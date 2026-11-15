@@ -866,6 +866,8 @@ function Promo.Confirm(self: any)
 			if self.Root.Parent and self.Root.Visible and not UIFeel.ReducedMotion() then
 				self:PlayAscension(stoneCount)
 				revealRank = self.Root.Parent ~= nil and self.Root.Visible
+			elseif self.Root.Parent and self.Root.Visible then
+				UIFeel.Sfx("UpgradeSuccess", nil, 0.8)
 			end
 			self.Message = string.format("Ascension complete! %s is now %s.", hero and hero.DisplayName or "Hero", stars(newStars))
 			local delta = response.Delta
@@ -885,12 +887,18 @@ function Promo.Confirm(self: any)
 				self.State.Heroes[recipientId] = updated
 			end
 		else
+			if not response.Stale then
+				UIFeel.Sfx("UpgradeFailure", nil, 0.7)
+			end
 			self.Message = if response.Stale then "" else (response.Message or "Promotion failed.")
 		end
 		self.Busy = false
 		if not self.Root.Parent then return end
 		self:Render()
-		if revealRank then UIFeel.Pop(self.MainRank, 0.3) end
+		if revealRank then
+			UIFeel.Pop(self.MainRank, 0.3)
+			UIFeel.Sfx("UpgradeSuccess", nil, 0.85)
+		end
 		task.delay(0.5, function()
 			if self.Root.Visible and not self.Busy then
 				self:Refresh()
@@ -1304,6 +1312,7 @@ function Promo.PlayAscension(self: any, count: number)
 			end
 			if landed ~= previous then
 				self.StoneCount.Text = string.format("%d / %d", landed, count)
+				UIFeel.Sfx("StarTick", 0.9 + (landed / math.max(1, count)) * 0.45, 0.5)
 			end
 		end
 		stone:Destroy()
@@ -1317,6 +1326,7 @@ function Promo.PlayAscension(self: any, count: number)
 end
 
 function Promo.Celebrate(self: any)
+	UIFeel.Sfx("HeroAscensionTransform", nil, 0.82)
 	local burst = new("Frame", {
 		Name = "AscensionFirework",
 		BackgroundTransparency = 1,

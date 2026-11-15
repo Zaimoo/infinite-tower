@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local RelicModelBuilder = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("RelicModelBuilder"))
 local RelicConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("RelicConfig"))
+local AudioManager = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("AudioManager"))
 
 local PhysicalRelics = Workspace:WaitForChild("PhysicalRelics")
 
@@ -32,11 +33,12 @@ type Visual = {
 	Fx: RelicModelBuilder.RelicFx,
 	Phase: number,
 	SpawnedAt: number,
+	CarriedConn: RBXScriptConnection,
 }
 
 local visuals: { [BasePart]: Visual } = {}
 
-local function attach(root: Instance)
+local function attach(root: Instance, isNewSpawn: boolean?)
 	if not root:IsA("BasePart") or visuals[root] then return end
 	local tierId = root:GetAttribute("RelicTier")
 	if type(tierId) ~= "string" then return end
@@ -89,6 +91,15 @@ local function attach(root: Instance)
 	local anchor = model.PrimaryPart
 	local burst = anchor and anchor:FindFirstChild("Burst") :: ParticleEmitter?
 	if burst then burst:Emit(30) end
+	if isNewSpawn ~= false then
+		AudioManager.Play3D("RelicDrop", root.Position)
+	end
+
+	local carriedConn = root:GetAttributeChangedSignal("RelicCarried"):Connect(function()
+		if root:GetAttribute("RelicCarried") == true then
+			AudioManager.Play3D("RelicPickup", root.Position)
+		end
+	end)
 
 	visuals[root] = {
 		Root = root,
@@ -100,6 +111,7 @@ local function attach(root: Instance)
 		Fx = fx,
 		Phase = math.random() * math.pi * 2,
 		SpawnedAt = os.clock(),
+		CarriedConn = carriedConn,
 	}
 end
 
@@ -107,14 +119,17 @@ local function detach(root: Instance)
 	local visual = visuals[root :: BasePart]
 	if not visual then return end
 	visuals[root :: BasePart] = nil
+	visual.CarriedConn:Disconnect()
 	visual.Model:Destroy()
 	visual.Ring:Destroy()
 end
 
-PhysicalRelics.ChildAdded:Connect(attach)
+PhysicalRelics.ChildAdded:Connect(function(child)
+	attach(child, true)
+end)
 PhysicalRelics.ChildRemoved:Connect(detach)
 for _, child in PhysicalRelics:GetChildren() do
-	attach(child)
+	attach(child, false)
 end
 
 local function stepRelicVisuals()

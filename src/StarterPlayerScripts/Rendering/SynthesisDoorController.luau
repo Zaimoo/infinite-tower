@@ -21,6 +21,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
+local AudioManager = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("AudioManager"))
 
 local SynthesisDoorController = {}
 
@@ -143,6 +144,9 @@ function SynthesisDoorController.SetDoorsOpen(state: ChamberState, open: boolean
 	end
 	state.IsOpen = open
 	state.Model:SetAttribute("DoorsOpen", open)
+	if not instant then
+		AudioManager.Play3D(if open then "SynthesisDoorOpen" else "SynthesisDoorClose", state.Model:GetPivot().Position)
+	end
 
 	local targetAlpha = if open then 1 else 0
 	tweenDoorLeaf(state.LeftDoor, targetAlpha, instant)

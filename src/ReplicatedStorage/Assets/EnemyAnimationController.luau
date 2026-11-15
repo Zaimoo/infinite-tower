@@ -17,6 +17,54 @@ local KIT_COLORS = {
 local SHIELD_FLAG, ROUSE_FLAG, AFFIX_FLAG = 8, 16, 32
 local AFFIX_COLOR = Color3.fromRGB(255, 120, 70)
 
+local sfxCallback: ((soundKey: string, pos: Vector3, pitch: number?, volumeScale: number?) -> ())? = nil
+local rigEnemyIds: { [any]: string } = setmetatable({}, { __mode = "k" }) :: any
+local rigAudioState: { [any]: { AwakenPlayed: boolean?, LastStepAt: number? } } = setmetatable({}, { __mode = "k" }) :: any
+
+function Controller.SetSfxCallback(cb: ((soundKey: string, pos: Vector3, pitch: number?, volumeScale: number?) -> ())?)
+	sfxCallback = cb
+end
+
+function Controller.ClassifyAudio(enemyId: string?): "CONSTRUCT" | "COLOSSUS" | "SLIME" | "BEAST" | "BOSS" | "BIPED"
+	local spec: any = if enemyId then Config.Get(enemyId) else nil
+	local fam = string.upper(tostring((spec and (spec.RigFamily or spec.CatalogFamily)) or ""))
+	local idLower = string.lower(tostring(enemyId or ""))
+	local isBoss = (spec and spec.Role == "BOSS") or false
+	if string.find(idLower, "slime", 1, true) or string.find(idLower, "ooze", 1, true)
+		or string.find(fam, "SLIME", 1, true) or string.find(fam, "OOZE", 1, true) then
+		return "SLIME"
+	elseif string.find(idLower, "construct", 1, true) or string.find(idLower, "golem", 1, true)
+		or string.find(idLower, "automaton", 1, true) or string.find(idLower, "clockwork", 1, true)
+		or string.find(fam, "FORGE", 1, true) or fam == "CONSTRUCT" then
+		return "CONSTRUCT"
+	elseif string.find(fam, "COLOSSUS", 1, true) then
+		return "COLOSSUS"
+	elseif fam == "QUADRUPED" or string.find(idLower, "wolf", 1, true) or string.find(idLower, "hound", 1, true)
+		or string.find(idLower, "beast", 1, true) or string.find(idLower, "lion", 1, true) or string.find(idLower, "drake", 1, true) then
+		return "BEAST"
+	elseif isBoss then
+		return "BOSS"
+	end
+	return "BIPED"
+end
+
+local function emitSfx(soundKey: string, pos: Vector3?, pitch: number?, volumeScale: number?)
+	if sfxCallback and pos then
+		sfxCallback(soundKey, pos, pitch, volumeScale)
+	end
+end
+
+local function getNodeEnemyId(node: any): string?
+	if node and node.EnemyAction and node.EnemyAction.EnemyId then
+		return node.EnemyAction.EnemyId
+	end
+	local rig = node and node.EnemyRig
+	if rig and rigEnemyIds[rig] then
+		return rigEnemyIds[rig]
+	end
+	return node and node.EnemyId
+end
+
 local function clearEffect(key: string)
 	local effect = effects[key]
 	if effect then
@@ -53,10 +101,11 @@ function Controller.Attach(model: Model, root: BasePart, enemyId: string)
 		assert(clips[slot], "Missing enemy clip " .. enemyId .. "/" .. slot)
 	end
 	-- Raid bosses use their Blender meshes once uploaded (RaidBossAssets); until then the stand-in rig.
-	if RaidRigs.BossFor(enemyId) then
-		return RaidRigs.Build(model, root, enemyId)
+	local rig = if RaidRigs.BossFor(enemyId) then RaidRigs.Build(model, root, enemyId) else RigFactory.Build(model, root, enemyId)
+	if rig then
+		rigEnemyIds[rig] = enemyId
 	end
-	return RigFactory.Build(model, root, enemyId) -- remodelled template, else the part rig
+	return rig
 end
 
 function Controller.Action(node: any, action: any, origin: Vector3, now: number)
@@ -66,6 +115,27 @@ function Controller.Action(node: any, action: any, origin: Vector3, now: number)
 	local key = tostring(node.NetId) .. ":" .. action.ActionSequence
 	node.EnemyEffectKey = key
 	if now >= due then return end -- late observers seek pose without a fresh warning or impact burst
+
+	if not node.AnimFar and (now - action.StartServerTime) <= 0.25 then
+		local worldOrigin = origin + action.Origin + Vector3.new(0, 1.5, 0)
+		local kind = Controller.ClassifyAudio(action.EnemyId or getNodeEnemyId(node))
+		if action.Shape == "ALLY_BEAM" or action.Shape == "ALLY_AURA" then
+			emitSfx("MagicSpark", worldOrigin, 0.9, 0.65)
+		elseif kind == "CONSTRUCT" then
+			emitSfx("ConstructArmSwing", worldOrigin, nil, 0.78)
+		elseif kind == "COLOSSUS" or kind == "BOSS" then
+			emitSfx("BossAwakenRoar", worldOrigin, nil, 0.75)
+		elseif kind == "BEAST" then
+			emitSfx("BeastRoar", worldOrigin, nil, 0.72)
+		elseif kind == "SLIME" then
+			emitSfx("SlimeAttackSquish", worldOrigin, nil, 0.7)
+		elseif action.Shape == "PROJECTILE" then
+			emitSfx("BowDraw", worldOrigin, 0.95, 0.65)
+		else
+			emitSfx("AirWhoosh", worldOrigin, 0.92, 0.58)
+		end
+	end
+
 	local n = 0
 	for _ in pairs(effects) do n += 1 end
 	if n >= MAX_EFFECTS then return end
@@ -162,8 +232,24 @@ function Controller.Contact(node: any, action: any, origin: Vector3, now: number
 	local key = tostring(node.NetId) .. ":" .. action.ActionSequence
 	clearEffect(key)
 	if now - (action.StartServerTime + action.ImpactOffsetSeconds) > .4 then return end
+	local aimPos = origin + action.Aim + Vector3.new(0, .2, 0)
+	if not node.AnimFar then
+		local kind = Controller.ClassifyAudio(action.EnemyId or getNodeEnemyId(node))
+		if action.Shape == "PROJECTILE" then
+			emitSfx("VoidBeamDetonation", aimPos, nil, 0.65)
+		elseif action.Shape == "SELF_DISC" or action.Shape == "TARGET_DISC" then
+			local soundKey = if (action.Radius or 0) >= 10 then "LargeExplosion" else "ExplosiveWaveShock"
+			emitSfx(soundKey, aimPos, nil, 0.72)
+		elseif kind == "SLIME" then
+			emitSfx("SlimeAttackSquish", aimPos, nil, 0.78)
+		elseif kind == "CONSTRUCT" or kind == "COLOSSUS" then
+			emitSfx("HammerImpact", aimPos, nil, 0.72)
+		else
+			emitSfx("HitIncoming", aimPos, nil, 0.62)
+		end
+	end
 	local burstColor = if action.Shape == "PROJECTILE" then Color3.fromRGB(190, 145, 255) else Color3.fromRGB(174, 239, 109)
-	local p = groundPart(workspace.ClientVisualEntities, Vector3.new(.2, 2, 2), CFrame.new(origin + action.Aim + Vector3.new(0, .2, 0)) * CFrame.Angles(0, 0, math.pi / 2), burstColor, .25)
+	local p = groundPart(workspace.ClientVisualEntities, Vector3.new(.2, 2, 2), CFrame.new(aimPos) * CFrame.Angles(0, 0, math.pi / 2), burstColor, .25)
 	p.Shape = Enum.PartType.Cylinder
 	local diameter = math.max(4, (action.Radius or 2) * 2)
 	game:GetService("TweenService"):Create(p, TweenInfo.new(.3), { Size = Vector3.new(.1, diameter, diameter), Transparency = 1 }):Play()
@@ -171,7 +257,12 @@ function Controller.Contact(node: any, action: any, origin: Vector3, now: number
 end
 
 function Controller.Hit(node: any, now: number)
-	if node and node.EnemyRig and not node.DeathAt then node.HitAt = now end
+	if node and node.EnemyRig and not node.DeathAt then
+		node.HitAt = now
+		if not node.AnimFar and node.RootPart and Controller.ClassifyAudio(getNodeEnemyId(node)) == "CONSTRUCT" then
+			emitSfx("ConstructStagger", node.RootPart.Position, nil, 0.55)
+		end
+	end
 end
 
 function Controller.Death(node: any, at: number)
@@ -284,6 +375,31 @@ function Controller.Step(node: any, dt: number, now: number)
 	input.AwakenSeconds = 2.2
 	input.Far = node.AnimFar == true
 	anim:Step(now, input)
+	if not node.DeathAt and not input.Far and node.CurrentPos then
+		local kind = Controller.ClassifyAudio(getNodeEnemyId(node))
+		if kind == "CONSTRUCT" or kind == "COLOSSUS" or kind == "BOSS" then
+			local state = rigAudioState[rig]
+			if not state then
+				state = {}
+				rigAudioState[rig] = state
+			end
+			if not state.AwakenPlayed and (now - (node.BornAt or 0)) < 1.2 then
+				state.AwakenPlayed = true
+				emitSfx(if kind == "CONSTRUCT" then "ConstructAwaken" else "BossAwakenRoar", node.CurrentPos, nil, 0.85)
+			end
+			if input.Speed > 2 then
+				local interval = if kind == "CONSTRUCT" then 0.75 else 1.1
+				if now - (state.LastStepAt or 0) >= interval then
+					state.LastStepAt = now
+					if kind == "CONSTRUCT" then
+						emitSfx("ConstructMoveStep", node.CurrentPos, nil, 0.48)
+					else
+						emitSfx("ColossusFootsteps", node.CurrentPos, nil, 0.65)
+					end
+				end
+			end
+		end
+	end
 	if node.HitAt and now - node.HitAt < .15 then
 		if node.Highlight then
 			node.Highlight.FillColor = Color3.fromRGB(235, 255, 190)

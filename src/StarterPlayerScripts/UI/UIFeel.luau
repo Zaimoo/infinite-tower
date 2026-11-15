@@ -15,12 +15,28 @@
 local GuiService = game:GetService("GuiService")
 local HapticService = game:GetService("HapticService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local IS_STUDIO = RunService:IsStudio()
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
+
+local SoundCatalog: any = nil
+local function getSoundCatalog()
+	if SoundCatalog ~= nil then
+		return SoundCatalog
+	end
+	local shared = ReplicatedStorage:FindFirstChild("Shared")
+	local cfg = if shared then shared:FindFirstChild("Config") else nil
+	local mod = if cfg then cfg:FindFirstChild("SoundCatalog") else nil
+	if mod and mod:IsA("ModuleScript") then
+		SoundCatalog = require(mod)
+	end
+	return SoundCatalog
+end
 
 local UIFeel = {}
 
@@ -64,19 +80,74 @@ local function group(): SoundGroup
 	return g
 end
 
--- Plays a UIAssets.Sounds entry. `pitch` (default 1) lets a sequence climb, e.g. star ticks.
+local uiSfxCooldowns: { [string]: number } = {}
+
+-- Plays a SoundCatalog / UIAssets.Sounds entry. `pitch` (default 1) lets a sequence climb, e.g. star ticks.
 function UIFeel.Sfx(name: string, pitch: number?, volume: number?)
-	local id = (UIAssets.Sounds :: any)[name]
+	local cat = getSoundCatalog()
+	local def = if cat then cat.Get(name) else nil
+	if def and def.Cooldown then
+		local now = os.clock()
+		if (now - (uiSfxCooldowns[name] or 0)) < def.Cooldown then
+			return
+		end
+		uiSfxCooldowns[name] = now
+	end
+
+	local id: string? = nil
+	if cat and def and cat.ResolveId then
+		id = cat.ResolveId(def, IS_STUDIO)
+	end
+	if type(id) ~= "string" or id == "" then
+		id = (UIAssets.Sounds :: any)[name]
+	end
 	if type(id) ~= "string" or id == "" then return end
+
+	local targetVol = volume or (def and def.Volume) or 0.6
+	local targetPitch = pitch or (def and def.Pitch) or 1
+
 	local s = Instance.new("Sound")
+	s.Name = "UISfx_" .. name
 	s.SoundId = id
-	s.Volume = volume or 0.6
-	s.PlaybackSpeed = pitch or 1
+	s.PlaybackSpeed = math.clamp(targetPitch, 0.2, 3.0)
+	s.TimePosition = (def and def.TimeOffset) or 0
 	s.SoundGroup = group()
+	s:SetAttribute("OrigVolume", targetVol)
+	s.Volume = targetVol
 	s.Parent = SoundService
-	s.Ended:Once(function() s:Destroy() end)
+
+	local destroyed = false
+	local function cleanup()
+		if destroyed then return end
+		destroyed = true
+		if s.Parent then
+			s:Destroy()
+		end
+	end
+
+	s.Ended:Once(cleanup)
 	s:Play()
-	task.delay(6, function() if s.Parent then s:Destroy() end end)
+
+	local maxDur = def and def.MaxDuration
+	if type(maxDur) == "number" and maxDur > 0 then
+		local fadeOut = math.clamp((def and def.FadeOutSeconds) or 0.15, 0, maxDur * 0.5)
+		local fadeDelay = math.max(0.02, maxDur - fadeOut)
+		task.delay(fadeDelay, function()
+			if destroyed or not s.Parent then return end
+			if fadeOut > 0.03 and s.IsPlaying then
+				local tw = TweenService:Create(
+					s,
+					TweenInfo.new(fadeOut, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ Volume = 0 }
+				)
+				tw:Play()
+			end
+			task.delay(fadeOut + 0.04, cleanup)
+		end)
+		task.delay(maxDur + 3, cleanup)
+	else
+		task.delay(6, cleanup)
+	end
 end
 
 --============================================================================

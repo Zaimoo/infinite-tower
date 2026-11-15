@@ -20,6 +20,7 @@ local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local GildedGrimoire = require(RS.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
+local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local Kit = require(script.Parent:WaitForChild("Kit"))
 local StatBalance = require(RS.Shared.Config.StatBalance)
 local StatFormulas = require(RS.Shared.Util.StatFormulas)
@@ -1511,6 +1512,8 @@ remotes.Response.OnClientEvent:Connect(function(r)
 	end
 end)
 
+local lastCommittedFloorId: number? = nil
+
 remotes.Context.OnClientEvent:Connect(function(c)
 	if c.Stage == "PREPARE" then
 		task.spawn(function()
@@ -1530,6 +1533,22 @@ remotes.Context.OnClientEvent:Connect(function(c)
 			})
 		end)
 	elseif c.Stage == "COMMIT" then
+		local prevFloor = lastCommittedFloorId
+		lastCommittedFloorId = c.FloorId
+		if prevFloor ~= nil and prevFloor ~= c.FloorId then
+			UIFeel.Sfx("FloorTeleportTransition", nil, 0.7)
+			if type(c.FloorId) == "number" and c.FloorId > 0 and c.FloorId <= 50 then
+				local newBiome = math.clamp(math.floor((c.FloorId - 1) / 5) + 1, 1, 10)
+				local oldBiome = if type(prevFloor) == "number" and prevFloor > 0 and prevFloor <= 50
+					then math.clamp(math.floor((prevFloor - 1) / 5) + 1, 1, 10)
+					else nil
+				if oldBiome ~= newBiome then
+					task.delay(0.25, function()
+						UIFeel.Sfx("BiomeBannerReveal", nil, 0.72)
+					end)
+				end
+			end
+		end
 		context = c
 		_G.TowerView = c
 		if c.FloorId > 0 and c.FloorId <= 50 and not isViewingSquad then selected = c.FloorId end -- 60 is the raid arena

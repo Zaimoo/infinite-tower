@@ -111,6 +111,7 @@ local function showUltimate(message: any)
 
 	fade(hero, 0, 0.15)
 	fade(skill, 0, 0.15)
+	UIFeel.Sfx("AuraPowerUp", nil, 0.82)
 	if not reduce then
 		TweenService:Create(scale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 		TweenService:Create(dim, TweenInfo.new(0.12), { BackgroundTransparency = 0.55 }):Play()
@@ -159,6 +160,7 @@ local function showWhistleHint()
 	detail.Text = whistleControl() .. " when the boss stops after a big attack."
 	fade(title, 0, 0.2)
 	fade(detail, 0, 0.2)
+	UIFeel.Sfx("EyeFocusTrigger", 1.1, 0.65)
 	task.delay(6, function()
 		fade(title, 1, 0.4)
 		fade(detail, 1, 0.4)

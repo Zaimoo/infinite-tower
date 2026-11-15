@@ -60,6 +60,18 @@ local AudioFolder = script.Parent.Parent:WaitForChild("Audio")
 local AudioManager = require(AudioFolder:WaitForChild("AudioManager"))
 local MusicController = require(AudioFolder:WaitForChild("MusicController"))
 
+local function playCombatSfx(soundKey: string, pos: Vector3, delaySeconds: number?, pitch: number?, volumeScale: number?)
+	if delaySeconds and delaySeconds > 0.01 then
+		AudioManager.PlayDelayed3D(delaySeconds, soundKey, pos, pitch, volumeScale)
+	else
+		AudioManager.Play3D(soundKey, pos, pitch, volumeScale)
+	end
+end
+
+EnemyAnimation.SetSfxCallback(function(soundKey: string, pos: Vector3, pitch: number?, volumeScale: number?)
+	AudioManager.Play3D(soundKey, pos, pitch, volumeScale)
+end)
+
 -- Attack tier codes in the HERO_CUE (TowerProtocol.EncodeHeroCue) -> HeroClips action states.
 local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "AttackSkill" }
 
@@ -379,12 +391,22 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 		Shake = if meta and meta.OwnerUserId == LocalPlayer.UserId then function(magnitude: number)
 			CombatFeedback:ScreenShake(magnitude)
 		end else nil,
+		Sfx = playCombatSfx,
 	}
 end
 
 local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
 	local args = attackArgs(rig, animator, meta, cue)
-	SkillVfx.Play(CombatVfxPool, args)
+	local played = SkillVfx.Play(CombatVfxPool, args)
+	if not played and args.Origin then
+		local weapon = string.upper(tostring(animator.WeaponType or ""))
+		local fallbackKey = if weapon == "BOW" then "BowRelease"
+			elseif weapon == "DAGGER" or weapon == "DUAL_DAGGER" then "SlashDagger"
+			elseif weapon == "STAFF" or weapon == "TOME" or weapon == "ORB" then "MagicSpark"
+			elseif weapon == "HAMMER" then "AirWhoosh"
+			else "SlashSword"
+		AudioManager.Play3D(fallbackKey, args.Origin, nil, 0.72)
+	end
 	if _G.GildedAnvilCombatFx and _G.GildedAnvilCombatFx.OnRelease then
 		_G.GildedAnvilCombatFx.OnRelease(rig, meta, args)
 	end
@@ -392,7 +414,8 @@ end
 
 -- Wind-up effects at an attack clip's Charge marker (cosmetic; the server ignores it).
 local function playChargeVfx(rig: Model, animator: any, meta: any, cue: any)
-	SkillVfx.PlayCharge(CombatVfxPool, attackArgs(rig, animator, meta, cue))
+	local args = attackArgs(rig, animator, meta, cue)
+	SkillVfx.PlayCharge(CombatVfxPool, args)
 end
 
 local function playComaVFX(node: any)
@@ -764,6 +787,17 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	model.PrimaryPart = root
 	model.Parent = VisualFolder
 
+	if Bootstrapped and View and (View.FloorId or 0) > 0 then
+		if isHero and meta and meta.OwnerUserId == LocalPlayer.UserId then
+			AudioManager.Play3D("HeroSpawnLanding", initPos, nil, 0.75)
+		elseif isBoss and meta and not EnemyAnimation.ClassifyAudio then
+			AudioManager.Play3D("BossAwakenRoar", initPos)
+		elseif isBoss and meta then
+			local kind = EnemyAnimation.ClassifyAudio(meta.EnemyId)
+			AudioManager.Play3D(if kind == "CONSTRUCT" then "ConstructAwaken" else "BossAwakenRoar", initPos)
+		end
+	end
+
 	-- Rigs built by HeroRegistry are posed by HeroAnimator on this client (Motor6D.Transform
 	-- does not replicate, so every client animates its own copy).
 	local rig = isHero and heroRig(model) or nil
@@ -855,13 +889,19 @@ TowerRemotes.Context.OnClientEvent:Connect(function(c)
 end)
 local function retireVisual(id,at)
  local node=VisualNodesByNetId[id];if not node then return end
+ local meta = MetadataByNetId[id]
  VisualNodesByNetId[id]=nil
  if node.EnemyRig and at+1.6>Workspace:GetServerTimeNow() then
   local pos = node.CurrentPos or (node.RootPart and node.RootPart.Position)
   local isAffixed = node.Flags and bit32.band(node.Flags, 4) ~= 0
   if pos then
    if _G.GildedAnvilCombatFx then _G.GildedAnvilCombatFx.OnKill(pos) end
-   if isAffixed then
+   local kind = EnemyAnimation.ClassifyAudio(meta and meta.EnemyId)
+   if kind == "CONSTRUCT" then
+    AudioManager.Play3D("ConstructDeath", pos)
+   elseif kind == "SLIME" then
+    AudioManager.Play3D("SlimeAttackSquish", pos, 0.85, 0.9)
+   elseif isAffixed then
     AudioManager.Play3D("EliteDeath", pos)
    else
     AudioManager.Play3D("MobDeath", pos)
@@ -940,6 +980,11 @@ local function consume(buf: buffer)
   end
   node.GoalPos=e.Position;node.GoalYaw=e.Yaw;node.HpPermille=e.HpPermille;node.Stamina=e.Stamina
   if node.IsHero and node.Model:GetAttribute("HpPermille")~=e.HpPermille then node.Model:SetAttribute("HpPermille",e.HpPermille) end -- read by GildedAnvilFx
+  if node.IsHero and View and (View.FloorId or 0) > 0 and meta and meta.OwnerUserId == LocalPlayer.UserId
+   and not node.WasKnockedOut and e.StateEnum ~= 4 and e.HpPermille > 0 and e.HpPermille <= 260 then
+   local hbKey = if e.HpPermille <= 120 then "LowHpHeartbeatUrgent" else "LowHpHeartbeat"
+   AudioManager.Play2D(hbKey, nil, 0.72)
+  end
   node.StateEnum=e.StateEnum;node.Flags=e.Flags;node.LastSeenClock=now
   if node.HPBarFill then node.HPBarFill.Size=UDim2.fromScale(e.HpPermille/1000,1) end
   if node.StamBarFill then
@@ -1170,10 +1215,15 @@ BossTelegraphRemote.OnClientEvent:Connect(function(context: any, telegraphType: 
 		return
 	end
 
+	local posVec = Vector3.new(ox, oy, oz)
 	if telegraphType == 1 then
 		-- DEVOURING NOVA (3.0s Red Telegraph on Ring 3, R = 85 studs)
 		_G.ClientCombatState.NovaCastStartClock = os.clock()
 		_G.ClientCombatState.NovaCastDuration = durationSec
+		AudioManager.Play3D("BossTelegraphMachine", posVec)
+		AudioManager.PlayDelayed3D(math.max(0.05, durationSec - 0.15), "SupernovaCataclysm", posVec)
+	elseif telegraphType == 3 then
+		AudioManager.Play3D("SilenceDisruptPulse", posVec, nil, 0.85)
 	end
 
 	if telegraphType == 1 or telegraphType == 3 then
@@ -1223,7 +1273,7 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 		local meta = type(amount) == "number" and MetadataByNetId[amount]
 		if node and meta and typeof(pos) == "Vector3" then
 			pcall(SkillVfx.PlayReflect, CombatVfxPool, meta.TemplateId, node.RootPart.Position + Vector3.new(0, 0.5, 0),
-				pos + Vector3.new(0, 2, 0), Workspace:GetServerTimeNow())
+				pos + Vector3.new(0, 2, 0), Workspace:GetServerTimeNow(), playCombatSfx)
 		end
 		return
 	elseif vfxType=="TWIN_MARK" then

@@ -13,6 +13,9 @@ local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 local DuelStateRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TowerRemotes"):WaitForChild("DuelState") :: RemoteEvent
+local AudioFolder = script.Parent.Parent:WaitForChild("Audio")
+local AudioManager = require(AudioFolder:WaitForChild("AudioManager"))
+local MusicController = require(AudioFolder:WaitForChild("MusicController"))
 
 local OPT_IN_DELAY = 4 -- after the outro, before the notifications opt-in prompt
 local CAMERA_BACK = 46 -- studs behind this player's squad
@@ -199,7 +202,7 @@ type Nearby = { Id: number, Center: Vector3, Forward: Vector3, Title: string }
 local nearby: Nearby? = nil
 local watching = false
 
-type DuelView = { Id: number, Side: string, FightAt: number, EndsAt: number, Ended: boolean, Kind: string? }
+type DuelView = { Id: number, Side: string, FightAt: number, EndsAt: number, Ended: boolean, Kind: string?, LastTickSec: number? }
 local current: DuelView? = nil
 local savedCamera: { CameraType: Enum.CameraType, FieldOfView: number }? = nil
 
@@ -278,17 +281,28 @@ DuelStateRemote.OnClientEvent:Connect(function(message: any)
 		resultSub.Visible = false
 		gui.Enabled = true
 		frameArena(message.Center, message.Forward, message.Side)
+		AudioManager.Play2D("BiomeBannerReveal", 1.05, 0.78)
+		MusicController.PlayDuelMusic()
 		return
 	end
 	local view = current
 	if not view or view.Id ~= message.DuelId then return end
 	if message.Kind == "SCORE" or message.Kind == "FIGHT" then
-		if message.Kind == "FIGHT" then intro.Visible = false end
+		if message.Kind == "FIGHT" then
+			intro.Visible = false
+			AudioManager.Play2D("AbilityActivation", 1.1, 0.75)
+		end
 		updateScore(message)
 	elseif message.Kind == "END" then
 		view.Ended = true
 		updateScore(message)
 		local won = message.Winner == view.Side
+		if won then
+			AudioManager.Play2D("CrowdWoahShort", nil, 0.6)
+			MusicController.PlayStinger("VictoryFanfare", 4.5)
+		else
+			MusicController.PlayStinger("DefeatStinger", 3.5)
+		end
 		local iAmOwner = view.Side == "A"
 		resultLabel.Text = if won then "VICTORY" else "DEFEAT"
 		resultLabel.TextColor3 = if won then GOLD else Color3.fromRGB(255, 95, 95)
@@ -327,6 +341,7 @@ DuelStateRemote.OnClientEvent:Connect(function(message: any)
 		gui.Enabled = false
 		intro.Visible = false
 		releaseCamera()
+		MusicController.PlayForFloor(_G.TowerView and _G.TowerView.FloorId or 0)
 	end
 end)
 
@@ -371,9 +386,19 @@ task.spawn(function()
 		if view and not view.Ended then
 			local now = Workspace:GetServerTimeNow()
 			if now < view.FightAt then
-				timerLabel.Text = string.format("Fight in %d", math.ceil(view.FightAt - now))
+				local sec = math.ceil(view.FightAt - now)
+				timerLabel.Text = string.format("Fight in %d", sec)
+				if sec > 0 and view.LastTickSec ~= sec then
+					view.LastTickSec = sec
+					AudioManager.Play2D("TimerCountdownTick", 1.05, 0.62)
+				end
 			else
-				timerLabel.Text = string.format("%ds", math.max(0, math.ceil(view.EndsAt - now)))
+				local sec = math.max(0, math.ceil(view.EndsAt - now))
+				timerLabel.Text = string.format("%ds", sec)
+				if sec > 0 and sec <= 5 and view.LastTickSec ~= -sec then
+					view.LastTickSec = -sec
+					AudioManager.Play2D("TimerCountdownTick", 1.2, 0.65)
+				end
 			end
 		end
 	end

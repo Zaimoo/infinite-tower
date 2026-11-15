@@ -20,6 +20,7 @@ local RaidRules = require(Shared:WaitForChild("Util"):WaitForChild("RaidRules"))
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Store = require(script.Parent:WaitForChild("Store"))
 local Components = require(script.Parent:WaitForChild("Components"))
+local UIFeel = require(script.Parent.Parent:WaitForChild("UIFeel"))
 
 local e = React.createElement
 local G = Theme.Glass
@@ -69,10 +70,30 @@ task.spawn(function()
 	local resultRemote = folder:WaitForChild("Result", 10) :: RemoteEvent?
 	if resultRemote then
 		resultRemote.OnClientEvent:Connect(function(r: any)
-			if type(r) == "table" then result = r; changed:Fire() end
+			if type(r) == "table" then
+				result = r
+				changed:Fire()
+				UIFeel.Sfx(if r.Killed then "VictoryFanfare" else "DefeatStinger", nil, 0.85)
+			end
 		end)
 	end
 end)
+
+local lastRaidPhase: string = ReplicatedStorage:GetAttribute("RaidPhase") or "CALM"
+ReplicatedStorage:GetAttributeChangedSignal("RaidPhase"):Connect(function()
+	local phase = ReplicatedStorage:GetAttribute("RaidPhase") or "CALM"
+	if phase == lastRaidPhase then
+		return
+	end
+	if lastRaidPhase == "CALM" and phase == "WARNING" then
+		UIFeel.Sfx("RaidAnnouncementChime", nil, 0.8)
+	elseif phase == "ACTIVE" then
+		UIFeel.Sfx("BountyHorn", nil, 0.88)
+	end
+	lastRaidPhase = phase
+end)
+
+local lastCountdownSec = -1
 
 export type Phase = { Phase: string, Boss: RaidConfig.Boss, StartsAt: number, EndsAt: number, Now: number, InRaid: boolean }
 
@@ -103,7 +124,19 @@ function RaidHud.useRaid(): Phase
 		task.spawn(function()
 			while alive do
 				task.wait(0.5)
-				if alive then setState(readPhase()) end
+				if alive then
+					local nextPhase = readPhase()
+					if nextPhase.InRaid and nextPhase.Phase == "ACTIVE" then
+						local sec = math.ceil(nextPhase.EndsAt - nextPhase.Now)
+						if sec > 0 and sec <= 10 and sec ~= lastCountdownSec then
+							lastCountdownSec = sec
+							UIFeel.Sfx("TimerCountdownTick", 1.1, 0.52)
+						end
+					elseif lastCountdownSec ~= -1 then
+						lastCountdownSec = -1
+					end
+					setState(nextPhase)
+				end
 			end
 		end)
 		return function()

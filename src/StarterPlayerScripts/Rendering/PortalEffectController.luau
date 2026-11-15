@@ -17,6 +17,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
+local AudioManager = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("AudioManager"))
 
 export type PortalState = "Closed" | "Active"
 
@@ -271,6 +272,9 @@ function PortalEffectController.SetState(portalModel: Model, newState: PortalSta
 	portalModel:SetAttribute("PortalState", newState)
 	local isActive = (newState == "Active")
 	local targetAlpha = if isActive then 1.0 else 0.0
+	if isActive and not instant then
+		AudioManager.Play3D("VoidRiftCrack", portalModel:GetPivot().Position, nil, 0.85)
+	end
 
 	-- 1. Swing Hinged Doors (or toggle combined closed doors mesh if unsplit)
 	if managed.LeftDoor or managed.RightDoor then
@@ -345,6 +349,8 @@ function PortalEffectController.TriggerSummonBurst(portalModel: Model?, rarityTi
 
 	managed.SummonHoldUntil = os.clock() + 6.0
 	PortalEffectController.SetState(targetModel, "Active", false)
+	local isHighRarity = (rarityTier or 1) >= 5
+	AudioManager.Play3D(if isHighRarity then "SummonBurstJackpot" else "SummonBurstRare", targetModel:GetPivot().Position, nil, 0.85)
 
 	if managed.VortexEmitter then
 		managed.VortexEmitter:Emit(35)
