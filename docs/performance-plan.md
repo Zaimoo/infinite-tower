@@ -89,8 +89,24 @@ Leak fixes (scenario D) jump the queue whenever found.
 | — | leak (scenario D) | `HeroCard` kept its nursery spares, posed sources and masters in weak tables keyed by template Instances. Roblox can collect a live Instance's Lua wrapper, so entries vanished and the nursery nursed a new spare every time while the old one stayed parented: ~8 rigs/s, 120k+ PlayerGui instances within minutes. The caches are now strong-keyed and pruned when a template leaves `Assets.Heroes` |
 | — | item 13 (second pass) | Hub dropped to ~10 FPS once all 8 plots sat around the Commons: ~408 shadow-casting scenery PointLights (wall torches, lancet windows, rampart arches, braziers). `StaticGeometry.Apply` now turns `Shadows` off on scenery lights (opt out with the `KeepShadows` attribute) and also runs on already-baked hubs; the cloud bank's per-cloud mist went from Rate 2 / 60–160 studs to Rate 0.6 / 40–110 studs |
 | — | item 9 (hub effects) | `HubEffectCulling.client.luau` + `EffectCullingRules`: hub scenery lights turn off past 160 studs + their Range and small emitters past 220 studs (25-stud hysteresis, 200 checks a frame). Rigs and atmospheric emitters (particles > 25 studs) are left alone. At a plot this runs 80 of 502 lights and 162 of 721 emitters. Studio profiling also found terrain `Clouds` (FoggyWindController, 0.84 cover) costing roughly a third of the hub's frame; they are removed, and the controller deletes any `Clouds` added to Terrain |
+| — | item 12 (streaming) | `StreamingTargetRadius` 1024 → 500. Plots are no longer `Persistent` (about 41,000 parts were pinned on every client before). The island streams part by part; the fountain, statue and buildings are `Atomic`; the owner's plot stays loaded through a replication focus. A first version made the whole island one atomic unit, which sent ~2,800 instances in one frame and hitched whenever a plot streamed in. Unoccupied plots hold no buildings or fountain at all (GDD §8.5) |
+| — | item 9 (hub effects, second pass) | `HubEffectCulling` also culls beams (about 950, mostly fountain waterfalls) past 220 studs + their length. `StaticGeometry.ThinEmitters` halves hub scenery emitter rates (`BaseRate` keeps the original; rates of 2 or less and `KeepRate` emitters are skipped) |
+| — | item 5 (bandwidth) | Profile sync sends deltas (`Shared/Util/ProfileDelta`, GDD §8.4). Kill rewards and the 3 s economy tick use `DataManager.SyncLight`, which skips the migrations, squad rebuild and plot refresh that `SyncProfile` runs. HUD panels refresh only for keys they depend on, merged to once per 0.2 s |
+| — | item 8 (client loops) | The HUD loop repaints the whistle buttons and floor strip only when their look changes. Fountain, portal, Commons, hub lighting and tower window glow moved from `RenderStepped` to `Heartbeat` |
+| — | native code | `--!native` on `CombatSimulation`, `TowerEncounterRuntime`, `HeroTargeting`, `HeroCombatMovement`, `SquadMovement`, `TowerProtocol`, `HeroAnimator` and `EnemyAnimator`. Not measured yet: check the Script Profiler and drop it where a script's time does not fall |
+| — | memory | Seven backup folders removed from `ServerStorage` in the place (8,307 instances) |
+| — | item 13 (mesh bake) | `FortressWalls` and `CourtyardGroundTiles` baked to merged meshes (GDD §8.5). Per plot: 2,194 wall parts → 12 meshes plus the colliders that were already there, 246 tiles → 10 meshes. Takes effect once the FBX files are imported (below) |
 
-Still open: baseline numbers (Phase 0.2–0.4, needs Studio), item 3 beyond stats (targeting, safety checks) once `CombatSim.Heroes` is measured, items 4–5 and streaming (item 12, its own plan).
+Still open: baseline numbers (Phase 0.2–0.4, needs Studio), item 3 beyond stats (targeting, safety checks) once `CombatSim.Heroes` is measured, and item 4.
+
+## Scenery mesh bake
+
+Re-run this whenever `WallsBuilder` or the courtyard tile builder changes (the server warns `[SceneryBake] ... parts no longer match the baked mesh` and falls back to parts until you do).
+
+1. **Export the parts.** In Studio edit mode with Rojo connected, run `tools/blender/export_scenery_parts.luau` and save its output as `tools/blender/bake_data/scenery_parts.txt`.
+2. **Bake.** `blender.exe --background --factory-startup --python tools/blender/bake_scenery_meshes.py` writes `assets/models/baked_scenery/*.fbx` and regenerates `BakedSceneryIndex.luau`.
+3. **Import.** In Studio, import `FortressWalls.fbx` and `CourtyardGroundTiles.fbx` with the 3D Importer. Keep the file's scale (1 unit = 1 stud), do not merge meshes and do not anchor or weld by hand. Put each imported Model in `ReplicatedStorage.Assets.BakedScenery`, named `FortressWalls` and `CourtyardGroundTiles`. Each must contain its `BakeOrigin`, `BakeAxisX` and `BakeAxisY` marker cubes.
+4. **Rebuild.** Start a server. The hub rebuilds once because the bake tag changed; save the place afterwards so the rebuilt hub is the baked one.
 
 ## Phase 3 — Guardrails
 

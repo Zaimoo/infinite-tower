@@ -1,6 +1,6 @@
 --!strict
 -- ReplicatedStorage/Shared/Util/EffectCullingRules.luau
--- Pure rules for HubEffectCulling: which hub scenery lights and particle emitters are worth running
+-- Pure rules for HubEffectCulling: which hub scenery lights, particle emitters and beams are worth running
 -- from where the camera stands. All 8 plots sit around the Commons, so without this every torch,
 -- brazier and spark on every island renders every frame (~550 lights, ~750 emitters).
 
@@ -11,6 +11,8 @@ EffectCullingRules.Config = {
 	LightCullDistance = 160,
 	-- Small emitters (torch flames, sparks, mist puffs) turn off past this distance: they are a few pixels there.
 	EmitterCullDistance = 220,
+	-- Beams (fountain waterfalls, causeway arcs) turn off once the camera is this far beyond their length.
+	BeamCullDistance = 220,
 	-- Turning back on happens this much closer than turning off, so an effect at the edge doesn't flicker.
 	Hysteresis = 25,
 	-- Emitters whose particles grow larger than this are atmosphere (fog banks, cloud mist) meant to be seen
@@ -27,6 +29,12 @@ function EffectCullingRules.CullDistance(isLight: boolean, reach: number): numbe
 		return cfg.LightCullDistance + math.max(reach, 0)
 	end
 	return cfg.EmitterCullDistance
+end
+
+-- The distance past which a beam should be off, measured from its midpoint. `length` is the distance
+-- between its attachments, so a long arc stays visible from further away than a short waterfall.
+function EffectCullingRules.BeamCullDistance(length: number): number
+	return EffectCullingRules.Config.BeamCullDistance + math.max(length, 0)
 end
 
 -- Whether an effect should be running, given its distance to the camera and whether it runs now.

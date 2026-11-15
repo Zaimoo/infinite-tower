@@ -9,6 +9,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PartKit = require(script.Parent:WaitForChild("PartKit"))
+local SceneryBake = require(script.Parent:WaitForChild("SceneryBake"))
 local makePart = PartKit.Part
 local makeWedge = PartKit.Wedge
 
@@ -1611,6 +1612,10 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			Parent = barrierFolder,
 		})
 	end
+
+	-- Swap the plain blocks for the Blender-merged meshes when they are imported (SceneryBake).
+	-- Built at the origin, so the builder's local space is world space here.
+	SceneryBake.Apply(wallsModel, CFrame.identity, "FortressWalls")
 
 	if parentIsland then
 		wallsModel.Parent = parentIsland

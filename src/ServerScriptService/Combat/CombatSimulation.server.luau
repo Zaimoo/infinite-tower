@@ -1,4 +1,5 @@
 --!strict
+--!native
 debug.setmemorycategory("CombatSim")
 -- ServerScriptService/Combat/CombatSimulation.server.luau
 -- 5 Hz (0.20s) Server-Authoritative Tower Combat & Encounter Simulation
@@ -3243,7 +3244,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
        dm.SendToast(killer, string.format("Loot|+%d Promotion Stone%s", stones, if stones == 1 then "" else "s"), "SUCCESS")
       end
-      dm.SyncProfile(killer)
+      dm.SyncLight(killer) -- Gold, Gems and stones only: no squad rebuild per kill
       -- An affixed Elite (Phase F) drops relics far more often; tiers stay by role, so Cores stay Elite-only.
       local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, AffixRules.DropRoll(mob, math.random()), math.random(), eventMods)
       if masterHere and tier and _G.RelicService then

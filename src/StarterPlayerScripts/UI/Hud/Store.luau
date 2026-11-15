@@ -69,7 +69,8 @@ end
 -- HUDController merges Pit deltas into _G.CurrentProfile; read it after that handler has run.
 ProfileDeltaSync.OnClientEvent:Connect(function(profile: any)
 	task.defer(function()
-		Store.Profile = _G.CurrentProfile or (type(profile) == "table" and not profile._PitDelta and profile) or Store.Profile
+		-- HUDController owns the cached profile and has already applied a delta to it by now.
+		Store.Profile = _G.CurrentProfile or (type(profile) == "table" and not profile._Delta and profile) or Store.Profile
 		bump()
 	end)
 end)

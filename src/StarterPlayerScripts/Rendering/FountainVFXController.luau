@@ -7,7 +7,7 @@
 -- Phase 3 Specifications (fountain_overhaul_plan.md):
 --   1. Basin Water (UV Scrolling):
 --      - Deep cyan/blue `#0EA5E9` (`Color3.fromRGB(14, 165, 233)`), non-Neon (`Glass`)
---      - Smoothly scrolls `OffsetStudsU` and `OffsetStudsV` on `RenderStepped` across
+--      - Smoothly scrolls `OffsetStudsU` and `OffsetStudsV` on `Heartbeat` across
 --        dual ripple `Texture` layers (`WaterRippleTextureA`, `WaterRippleTextureB`).
 --   2. Waterfalls & Spouts (`Beam` VFX):
 --      - Connects `Waterfall_Spout_1..N` to `Waterfall_Impact_1..N`
@@ -353,9 +353,12 @@ function FountainVFXController.Start()
 	end)
 
 	local elapsed = 0
-	RunService.RenderStepped:Connect(function(dt: number)
+	-- Heartbeat, not RenderStepped: nothing here tracks the camera or a moving character, so it need not hold up the frame
+	RunService.Heartbeat:Connect(function(dt: number)
 		elapsed += dt
+		debug.profilebegin("FountainVFX")
 		FountainVFXController.Step(dt, elapsed)
+		debug.profileend()
 	end)
 end
 

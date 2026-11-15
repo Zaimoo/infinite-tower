@@ -394,8 +394,9 @@ function PortalEffectController.Start()
 		end)
 	end
 
-	-- 60 FPS Vortex Swirl, Lightning Flicker & Proximity Door Trigger Loop
-	RunService.RenderStepped:Connect(function(_dt: number)
+	-- 60 FPS Vortex Swirl, Lightning Flicker & Proximity Door Trigger Loop.
+	-- Heartbeat, not RenderStepped: nothing here tracks the camera or a moving character, so it need not hold up the frame
+	RunService.Heartbeat:Connect(function(_dt: number)
 		local now = os.clock()
 		local char = localPlayer and localPlayer.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?

@@ -19,6 +19,12 @@ test("lights reach further the larger their range; emitters use one distance", f
 	assert(Rules.CullDistance(false, 99) == cfg.EmitterCullDistance, "emitters ignore reach")
 end)
 
+test("beams reach further the longer they are", function()
+	assert(Rules.BeamCullDistance(0) == cfg.BeamCullDistance)
+	assert(Rules.BeamCullDistance(47) == cfg.BeamCullDistance + 47, "causeway arc")
+	assert(Rules.BeamCullDistance(-3) == cfg.BeamCullDistance, "negative length clamps to 0")
+end)
+
 test("a running effect stays on up to its cull distance and turns off past it", function()
 	assert(Rules.ShouldRun(100, 200, true))
 	assert(Rules.ShouldRun(200, 200, true))

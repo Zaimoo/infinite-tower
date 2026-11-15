@@ -44,6 +44,7 @@ task.spawn(function()
 			if profile then
 				dm.EnsureFacilities(profile)
 				local dirty = false
+				local comaCleared = false
 
 				-- 1. Coma clearing and passive stamina recovery (the Infirmary was removed in Phase 4)
 				for _, hero in pairs(profile.Heroes) do
@@ -54,6 +55,7 @@ task.spawn(function()
 						hero.ComaUntilTimestamp = 0
 						hero.CurrentStamina = 50.0
 						dirty = true
+						comaCleared = true
 					end
 
 					-- Benched heroes and facility workers recover passively
@@ -87,8 +89,13 @@ task.spawn(function()
 					end
 				end
 
-				if dirty or (tickCount % 3 == 0) then
+				-- A hero leaving a coma changes the squad, so it takes the full sync. Stamina and passive
+				-- Gold only move numbers: they go out as a light delta every 3 s, with a full sync every
+				-- 30 s as a safety net.
+				if comaCleared or (tickCount % 30 == 0) then
 					dm.SyncProfile(player)
+				elseif dirty or (tickCount % 3 == 0) then
+					dm.SyncLight(player)
 				end
 			end
 		end

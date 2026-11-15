@@ -516,8 +516,9 @@ function TowerAtmosphereController.Start()
 		end)
 	end
 
-	-- Subtle 60 FPS atmospheric crimson window glow pulse (paused when player is inside a tower floor)
-	RunService.RenderStepped:Connect(function()
+	-- Subtle 60 FPS atmospheric crimson window glow pulse (paused when player is inside a tower floor).
+	-- Heartbeat, not RenderStepped: nothing here tracks the camera or a moving character, so it need not hold up the frame
+	RunService.Heartbeat:Connect(function()
 		if HubPresence.InTower() or #WindowLights == 0 then
 			return
 		end

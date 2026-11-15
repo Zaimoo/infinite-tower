@@ -1,4 +1,5 @@
 --!strict
+--!native
 -- One clip player for every tower enemy rig (docs/mob-reanimation-plan.md §3.1, step 1): the tower renderer
 -- (EnemyAnimationController), the hub patrol and the Facility preview all drive their rigs through it.
 --
