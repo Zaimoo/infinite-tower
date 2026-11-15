@@ -253,18 +253,62 @@ local function createMeshPartFromId(meshId: string): MeshPart?
 	return nil
 end
 
+local function alignTemplateToSpecGround(templateModel: Model, specs: { BundledMeshSpec })
+	local refSpec = specs[1]
+	if not refSpec then
+		return
+	end
+	local refPart = templateModel:FindFirstChild(refSpec.Name, true)
+	if not (refPart and refPart:IsA("BasePart")) then
+		return
+	end
+	local pivotY = templateModel:GetPivot().Position.Y
+	local deltaY = refSpec.Pos.Y - (refPart.Position.Y - pivotY)
+	if math.abs(deltaY) <= 0.05 then
+		return
+	end
+	local offset = Vector3.new(0, deltaY, 0)
+	for _, desc in ipairs(templateModel:GetDescendants()) do
+		if desc:IsA("BasePart") then
+			desc.CFrame = desc.CFrame + offset
+		end
+	end
+end
+
+local function isFacilityPrefabAligned(templateModel: Model, specs: { BundledMeshSpec }): boolean
+	local refSpec = specs[1]
+	if not refSpec then
+		return true
+	end
+	local refPart = templateModel:FindFirstChild(refSpec.Name, true)
+	if not (refPart and refPart:IsA("BasePart")) then
+		return false
+	end
+	local root = templateModel:FindFirstChild("PrimaryRoot")
+	local groundY = if root and root:IsA("BasePart")
+		then root.Position.Y - root.Size.Y * 0.5
+		else templateModel:GetPivot().Position.Y
+	return math.abs(refSpec.Pos.Y - (refPart.Position.Y - groundY)) <= 0.05
+end
+
 local function resolveBundledMeshTemplate(templateName: string, specs: { BundledMeshSpec }): Model?
 	local function findValidTemplate(): Model?
 		local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
 		local customMeshes = assetsFolder and assetsFolder:FindFirstChild("CustomFacilityMeshes")
 		local imported = customMeshes and customMeshes:FindFirstChild(templateName)
 		if imported and imported:IsA("Model") and imported:FindFirstChildWhichIsA("MeshPart", true) then
+			-- Normalize older sunken imports in-place (preserving CFrame.identity pivot semantics).
+			if not imported:FindFirstChild("PrimaryRoot") then
+				alignTemplateToSpecGround(imported, specs)
+			end
 			return imported
 		end
 		local plotFacs = assetsFolder and assetsFolder:FindFirstChild("PlotFacilities")
 		local candidate = plotFacs and plotFacs:FindFirstChild(templateName)
 		if candidate and candidate:IsA("Model") and candidate:FindFirstChildWhichIsA("MeshPart", true) then
-			return candidate
+			if isFacilityPrefabAligned(candidate, specs) then
+				return candidate
+			end
 		end
 		return nil
 	end
@@ -1480,20 +1524,20 @@ local TG_FLOOR_NM = "rbxassetid://128264443006045"
 local TG_FLOOR_RM = "rbxassetid://86555471679808"
 
 local TRAINING_GROUND_MESHES: { BundledMeshSpec } = {
-	{ Name = "Arena_Floor", MeshId = "rbxassetid://107205650672236", Size = V(48.500000, 0.080008, 40.750000), Pos = V(0, -0.460001, 7.575134), PivotOffset = V(0, -0.0400, 7.5750), ColorMap = TG_FLOOR_CM, NormalMap = TG_FLOOR_NM, RoughnessMap = TG_FLOOR_RM, CastShadow = false },
-	{ Name = "Entrance_Archway", MeshId = "rbxassetid://86958939031314", Size = V(13.612968, 11.690001, 4.458000), Pos = V(0, 5.345001, -12.028931), PivotOffset = V(0, -5.8450, -12.0290), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Perimeter_Fence", MeshId = "rbxassetid://133116725826364", Size = V(48.079998, 3.200007, 39.980000), Pos = V(0, 1.099998, 7.750061), PivotOffset = V(0, -1.6000, 7.7500), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Training_Props", MeshId = "rbxassetid://101080363217091", Size = V(44.995201, 5.732375, 36.785378), Pos = V(0, 2.341270, 5.185791), PivotOffset = V(0, -2.8413, 5.1857), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_1_Base", MeshId = "rbxassetid://99125394433707", Size = V(2.299000, 1.190000, 2.299000), Pos = V(-8.500000, 0.175000, -1.500000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_1_Body", MeshId = "rbxassetid://86192274983173", Size = V(1.955179, 4.465000, 2.852854), Pos = V(-8.500000, 2.957500, -1.500000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_2_Base", MeshId = "rbxassetid://140129259261171", Size = V(2.360000, 1.190000, 2.360000), Pos = V(0, 0.174999, 2.000000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_2_Body", MeshId = "rbxassetid://117182456500032", Size = V(3.150000, 4.465000, 1.673859), Pos = V(0, 2.957500, 2.000000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_3_Base", MeshId = "rbxassetid://132106594732171", Size = V(2.299000, 1.190000, 2.299000), Pos = V(8.500000, 0.175000, -1.500000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_3_Body", MeshId = "rbxassetid://87751998200386", Size = V(1.955179, 4.465000, 2.852854), Pos = V(8.500000, 2.957500, -1.500000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_4_Base", MeshId = "rbxassetid://74666535097921", Size = V(2.242216, 1.190000, 2.242216), Pos = V(-6.200000, 0.175000, 11.200000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_4_Body", MeshId = "rbxassetid://113994151162337", Size = V(2.964515, 4.465000, 1.739178), Pos = V(-6.200000, 2.957500, 11.200000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_5_Base", MeshId = "rbxassetid://123098187620011", Size = V(2.242216, 1.190000, 2.242216), Pos = V(6.200000, 0.175000, 11.200000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
-	{ Name = "Dummy_5_Body", MeshId = "rbxassetid://77160486416462", Size = V(2.964515, 4.465000, 1.739178), Pos = V(6.200000, 2.957500, 11.200000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Arena_Floor", MeshId = "rbxassetid://107205650672236", Size = V(48.500000, 0.080008, 40.750000), Pos = V(0, 0.040000, 7.575134), PivotOffset = V(0, -0.0400, 7.5750), ColorMap = TG_FLOOR_CM, NormalMap = TG_FLOOR_NM, RoughnessMap = TG_FLOOR_RM, CastShadow = false },
+	{ Name = "Entrance_Archway", MeshId = "rbxassetid://86958939031314", Size = V(13.612968, 11.690001, 4.458000), Pos = V(0, 5.845001, -12.028931), PivotOffset = V(0, -5.8450, -12.0290), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Perimeter_Fence", MeshId = "rbxassetid://133116725826364", Size = V(48.079998, 3.200007, 39.980000), Pos = V(0, 1.599998, 7.750061), PivotOffset = V(0, -1.6000, 7.7500), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Training_Props", MeshId = "rbxassetid://101080363217091", Size = V(44.995201, 5.732375, 36.785378), Pos = V(0, 2.841270, 5.185791), PivotOffset = V(0, -2.8413, 5.1857), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_1_Base", MeshId = "rbxassetid://99125394433707", Size = V(2.299000, 1.190000, 2.299000), Pos = V(-8.500000, 0.675000, -1.500000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_1_Body", MeshId = "rbxassetid://86192274983173", Size = V(1.955179, 4.465000, 2.852854), Pos = V(-8.500000, 3.457500, -1.500000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_2_Base", MeshId = "rbxassetid://140129259261171", Size = V(2.360000, 1.190000, 2.360000), Pos = V(0, 0.674999, 2.000000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_2_Body", MeshId = "rbxassetid://117182456500032", Size = V(3.150000, 4.465000, 1.673859), Pos = V(0, 3.457500, 2.000000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_3_Base", MeshId = "rbxassetid://132106594732171", Size = V(2.299000, 1.190000, 2.299000), Pos = V(8.500000, 0.675000, -1.500000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_3_Body", MeshId = "rbxassetid://87751998200386", Size = V(1.955179, 4.465000, 2.852854), Pos = V(8.500000, 3.457500, -1.500000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_4_Base", MeshId = "rbxassetid://74666535097921", Size = V(2.242216, 1.190000, 2.242216), Pos = V(-6.200000, 0.675000, 11.200000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_4_Body", MeshId = "rbxassetid://113994151162337", Size = V(2.964515, 4.465000, 1.739178), Pos = V(-6.200000, 3.457500, 11.200000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_5_Base", MeshId = "rbxassetid://123098187620011", Size = V(2.242216, 1.190000, 2.242216), Pos = V(6.200000, 0.675000, 11.200000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_5_Body", MeshId = "rbxassetid://77160486416462", Size = V(2.964515, 4.465000, 1.739178), Pos = V(6.200000, 3.457500, 11.200000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
 }
 
 function Arch.BuildTrainingGrounds(folder: Instance, centerCF: CFrame): Part
@@ -1746,7 +1790,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 14 then
+	if existing and existing:GetAttribute("PrefabVersion") == 15 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1755,7 +1799,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 14)
+	prefabs:SetAttribute("PrefabVersion", 15)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")
