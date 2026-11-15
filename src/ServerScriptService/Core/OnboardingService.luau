@@ -80,7 +80,14 @@ function OnboardingService.ClaimMoment(player: Player, fact: string): boolean
 	return true
 end
 
--- The guide chain a profile plays ("v3" control, "v4"), from its arm.
+-- The Rival Master lesson is due (A7): the arm has it, Floor 1 is cleared, nothing stolen yet.
+function OnboardingService.RivalLessonDue(profile: any): boolean
+	local guide = profile.Onboarding and profile.Onboarding.Guide
+	if not guide or not guide.Enabled or guide.Facts.Steal or not guide.Facts.Clear then return false end
+	return GuideConfig.Arms[OnboardingService.ArmOf(profile)].Rival == true
+end
+
+-- The guide chain a profile plays ("v3" control, "v4", "v5"), from its arm.
 function OnboardingService.ChainOf(profile: any): string
 	return GuideConfig.Arms[OnboardingService.ArmOf(profile)].Chain
 end
@@ -267,6 +274,14 @@ function OnboardingService.EnsureState(profile: any)
 			facts.Bank = true
 		end
 	end
+	if guide.Enabled and ((guide :: any).Version or 0) < 5 then
+		-- v5 chain (the Rival Master lesson): a player past Floor 2 has met relics and bounties
+		-- already. Credited lessons pay nothing. Runs once per profile.
+		(guide :: any).Version = 5
+		if (profile.HighestClearedFloor or 0) >= 2 then
+			guide.Facts.Steal, guide.Facts.Duel, guide.Facts.Haul, guide.Facts.Climb = true, true, true, true
+		end
+	end
 	if guide.Enabled then Onboarding.UpdateAccess(profile, Onboarding.HasReadySquad(profile, os.time()), guide.Facts) end
 end
 
@@ -353,9 +368,12 @@ function OnboardingService.Push(player: Player, force: boolean?)
 		local combat = _G.CombatSimulation
 		local raid = _G.RaidService
 		local relics = _G.RelicService
+		local rivalLesson = _G.RivalLesson
 		step = GuideLessons.Select(profile, {
 			Chain = chainId,
 			OwnRelic = floor > 0 and not carrying and relics ~= nil and relics.HasOwnRelicOnFloor ~= nil and relics.HasOwnRelicOnFloor(player),
+			RivalRelic = rivalLesson ~= nil and rivalLesson.RelicWaiting(player),
+			RivalActive = rivalLesson ~= nil and rivalLesson.Hunting(player),
 			Floor = floor,
 			Carrying = carrying,
 			TravelSealed = carrying and floor > 0 and combat ~= nil and combat.IsBossLocked ~= nil and combat.IsBossLocked(player, floor),
@@ -396,7 +414,8 @@ function OnboardingService.Push(player: Player, force: boolean?)
 end
 
 local GUIDE_EVENTS: { [string]: string } = {
-	HeroSummoned = "Summon", LimitedSummoned = "Limited", SquadDeployed = "Squad", ArtifactSummoned = "Roll", ArtifactUpgraded = "Upgrade",
+	HeroSummoned = "Summon", LimitedSummoned = "Limited", SquadDeployed = "Squad",
+	RelicStolen = "Steal", DuelWon = "Duel", DuelLesson = "Duel", ArtifactSummoned = "Roll", ArtifactUpgraded = "Upgrade",
 	ArtifactEquipped = "Equip", TreeNodeUnlocked = "Tree", RelicBanked = "Bank", RaidEntered = "Raid",
 }
 local PIT_EVENTS: { [string]: string } = { SYNTHESIS = "Synthesis", PROMOTION = "Promotion" }
@@ -423,6 +442,8 @@ function OnboardingService.Report(player: Player, eventName: string, detail: (st
 	if eventName == "FloorVisited" and detail == 1 then id = "Visit" end
 	if eventName == "TowerReturned" and guide.Facts.Clear then id = "Return" end
 	if eventName == "PitUsed" and type(detail) == "string" then id = PIT_EVENTS[detail] end
+	-- A stolen (or duel-won) relic banked after the first bank completes the Haul lesson.
+	if eventName == "RelicBanked" and detail == "Stolen" and guide.Facts.Bank then id = "Haul" end
 	if eventName == "FacilityAssigned" and type(detail) == "string" and WORKERS[detail] then id = detail end
 	local chainId = OnboardingService.ChainOf(profile)
 	local first = id ~= nil and mark(player, guide.Facts, id, if guide.Enabled then chainId else "legacy")

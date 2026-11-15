@@ -40,6 +40,9 @@ export type Contest = {
 	-- "CARRY": a carry challenge. The carrier defends as the thief side (B) without being a thief:
 	-- no [Loot Thief] flag and no bounty. nil: a theft's bounty.
 	Kind: "CARRY"?,
+	-- A Rival Master lesson's theft (first-session-and-social-plan.md A7): private to the thief. No
+	-- public bounty toast or Claim Bounty prompt, and only the Rival may duel for it.
+	Training: boolean?,
 }
 
 local SQRT3 = math.sqrt(3)
@@ -163,7 +166,7 @@ end
 export type CarryCheck = {
 	ChallengerUserId: number,
 	CarrierUserId: number,
-	Drop: any, -- the carried relic's record (LockedOut, DuelLocked, ProtectedForUserId)
+	Drop: any, -- the carried relic's record (LockedOut, DuelLocked, ProtectedForUserId, TrainingFor)
 	SameFloor: boolean,
 	FloorId: number,
 	ChallengerCarrying: boolean,
@@ -199,6 +202,8 @@ function LootDuel.CanChallengeCarrier(c: CarryCheck): (boolean, string?)
 		return false, "Hands full|Bank or drop your relic first"
 	elseif c.Drop.ProtectedForUserId then
 		return false, "Protected|A new Master's first relic"
+	elseif c.Drop.TrainingFor then
+		return false, "Protected|A Rival lesson's relic"
 	elseif c.Drop.DuelLocked then
 		return false, "Already contested|A duel for it is running"
 	elseif c.Drop.LockedOut and c.Drop.LockedOut[c.ChallengerUserId] then

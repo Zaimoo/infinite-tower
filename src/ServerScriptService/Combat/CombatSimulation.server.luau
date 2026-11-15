@@ -278,6 +278,7 @@ local NextRivalUserId = -1000
 type Rival = {
 	IsRival: boolean, UserId: number, DisplayName: string, Name: string, Parent: Instance, Character: Model?,
 	Position: Vector3, FloorId: number, RoomGeneration: number, Heroes: { SimHero }, Gone: boolean?,
+	MaxFloorReached: number, -- stands in for a profile's, in the duel's attunement cap
 }
 local function isRival(owner: any): boolean
 	return type(owner) == "table" and owner.IsRival == true
@@ -944,9 +945,20 @@ local function applyThiefTag(player: Player)
 	if not char then return end
 	local flagged = (ThiefFlagUntil[player] or 0) > os.clock()
 	char:SetAttribute("IsLootThief", flagged)
+	-- Only a public bounty carries the Claim Bounty prompt: a Rival lesson's theft is private (A7).
+	local public = false
+	for _, contest in pairs(Contests) do
+		if contest.ThiefUserId == player.UserId and contest.Status == "CONTESTED" and not contest.Training and contest.Kind ~= "CARRY" then
+			public = true
+		end
+	end
 	local root = char:FindFirstChild("HumanoidRootPart")
 	local bountyPrompt = root and root:FindFirstChild("BountyPrompt")
-	if flagged and root and not bountyPrompt then
+	if bountyPrompt and not public then
+		bountyPrompt:Destroy()
+		bountyPrompt = nil
+	end
+	if flagged and public and root and not bountyPrompt then
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "BountyPrompt"
 		prompt.ActionText = "Claim Bounty"
@@ -1029,14 +1041,17 @@ registerPickup = function(player: Player, dropId: number, killerUserId: number, 
 		if previousThief then refreshThiefFlag(previousThief) end
 	end
 	local contest = LootDuel.NewContest(dropId, killerUserId, player.UserId, os.clock())
+	local relic = _G.RelicService and _G.RelicService.GetRelic(dropId)
+	contest.Training = relic ~= nil and relic.TrainingFor == player.UserId
 	Contests[dropId] = contest
 	refreshThiefFlag(player)
 
 	local victimPlayer = Players:GetPlayerByUserId(killerUserId)
-	-- The bounty is public: every other Master on the floor can hunt the thief down.
+	-- The bounty is public: every other Master on the floor can hunt the thief down. A Rival
+	-- lesson's bounty is private: only the Rival comes for it.
 	local thiefState = Tower.GetState(player)
 	for _, other in Players:GetPlayers() do
-		if other ~= player and other ~= victimPlayer and Tower.Same(Tower.GetState(other), thiefState) then
+		if not contest.Training and other ~= player and other ~= victimPlayer and Tower.Same(Tower.GetState(other), thiefState) then
 			dm.SendToast(other, string.format("Bounty on %s|Stole %s's %s · Press F nearby", player.DisplayName, killerName, label), "INFO")
 		end
 	end
@@ -1047,8 +1062,13 @@ registerPickup = function(player: Player, dropId: number, killerUserId: number, 
 			Label = label, Seconds = LootDuel.THIEF_FLAG_SECONDS,
 		})
 	end
-	dm.SendToast(player, string.format("You're a Loot Thief|%s's %s · Anyone can duel you for it", killerName, label), "WARN")
+	if contest.Training then
+		dm.SendToast(player, string.format("You're a Loot Thief|%s is coming for it", killerName), "WARN")
+	else
+		dm.SendToast(player, string.format("You're a Loot Thief|%s's %s · Anyone can duel you for it", killerName, label), "WARN")
+	end
 	if dm.ReportMilestone then dm.ReportMilestone(player, "FirstTheft") end
+	if dm.ReportProgress then dm.ReportProgress(player, "RelicStolen") end -- the guide's Steal step
 	return true
 end
 
@@ -1056,7 +1076,9 @@ end
 -- Contests are keyed by relic id.
 function CombatSimulation.ReportRelicPickup(player: Player, relicId: number, killerUserId: number?, label: string): boolean
 	local killer = killerUserId and Players:GetPlayerByUserId(killerUserId)
-	return registerPickup(player, relicId, killerUserId or 0, if killer then killer.DisplayName else "another Master", label)
+	local relic = _G.RelicService and _G.RelicService.GetRelic(relicId)
+	local name = if killer then killer.DisplayName elseif relic and relic.KillerName then relic.KillerName else "another Master"
+	return registerPickup(player, relicId, killerUserId or 0, name, label)
 end
 
 -- 5. MOB DEATH & RELIC DROPS
@@ -1254,8 +1276,10 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 
 	local duelCap = math.huge
 	for _, side in { "A", "B" } :: { LootDuel.Side } do
-		local sideProfile = getDataManager().GetProfile(duelSquad(duel, side).Player)
-		duelCap = math.min(duelCap, StatFormulas.GetAttunementCap(sideProfile and sideProfile.MaxFloorReached))
+		local squad = duelSquad(duel, side)
+		local sideProfile = if squad.Rival then nil else getDataManager().GetProfile(squad.Player)
+		local maxFloor = if squad.Rival then (squad.Player :: any).MaxFloorReached else sideProfile and sideProfile.MaxFloorReached
+		duelCap = math.min(duelCap, StatFormulas.GetAttunementCap(maxFloor))
 	end
 
 	local frame = DuelArena.Frame(center, forward)
@@ -1485,10 +1509,26 @@ local function applyDuelOutcome(duel: Duel)
 			CarryCooldownUntil[challenger] = now + (if winner == challenger then LootDuel.CARRY_WIN_COOLDOWN else LootDuel.CARRY_LOSS_COOLDOWN)
 		end
 	end
+	-- A Rival lesson never ends on a loss (A7): the Rival lets the relic go and the thief keeps it,
+	-- shielded like any duel's winner.
+	if contest.Training and duelSquad(duel, duel.Winner or "B").Rival and loser.Parent == Players then
+		if record then
+			record.KillerUserId, record.KillerName = loser.UserId, loser.DisplayName
+			if record.LockedOut then record.LockedOut[loser.UserId] = nil end
+		end
+		CarryShieldUntil[loser] = now + LootDuel.CARRY_SHIELD_SECONDS
+		dm.SendToast(loser, "Rival lets it go|The relic is yours · Bank it", "INFO")
+		if dm.ReportProgress then dm.ReportProgress(loser, "DuelLesson") end
+		local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
+		if thief then refreshThiefFlag(thief) end
+		closeContestPrompt(contest)
+		return
+	end
 	local hunterLost = loser.UserId ~= contest.ThiefUserId
 	if winner.Parent == Players then
 		dm.SendToast(winner, string.format("Duel won|%s's drop is yours", loser.DisplayName), "SUCCESS")
 		if dm.ReportMilestone then dm.ReportMilestone(winner, "DuelWon") end
+		if dm.ReportProgress then dm.ReportProgress(winner, "DuelWon") end -- the guide's Duel step
 	end
 	if loser.Parent == Players then
 		dm.SendToast(loser, if hunterLost
@@ -1730,7 +1770,7 @@ refreshStealPrompt = function(player: Player, now: number)
 		return
 	end
 	local floorId = Tower.GetState(player).FloorId
-	local usable = floorId >= 1 and floorId <= 50 and not relic.ProtectedForUserId and not relic.DuelLocked
+	local usable = floorId >= 1 and floorId <= 50 and not relic.ProtectedForUserId and not relic.TrainingFor and not relic.DuelLocked
 		and DuelByPlayer[player] == nil and (CarryShieldUntil[player] or 0) <= now and (ThiefFlagUntil[player] or 0) <= now
 	if not prompt then
 		local created = Instance.new("ProximityPrompt")
@@ -1766,7 +1806,7 @@ challengeThief = function(hunter: Player, thief: Player)
 	-- A thief with several open bounties is challenged for their newest steal.
 	local chosen: LootDuel.Contest? = nil
 	for _, contest in pairs(Contests) do
-		if contest.ThiefUserId == thief.UserId and contest.Status == "CONTESTED" and contest.Kind ~= "CARRY"
+		if contest.ThiefUserId == thief.UserId and contest.Status == "CONTESTED" and contest.Kind ~= "CARRY" and not contest.Training
 			and (not chosen or contest.ExpiresAt > chosen.ExpiresAt) then
 			chosen = contest
 		end
@@ -3577,17 +3617,27 @@ local function isBossLocked(player: Player, floorId: number): boolean
 	return m ~= nil and not m.IsSquadWiped
 end
 
+local addRivalHeroes: (rival: Rival, roster: { { TemplateId: string, Level: number? } }) -> ()
 -- A server-run rival Master (A7) standing at `position`, with a squad of fresh 1★ heroes. Its
 -- heroes are live sim heroes (ActiveHeroesByNetId), so they replicate and render like any other;
 -- they are removed when its duel ends (finishDuel) or by dismissRival.
-local function newRival(name: string, position: Vector3, floorId: number, roomGeneration: number, roster: { { TemplateId: string, Level: number? } }): Rival
+local function newRival(name: string, position: Vector3, floorId: number, roomGeneration: number, roster: { { TemplateId: string, Level: number? } }, maxFloor: number?): Rival
 	local rival: Rival = {
 		IsRival = true, UserId = NextRivalUserId, DisplayName = name, Name = name, Parent = RivalHolder, Character = nil,
-		Position = position, FloorId = floorId, RoomGeneration = roomGeneration, Heroes = {},
+		Position = position, FloorId = floorId, RoomGeneration = roomGeneration, Heroes = {}, MaxFloorReached = maxFloor or floorId,
 	}
 	NextRivalUserId -= 1
+	addRivalHeroes(rival, roster)
+	return rival
+end
+
+-- Gives a rival its squad. A rival's heroes are only stepped inside a duel (stepDuelHero), so
+-- arm it right before StartRivalDuel; a rival waiting for its lesson has none.
+addRivalHeroes = function(rival: Rival, roster: { { TemplateId: string, Level: number? } })
 	local dm = getDataManager()
-	for slot, spec in roster do
+	local floorId, roomGeneration, position = rival.FloorId, rival.RoomGeneration, rival.Position
+	for _, spec in roster do
+		local slot = #rival.Heroes + 1
 		local uuid, heroData = dm.CreateHeroFromSeed(spec.TemplateId, 1.0)
 		heroData.Level = spec.Level or 1
 		local effATK, effHP, _, effInterval = StatFormulas.GetEffectiveCombatStats(heroData, false, false, nil, 1, 1)
@@ -3609,7 +3659,6 @@ local function newRival(name: string, position: Vector3, floorId: number, roomGe
 		table.insert(rival.Heroes, sim)
 	end
 	broadcastMetadata(nil)
-	return rival
 end
 
 local function dismissRival(rival: Rival)
@@ -3644,6 +3693,17 @@ function CombatSimulation.DebugRivalDuel(player: Player, roster: { { TemplateId:
 	local ok, reason = startDuel(rival :: any, Contests[relic.RelicId])
 	if not ok then dismissRival(rival) end
 	return ok, reason
+end
+
+-- The Rival Master lesson (RivalLesson.server.luau) drives rivals through these.
+CombatSimulation.CreateRival = newRival
+CombatSimulation.ArmRival = function(rival: any, roster: { { TemplateId: string, Level: number? } })
+	if isRival(rival) then addRivalHeroes(rival, roster) end
+end
+CombatSimulation.DismissRival = dismissRival
+CombatSimulation.StartRivalDuel = function(rival: any, contest: LootDuel.Contest?): (boolean, string?)
+	if not isRival(rival) then return false, "Not a rival" end
+	return startDuel(rival, contest)
 end
 
 CombatSimulation.Contests = Contests

@@ -24,8 +24,10 @@ export type Context = {
 	TravelSealed: boolean?,
 	Ready: boolean,
 	CanRaid: boolean,
-	Chain: string?, -- "v3" (control) or "v4"; nil means v3
+	Chain: string?, -- "v3" (control), "v4" or "v5" (v4 with the Rival lesson); nil means v3
 	OwnRelic: boolean?, -- a relic this player owns lies on their floor, waiting to be carried
+	RivalRelic: boolean?, -- the Rival lesson's relic lies on this player's floor (RivalLesson)
+	RivalActive: boolean?, -- the Rival is coming for its relic, or duelling for it
 	Now: number,
 	PitLesson: (any, boolean, boolean) -> string?,
 }
@@ -127,7 +129,8 @@ local function selectLesson(profile: any, context: Context): Lesson?
 	local unlocks = profile.Unlocks or {}
 	local now = context.Now
 	local atHub = context.Floor == 0
-	local v4 = context.Chain == "v4"
+	local v4 = context.Chain == "v4" or context.Chain == "v5" -- v5 is v4 plus the Rival lesson
+	local rival = context.Chain == "v5"
 	local function open(lesson: Lesson): boolean
 		return not facts[lesson.Id]
 	end
@@ -136,6 +139,13 @@ local function selectLesson(profile: any, context: Context): Lesson?
 		return open(lesson) and (guide.Snoozed[lesson.Id] or 0) <= now
 	end
 
+	-- v5: the relic won from the Rival goes home too.
+	if context.Carrying and rival and facts.Duel and not context.RivalActive and available(Config.Haul) then
+		if context.TravelSealed then
+			return with(Config.Haul, { Description = "Bank it on this floor." })
+		end
+		return Config.Haul
+	end
 	-- Bank is a core step in v4, so Later does not put it off there.
 	if context.Carrying and (if v4 then open(Config.Bank) else available(Config.Bank)) then
 		if context.TravelSealed then
@@ -162,6 +172,16 @@ local function selectLesson(profile: any, context: Context): Lesson?
 	-- floor (sealed for a few seconds). With no relic to carry the step is passed over.
 	if v4 and facts.Clear and open(Config.Bank) and context.Floor > 0 and context.OwnRelic then
 		return with(Config.Bank, { Description = "Pick up your relic, then carry it to a sanctuary." })
+	end
+	-- v5: the Rival Master lesson. Its relic appears on the player's first Floor 2-4 visit after
+	-- the first clear; until then, on Floor 1, point the way up (put off with Later).
+	if rival and facts.Clear then
+		if open(Config.Steal) then
+			if context.RivalRelic then return Config.Steal end
+			if context.Floor == 1 and not context.Carrying and available(Config.Climb) then return Config.Climb end
+		elseif open(Config.Duel) and context.RivalActive then
+			return Config.Duel
+		end
 	end
 	if open(Config.Return) and context.Floor > 0 and context.Floor <= 50 then return Config.Return end
 	if not atHub then return nil end

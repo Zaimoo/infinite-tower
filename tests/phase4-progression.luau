@@ -467,6 +467,65 @@ test("Guide v4: limited banner, squad, and the first relic is a core step", func
 	assert(conditional.Id == "Bank" and not conditional.Core and conditional.Reward == nil)
 end)
 
+test("Guide v5: the Rival Master lesson after the first bank", function()
+	local GuideLessons = require(nodes["ServerScriptService.Core.GuideLessons"])
+	local GuideConfig = require(nodes["ReplicatedStorage.Shared.Config.GuideConfig"])
+	local chain = GuideConfig.Chains.v5
+	assert(chain[6] == "Bank" and chain[7] == "Steal" and chain[8] == "Duel" and chain[9] == "Return", "Steal and Duel follow the first bank")
+	for _, id in chain do
+		local lesson = GuideConfig[id]
+		assert(#lesson.Title <= 24 and #lesson.Description <= 36, id .. " copy stays short")
+	end
+	for _, id in { "Climb", "Haul" } do
+		assert(#GuideConfig[id].Title <= 24 and #GuideConfig[id].Description <= 36, id .. " copy stays short")
+	end
+	assert(GuideConfig.Arms.v2r.Chain == "v5" and GuideConfig.Arms.v2r.Rival and GuideConfig.Arms.v2r.Showcase)
+	assert(not GuideConfig.Arms.v2.Rival and not GuideConfig.Arms.control.Rival, "only v2r plays the Rival lesson")
+	assert(GuideConfig.Arms[GuideConfig.DefaultArm] ~= nil, "the default arm exists")
+	assert(GuideConfig.RewardFor("v5", "Duel").Gems == 100 and GuideConfig.RewardFor("v5", "Steal") == nil)
+	assert(GuideConfig.RewardFor("v5", "Bank").Gems == 200 and GuideConfig.RewardFor("v5", "Equip") == nil, "v5 keeps v4's rewards")
+
+	local state = Onboarding.NewState()
+	local guide = Onboarding.EnsureGuide(state)
+	local facts = guide.Facts
+	for _, id in { "Summon", "Limited", "Squad", "Visit", "Clear", "Bank" } do facts[id] = true end
+	local profile: any = {
+		Onboarding = state, Unlocks = { Forge = true }, HighestClearedFloor = 1, MaxFloorReached = 2,
+		Currencies = { Gold = 0, Gems = 0 },
+		Heroes = { lead = { UUID = "lead", Archetype = "Marksman", Assignment = "SQUAD_SLOT_1", Stars = 1, Level = 1 } },
+		Artifacts = {}, Facilities = { GuardPost = { Level = 1, AssignedHeroUUIDs = {} } }, FortressTree = FortressTree.DefaultTree(),
+	}
+	local context: any = { Chain = "v5", Floor = 1, Ready = true, Carrying = false, CanRaid = false, Now = 100, PitLesson = function() return nil end }
+	local function nextLesson(): any
+		return GuideLessons.Select(profile, context)
+	end
+	-- Floor 1 cleared and banked: point the way up, a lesson that can be put off.
+	local climb = nextLesson()
+	assert(climb.Id == "Climb" and not climb.Core, "Climb points the way up")
+	guide.Snoozed.Climb = context.Now + 900
+	assert(nextLesson().Id == "Return", "with Climb put off, Return is next")
+	guide.Snoozed.Climb = nil
+	-- Floor 2: until the Rival's relic is down, nothing new; then Steal (core).
+	context.Floor = 2
+	assert(nextLesson().Id == "Return", "no relic yet: the Steal step is passed over")
+	context.RivalRelic = true
+	local steal = nextLesson()
+	assert(steal.Id == "Steal" and steal.Core and steal.Index == 7)
+	-- Stolen: the Rival hunts, Duel (core, 100 Gems) while it is on its way or fighting.
+	facts.Steal, context.RivalRelic, context.RivalActive, context.Carrying = true, false, true, true
+	local duel = nextLesson()
+	assert(duel.Id == "Duel" and duel.Core and duel.Reward.Gems == 100, "Duel shows while the Rival is coming, even while carrying")
+	-- Won: bank the stolen relic (Haul), then Return.
+	facts.Duel, context.RivalActive = true, false
+	assert(nextLesson().Id == "Haul", "the stolen relic goes home")
+	facts.Haul, context.Carrying = true, false
+	assert(nextLesson().Id == "Return")
+	-- The v4 chain never shows the Rival lesson.
+	facts.Steal, facts.Duel = nil, nil
+	context.Chain, context.Floor, context.RivalRelic = "v4", 2, true
+	assert(nextLesson().Id == "Return", "v4 has no Steal step")
+end)
+
 test("Phase 5: Squad Power sums round(10 x DPS + Health) over deployed heroes only", function()
 	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1, Assignment = "SQUAD_SLOT_1" }
 	local jenna = { TemplateId = "hero_jenna", Stars = 1, Level = 1, QualityScalar = 1, Assignment = "SQUAD_SLOT_2", ComaUntilTimestamp = os.time() + 60 }

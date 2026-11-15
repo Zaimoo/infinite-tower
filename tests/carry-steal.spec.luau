@@ -71,6 +71,7 @@ test("carry: guardrails on who may challenge, and where", function()
 	refused({ FloorId = 60 }, "Out of reach") -- raid arena
 	refused({ ChallengerCarrying = true }, "Hands full")
 	refused({ Drop = { ProtectedForUserId = CARRIER } }, "Protected")
+	refused({ Drop = { TrainingFor = CARRIER } }, "Protected") -- the Rival Master lesson's relic (A7)
 	refused({ Drop = { DuelLocked = true } }, "Already contested")
 	refused({ ChallengerSafe = true }, "Sanctuary")
 	refused({ CarrierSafe = true }, "Sanctuary")

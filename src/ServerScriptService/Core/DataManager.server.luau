@@ -2147,6 +2147,12 @@ function DataManager.ReportProgress(player: Player, eventName: string, detail: (
 	OnboardingService.Report(player, eventName, detail)
 end
 
+-- The Rival Master lesson is due for this player (RivalLesson.server.luau, A7).
+function DataManager.RivalLessonDue(player: Player): boolean
+	local profile = ActiveProfiles[player]
+	return profile ~= nil and OnboardingService.RivalLessonDue(profile)
+end
+
 -- A one-time first-session moment (the first Ultimate, the first boss): true once per profile.
 function DataManager.ClaimGuideMoment(player: Player, fact: string): boolean
 	return OnboardingService.ClaimMoment(player, fact)

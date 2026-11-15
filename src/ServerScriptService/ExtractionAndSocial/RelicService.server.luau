@@ -59,6 +59,9 @@ export type ActiveRelic = {
 	-- A new Master's first relic (their first Floor 1 clear): nobody else may carry it, so it can't be
 	-- stolen, for as long as it exists. Docs: first-session-and-social-plan.md A4.
 	ProtectedForUserId: number?,
+	-- A Rival Master lesson's relic (A7): only this player may take it, and taking it opens a
+	-- private, training bounty (CombatSimulation registerPickup).
+	TrainingFor: number?,
 	LockedOut: { [number]: boolean }?, -- duel losers, for the relic's lifetime
 	DuelLocked: boolean?, -- nobody may pick it up while its duel runs
 }
@@ -230,6 +233,10 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	end
 	if relic.ProtectedForUserId and relic.ProtectedForUserId ~= player.UserId then
 		getDataManager().SendToast(player, "Protected relic|A new Master's first relic", "WARN")
+		return false
+	end
+	if relic.TrainingFor and relic.TrainingFor ~= player.UserId then
+		getDataManager().SendToast(player, "Not yours|A rival's lesson for another Master", "WARN")
 		return false
 	end
 	local allowed, denial = LootDuel.CanPickUp(relic, player.UserId)
@@ -451,6 +458,14 @@ local function destroyRelicInstance(relic: ActiveRelic)
 		relic.Part:Destroy()
 	end
 	ActiveRelics[relic.RelicId] = nil
+end
+
+-- Removes a relic that lies on the ground (an abandoned Rival lesson). Carried relics stay.
+function RelicService.RemoveRelic(relicId: number): boolean
+	local relic = ActiveRelics[relicId]
+	if not relic or relic.Carrier then return false end
+	destroyRelicInstance(relic) -- as a natural despawn: clients drop the visual with the part
+	return true
 end
 
 local function extractAtSanctuary(carrier: Player, floorOnly: boolean?)

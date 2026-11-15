@@ -32,6 +32,9 @@ local Lessons: { [string]: Lesson } = {
 	-- Core chain ---------------------------------------------------------------------------------
 	Summon = lesson("Summon", "Summon a hero", "Go to the Summoning Altar.", "Summon here", "Summoning", { Gems = 200 }),
 	Limited = lesson("Limited", "Try the limited banner", "Pull once on A Star's Arrival.", "Summon once", "Summoning", { Gems = 200 }),
+	-- The Rival Master lesson (v5, first-session-and-social-plan.md A7).
+	Steal = lesson("Steal", "Steal a relic", "Take the Rival's relic.", nil, nil),
+	Duel = lesson("Duel", "Win the duel", "The Rival wants it back.", nil, nil, { Gems = 100 }),
 	Squad = lesson("Squad", "Set your squad", "Open Squad and place a hero.", "Pick a hero", "Squad"),
 	Visit = lesson("Visit", "Enter the Tower", "Go to Floor 1.", "Choose Floor 1", "Tower"),
 	Clear = lesson("Clear", "Clear Floor 1", "Beat the enemies, then the boss.", nil, nil, { Gold = 5000 }),
@@ -52,6 +55,9 @@ local Lessons: { [string]: Lesson } = {
 	TrainingGrounds = lesson("TrainingGrounds", "Staff the Training Grounds", "More squad power.", "Assign a hero", "TrainingGrounds"),
 	GodsBlessing = lesson("GodsBlessing", "Staff God's Blessing", "Better summon luck.", "Assign a hero", "GodsBlessing"),
 	Raid = lesson("Raid", "Join the raid", "Enter the Raid Portal.", nil, "Raid"),
+	-- v5: after Floor 1, before the Rival lesson; and the stolen relic, after the duel.
+	Climb = lesson("Climb", "Climb to Floor 2", "A rival waits there.", nil, nil),
+	Haul = lesson("Haul", "Bank the stolen relic", "Carry it to a sanctuary.", nil, "Bank"),
 }
 
 -- The linear chains, first to last. v3 is the control arm. v4 (docs/first-session-and-social-plan.md
@@ -60,6 +66,8 @@ local Lessons: { [string]: Lesson } = {
 local Chains = table.freeze({
 	v3 = table.freeze({ "Summon", "Squad", "Visit", "Clear", "Return", "Roll", "Equip", "GuardPost", "Tree", "Synthesis" }),
 	v4 = table.freeze({ "Summon", "Limited", "Squad", "Visit", "Clear", "Bank", "Return", "Roll", "Equip", "GuardPost", "Tree", "Synthesis" }),
+	-- v5 adds the Rival Master lesson after the first bank (A7): steal its relic, win the duel.
+	v5 = table.freeze({ "Summon", "Limited", "Squad", "Visit", "Clear", "Bank", "Steal", "Duel", "Return", "Roll", "Equip", "GuardPost", "Tree", "Synthesis" }),
 })
 local Chain = Chains.v3
 
@@ -76,6 +84,7 @@ GuideConfig.Chains = Chains
 -- 200 Gems move to the Bank step, so they arrive in the first five minutes.
 local RewardOverrides: { [string]: { [string]: Reward | false } } = {
 	v4 = { Bank = table.freeze({ Gems = 200 }), Equip = false },
+	v5 = { Bank = table.freeze({ Gems = 200 }), Equip = false },
 }
 
 function GuideConfig.RewardFor(chainId: string, id: string): Reward?
@@ -97,22 +106,24 @@ end
 
 -- Every lesson, chain first, then the conditional ones (the Guide help panel lists them in this order).
 local ordered: { Lesson } = {}
-for _, id in Chains.v4 do
+for _, id in Chains.v5 do
 	if id ~= "Bank" then table.insert(ordered, Lessons[id]) end
 end
-for _, id in { "Bank", "Upgrade", "Promotion", "Market", "TrainingGrounds", "GodsBlessing", "Raid" } do table.insert(ordered, Lessons[id]) end
+for _, id in { "Bank", "Climb", "Haul", "Upgrade", "Promotion", "Market", "TrainingGrounds", "GodsBlessing", "Raid" } do table.insert(ordered, Lessons[id]) end
 GuideConfig.Ordered = table.freeze(ordered)
 
 -- Onboarding experiment arms (docs/first-session-and-social-plan.md, A1). A new profile's arm is
 -- picked once, on its first join, from the "OnboardingArm" experience config (ConfigService), and
 -- saved so the player never changes arms mid-onboarding. Profiles without an arm use DefaultArm.
--- Each arm names its chain and the Phase 1 features it gets.
-export type Arm = { Chain: string, Showcase: boolean, FrameUltimate: boolean }
+-- Each arm names its chain and the features it gets. v2r is v2 plus the Rival Master lesson
+-- (A7), and is what every new Master plays unless an experiment says otherwise.
+export type Arm = { Chain: string, Showcase: boolean, FrameUltimate: boolean, Rival: boolean }
 GuideConfig.Arms = table.freeze({
-	control = table.freeze({ Chain = "v3", Showcase = false, FrameUltimate = false }),
-	v1 = table.freeze({ Chain = "v4", Showcase = false, FrameUltimate = false }),
-	v2 = table.freeze({ Chain = "v4", Showcase = true, FrameUltimate = true }),
+	control = table.freeze({ Chain = "v3", Showcase = false, FrameUltimate = false, Rival = false }),
+	v1 = table.freeze({ Chain = "v4", Showcase = false, FrameUltimate = false, Rival = false }),
+	v2 = table.freeze({ Chain = "v4", Showcase = true, FrameUltimate = true, Rival = false }),
+	v2r = table.freeze({ Chain = "v5", Showcase = true, FrameUltimate = true, Rival = true }),
 })
-GuideConfig.DefaultArm = "v2"
+GuideConfig.DefaultArm = "v2r"
 
 return table.freeze(GuideConfig)
