@@ -26,9 +26,12 @@ local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"
 local MirrorBanner = require(Shared:WaitForChild("Util"):WaitForChild("MirrorBanner"))
 local AnvilBanner = require(Shared:WaitForChild("Util"):WaitForChild("AnvilBanner"))
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
+local NotorietyRules = require(Shared:WaitForChild("Util"):WaitForChild("NotorietyRules"))
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
 local RewardsService = require(script.Parent:WaitForChild("RewardsService"))
+local NewsService = require(script.Parent:WaitForChild("NewsService"))
+local NotorietyService = require(script.Parent:WaitForChild("NotorietyService"))
 local RewardRules = require(Shared:WaitForChild("Util"):WaitForChild("RewardRules"))
 local ProfileMigrations = require(script.Parent:WaitForChild("ProfileMigrations"))
 local ProfilePersistence = require(script.Parent:WaitForChild("ProfilePersistence"))
@@ -84,6 +87,7 @@ local function applySettingsAttributes(player: Player, s: SettingsConfig.Setting
 	player:SetAttribute("Settings_Bloom", clean.Bloom)
 	player:SetAttribute("Settings_ColorFX", clean.ColorFX)
 	player:SetAttribute("Settings_ShowNotifications", clean.ShowNotifications)
+	player:SetAttribute("Settings_ShowNews", clean.ShowNews)
 	player:SetAttribute("Settings_DamageNumbers", clean.DamageNumbers)
 	player:SetAttribute("Settings_CompactMode", clean.CompactMode)
 	player:SetAttribute("Settings_ReduceMotion", clean.ReduceMotion)
@@ -533,6 +537,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		LastLogoutTimestamp = os.time(),
 		LastActiveTimestamp = os.time(),
 		Rewards = RewardRules.NewState(),
+		Notoriety = NotorietyRules.NewState(), -- thefts, bounties claimed, escapes (B6, schema v10)
 	}
 end
 
@@ -552,6 +557,19 @@ end
 
 function DataManager.BroadcastToast(message: string, colorType: string?)
 	SystemToastEvent:FireAllClients(message, colorType or "ALERT")
+end
+
+-- A server-wide headline (NewsService, B0): thefts, duel results, big pulls and the like.
+-- `endsIn`: seconds until its countdown (a bounty) runs out.
+function DataManager.PostNews(item: any, endsIn: number?)
+	NewsService.Post(item, endsIn)
+end
+
+-- Reputation (NotorietyService, B6): a theft, a bounty claimed or an escape by `player` against
+-- `victimUserId`. Training, friends and the daily per-victim cap are filtered there.
+function DataManager.RecordNotoriety(player: Player, kind: string, victimUserId: number, training: boolean?)
+	if kind ~= "THEFT" and kind ~= "CLAIM" and kind ~= "ESCAPE" then return end
+	NotorietyService.Record(player, kind :: any, victimUserId, training)
 end
 
 -- Build a sanitized copy of profile for client UI (hiding secret directive of rented mercenary!)
@@ -1070,6 +1088,13 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	DataManager.SyncProfile(player)
 	OnboardingService.Report(player, "HeroSummoned")
 	if isLimited then OnboardingService.Report(player, "LimitedSummoned") end
+	-- A Legendary or Mythical hero is server news (B3); a ten-pull's legends merge into one headline.
+	for _, hero in summonedList do
+		if (hero.Rarity or 1) >= 6 then
+			NewsService.Post({ Kind = "BIG_PULL", ActorUserId = player.UserId, ActorName = player.DisplayName,
+				ItemName = hero.DisplayName, Tier = hero.Rarity })
+		end
+	end
 	if luck > 0 and bestTier >= 3 and _G.PlotManager and _G.PlotManager.PulseBlessing then
 		_G.PlotManager.PulseBlessing(player)
 	end
@@ -1564,6 +1589,13 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 
 	DataManager.SyncProfile(player)
 	OnboardingService.Report(player, "ArtifactSummoned")
+	-- An Exalted or rarer weapon is server news (B3).
+	for _, artifact in summonedList do
+		if (artifact.Rarity or 1) >= (cfg.PityRarity or 5) then
+			NewsService.Post({ Kind = "BIG_FORGE", ActorUserId = player.UserId, ActorName = player.DisplayName,
+				ItemName = artifact.DisplayName, Tier = artifact.Rarity })
+		end
+	end
 	if luck > 0 and bestTier >= 3 and _G.PlotManager and _G.PlotManager.PulseBlessing then
 		_G.PlotManager.PulseBlessing(player)
 	end
@@ -2245,6 +2277,18 @@ RewardsService.Init({
 	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
 })
 
+NewsService.Init({
+	SendToast = DataManager.SendToast,
+	VisitFloor = function(player: Player, floorId: number) TowerFloorService.VisitFloor(player, floorId) end,
+	IsTransitioning = TowerFloorService.IsTransitioning,
+	FloorOf = function(player: Player): number return TowerFloorService.GetState(player).FloorId end,
+})
+
+NotorietyService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	PushBoards = NewsService.PushBoards,
+})
+
 --============================================================================
 -- 7. PLAYER LIFECYCLE INITIALIZATION
 --============================================================================
@@ -2295,6 +2339,7 @@ local function onPlayerAdded(player: Player)
 	persistentPlayers[player] = loaded.Persistent or nil
 	releasedPlayers[player] = nil
 	DataManager.ApplySettingsAttributes(player, profile.Settings)
+	NotorietyService.Refresh(player)
 	-- Claim the new player's record right away so the first visit survives a crash.
 	if loaded.Persistent and not loaded.Data then task.spawn(DataManager.SaveProfile, player) end
 
@@ -2323,6 +2368,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	if profile then
 		OfflineRewardService.RecordLogout(player, profile)
 	end
+	NotorietyService.Forget(player)
 	releaseProfile(player)
 	if profile then forgeTransactions.Forget(profile) end
 	pit:Forget(player)

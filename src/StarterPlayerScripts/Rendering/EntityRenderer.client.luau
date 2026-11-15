@@ -1118,7 +1118,9 @@ local function stepRender(dt: number)
 			end
 			local walking = ((node :: any).WalkingUntil or 0) > now
 			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)
-			animator:SetLocomotion(if isKnockedOut then "Coma" elseif walking then "Move" else "Idle")
+			-- StateEnum 5: a duel's winner posing through the outro (CombatSimulation VICTORY).
+			local cheering = node.StateEnum == 5 and not isKnockedOut
+			animator:SetLocomotion(if isKnockedOut then "Coma" elseif cheering then "Victory" elseif walking then "Move" else "Idle")
 			local moveSpeedScale = if walking then math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2) else 1.0
 			animator:Step(stepDt, moveSpeedScale)
 			debug.profileend()

@@ -425,10 +425,15 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 	if dm.ReportProgress and (gold > 0 or gems > 0 or stones > 0) then dm.ReportProgress(player, "RelicBanked", if stolen then "Stolen" else nil) end
 
 	-- Apex Cores / Calamity Heart: a small chance of a free Exalted Archon
+	if spec.BaseTierId == "CALAMITY_HEART" and dm.PostNews then
+		dm.PostNews({ Kind = "HEART_BANKED", ActorUserId = player.UserId, ActorName = player.DisplayName, ItemName = spec.DisplayName })
+	end
 	if spec.BaseTierId == "CALAMITY_HEART" and math.random() <= HEART_ARCHON_CHANCE then
 		local uuid, archon = dm.CreateHeroFromSeed("hero_archon", 1.10)
 		profile.Heroes[uuid] = archon
-		dm.BroadcastToast(string.format("👑 %s extracted %s and rolled 5★ SOVEREIGN ARCHON!", player.DisplayName, string.upper(spec.DisplayName)), "SUCCESS")
+		if dm.PostNews then
+			dm.PostNews({ Kind = "ARCHON", ActorUserId = player.UserId, ActorName = player.DisplayName, ItemName = spec.DisplayName })
+		end
 	end
 
 	local stoneText = if stones > 0 then string.format(", +%d Promotion Stone%s", stones, if stones == 1 then "" else "s") else ""

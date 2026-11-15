@@ -7,6 +7,9 @@
 --   TowerEventBiome  the featured biome for BIOME events, 0 otherwise
 -- Gameplay code asks _G.TowerEvents.GetMods(floorId) for the modifiers to stamp on a mob at spawn.
 -- In Studio, setting workspace.TowerEventForce = "<EventId>" starts that event's warning at once.
+-- Gathering players (plan B4): Relic Rain comes round after Config.RelicDroughtCycles other events,
+-- starts are pushed clear of raids (TowerEventRules.ClearOfRaids), and TowerRemotes.EventTravel
+-- ("Go to event" on the HUD badge) travels a Master to the event's floor through the normal checks.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -18,12 +21,19 @@ local EventRules = require(Shared.Util.TowerEventRules)
 local TowerFloorConfig = require(Shared.Config.TowerFloorConfig)
 local TowerLayout = require(Shared.Config.TowerLayout)
 local Tower = require(script.Parent.TowerFloorService)
+local RaidConfig = require(Shared.Config.RaidConfig)
 
 local Service = {}
 local rng = Random.new()
 local phase, eventId, featured = "CALM", "", 0
 local startsAt, endsAt = 0, 0
 local lastId: string? = nil
+local relicDrought = 0 -- events since the last Relic Rain
+local lastTravel: { [Player]: number } = {}
+local RAID_WINDOW = {
+	Interval = RaidConfig.IntervalSeconds, Warning = RaidConfig.WarningSeconds,
+	Active = RaidConfig.ActiveSeconds, Results = RaidConfig.ResultsSeconds,
+}
 
 local function dataManager(): any
 	while not _G.DataManager do task.wait(0.05) end
@@ -56,7 +66,9 @@ end
 
 local function beginCalm(now: number)
 	phase, eventId, featured = "CALM", "", 0
-	startsAt = now + EventConfig.CalmSeconds + EventConfig.WarningSeconds
+	-- Never on top of a raid: the server answers one call at a time.
+	startsAt = EventRules.ClearOfRaids(now + EventConfig.CalmSeconds + EventConfig.WarningSeconds, EventConfig.WarningSeconds,
+		EventConfig.ActiveSeconds, RAID_WINDOW, EventConfig.RaidGapSeconds)
 	endsAt = startsAt + EventConfig.ActiveSeconds
 	publish()
 end
@@ -71,8 +83,9 @@ local function beginWarning(now: number, forcedId: string?)
 			biome = math.max(unlocked[#unlocked], math.ceil(event.MinFloor / 5))
 		end
 	else
-		id, biome = EventRules.Pick(function() return rng:NextNumber() end, lastId, unlockedBiomes())
+		id, biome = EventRules.PickWithRelicDrought(function() return rng:NextNumber() end, lastId, unlockedBiomes(), relicDrought)
 	end
+	relicDrought = if id == EventConfig.RelicEventId then 0 else relicDrought + 1
 	if not id then
 		beginCalm(now)
 		return
@@ -165,6 +178,38 @@ local function rainTick(now: number)
 		if floorId >= event.MinFloor then dropMeteor(floorId) end
 	end
 end
+
+-- "Go to event" (plan B4): during the warning or the event, travel to its floor. The floor is the
+-- featured biome's first (or a tower-wide event's, the Master's highest reached); Tower.VisitFloor
+-- applies the usual unlock, boss-lock and cargo checks.
+local function travelToEvent(player: Player)
+	local now = os.clock()
+	if now - (lastTravel[player] or -math.huge) < 2 then return end
+	lastTravel[player] = now
+	local dm = dataManager()
+	if phase == "CALM" then return end
+	local event = EventConfig.Get(eventId)
+	local profile = dm.GetProfile(player)
+	if not event or not profile then return end
+	local floor = EventRules.EventFloor(event, featured, profile.MaxFloorReached or 1)
+	if not floor then
+		dm.SendToast(player, string.format("Out of reach|Climb to Floor %d first", math.max(event.MinFloor, (featured - 1) * 5 + 1)), "INFO")
+		return
+	end
+	local state = Tower.GetState(player)
+	local here = TowerFloorConfig.Get(state.FloorId)
+	if state.FloorId > 0 and here and EventRules.Applies(event, state.FloorId, here.BiomeIndex, featured) then
+		dm.SendToast(player, string.format("You're there|%s is on this floor", event.DisplayName), "INFO")
+		return
+	end
+	Tower.VisitFloor(player, floor)
+end
+
+task.spawn(function()
+	local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TowerRemotes"):WaitForChild("EventTravel") :: RemoteEvent
+	remote.OnServerEvent:Connect(travelToEvent)
+end)
+Players.PlayerRemoving:Connect(function(player) lastTravel[player] = nil end)
 
 _G.TowerEvents = Service
 beginCalm(Workspace:GetServerTimeNow())

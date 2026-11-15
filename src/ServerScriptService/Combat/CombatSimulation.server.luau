@@ -48,6 +48,7 @@ local TowerProgress=require(Shared.Util.TowerProgress)
 local TowerRoomBuilder=require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("TowerRoomBuilder"))
 local TowerPortalKit=require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("TowerPortalKit"))
 local LootDuel=require(Shared.Util.LootDuel)
+local NotorietyRules=require(Shared.Util.NotorietyRules)
 local DuelArena=require(script.Parent.DuelArena)
 local Encounters: any=nil
 local CombatLifecycleRevision=0
@@ -135,7 +136,8 @@ local RECALL_PACIFY_DURATION = 2.0
 
 local COMA_DURATION_DEFAULT = 60
 
-export type HeroSimState = "FOLLOW_MASTER" | "MOVE_TO_TARGET" | "ATTACKING" | "COMA"
+-- VICTORY: a duel's winners strike a pose through its outro (B2); finishDuel puts them back.
+export type HeroSimState = "FOLLOW_MASTER" | "MOVE_TO_TARGET" | "ATTACKING" | "COMA" | "VICTORY"
 
 export type SimHero = {
 	NetId: number,
@@ -244,6 +246,7 @@ local LastChallengeRequest: { [Player]: number } = {}
 -- Carry challenges (GDD 6.1, LootDuel.CanChallengeCarrier): the relic holder's shield after a duel,
 -- each challenger's cooldown, and the cooldown between the same two Masters (LootDuel.PairKey).
 local CarryShieldUntil: { [Player]: number } = {}
+local ServerBiomeFirsts: { [number]: boolean } = {} -- floors whose Biome Boss someone in this server has killed
 local CarryCooldownUntil: { [Player]: number } = {}
 local CarryPairUntil: { [string]: number } = {}
 
@@ -1063,6 +1066,14 @@ registerPickup = function(player: Player, dropId: number, killerUserId: number, 
 			Label = label, Seconds = LootDuel.THIEF_FLAG_SECONDS,
 		})
 	end
+	-- A Core or Heart theft is server news with a Hunt button (B1); smaller relics stay floor news.
+	local relicSpec = relic and RelicConfig[relic.TierId]
+	local baseTier = relicSpec and relicSpec.BaseTierId
+	if not contest.Training and (baseTier == "ABYSSAL_CORE" or baseTier == "CALAMITY_HEART") and dm.PostNews then
+		dm.PostNews({ Kind = "THEFT", ActorUserId = player.UserId, ActorName = player.DisplayName,
+			TargetUserId = killerUserId, TargetName = killerName, ItemName = label, FloorId = thiefState.FloorId },
+			LootDuel.THIEF_FLAG_SECONDS)
+	end
 	if contest.Training then
 		dm.SendToast(player, string.format("You're a Loot Thief|%s is coming for it", killerName), "WARN")
 	else
@@ -1070,6 +1081,13 @@ registerPickup = function(player: Player, dropId: number, killerUserId: number, 
 	end
 	if dm.ReportMilestone then dm.ReportMilestone(player, "FirstTheft") end
 	if dm.ReportProgress then dm.ReportProgress(player, "RelicStolen") end -- the guide's Steal step
+	-- Reputation (B6): a fair theft counts toward the thief track and Top Thieves (not a lesson, and
+	-- not low-floor farming).
+	if dm.RecordNotoriety then
+		local profile = dm.GetProfile(player)
+		local farming = NotorietyRules.Overlevel(if profile then profile.HighestClearedFloor or 0 else 0, thiefState.FloorId)
+		dm.RecordNotoriety(player, "THEFT", killerUserId, contest.Training or farming)
+	end
 	return true
 end
 
@@ -1203,6 +1221,30 @@ local function findDrop(dropId: number): (any?, Player?)
 		return relic, relic.Carrier
 	end
 	return nil, nil
+end
+
+-- A duel side's power as it will fight (after the Attunement clamp): Squad Power's 10 x DPS + HP.
+local function duelSidePower(squad: DuelSquad): number
+	local total = 0
+	for _, h in squad.Heroes do
+		total += 10 * h.EffectiveATK / math.max(0.1, h.AttackInterval) + h.MaxHP
+	end
+	return math.round(total)
+end
+
+-- Other Masters on the duel's floor can watch it (B2): they get the arena, and a notice when it ends.
+local function notifyWatchers(duel: Duel, payload: { [string]: any })
+	local a, b = duel.Sides.A.Player, duel.Sides.B.Player
+	for _, other in Players:GetPlayers() do
+		if other ~= a and other ~= b and not DuelByPlayer[other] then
+			local state = Tower.GetState(other)
+			if state.FloorId == duel.FloorId then
+				local message = table.clone(payload)
+				message.DuelId = duel.Id
+				DuelStateRemote:FireClient(other, message)
+			end
+		end
+	end
 end
 
 local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, string?)
@@ -1345,9 +1387,15 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 		record.DespawnAt += LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS + LootDuel.DUEL_OUTRO_SECONDS
 	end
 	closeContestPrompt(contest)
+	notifyWatchers(duel, {
+		Kind = "NEARBY", Center = center, Forward = forward, NameA = owner.DisplayName, NameB = thief.DisplayName,
+		EndsAt = Workspace:GetServerTimeNow() + LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS,
+	})
 	sendDuelState(duel, {
 		Kind = "START",
 		DuelKind = contest.Kind, -- "CARRY" or nil (a bounty); the HUD titles the duel by it
+		UserIdA = owner.UserId, UserIdB = thief.UserId, -- the intro card's headshots (a rival's id is negative)
+		PowerA = duelSidePower(duel.Sides.A), PowerB = duelSidePower(duel.Sides.B),
 		Center = center,
 		Forward = forward,
 		Radius = DuelArena.Radius(),
@@ -1526,6 +1574,27 @@ local function applyDuelOutcome(duel: Duel)
 		return
 	end
 	local hunterLost = loser.UserId ~= contest.ThiefUserId
+	-- Duel results between two Masters are server news (B2); rival duels are not.
+	if winner.Parent == Players and loser.Parent == Players and dm.PostNews then
+		local spec = record and RelicConfig[record.TierId]
+		local item = { ActorUserId = winner.UserId, ActorName = winner.DisplayName, TargetUserId = loser.UserId,
+			TargetName = loser.DisplayName, ItemName = if spec then spec.DisplayName else "relic" }
+		if contest.Kind == "CARRY" then
+			item.Kind = "RELIC_DUEL"
+		elseif hunterLost then
+			item.Kind = "ESCAPED" -- the thief beat the hunter
+		else
+			item.Kind = "BOUNTY_CLAIMED"
+		end
+		dm.PostNews(item)
+	end
+	-- Reputation (B6): a bounty duel between two Masters is a bounty claimed for the hunter who
+	-- wins it, or an escape for the thief who does. Carry challenges and lessons don't count.
+	if contest.Kind ~= "CARRY" and winner.Parent == Players and loser.Parent == Players and dm.RecordNotoriety then
+		local profile = dm.GetProfile(winner)
+		local farming = NotorietyRules.Overlevel(if profile then profile.HighestClearedFloor or 0 else 0, Tower.GetState(winner).FloorId)
+		dm.RecordNotoriety(winner, if hunterLost then "ESCAPE" else "CLAIM", loser.UserId, contest.Training or farming)
+	end
 	if winner.Parent == Players then
 		dm.SendToast(winner, string.format("Duel won|%s's drop is yours", loser.DisplayName), "SUCCESS")
 		if dm.ReportMilestone then dm.ReportMilestone(winner, "DuelWon") end
@@ -1599,6 +1668,7 @@ local function finishDuel(duel: Duel)
 	duel.Arena:Destroy()
 	applyDuelOutcome(duel)
 	sendDuelState(duel, { Kind = "CLEAR" })
+	notifyWatchers(duel, { Kind = "NEARBY_END" })
 	for _, side in { "A", "B" } :: { LootDuel.Side } do
 		local player = duelSquad(duel, side).Player
 		if player.Parent == Players then syncSquadStatus(player) end
@@ -1613,9 +1683,11 @@ local function concludeDuel(duel: Duel, winner: LootDuel.Side, reason: string)
 	for _, side in { "A", "B" } :: { LootDuel.Side } do
 		for _, h in duelSquad(duel, side).Heroes do
 			h.TargetNetId = nil
-			if h.State ~= "COMA" then h.State = "FOLLOW_MASTER" end
+			if h.State ~= "COMA" then h.State = if side == winner then "VICTORY" else "FOLLOW_MASTER" end
 		end
 	end
+	local record = findDrop(duel.Contest.DropId)
+	local spec = record and RelicConfig[record.TierId]
 	sendDuelState(duel, {
 		Kind = "END",
 		Winner = winner,
@@ -1623,6 +1695,9 @@ local function concludeDuel(duel: Duel, winner: LootDuel.Side, reason: string)
 		WinnerName = duelSquad(duel, winner).Player.DisplayName,
 		OwnerWon = winner == "A",
 		OutroSeconds = LootDuel.DUEL_OUTRO_SECONDS,
+		DuelKind = duel.Contest.Kind,
+		Training = duel.Contest.Training == true, -- a Rival lesson: the player keeps the relic either way
+		PrizeName = if spec then spec.DisplayName else "relic",
 	})
 end
 
@@ -2845,6 +2920,7 @@ local STATE_TO_ENUM: { [HeroSimState]: number } = {
 	MOVE_TO_TARGET = 2,
 	ATTACKING = 3,
 	COMA = 4,
+	VICTORY = 5, -- EntityRenderer plays the hero's Victory clip
 }
 
 local ENEMY_STATE_TO_ENUM: { [string]: number } = { IDLE = 20, CHASE = 21, WINDUP = 22, RECOVERY = 23, RESET = 24, PATROL = 25 }
@@ -3346,6 +3422,11 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
 
        if bossTier > 0 then
         dm.RecordBiomeBossClear(p, bossTier)
+        -- The first kill of each Biome Boss in this server is news (B3).
+        if p == killer and not ServerBiomeFirsts[mob.FloorId] and dm.PostNews then
+         ServerBiomeFirsts[mob.FloorId] = true
+         dm.PostNews({ Kind = "BIOME_FIRST", ActorUserId = p.UserId, ActorName = p.DisplayName, ItemName = mob.DisplayName, FloorId = mob.FloorId })
+        end
        end
 
        local progress = ActivePlayerProgress[p]
@@ -3694,6 +3775,29 @@ function CombatSimulation.DebugRivalDuel(player: Player, roster: { { TemplateId:
 	local ok, reason = startDuel(rival :: any, Contests[relic.RelicId])
 	if not ok then dismissRival(rival) end
 	return ok, reason
+end
+
+-- Every open public bounty, for the Wanted list (NewsService, B1): not training or carry contests.
+-- EndsAt is server time (GetServerTimeNow).
+CombatSimulation.PublicBounties = function(): { any }
+	local now, serverNow = os.clock(), Workspace:GetServerTimeNow()
+	local list = {}
+	for dropId, contest in pairs(Contests) do
+		if contest.Status == "CONTESTED" and not contest.Training and contest.Kind ~= "CARRY" and contest.ExpiresAt > now then
+			local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
+			local relic = _G.RelicService and _G.RelicService.GetRelic(dropId)
+			local spec = relic and RelicConfig[relic.TierId]
+			if thief and relic and relic.Carrier == thief then
+				table.insert(list, {
+					ThiefUserId = thief.UserId, ThiefName = thief.DisplayName,
+					ItemName = if spec then spec.DisplayName else "relic",
+					FloorId = Tower.GetState(thief).FloorId, EndsAt = serverNow + (contest.ExpiresAt - now),
+				})
+			end
+		end
+	end
+	table.sort(list, function(a, b) return a.EndsAt < b.EndsAt end)
+	return list
 end
 
 -- The Rival Master lesson (RivalLesson.server.luau) drives rivals through these.

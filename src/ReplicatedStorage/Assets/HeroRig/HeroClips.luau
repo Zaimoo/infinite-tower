@@ -39,8 +39,10 @@ HeroClips.SHARED_STATES = table.freeze({
 	"MarketLedger",
 	"TrainingKata",
 	"TrainingCoach",
+	"Victory", -- a duel's winners, through its outro (B2); every weapon has its own, this is the fallback
 })
 HeroClips.LOCOMOTION_STATES = table.freeze({
+	Victory = true,
 	Idle = true,
 	Move = true,
 	Coma = true,
@@ -181,6 +183,18 @@ local function walk(carry: Pose, armSwing: number?, gait: Gait?): Clip
 	return clip(0.7, true, keys)
 end
 
+-- A looping victory cheer over `pose`: the raised arm pumps, the chest lifts and the hero bobs up
+-- onto the toes. `joint` is the shoulder that pumps (the weapon arm).
+local function cheer(pose: Pose, joint: string): Clip
+	local pumped = merge(pose, {})
+	nudge(pumped, joint, { 10, 0, 0 })
+	nudge(pumped, "Waist", { 4, 0, 0 })
+	nudge(pumped, "Neck", { 4, 0, 0 })
+	local root = pose.RootOffset or { 0, 0, 0 }
+	pumped.RootOffset = { root[1], root[2] + 0.12, root[3] }
+	return clip(1.1, true, { { 0, pose }, { 0.45, pumped }, { 1, pose } })
+end
+
 -- Base stance shared by most weapon idles: soft knees, weight slightly forward.
 local STANCE: Pose = {
 	LeftHip = { 6, 0, -3 }, RightHip = { -4, 0, 3 },
@@ -208,7 +222,9 @@ do
 		LeftShoulder = { 60, 0, -10 }, LeftElbow = { 95, 0, 0 },
 		RightShoulder = { 45, 0, 10 }, RightElbow = { 110, 0, 0 },
 	})
+	local fistUp = merge(STANCE, { Waist = { 4, 0, 0 }, Neck = { 8, 0, 0 }, RightShoulder = { 160, 0, 14 }, RightElbow = { 30, 0, 0 }, LeftShoulder = { 10, 0, -10 }, LeftElbow = { 40, 0, 0 } })
 	ByWeapon.UNARMED = {
+		Victory = cheer(fistUp, "RightShoulder"),
 		Idle = breathe(idle),
 		Move = walk(idle, 24),
 		AttackBasic = clip(0.5, false, {
@@ -258,23 +274,34 @@ do
 	local fullDraw = merge(drawn, { Waist = { 3, -20, 0 }, Neck = { -2, 18, 0 }, RightShoulder = { 88, 32, -14 }, RightElbow = { 150, 0, 0 } })
 	local loose = merge(release, { Waist = { -3, -16, 0 }, Neck = { 0, 14, 0 }, LeftShoulder = { 100, 0, 0 }, RightShoulder = { 62, 46, -40 }, RightElbow = { 112, 0, 0 }, RootOffset = { 0, -0.1, 0.05 } })
 	local looseHeld = merge(loose, { LeftShoulder = { 97, 0, 0 }, RightShoulder = { 58, 48, -44 }, RightElbow = { 104, 0, 0 } })
+	local bowUp = merge(STANCE, { Waist = { 4, -6, 0 }, Neck = { 8, 6, 0 }, LeftShoulder = { 158, 0, -8 }, LeftElbow = { 12, 0, 0 }, RightShoulder = { 20, 0, 18 }, RightElbow = { 40, 0, 0 } })
 	ByWeapon.BOW = {
+		Victory = cheer(bowUp, "LeftShoulder"),
 		Idle = breathe(carry),
 		-- A light scout's walk: long, easy strides, leaning a little into them.
 		Move = walk(carry, nil, { Stride = 26, Lean = -3 }),
 		AttackBasic = clip(0.8, false, { { 0, carry }, { 0.24, nocked }, { 0.62, fullDraw }, { 0.72, loose, true }, { 0.86, looseHeld }, { 1, carry } }),
+		-- Special: drop into a low kneel squaring up, nock, lean back into a long trembling full
+		-- draw (the Charge glow builds here), loose with the bow arm kicking up and the body
+		-- rocking back off the shot, hold it, rise.
 		AttackSpecial = clip(0.95, false, {
 			{ 0, carry },
-			{ 0.3, merge(aim, crouch) },
-			{ 0.66, merge(merge(drawn, crouch), { Waist = { -10, -18, 0 } }) },
-			{ 0.78, merge(merge(release, crouch), { Waist = { 8, -18, 0 } }) },
+			{ 0.18, merge(merge(aim, crouch), { Waist = { -6, -14, 0 }, RootOffset = { 0, -0.62, 0.04 } }) },
+			{ 0.48, merge(merge(drawn, crouch), { Waist = { -8, -20, 0 }, RightShoulder = { 88, 30, -12 }, RightElbow = { 148, 0, 0 } }) },
+			{ 0.7, merge(merge(drawn, crouch), { Waist = { -12, -24, 0 }, Neck = { -2, 20, 0 }, RightShoulder = { 88, 34, -16 }, RightElbow = { 152, 0, 0 } }) },
+			{ 0.78, merge(merge(release, crouch), { Waist = { 10, -18, 0 }, LeftShoulder = { 102, 0, 0 }, RightShoulder = { 60, 46, -42 }, RightElbow = { 110, 0, 0 }, RootOffset = { 0, -0.52, 0.12 } }), true },
+			{ 0.88, merge(merge(release, crouch), { Waist = { 6, -17, 0 }, LeftShoulder = { 98, 0, 0 }, RightShoulder = { 56, 48, -46 }, RightElbow = { 102, 0, 0 }, RootOffset = { 0, -0.55, 0.08 } }) },
 			{ 1, carry },
 		}),
+		-- Skill: sink to gather, spring up onto the toes aiming at the sky, a long held sky draw,
+		-- then loose straight up with a recoil that rocks the archer back.
 		AttackSkill = clip(1.1, false, {
 			{ 0, carry },
-			{ 0.35, skyAim },
-			{ 0.6, merge(skyAim, { RightShoulder = { 136, 26, -10 }, RightElbow = { 145, 0, 0 } }) },
-			{ 0.72, merge(skyAim, { LeftShoulder = { 148, 0, 0 }, RightShoulder = { 115, 40, -30 }, RightElbow = { 120, 0, 0 } }) },
+			{ 0.2, merge(merge(aim, crouch), { Waist = { -14, -10, 0 }, Neck = { -6, 10, 0 }, RootOffset = { 0, -0.5, 0 } }) },
+			{ 0.42, merge(skyAim, { RootOffset = { 0, 0.12, 0 } }) },
+			{ 0.64, merge(skyAim, { Waist = { 22, -12, 0 }, RightShoulder = { 136, 28, -10 }, RightElbow = { 150, 0, 0 }, RootOffset = { 0, 0.14, 0 } }) },
+			{ 0.72, merge(skyAim, { Waist = { 26, -10, 0 }, LeftShoulder = { 150, 0, 0 }, RightShoulder = { 112, 42, -32 }, RightElbow = { 118, 0, 0 }, RootOffset = { 0, 0.04, 0.12 } }), true },
+			{ 0.86, merge(skyAim, { Waist = { 20, -10, 0 }, LeftShoulder = { 146, 0, 0 }, RightShoulder = { 108, 44, -36 }, RightElbow = { 112, 0, 0 }, RootOffset = { 0, 0, 0.08 } }) },
 			{ 1, carry },
 		}),
 	}
@@ -300,21 +327,35 @@ do
 		LeftHip = { 34, 0, -6 }, LeftKnee = { -40, 0, 0 }, RightHip = { -22, 0, 6 }, RootOffset = { 0, -0.3, -0.12 },
 	})
 	local followThrough = merge(lunge, { Waist = { -16, -28, 0 }, RightShoulder = { 40, -22, -6 }, RootOffset = { 0, -0.24, -0.08 } })
+	local swordUp = merge(STANCE, { Waist = { 4, 8, 0 }, Neck = { 8, -6, 0 }, RightShoulder = { 165, 0, 10 }, RightElbow = { 12, 0, 0 }, LeftShoulder = { 30, -25, -10 }, LeftElbow = { 75, 0, 0 } })
 	ByWeapon.SWORD_SHIELD = {
+		Victory = cheer(swordUp, "RightShoulder"),
 		Idle = breathe(guard),
 		-- A guarded march: shorter steps, shield held, weight forward.
 		Move = walk(guard, nil, { Stride = 24, Lift = 26, Lean = -4, Bob = 0.05 }),
 		AttackBasic = clip(0.75, false, { { 0, guard }, { 0.32, coil }, { 0.52, overhand, true }, { 0.62, lunge, true }, { 0.78, followThrough }, { 1, guard } }),
+		-- Special: wind the shield arm back with the whole torso, sink onto the back leg, then
+		-- drive forward off it into a lunging shield bash that carries past the target, and
+		-- recover behind the shield.
 		AttackSpecial = clip(0.85, false, {
 			{ 0, guard },
-			{ 0.35, merge(guard, { Waist = { 4, 25, 0 }, LeftShoulder = { 40, -40, -10 }, LeftElbow = { 100, 0, 0 } }) },
-			{ 0.6, bash },
+			{ 0.2, merge(guard, { Waist = { 4, 26, 0 }, Neck = { 0, -18, 0 }, LeftShoulder = { 38, -42, -10 }, LeftElbow = { 102, 0, 0 }, RootOffset = { 0, -0.08, 0.06 } }) },
+			{ 0.45, merge(ATTACK_STANCE, { Waist = { 8, 36, 0 }, Neck = { -2, -26, 0 }, LeftShoulder = { 30, -55, -12 }, LeftElbow = { 115, 0, 0 }, RightShoulder = { 25, 0, 20 }, RightElbow = { 60, 0, 0 }, RightHip = { -20, 0, 6 }, RightKnee = { -30, 0, 0 }, RootOffset = { 0, -0.2, 0.12 } }) },
+			{ 0.6, merge(bash, { Waist = { -12, -34, 0 }, Neck = { 8, 24, 0 }, LeftShoulder = { 90, 28, -5 }, LeftElbow = { 14, 0, 0 }, LeftHip = { 34, 0, -6 }, LeftKnee = { -40, 0, 0 }, RightHip = { -22, 0, 6 }, RootOffset = { 0, -0.3, -0.16 } }), true },
+			{ 0.72, merge(bash, { Waist = { -16, -38, 0 }, Neck = { 10, 26, 0 }, LeftShoulder = { 92, 30, -5 }, LeftElbow = { 10, 0, 0 }, LeftHip = { 36, 0, -6 }, LeftKnee = { -44, 0, 0 }, RightHip = { -24, 0, 6 }, RootOffset = { 0, -0.34, -0.2 } }) },
+			{ 0.86, merge(guard, { Waist = { -4, -8, 0 }, RootOffset = { 0, -0.1, -0.06 } }) },
 			{ 1, guard },
 		}),
+		-- Skill: crouch and gather, rise onto the toes with the sword straight up (the light
+		-- gathers there), then drop through a full-body overhead strike into the ground, hold it,
+		-- and stand.
 		AttackSkill = clip(1.1, false, {
 			{ 0, guard },
-			{ 0.35, merge(high, { Waist = { 12, 0, 0 }, RightShoulder = { 175, 0, 5 }, RootOffset = { 0, 0.15, 0 } }) },
-			{ 0.62, merge(cut, { Waist = { -30, 0, 0 }, RightShoulder = { 40, 0, 0 }, RootOffset = { 0, -0.45, 0 }, LeftKnee = { -50, 0, 0 }, RightKnee = { -45, 0, 0 }, LeftHip = { 40, 0, -6 }, RightHip = { 10, 0, 6 } }) },
+			{ 0.18, merge(guard, { Waist = { -14, 10, 0 }, LeftKnee = { -40, 0, 0 }, RightKnee = { -36, 0, 0 }, LeftHip = { 26, 0, -6 }, RightHip = { 18, 0, 6 }, RootOffset = { 0, -0.4, 0 } }) },
+			{ 0.42, merge(high, { Waist = { 14, 0, 0 }, Neck = { 10, 0, 0 }, RightShoulder = { 178, 0, 4 }, RightElbow = { 8, 0, 0 }, RootOffset = { 0, 0.2, 0 } }) },
+			{ 0.52, merge(high, { Waist = { 18, 0, 0 }, Neck = { 12, 0, 0 }, RightShoulder = { 178, 0, 2 }, RightElbow = { 14, 0, 0 }, RootOffset = { 0, 0.24, 0.06 } }) },
+			{ 0.62, merge(cut, { Waist = { -32, 0, 0 }, Neck = { 16, 0, 0 }, RightShoulder = { 38, 0, 0 }, RightElbow = { 6, 0, 0 }, RootOffset = { 0, -0.5, -0.1 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -48, 0, 0 }, LeftHip = { 42, 0, -6 }, RightHip = { 12, 0, 6 } }), true },
+			{ 0.8, merge(cut, { Waist = { -28, 0, 0 }, Neck = { 14, 0, 0 }, RightShoulder = { 42, 0, 0 }, RootOffset = { 0, -0.46, -0.08 }, LeftKnee = { -52, 0, 0 }, RightKnee = { -45, 0, 0 }, LeftHip = { 40, 0, -6 }, RightHip = { 10, 0, 6 } }) },
 			{ 1, guard },
 		}),
 	}
@@ -340,7 +381,9 @@ do
 		Waist = { -10, 24, 0 }, Neck = { 4, -18, 0 }, LeftShoulder = { 92, 4, 6 }, LeftElbow = { 4, 0, 0 }, LeftWrist = { -85, 0, 0 },
 		RightShoulder = { 30, 0, 14 }, RightElbow = { 95, 0, 0 }, RootOffset = { 0, -0.2, -0.14 },
 	})
+	local bladesUp = merge(STANCE, { Waist = { 4, 0, 0 }, Neck = { 8, 0, 0 }, LeftShoulder = { 150, 0, -28 }, LeftElbow = { 25, 0, 0 }, RightShoulder = { 150, 0, 28 }, RightElbow = { 25, 0, 0 } })
 	ByWeapon.DAGGERS = {
+		Victory = cheer(bladesUp, "RightShoulder"),
 		Idle = breathe(ready, 2.6),
 		-- A low prowl: knees bent, chest forward, the torso twisting with each step.
 		Move = walk(ready, nil, { Stride = 30, Lift = 34, Crouch = 12, Lean = -9, Bob = 0.04, Twist = 1.3 }),
@@ -352,18 +395,27 @@ do
 			{ 0.75, stabLeft, true },
 			{ 1, crouched },
 		}),
+		-- Special: blades crossed low at the chest, a hop up throwing both overhead and wide (the
+		-- Charge glints), then both rip down across each other in an X as the body drops forward.
 		AttackSpecial = clip(0.7, false, {
 			{ 0, crouched },
-			{ 0.35, merge(crouched, { LeftShoulder = { 140, 0, -40 }, RightShoulder = { 140, 0, 40 }, LeftElbow = { 20, 0, 0 }, RightElbow = { 20, 0, 0 } }) },
-			{ 0.6, merge(crouched, { Waist = { -12, 0, 0 }, LeftShoulder = { 60, 0, 30 }, RightShoulder = { 60, 0, -30 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 } }) },
+			{ 0.15, merge(crouched, { Waist = { 6, 0, 0 }, LeftShoulder = { 40, 30, 20 }, RightShoulder = { 40, -30, -20 }, LeftElbow = { 110, 0, 0 }, RightElbow = { 110, 0, 0 }, RootOffset = { 0, -0.28, 0 } }) },
+			{ 0.42, merge(crouched, { Waist = { 12, 0, 0 }, Neck = { 8, 0, 0 }, LeftShoulder = { 150, 0, -42 }, RightShoulder = { 150, 0, 42 }, LeftElbow = { 18, 0, 0 }, RightElbow = { 18, 0, 0 }, RootOffset = { 0, 0.1, 0.04 } }) },
+			{ 0.6, merge(crouched, { Waist = { -18, 0, 0 }, Neck = { 10, 0, 0 }, LeftShoulder = { 55, 0, 34 }, RightShoulder = { 55, 0, -34 }, LeftElbow = { 8, 0, 0 }, RightElbow = { 8, 0, 0 }, RootOffset = { 0, -0.34, -0.16 } }), true },
+			{ 0.74, merge(crouched, { Waist = { -20, 0, 0 }, Neck = { 10, 0, 0 }, LeftShoulder = { 45, 0, 40 }, RightShoulder = { 45, 0, -40 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, -0.36, -0.18 } }) },
 			{ 1, crouched },
 		}),
+		-- Skill: a gathering crouch, then a flurry of three body-turning slashes, each one lunging,
+		-- into a final two-blade thrust that ends low.
 		AttackSkill = clip(1.0, false, {
 			{ 0, crouched },
-			{ 0.2, merge(crouched, { Waist = { -8, -35, 0 }, RightShoulder = { 90, 20, 0 }, RightElbow = { 10, 0, 0 } }) },
-			{ 0.4, merge(crouched, { Waist = { -8, 35, 0 }, LeftShoulder = { 90, -20, 0 }, LeftElbow = { 10, 0, 0 } }) },
-			{ 0.6, merge(crouched, { Waist = { -8, -35, 0 }, RightShoulder = { 90, 20, 0 }, RightElbow = { 10, 0, 0 } }) },
-			{ 0.8, merge(crouched, { Waist = { -15, 0, 0 }, LeftShoulder = { 100, 0, 20 }, RightShoulder = { 100, 0, -20 }, LeftElbow = { 5, 0, 0 }, RightElbow = { 5, 0, 0 }, RootOffset = { 0, -0.3, 0 } }) },
+			{ 0.1, merge(crouched, { Waist = { 4, 0, 0 }, LeftShoulder = { 30, 20, 10 }, RightShoulder = { 30, -20, -10 }, LeftElbow = { 115, 0, 0 }, RightElbow = { 115, 0, 0 }, RootOffset = { 0, -0.3, 0 } }) },
+			{ 0.24, merge(crouched, { Waist = { -10, -40, 0 }, Neck = { 4, 26, 0 }, RightShoulder = { 92, 22, 0 }, RightElbow = { 8, 0, 0 }, RootOffset = { 0, -0.2, -0.1 } }), true },
+			{ 0.42, merge(crouched, { Waist = { -10, 40, 0 }, Neck = { 4, -26, 0 }, LeftShoulder = { 92, -22, 0 }, LeftElbow = { 8, 0, 0 }, RootOffset = { 0, -0.2, -0.14 } }), true },
+			{ 0.6, merge(crouched, { Waist = { -10, -40, 0 }, Neck = { 4, 26, 0 }, RightShoulder = { 92, 22, 0 }, RightElbow = { 8, 0, 0 }, RootOffset = { 0, -0.22, -0.16 } }), true },
+			{ 0.7, merge(crouched, { Waist = { 4, 0, 0 }, LeftShoulder = { 40, 10, 20 }, RightShoulder = { 40, -10, -20 }, LeftElbow = { 120, 0, 0 }, RightElbow = { 120, 0, 0 }, RootOffset = { 0, -0.1, 0 } }) },
+			{ 0.8, merge(crouched, { Waist = { -18, 0, 0 }, LeftShoulder = { 100, 0, 20 }, RightShoulder = { 100, 0, -20 }, LeftElbow = { 4, 0, 0 }, RightElbow = { 4, 0, 0 }, RootOffset = { 0, -0.36, -0.18 } }), true },
+			{ 0.9, merge(crouched, { Waist = { -16, 0, 0 }, LeftShoulder = { 96, 0, 22 }, RightShoulder = { 96, 0, -22 }, LeftElbow = { 6, 0, 0 }, RightElbow = { 6, 0, 0 }, RootOffset = { 0, -0.34, -0.16 } }) },
 			{ 1, crouched },
 		}),
 	}
@@ -414,17 +466,38 @@ do
 	local rise = merge(windup, { Waist = { 12, -30, 0 }, Neck = { -6, 24, 0 }, LeftKnee = { -10, 0, 0 }, RightKnee = { -8, 0, 0 }, RootOffset = { 0, 0.08, 0.06 } })
 	local strike = merge(chop, { Waist = { -28, 60, 0 }, LeftHip = { 30, 0, -6 }, LeftKnee = { -38, 0, 0 }, RightKnee = { -30, 0, 0 }, RootOffset = { 0, -0.38, -0.1 } })
 	local recoil = merge(chop, { Waist = { -20, 52, 0 }, RootOffset = { 0, -0.22, -0.06 } })
+	local axeUp = merge(merge(STANCE, overhead), { Waist = { 8, 8, 0 }, Neck = { -2, -6, 0 } })
 	ByWeapon.AXE = {
+		-- The arms keep the baked overhead haft grip, so only the chest and bob move.
+		Victory = clip(1.1, true, { { 0, axeUp }, { 0.45, merge(axeUp, { Waist = { 12, 8, 0 }, RootOffset = { 0, 0.12, 0 } }) }, { 1, axeUp } }),
 		Idle = breathe(rest),
 		-- A heavy walk: shorter strides, a deeper bob, the weapon's weight keeping the torso square.
 		Move = walk(rest, nil, { Stride = 24, Lift = 28, Bob = 0.09, Lean = -5, Twist = 0.7 }),
 		-- Overhand chop: sink, then rise onto the toes hauling it back over the shoulder, then the
 		-- whole body drops through the chop and bounces off the impact.
 		AttackBasic = clip(0.85, false, { { 0, rest }, { 0.16, settle }, { 0.45, rise }, { 0.65, strike, true }, { 0.8, recoil }, { 1, rest } }),
-		-- Level sweep: drawn back on the right, swung flat through the front.
-		AttackSpecial = clip(0.9, false, { { 0, rest }, { 0.4, sweepBack }, { 0.68, sweepThrough }, { 0.82, sweepThrough }, { 1, rest } }),
-		-- Both hands overhead, then buried in the floor.
-		AttackSkill = clip(1.15, false, { { 0, rest }, { 0.4, high }, { 0.62, slam }, { 0.84, slam }, { 1, rest } }),
+		-- Level sweep: sink and wind the torso far back on the right (the Charge builds), then
+		-- unwind through a flat sweep that drags the body round past the front, and settle.
+		AttackSpecial = clip(0.9, false, {
+			{ 0, rest },
+			{ 0.2, merge(sweepBack, { Waist = { 4, -30, 0 }, LeftKnee = { -26, 0, 0 }, RightKnee = { -22, 0, 0 }, RootOffset = { 0, -0.2, 0.04 } }) },
+			{ 0.48, merge(sweepBack, { Waist = { 6, -52, 0 }, Neck = { -2, 40, 0 }, RightHip = { -20, 0, 6 }, RightKnee = { -30, 0, 0 }, RootOffset = { 0, -0.14, 0.1 } }) },
+			{ 0.68, merge(sweepThrough, { Waist = { -12, 70, 0 }, Neck = { 6, -50, 0 }, LeftHip = { 30, 0, -6 }, LeftKnee = { -38, 0, 0 }, RootOffset = { 0, -0.3, -0.12 } }), true },
+			{ 0.8, merge(sweepThrough, { Waist = { -8, 76, 0 }, Neck = { 4, -54, 0 }, LeftHip = { 28, 0, -6 }, LeftKnee = { -34, 0, 0 }, RootOffset = { 0, -0.26, -0.1 } }) },
+			{ 1, rest },
+		}),
+		-- Skill: drop low, then haul the axe overhead rising onto the toes, hang at the top, and
+		-- slam it into the floor with the whole body, bouncing once off the impact.
+		AttackSkill = clip(1.15, false, {
+			{ 0, rest },
+			{ 0.18, merge(settle, { Waist = { -10, 14, 0 }, LeftKnee = { -34, 0, 0 }, RightKnee = { -30, 0, 0 }, RootOffset = { 0, -0.32, 0 } }) },
+			{ 0.42, merge(high, { Waist = { 16, 8, 0 }, RootOffset = { 0, 0.28, 0.04 } }) },
+			{ 0.52, merge(high, { Waist = { 20, 8, 0 }, Neck = { -8, -6, 0 }, RootOffset = { 0, 0.32, 0.06 } }) },
+			{ 0.62, merge(slam, { RootOffset = { 0, -0.62, -0.1 } }), true },
+			{ 0.74, merge(slam, { Waist = { -32, 50, 0 }, RootOffset = { 0, -0.5, -0.08 } }) },
+			{ 0.86, merge(slam, { Waist = { -26, 48, 0 }, RootOffset = { 0, -0.42, -0.06 } }) },
+			{ 1, rest },
+		}),
 	}
 end
 
@@ -449,16 +522,33 @@ do
 		LeftShoulder = { 82, 0, -16 }, LeftElbow = { 8, 0, 0 }, RootOffset = { 0, -0.18, -0.1 },
 	})
 	local castHeld = merge(thrust, { Waist = { -9, -12, 0 }, RightShoulder = { 92, 0, 0 }, LeftShoulder = { 72, 0, -18 }, LeftElbow = { 16, 0, 0 }, RootOffset = { 0, -0.14, -0.07 } })
+	local staffUp = merge(STANCE, { Waist = { 6, 0, 0 }, Neck = { 10, 0, 0 }, RightShoulder = { 165, 0, 10 }, RightElbow = { 10, 0, 0 }, LeftShoulder = { 20, 0, -18 }, LeftElbow = { 30, 0, 0 } })
 	ByWeapon.STAFF = {
+		Victory = cheer(staffUp, "RightShoulder"),
 		Idle = breathe(stand),
 		-- A measured walk.
 		Move = walk(stand, nil, { Stride = 25, Lift = 28, Lean = -2, Bob = 0.05 }),
 		AttackBasic = clip(0.8, false, { { 0, stand }, { 0.32, gather }, { 0.62, thrust, true }, { 0.8, castHeld }, { 1, stand } }),
-		AttackSpecial = clip(0.9, false, { { 0, stand }, { 0.45, raised }, { 0.65, merge(cast, { Waist = { -12, 0, 0 } }) }, { 1, stand } }),
+		-- Special: gather the staff back (the Charge glow starts), sweep it up overhead leaning
+		-- back, then stab it forward at the target with a lunge, hold the cast, recover.
+		AttackSpecial = clip(0.9, false, {
+			{ 0, stand },
+			{ 0.2, gather },
+			{ 0.45, raised },
+			{ 0.56, merge(raised, { Waist = { 16, 4, 0 }, Neck = { 14, 0, 0 }, RightShoulder = { 172, 6, 12 }, RootOffset = { 0, 0.06, 0.06 } }) },
+			{ 0.65, merge(thrust, { Waist = { -14, -14, 0 }, RootOffset = { 0, -0.22, -0.14 } }), true },
+			{ 0.8, castHeld },
+			{ 1, stand },
+		}),
+		-- Skill: crouch gathering power, rise onto the toes with both arms climbing overhead,
+		-- arch back at the top and thrust the staff skyward as the pillar is called, then hold.
 		AttackSkill = clip(1.2, false, {
 			{ 0, stand },
+			{ 0.15, merge(gather, { Waist = { -10, 14, 0 }, LeftKnee = { -34, 0, 0 }, RightKnee = { -30, 0, 0 }, RootOffset = { 0, -0.3, 0 } }) },
 			{ 0.4, merge(raised, { LeftShoulder = { 165, 0, -10 }, RootOffset = { 0, 0.1, 0 } }) },
-			{ 0.7, merge(raised, { Waist = { 16, 0, 0 }, RightShoulder = { 175, 0, 0 }, LeftShoulder = { 175, 0, 0 } }) },
+			{ 0.6, merge(raised, { Waist = { 20, 0, 0 }, Neck = { 18, 0, 0 }, RightShoulder = { 172, 0, 4 }, LeftShoulder = { 170, 0, -4 }, RootOffset = { 0, 0.18, 0 } }) },
+			{ 0.7, merge(raised, { Waist = { 12, 0, 0 }, Neck = { 14, 0, 0 }, RightShoulder = { 178, 0, 0 }, RightElbow = { 0, 0, 0 }, LeftShoulder = { 176, 0, 0 }, RootOffset = { 0, 0.22, 0 } }), true },
+			{ 0.86, merge(raised, { Waist = { 14, 0, 0 }, RightShoulder = { 175, 0, 0 }, LeftShoulder = { 172, 0, 0 }, RootOffset = { 0, 0.14, 0 } }) },
 			{ 1, stand },
 		}),
 	}
@@ -514,7 +604,9 @@ do
 	-- small step in, and ease back to reading.
 	local wind = merge(gather, { Waist = { 2, 24, 0 }, Neck = { -2, -12, 0 }, RightShoulder = { 28, 30, 30 }, RightElbow = { 105, 0, 0 }, RootOffset = { 0, -0.04, 0.05 } })
 	local push = merge(release, { Waist = { -8, -18, 0 }, RightShoulder = { 96, -8, 2 }, RightElbow = { 4, 0, 0 }, RootOffset = { 0, -0.12, -0.08 } })
+	local tomeUp = merge(read, { Waist = { 4, 6, 0 }, Neck = { 6, 8, 2 }, RightShoulder = { 158, 0, 22 }, RightElbow = { 20, 0, 0 }, RightWrist = { 0, 0, 0 } })
 	ByWeapon.TOME = {
+		Victory = cheer(tomeUp, "RightShoulder"),
 		Idle = floatIdle(read, 3.2),
 		-- A gliding walk: short steps, little bob, the tome steady.
 		Move = walk(read, nil, { Stride = 22, Lift = 24, Bob = 0.04 }),
@@ -525,11 +617,14 @@ do
 			{ 0.72, followThrough },
 			{ 1, read },
 		}),
+		-- Special: the casting hand circles back with the torso (the Charge glow gathers), rears
+		-- further, then pushes out with a step in and holds before easing back to reading.
 		AttackSpecial = clip(0.95, false, {
 			{ 0, read },
-			{ 0.32, merge(gather, { LeftShoulder = { 42, -6, -10 }, RightShoulder = { 65, 24, 38 }, RightElbow = { 95, 0, 0 }, Waist = { 4, 22, 0 } }) },
-			{ 0.65, merge(release, { RightShoulder = { 102, -8, 0 }, RightElbow = { 6, 0, 0 }, Waist = { -8, -18, 0 }, RootOffset = { 0, -0.06, -0.04 } }) },
-			{ 0.82, followThrough },
+			{ 0.16, merge(gather, { Waist = { 2, 14, 0 }, RightShoulder = { 40, 20, 26 }, RightElbow = { 90, 0, 0 } }) },
+			{ 0.42, merge(gather, { LeftShoulder = { 42, -6, -10 }, RightShoulder = { 62, 28, 42 }, RightElbow = { 100, 0, 0 }, Waist = { 6, 26, 0 }, Neck = { -2, -12, 0 }, RootOffset = { 0, -0.04, 0.06 } }) },
+			{ 0.65, merge(release, { RightShoulder = { 104, -8, 0 }, RightElbow = { 4, 0, 0 }, Waist = { -10, -20, 0 }, RootOffset = { 0, -0.12, -0.1 } }), true },
+			{ 0.8, merge(followThrough, { Waist = { -6, -12, 0 }, RootOffset = { 0, -0.08, -0.06 } }) },
 			{ 1, read },
 		}),
 		AttackSkill = clip(1.2, false, {
@@ -544,6 +639,8 @@ end
 
 -- Shared states -----------------------------------------------------------------------------
 local Shared: { [string]: Clip } = {
+	-- Weapon sets have their own Victory; this is the fallback for anything else.
+	Victory = cheer(merge(STANCE, { Waist = { 4, 0, 0 }, Neck = { 8, 0, 0 }, RightShoulder = { 160, 0, 14 }, RightElbow = { 30, 0, 0 } }), "RightShoulder"),
 	Hit = clip(0.35, false, {
 		{ 0, {} },
 		{ 0.3, { Waist = { 14, 0, 0 }, Neck = { 12, 0, 0 }, LeftShoulder = { -10, 0, -25 }, RightShoulder = { -10, 0, 25 }, RootOffset = { 0, 0, 0.15 } } },
@@ -779,11 +876,24 @@ local RELEASE_MARKERS: { [string]: { [string]: number } } = {
 	STAFF = { AttackBasic = 0.62, AttackSpecial = 0.65, AttackSkill = 0.7 },
 	TOME = { AttackBasic = 0.55, AttackSpecial = 0.65, AttackSkill = 0.65 },
 }
+-- Charge: where the weapon Special and Skill clips' wind-up starts (their anticipation key), so
+-- the shared styles' wind-up VFX (SkillVfx chargers) play for every hero using these clips.
+local CHARGE_MARKERS: { [string]: { [string]: number } } = {
+	BOW = { AttackSpecial = 0.18, AttackSkill = 0.2 },
+	SWORD_SHIELD = { AttackSpecial = 0.2, AttackSkill = 0.18 },
+	DAGGERS = { AttackSpecial = 0.15, AttackSkill = 0.1 },
+	AXE = { AttackSpecial = 0.2, AttackSkill = 0.18 },
+	STAFF = { AttackSpecial = 0.2, AttackSkill = 0.15 },
+	TOME = { AttackSpecial = 0.16, AttackSkill = 0.12 },
+}
 local BOW_NOCK = 0.9
 for weaponType, releases in RELEASE_MARKERS do
 	for state, release in releases do
 		local attack = ByWeapon[weaponType][state]
 		attack.Markers = if weaponType == "BOW" then { Release = release, Nock = BOW_NOCK } else { Release = release }
+		local charges = CHARGE_MARKERS[weaponType]
+		local charge = charges and charges[state]
+		if charge then (attack.Markers :: any).Charge = charge end
 	end
 end
 
