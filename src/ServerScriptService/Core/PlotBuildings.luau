@@ -16,7 +16,7 @@ local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 39 -- 39: Preserve FacilityPresence-stashed facilities and ensure TrainingGrounds always includes its 14 MeshParts (38: bastion tip alignment)
+local VERSION = 41 -- 41: Enlarged Market Bazaar at (50,0,36) facing Fountain (40: Curved 3-stall Bazaar)
 
 local function attachPrompt(
 	parent: Instance,
@@ -108,10 +108,12 @@ function Buildings.Build(plot: Instance)
 	-- Reuse cached buildings only if they were built for this version and this island position
 	-- (including support facilities temporarily stashed off-tree by FacilityPresence).
 	local existing = plot:FindFirstChild("PlotBuildings")
+	local existingMarket = FacilityPresence.GetBuilding(plot, "Market")
 	local existingTG = FacilityPresence.GetBuilding(plot, "TrainingGrounds")
 	if existing and existing:GetAttribute("Version") == VERSION
 		and sameOrigin(existing:GetAttribute("Origin"), origin)
-		and FacilityPresence.GetBuilding(plot, "Market") ~= nil
+		and existingMarket ~= nil
+		and existingMarket:FindFirstChildWhichIsA("MeshPart", true) ~= nil
 		and existingTG ~= nil
 		and existingTG:FindFirstChildWhichIsA("MeshPart", true) ~= nil then
 		return existing
@@ -150,7 +152,7 @@ function Buildings.Build(plot: Instance)
 
 	-- 4. Market Cluster (4-Stall Merchant Bazaar in NE Corner)
 	local marketCfg = layout.Market
-	local marketCF = origin * CFrame.new(marketCfg.Offset) * CFrame.Angles(0, marketCfg.RotationY or math.rad(-145), 0)
+	local marketCF = origin * CFrame.new(marketCfg.Offset) * CFrame.Angles(0, marketCfg.RotationY or math.atan2(-50, -36), 0)
 	local marketInteract = Architecture.BuildMarket(folder, marketCF)
 	local marketModel = folder:FindFirstChild("Building_Market")
 	if marketModel then

@@ -115,12 +115,33 @@ type WorkerVisual = {
 	NextMoteAt: number,
 }
 
+type MarketSwayPart = {
+	Part: BasePart,
+	PivotWorld: CFrame,
+	OffsetFromPivot: CFrame,
+	PhaseOffset: number,
+	AmplitudeX: number,
+	AmplitudeZ: number,
+	FreqX: number,
+	FreqZ: number,
+}
+
+type MarketAmbianceState = {
+	SourceModel: Model?,
+	SwayParts: { MarketSwayPart },
+	LanternLights: { PointLight },
+	LanternEmbers: { ParticleEmitter },
+	WasStaffed: boolean?,
+	Settled: boolean,
+}
+
 type PlotWorkerDirector = {
 	PlotIndex: number,
 	Plot: Model,
 	Workers: { [string]: WorkerVisual },
 	DummyStates: { [number]: DummyWobbleState },
 	DummySourceModel: Model?,
+	MarketAmbiance: MarketAmbianceState,
 	Dirty: boolean,
 	Initialized: boolean,
 	Parked: boolean,
@@ -571,6 +592,133 @@ local function resetAllDummies(director: PlotWorkerDirector)
 end
 
 --============================================================================
+-- MARKET BAZAAR LANTERNS & HANGING SIGN AMBIANCE
+--============================================================================
+local function ensureMarketAmbianceCache(director: PlotWorkerDirector)
+	local buildings = director.Plot:FindFirstChild("PlotBuildings")
+	local marketModel = buildings and buildings:FindFirstChild("Building_Market") :: Model?
+	local cache = director.MarketAmbiance
+	if marketModel == cache.SourceModel then
+		return
+	end
+
+	for _, sp in ipairs(cache.SwayParts) do
+		if sp.Part.Parent then
+			sp.Part.CFrame = sp.PivotWorld * sp.OffsetFromPivot
+		end
+	end
+	table.clear(cache.SwayParts)
+	table.clear(cache.LanternLights)
+	table.clear(cache.LanternEmbers)
+	cache.SourceModel = marketModel
+	cache.WasStaffed = nil
+	cache.Settled = true
+
+	if not marketModel then
+		return
+	end
+
+	local signBoard = marketModel:FindFirstChild("Sign_HangingBoard", true)
+	if signBoard and signBoard:IsA("BasePart") then
+		local pivotWorld = signBoard:GetPivot()
+		table.insert(cache.SwayParts, {
+			Part = signBoard,
+			PivotWorld = pivotWorld,
+			OffsetFromPivot = pivotWorld:ToObjectSpace(signBoard.CFrame),
+			PhaseOffset = 0.0,
+			AmplitudeX = math.rad(3.1),
+			AmplitudeZ = 0,
+			FreqX = 1.35,
+			FreqZ = 0,
+		})
+	end
+
+	for idx = 1, 3 do
+		local lantern = marketModel:FindFirstChild("Lantern_Housing_" .. idx, true)
+		if lantern and lantern:IsA("BasePart") then
+			local pivotWorld = lantern:GetPivot()
+			table.insert(cache.SwayParts, {
+				Part = lantern,
+				PivotWorld = pivotWorld,
+				OffsetFromPivot = pivotWorld:ToObjectSpace(lantern.CFrame),
+				PhaseOffset = idx * 1.95,
+				AmplitudeX = math.rad(2.8),
+				AmplitudeZ = math.rad(1.9),
+				FreqX = 1.65 + idx * 0.14,
+				FreqZ = 1.25 + idx * 0.11,
+			})
+			for _, desc in ipairs(lantern:GetDescendants()) do
+				if desc:IsA("PointLight") then
+					table.insert(cache.LanternLights, desc)
+				elseif desc:IsA("ParticleEmitter") then
+					table.insert(cache.LanternEmbers, desc)
+				end
+			end
+		end
+	end
+end
+
+local function stepMarketAmbiance(
+	director: PlotWorkerDirector,
+	nowClock: number,
+	animateSway: boolean,
+	hasAwakeMarketWorker: boolean
+)
+	ensureMarketAmbianceCache(director)
+	local cache = director.MarketAmbiance
+	if not cache.SourceModel then
+		return
+	end
+
+	if animateSway then
+		cache.Settled = false
+		for _, sp in ipairs(cache.SwayParts) do
+			if sp.Part.Parent then
+				local rx = sp.AmplitudeX * math.sin(nowClock * sp.FreqX + sp.PhaseOffset)
+				local rz = sp.AmplitudeZ * math.cos(nowClock * sp.FreqZ + sp.PhaseOffset * 0.7)
+				local rotatedPivot = sp.PivotWorld * CFrame.Angles(rx, 0, rz)
+				sp.Part.CFrame = rotatedPivot * sp.OffsetFromPivot
+			end
+		end
+	elseif not cache.Settled then
+		for _, sp in ipairs(cache.SwayParts) do
+			if sp.Part.Parent then
+				sp.Part.CFrame = sp.PivotWorld * sp.OffsetFromPivot
+			end
+		end
+		cache.Settled = true
+	end
+
+	if hasAwakeMarketWorker then
+		for i, pl in ipairs(cache.LanternLights) do
+			if pl.Parent then
+				pl.Brightness = 2.15 + 0.22 * math.sin(nowClock * 3.1 + i * 1.4)
+			end
+		end
+		if cache.WasStaffed ~= true then
+			for _, ember in ipairs(cache.LanternEmbers) do
+				if ember.Parent then
+					ember.Enabled = true
+				end
+			end
+			cache.WasStaffed = true
+		end
+	elseif cache.WasStaffed ~= false then
+		for _, pl in ipairs(cache.LanternLights) do
+			if pl.Parent then
+				pl.Brightness = 0.45
+			end
+		end
+		for _, ember in ipairs(cache.LanternEmbers) do
+			if ember.Parent then
+				ember.Enabled = false
+			end
+		end
+		cache.WasStaffed = false
+	end
+end
+
+--============================================================================
 -- WORKER VISUAL CREATION & EQUIPMENT
 --============================================================================
 local function destroyWorkerVisual(worker: WorkerVisual)
@@ -951,7 +1099,7 @@ local function stepMarketSlotRoutine(
 	local slot = worker.Slot
 
 	if slot == 1 then
-		-- Slot 1: Bazaar Hawker — sweeps along Stall_RedAmber counter calling out deals
+		-- Slot 1: Bazaar Hawker — sweeps along Awning_Left_RedYellow counter calling out deals
 		local tertiary = slotSpec.Tertiary or slotSpec.Primary
 		local targetStation = if worker.Phase == 1
 			then slotSpec.Primary
@@ -1300,6 +1448,7 @@ local function parkDirector(director: PlotWorkerDirector, parked: boolean, origi
 	end
 	if parked then
 		resetAllDummies(director)
+		stepMarketAmbiance(director, os.clock(), false, false)
 	end
 end
 
@@ -1311,6 +1460,15 @@ local function stepPlotDirector(
 	dt: number
 )
 	stepDummyWobbles(director, nowClock)
+
+	local hasAwakeMarketWorker = false
+	for _, worker in pairs(director.Workers) do
+		if worker.FacilityId == "Market" and worker.ComaUntil <= nowUnix then
+			hasAwakeMarketWorker = true
+			break
+		end
+	end
+	stepMarketAmbiance(director, nowClock, true, hasAwakeMarketWorker)
 
 	for _, worker in pairs(director.Workers) do
 		local slotSpec = FacilityWorkerRules.GetSlotSpec(worker.FacilityId, worker.Slot)
@@ -1424,6 +1582,14 @@ local function createPlotDirector(plotIndex: number, plot: Model): PlotWorkerDir
 		Workers = {},
 		DummyStates = {},
 		DummySourceModel = nil,
+		MarketAmbiance = {
+			SourceModel = nil,
+			SwayParts = {},
+			LanternLights = {},
+			LanternEmbers = {},
+			WasStaffed = nil,
+			Settled = true,
+		},
 		Dirty = true,
 		Initialized = false,
 		Parked = false,
@@ -1459,6 +1625,7 @@ local function createPlotDirector(plotIndex: number, plot: Model): PlotWorkerDir
 				director.Dirty = true
 			elseif child.Name == "PlotBuildings" then
 				director.DummySourceModel = nil
+				director.MarketAmbiance.SourceModel = nil
 				director.Dirty = true
 			end
 		end)
@@ -1518,6 +1685,7 @@ local function stepFacilityWorkers(dt: number)
 
 		if next(director.Workers) == nil then
 			resetAllDummies(director)
+			stepMarketAmbiance(director, nowClock, false, false)
 			continue
 		end
 

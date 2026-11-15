@@ -5,7 +5,7 @@
 -- ReplicatedStorage.Assets.PlotFacilities with ground-level PrimaryPart and PromptAnchor attachments:
 --   1. SummoningPortal    (Monumental Circular Stone Stargate with #22D3EE cyan runes & light beam)
 --   2. LeaderboardBoard   (Recessed #0D0912 Obsidian Wall Board with #FACC15 gold neon trim)
---   3. MarketCluster      (4-Stall U-Shaped Merchant Bazaar with striped awnings, barrels, crates, warm lights)
+--   3. MarketCluster      (3-Stall Curved Merchant Bazaar with Striped/Draped Awnings, Flagstones, Clutter & Lanterns)
 --   4. SynthesisChamber   (Cylindrical Gothic Stone Rotunda with cyan barrier arch & #C084FC purple oculus plume)
 --   5. BlacksmithForge    (Open-Air Stone Hearth & Chimney against Dividing Wall, anvil sparks, coal, trough)
 --   6. TrainingArea       (Polygonal Split-Rail Courtyard with V-Gable Archway, 5 Dummies & 2 Bullseyes)
@@ -215,6 +215,176 @@ local function finalizeFacilityModel(
 	interactionPart.Transparency = 1
 
 	return interactionPart, promptAnchor
+end
+
+type BundledMeshSpec = {
+	Name: string,
+	MeshId: string,
+	Size: Vector3,
+	Pos: Vector3,
+	PivotOffset: Vector3,
+	ColorMap: string,
+	NormalMap: string,
+	RoughnessMap: string,
+	CastShadow: boolean,
+}
+
+local buildingMeshTemplates: { [string]: boolean } = {}
+
+local function createMeshPartFromId(meshId: string): MeshPart?
+	local ok, res = pcall(function()
+		return AssetService:CreateMeshPartAsync(Content.fromUri(meshId))
+	end)
+	if ok and res and res:IsA("MeshPart") then
+		return res
+	end
+	ok, res = pcall(function()
+		return (AssetService :: any):CreateMeshPartAsync(meshId)
+	end)
+	if ok and res and res:IsA("MeshPart") then
+		return res
+	end
+	ok, res = pcall(function()
+		return InsertService:CreateMeshPartAsync(meshId, Enum.CollisionFidelity.Default, Enum.RenderFidelity.Automatic)
+	end)
+	if ok and res and res:IsA("MeshPart") then
+		return res
+	end
+	return nil
+end
+
+local function resolveBundledMeshTemplate(templateName: string, specs: { BundledMeshSpec }): Model?
+	local function findValidTemplate(): Model?
+		local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
+		local customMeshes = assetsFolder and assetsFolder:FindFirstChild("CustomFacilityMeshes")
+		local imported = customMeshes and customMeshes:FindFirstChild(templateName)
+		if imported and imported:IsA("Model") and imported:FindFirstChildWhichIsA("MeshPart", true) then
+			return imported
+		end
+		local plotFacs = assetsFolder and assetsFolder:FindFirstChild("PlotFacilities")
+		local candidate = plotFacs and plotFacs:FindFirstChild(templateName)
+		if candidate and candidate:IsA("Model") and candidate:FindFirstChildWhichIsA("MeshPart", true) then
+			return candidate
+		end
+		return nil
+	end
+
+	while buildingMeshTemplates[templateName] do
+		task.wait()
+	end
+	local existing = findValidTemplate()
+	if existing then
+		return existing
+	end
+
+	-- Self-healing fallback: reconstruct and cache all Blender MeshParts from uploaded AssetIds
+	-- so facilities stay visible even if CustomFacilityMeshes was stripped or unsynced.
+	buildingMeshTemplates[templateName] = true
+	local ok, built = pcall(function(): Model?
+		local templateModel = Instance.new("Model")
+		templateModel.Name = templateName
+		templateModel.WorldPivot = CFrame.identity
+
+		local remaining = #specs
+		local createdCount = 0
+		local meshRot = CFrame.Angles(0, math.pi, 0)
+		local neutralTint = Color3.fromRGB(163, 162, 165)
+
+		for _, spec in ipairs(specs) do
+			task.spawn(function()
+				local mp = createMeshPartFromId(spec.MeshId)
+				if mp then
+					mp.Name = spec.Name
+					mp.Size = spec.Size
+					mp.CFrame = CFrame.new(spec.Pos) * meshRot
+					mp.PivotOffset = CFrame.new(spec.PivotOffset)
+					mp.Color = neutralTint
+					mp.Material = Enum.Material.Plastic
+					mp.Anchored = true
+					mp.CanCollide = false
+					mp.CanTouch = false
+					mp.CanQuery = false
+					mp.CastShadow = spec.CastShadow
+
+					local sa = Instance.new("SurfaceAppearance")
+					sa.ColorMap = spec.ColorMap
+					sa.NormalMap = spec.NormalMap
+					sa.RoughnessMap = spec.RoughnessMap
+					sa.AlphaMode = Enum.AlphaMode.Overlay
+					sa.Parent = mp
+
+					mp.Parent = templateModel
+					createdCount += 1
+				end
+				remaining -= 1
+			end)
+		end
+
+		while remaining > 0 do
+			task.wait()
+		end
+
+		if createdCount == 0 then
+			templateModel:Destroy()
+			return nil
+		end
+
+		local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
+		if not assetsFolder then
+			local newAssets = Instance.new("Folder")
+			newAssets.Name = "Assets"
+			newAssets.Parent = ReplicatedStorage
+			assetsFolder = newAssets
+		end
+		local customMeshes = assetsFolder:FindFirstChild("CustomFacilityMeshes")
+		if not customMeshes then
+			local newCustom = Instance.new("Folder")
+			newCustom.Name = "CustomFacilityMeshes"
+			newCustom.Parent = assetsFolder
+			customMeshes = newCustom
+		end
+		templateModel.Parent = customMeshes
+		return templateModel
+	end)
+	buildingMeshTemplates[templateName] = nil
+
+	return if ok then built else nil
+end
+
+local function instantiateBundledMeshes(
+	templateName: string,
+	specs: { BundledMeshSpec },
+	model: Model,
+	centerCF: CFrame
+): boolean
+	local castShadowByName: { [string]: boolean } = {}
+	for _, spec in ipairs(specs) do
+		castShadowByName[spec.Name] = spec.CastShadow
+	end
+
+	local importedTemplate = resolveBundledMeshTemplate(templateName, specs)
+	if not importedTemplate then
+		return false
+	end
+
+	local cloned = importedTemplate:Clone()
+	cloned:PivotTo(centerCF)
+	for _, desc in ipairs(cloned:GetDescendants()) do
+		if desc:IsA("BasePart") then
+			desc.Anchored = true
+			desc.CanCollide = false
+			desc.CanTouch = false
+			desc.CanQuery = false
+			desc.CastShadow = castShadowByName[desc.Name] ~= false
+		end
+	end
+	for _, ch in ipairs(cloned:GetChildren()) do
+		if not ch:IsA("PackageLink") then
+			ch.Parent = model
+		end
+	end
+	cloned:Destroy()
+	return true
 end
 
 --============================================================================
@@ -731,137 +901,129 @@ end
 --============================================================================
 -- 2.3 MARKET CLUSTER (`MarketCluster` — 4-Stall Merchant Bazaar)
 --============================================================================
+local MB_GROUND_CM = "rbxassetid://100560967661665"
+local MB_GROUND_NM = "rbxassetid://76492701795761"
+local MB_GROUND_RM = "rbxassetid://116909121077069"
+local MB_PROPS_CM = "rbxassetid://138033743603856"
+local MB_PROPS_NM = "rbxassetid://125626595855578"
+local MB_PROPS_RM = "rbxassetid://109367096016299"
+
+local MARKET_BAZAAR_MESHES: { BundledMeshSpec } = {
+	{ Name = "Bazaar_FlagstonePath", MeshId = "rbxassetid://120654218023852", Size = V(36.2106, 0.1128, 25.6074), Pos = V(-0.0754, 0.0314, 1.0763), PivotOffset = V(-0.0754, -0.0314, 1.0763), ColorMap = MB_GROUND_CM, NormalMap = MB_GROUND_NM, RoughnessMap = MB_GROUND_RM, CastShadow = false },
+	{ Name = "Bazaar_GrassTufts", MeshId = "rbxassetid://134746546712747", Size = V(31.1276, 1.3751, 16.2294), Pos = V(-0.5799, 0.6676, 3.3078), PivotOffset = V(-0.5799, -0.6676, 3.3078), ColorMap = MB_GROUND_CM, NormalMap = MB_GROUND_NM, RoughnessMap = MB_GROUND_RM, CastShadow = false },
+	{ Name = "Stall_TimberFrame", MeshId = "rbxassetid://94835237518558", Size = V(34.7483, 11.1800, 14.1258), Pos = V(-0.1164, 5.5900, -4.3771), PivotOffset = V(-0.1164, -5.5900, -4.3771), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Stall_Counters", MeshId = "rbxassetid://108082766428988", Size = V(31.1441, 3.4800, 10.3771), Pos = V(0.0159, 1.7400, -2.7232), PivotOffset = V(0.0159, -1.7400, -2.7232), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Awning_Left_RedYellow", MeshId = "rbxassetid://100646726815798", Size = V(12.6421, 3.4000, 9.0359), Pos = V(-10.8776, 9.3500, -4.0898), PivotOffset = V(-10.8776, -9.3500, -4.0898), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Awning_Center_Tan", MeshId = "rbxassetid://116621867088318", Size = V(13.2248, 3.3500, 7.1166), Pos = V(0.9180, 10.1050, -8.1162), PivotOffset = V(0.9180, -10.1050, -8.1162), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Awning_Right_GreenWhite", MeshId = "rbxassetid://102136386214882", Size = V(12.4687, 3.4000, 10.3968), Pos = V(11.5315, 9.3500, -1.8696), PivotOffset = V(11.5315, -9.3500, -1.8696), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Sign_HangingBoard", MeshId = "rbxassetid://97980584183874", Size = V(2.5356, 2.4750, 0.9304), Pos = V(-16.9800, 7.6125, -0.0200), PivotOffset = V(0.0000, 1.2375, 0.0000), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Bazaar_Props_Clutter", MeshId = "rbxassetid://84470033674241", Size = V(34.7280, 3.7940, 16.0324), Pos = V(-1.1000, 1.8440, -2.8478), PivotOffset = V(-1.1000, -1.8440, -2.8478), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Lantern_Housing_1", MeshId = "rbxassetid://95196063236877", Size = V(0.4808, 1.0700, 0.4808), Pos = V(-5.8500, 6.7150, -2.5400), PivotOffset = V(0.0000, 0.5350, 0.0000), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Lantern_Housing_2", MeshId = "rbxassetid://70695528803700", Size = V(0.4808, 1.0700, 0.4808), Pos = V(0.8100, 7.1150, -5.0500), PivotOffset = V(0.0000, 0.5350, 0.0000), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+	{ Name = "Lantern_Housing_3", MeshId = "rbxassetid://98025089646022", Size = V(0.4808, 1.0700, 0.4808), Pos = V(6.5300, 6.7150, -1.3100), PivotOffset = V(0.0000, 0.5350, 0.0000), ColorMap = MB_PROPS_CM, NormalMap = MB_PROPS_NM, RoughnessMap = MB_PROPS_RM, CastShadow = true },
+}
+
 function Arch.BuildMarket(folder: Instance, centerCF: CFrame): Part
 	local model = Instance.new("Model")
 	model.Name = "Building_Market"
 	model.Parent = folder
 
-	local woodDark = Color3.fromRGB(96, 64, 38)
-	local woodLight = Color3.fromRGB(132, 92, 56)
-	local stoneCurb = Color3.fromRGB(78, 82, 90)
-	local warmGlow = Color3.fromRGB(255, 170, 75)
-
-	-- Cobblestone Bazaar Apron
-	part(
-		model,
-		"BazaarCobblePad",
-		V(38, 0.3, 30),
-		centerCF * CFrame.new(0, 0.15, 0),
-		stoneCurb,
-		Enum.Material.Cobblestone,
-		false
-	)
-
-	-- Helper to build an individual market stall with custom awning stripes
-	local function buildStall(stallName: string, stallCF: CFrame, stripeColorA: Color3, stripeColorB: Color3)
-		-- Wooden counter
-		part(model, stallName .. "_Counter", V(9.6, 3.2, 3.2), stallCF * CFrame.new(0, 1.6, 2.2), woodDark, Enum.Material.WoodPlanks, true)
-		part(model, stallName .. "_CounterTop", V(10.2, 0.35, 3.6), stallCF * CFrame.new(0, 3.3, 2.2), woodLight, Enum.Material.Wood, false)
-
-		-- 4 Corner Posts
-		for _, sx in ipairs({ -4.5, 4.5 }) do
-			for _, sz in ipairs({ -3.0, 3.0 }) do
-				part(model, stallName .. "_Post", V(0.65, 9.2, 0.65), stallCF * CFrame.new(sx, 4.6, sz), woodDark, Enum.Material.Wood, false)
-			end
-		end
-
-		-- Sloped Striped Awning (5 fabric panels)
-		local awningCenter = stallCF * CFrame.new(0, 9.4, 0.2) * CFrame.Angles(math.rad(14), 0, 0)
-		for s = -2, 2 do
-			local col = (s % 2 == 0) and stripeColorA or stripeColorB
-			part(
-				model,
-				stallName .. "_AwningStripe_" .. (s + 3),
-				V(2.15, 0.45, 8.2),
-				awningCenter * CFrame.new(s * 2.1, 0, 0),
-				col,
-				Enum.Material.Fabric,
-				false
-			)
-		end
-
-		-- Warm Interior PointLight (Color = (255, 170, 75), Range = 18)
-		local lantern = sphere(
-			model,
-			stallName .. "_Lantern",
-			1.1,
-			stallCF * CFrame.new(0, 7.6, 0.8),
-			warmGlow,
-			Enum.Material.Neon
-		)
-		pointLight(lantern, warmGlow, 1.8, 18, false)
-
-		-- Display goods on counter (colored fruit/relic crates)
-		for g = -1, 1 do
-			local crateCF = stallCF * CFrame.new(g * 2.8, 3.8, 2.2)
-			part(model, stallName .. "_GoodsTray", V(2.1, 0.6, 2.0), crateCF, woodDark, Enum.Material.WoodPlanks, false)
-			local goodColor = if g == -1
-				then Color3.fromRGB(220, 65, 55)
-				elseif g == 0 then Color3.fromRGB(245, 195, 55)
-				else Color3.fromRGB(75, 185, 95)
-			sphere(model, stallName .. "_RelicItem", 0.9, crateCF * CFrame.new(-0.4, 0.45, 0), goodColor, Enum.Material.SmoothPlastic)
-			sphere(model, stallName .. "_RelicItem2", 0.85, crateCF * CFrame.new(0.45, 0.42, 0.2), goodColor, Enum.Material.SmoothPlastic)
-		end
-
-		-- Merchant wooden stool behind counter
-		cylinder(model, stallName .. "_Stool", 0.9, 1.6, stallCF * CFrame.new(0, 0.8, -1.4), woodLight, Enum.Material.Wood, false)
+	if not instantiateBundledMeshes("MarketCluster", MARKET_BAZAAR_MESHES, model, centerCF) then
+		warn("[PlotFacilityArchitecture] Failed to load MarketCluster MeshParts")
 	end
 
-	-- 4 Market Stalls arranged in a gentle U-shape:
-	-- 1 Red/Amber striped awning, 2 Tan canvas awnings, 1 Green/White striped awning
-	buildStall(
-		"Stall_RedAmber",
-		centerCF * CFrame.new(-11.5, 0, -3.5) * CFrame.Angles(0, math.rad(28), 0),
-		Color3.fromRGB(185, 38, 38),
-		Color3.fromRGB(235, 168, 48)
-	)
-	buildStall(
-		"Stall_TanLeft",
-		centerCF * CFrame.new(-4.2, 0, -8.5) * CFrame.Angles(0, math.rad(8), 0),
-		Color3.fromRGB(212, 192, 154),
-		Color3.fromRGB(188, 166, 128)
-	)
-	buildStall(
-		"Stall_TanRight",
-		centerCF * CFrame.new(6.2, 0, -8.0) * CFrame.Angles(0, math.rad(-12), 0),
-		Color3.fromRGB(212, 192, 154),
-		Color3.fromRGB(192, 170, 132)
-	)
-	buildStall(
-		"Stall_GreenWhite",
-		centerCF * CFrame.new(12.5, 0, -1.5) * CFrame.Angles(0, math.rad(-38), 0),
-		Color3.fromRGB(42, 128, 64),
-		Color3.fromRGB(232, 232, 222)
-	)
+	-- Attach hinge pivot marker to the left merchant sign
+	local signBoard = model:FindFirstChild("Sign_HangingBoard")
+	if signBoard and signBoard:IsA("BasePart") then
+		local signPivot = Instance.new("Attachment")
+		signPivot.Name = "HangingSign_Pivot"
+		signPivot.Position = V(0, 1.2375, 0)
+		signPivot.Parent = signBoard
+	end
 
-	-- 10 Surrounding Barrels & Open Fruit/Relic Crates
-	local barrelOffsets = {
-		V(-16.5, 0, 1.5),
-		V(-15.0, 0, 4.2),
-		V(-8.5, 0, -11.5),
-		V(0.8, 0, -11.8),
-		V(11.0, 0, -10.5),
-		V(16.8, 0, 2.5),
-		V(15.2, 0, 5.4),
-		V(17.5, 0, 4.8),
+	-- Attach warm amber lantern PointLights & subtle ember sparkles inside each swinging lantern mesh
+	local warmGold = Color3.fromRGB(245, 158, 11)
+	local emberColor = ColorSequence.new(Color3.fromRGB(255, 204, 102), Color3.fromRGB(245, 158, 11))
+	for i = 1, 3 do
+		local lantern = model:FindFirstChild("Lantern_Housing_" .. i)
+		if lantern and lantern:IsA("BasePart") then
+			local att = Instance.new("Attachment")
+			att.Name = "LanternLight_" .. i
+			att.Position = V(0, -0.18, 0)
+			att.Parent = lantern
+
+			local pl = Instance.new("PointLight")
+			pl.Name = "LanternPointLight"
+			pl.Color = warmGold
+			pl.Brightness = 1.15
+			pl.Range = 18
+			pl.Shadows = false
+			pl.Parent = att
+
+			local ember = Instance.new("ParticleEmitter")
+			ember.Name = "LanternEmber"
+			ember.Color = emberColor
+			ember.Size = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.09),
+				NumberSequenceKeypoint.new(1, 0),
+			})
+			ember.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.25),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			ember.Lifetime = NumberRange.new(1.0, 1.8)
+			ember.Rate = 1.5
+			ember.Speed = NumberRange.new(0.4, 0.9)
+			ember.SpreadAngle = Vector2.new(35, 35)
+			ember.EmissionDirection = Enum.NormalId.Top
+			ember.LightEmission = 0.85
+			ember.Parent = att
+		end
+	end
+
+	-- Invisible solid box colliders ONLY for the 3 counters & 2 outer crate/barrel clusters
+	-- so flagstones, open courtyard plaza, and rear trader lane stay 100% passable.
+	local colColor = Color3.fromRGB(92, 86, 78)
+	local marketColliders = {
+		{ Name = "CounterCollider_Left", Pos = V(-10.50, 1.65, -2.69), Size = V(9.8, 3.30, 2.25), YawDeg = 15 },
+		{ Name = "CounterCollider_Center", Pos = V(0.87, 1.65, -6.60), Size = V(11.2, 3.30, 2.25), YawDeg = -2 },
+		{ Name = "CounterCollider_Right", Pos = V(10.94, 1.65, -0.66), Size = V(9.2, 3.30, 2.25), YawDeg = -26 },
+		{ Name = "ClutterCollider_Left", Pos = V(-15.80, 1.35, -1.20), Size = V(3.6, 2.70, 5.60), YawDeg = 15 },
+		{ Name = "ClutterCollider_Right", Pos = V(13.50, 1.35, 3.00), Size = V(4.6, 2.70, 4.40), YawDeg = -26 },
 	}
-	for _, bo in ipairs(barrelOffsets) do
-		addBarrel(model, centerCF * CFrame.new(bo), 0.95)
-	end
-
-	for idx, co in ipairs({ V(-13.5, 1.2, 6.2), V(13.5, 1.2, 7.0), V(1.5, 1.2, -5.5) }) do
-		part(
+	for _, col in ipairs(marketColliders) do
+		local cp = part(
 			model,
-			"MarketCrate_" .. idx,
-			V(3.2, 2.4, 3.2),
-			centerCF * CFrame.new(co) * CFrame.Angles(0, math.rad(idx * 25), 0),
-			woodLight,
-			Enum.Material.WoodPlanks,
-			false
+			col.Name,
+			col.Size,
+			centerCF * CFrame.new(col.Pos) * CFrame.Angles(0, math.rad(col.YawDeg), 0),
+			colColor,
+			Enum.Material.Wood,
+			true
 		)
+		cp.Transparency = 1
+		cp.CastShadow = false
+		cp.CanTouch = false
+		cp.CanQuery = false
 	end
 
-	local interactionPart = finalizeFacilityModel(model, centerCF, V(26, 2.5, 18), V(0, 3.5, 5.5))
+	-- Keep PrimaryRoot hullSize.Y <= 1.5 so PrimaryRoot stays non-colliding while PromptAnchor & TraderSpots sit cleanly
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(4, 1.0, 4), V(0, 3.1, 6.2))
+	local root = model.PrimaryPart
+	if root then
+		local traderSpots = {
+			{ Name = "TraderSpot_1", Pos = V(-11.20, -0.44, -5.30), YawDeg = 15 },
+			{ Name = "TraderSpot_2", Pos = V(0.95, -0.44, -9.15), YawDeg = -2 },
+			{ Name = "TraderSpot_3", Pos = V(12.08, -0.44, -2.99), YawDeg = -26 },
+		}
+		for _, spot in ipairs(traderSpots) do
+			local att = Instance.new("Attachment")
+			att.Name = spot.Name
+			att.CFrame = CFrame.new(spot.Pos) * CFrame.Angles(0, math.rad(spot.YawDeg), 0)
+			att.Parent = root
+		end
+	end
+
 	return interactionPart
 end
 
@@ -1310,18 +1472,6 @@ end
 --============================================================================
 -- 2.6 TRAINING AREA (`TrainingArea` — Fenced Polygonal Cobblestone Combat Ring)
 --============================================================================
-type TrainingMeshSpec = {
-	Name: string,
-	MeshId: string,
-	Size: Vector3,
-	Pos: Vector3,
-	PivotOffset: Vector3,
-	ColorMap: string,
-	NormalMap: string,
-	RoughnessMap: string,
-	CastShadow: boolean,
-}
-
 local TG_PROPS_CM = "rbxassetid://108825920828981"
 local TG_PROPS_NM = "rbxassetid://103410370581370"
 local TG_PROPS_RM = "rbxassetid://116703552811362"
@@ -1329,7 +1479,7 @@ local TG_FLOOR_CM = "rbxassetid://113479401976759"
 local TG_FLOOR_NM = "rbxassetid://128264443006045"
 local TG_FLOOR_RM = "rbxassetid://86555471679808"
 
-local TRAINING_GROUND_MESHES: { TrainingMeshSpec } = {
+local TRAINING_GROUND_MESHES: { BundledMeshSpec } = {
 	{ Name = "Arena_Floor", MeshId = "rbxassetid://107205650672236", Size = V(48.500000, 0.080008, 40.750000), Pos = V(0, -0.460001, 7.575134), PivotOffset = V(0, -0.0400, 7.5750), ColorMap = TG_FLOOR_CM, NormalMap = TG_FLOOR_NM, RoughnessMap = TG_FLOOR_RM, CastShadow = false },
 	{ Name = "Entrance_Archway", MeshId = "rbxassetid://86958939031314", Size = V(13.612968, 11.690001, 4.458000), Pos = V(0, 5.345001, -12.028931), PivotOffset = V(0, -5.8450, -12.0290), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
 	{ Name = "Perimeter_Fence", MeshId = "rbxassetid://133116725826364", Size = V(48.079998, 3.200007, 39.980000), Pos = V(0, 1.099998, 7.750061), PivotOffset = V(0, -1.6000, 7.7500), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
@@ -1346,153 +1496,12 @@ local TRAINING_GROUND_MESHES: { TrainingMeshSpec } = {
 	{ Name = "Dummy_5_Body", MeshId = "rbxassetid://77160486416462", Size = V(2.964515, 4.465000, 1.739178), Pos = V(6.200000, 2.957500, 11.200000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
 }
 
-local buildingTrainingTemplate = false
-
-local function createMeshPartFromId(meshId: string): MeshPart?
-	local ok, res = pcall(function()
-		return AssetService:CreateMeshPartAsync(Content.fromUri(meshId))
-	end)
-	if ok and res and res:IsA("MeshPart") then
-		return res
-	end
-	ok, res = pcall(function()
-		return (AssetService :: any):CreateMeshPartAsync(meshId)
-	end)
-	if ok and res and res:IsA("MeshPart") then
-		return res
-	end
-	ok, res = pcall(function()
-		return InsertService:CreateMeshPartAsync(meshId, Enum.CollisionFidelity.Default, Enum.RenderFidelity.Automatic)
-	end)
-	if ok and res and res:IsA("MeshPart") then
-		return res
-	end
-	return nil
-end
-
-local function resolveTrainingGroundsTemplate(): Model?
-	local function findValidTemplate(): Model?
-		local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
-		local customMeshes = assetsFolder and assetsFolder:FindFirstChild("CustomFacilityMeshes")
-		local imported = customMeshes and customMeshes:FindFirstChild("TrainingArea")
-		if imported and imported:IsA("Model") and imported:FindFirstChildWhichIsA("MeshPart", true) then
-			return imported
-		end
-		local plotFacs = assetsFolder and assetsFolder:FindFirstChild("PlotFacilities")
-		local candidate = plotFacs and plotFacs:FindFirstChild("TrainingArea")
-		if candidate and candidate:IsA("Model") and candidate:FindFirstChildWhichIsA("MeshPart", true) then
-			return candidate
-		end
-		return nil
-	end
-
-	while buildingTrainingTemplate do
-		task.wait()
-	end
-	local existing = findValidTemplate()
-	if existing then
-		return existing
-	end
-
-	-- Self-healing fallback: reconstruct and cache all 14 Blender MeshParts from uploaded AssetIds
-	-- so Training Grounds stays visible even if CustomFacilityMeshes was stripped or unsynced.
-	buildingTrainingTemplate = true
-	local ok, built = pcall(function(): Model?
-		local templateModel = Instance.new("Model")
-		templateModel.Name = "TrainingArea"
-		templateModel.WorldPivot = CFrame.identity
-
-		local remaining = #TRAINING_GROUND_MESHES
-		local createdCount = 0
-		local meshRot = CFrame.Angles(0, math.pi, 0)
-		local neutralTint = Color3.fromRGB(163, 162, 165)
-
-		for _, spec in ipairs(TRAINING_GROUND_MESHES) do
-			task.spawn(function()
-				local mp = createMeshPartFromId(spec.MeshId)
-				if mp then
-					mp.Name = spec.Name
-					mp.Size = spec.Size
-					mp.CFrame = CFrame.new(spec.Pos) * meshRot
-					mp.PivotOffset = CFrame.new(spec.PivotOffset)
-					mp.Color = neutralTint
-					mp.Material = Enum.Material.Plastic
-					mp.Anchored = true
-					mp.CanCollide = false
-					mp.CanTouch = false
-					mp.CanQuery = false
-					mp.CastShadow = spec.CastShadow
-
-					local sa = Instance.new("SurfaceAppearance")
-					sa.ColorMap = spec.ColorMap
-					sa.NormalMap = spec.NormalMap
-					sa.RoughnessMap = spec.RoughnessMap
-					sa.AlphaMode = Enum.AlphaMode.Overlay
-					sa.Parent = mp
-
-					mp.Parent = templateModel
-					createdCount += 1
-				end
-				remaining -= 1
-			end)
-		end
-
-		while remaining > 0 do
-			task.wait()
-		end
-
-		if createdCount == 0 then
-			templateModel:Destroy()
-			return nil
-		end
-
-		local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
-		if not assetsFolder then
-			local newAssets = Instance.new("Folder")
-			newAssets.Name = "Assets"
-			newAssets.Parent = ReplicatedStorage
-			assetsFolder = newAssets
-		end
-		local customMeshes = assetsFolder:FindFirstChild("CustomFacilityMeshes")
-		if not customMeshes then
-			local newCustom = Instance.new("Folder")
-			newCustom.Name = "CustomFacilityMeshes"
-			newCustom.Parent = assetsFolder
-			customMeshes = newCustom
-		end
-		templateModel.Parent = customMeshes
-		return templateModel
-	end)
-	buildingTrainingTemplate = false
-
-	return if ok then built else nil
-end
-
 function Arch.BuildTrainingGrounds(folder: Instance, centerCF: CFrame): Part
 	local model = Instance.new("Model")
 	model.Name = "Building_TrainingGrounds"
 	model.Parent = folder
 
-	local importedTemplate = resolveTrainingGroundsTemplate()
-	if importedTemplate then
-		local cloned = importedTemplate:Clone()
-		cloned:PivotTo(centerCF)
-		for _, desc in ipairs(cloned:GetDescendants()) do
-			if desc:IsA("BasePart") then
-				desc.Anchored = true
-				desc.CanCollide = false
-				desc.CanTouch = false
-				desc.CanQuery = false
-				desc.CastShadow = (desc.Name ~= "Arena_Floor")
-			end
-		end
-		for _, ch in ipairs(cloned:GetChildren()) do
-			if not ch:IsA("PackageLink") then
-				ch.Parent = model
-			end
-		end
-		cloned:Destroy()
-	else
+	if not instantiateBundledMeshes("TrainingArea", TRAINING_GROUND_MESHES, model, centerCF) then
 		warn("[PlotFacilityArchitecture] Failed to load TrainingGrounds MeshParts")
 	end
 
@@ -1737,7 +1746,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 12 then
+	if existing and existing:GetAttribute("PrefabVersion") == 14 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1746,7 +1755,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 12)
+	prefabs:SetAttribute("PrefabVersion", 14)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")
