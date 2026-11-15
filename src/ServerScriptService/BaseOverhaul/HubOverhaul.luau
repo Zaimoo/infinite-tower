@@ -29,7 +29,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 31 -- Bump to force a rebuild of baked geometry (31: extend Path_Market into enlarged Market Bazaar at 50,0,36)
+HubOverhaul.Version = 32 -- Bump to force a rebuild of baked geometry (32: remove courtyard lamps and benches around island PlazaFountain)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
@@ -431,14 +431,10 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 			local pModel = plotsFolder:FindFirstChild("Plot_" .. tostring(i))
 			if pModel and pModel:IsA("Model") then
 				alignPlotSpawnAndBeacon(pModel, HubLayout.PlotIslandCFrame(i))
-				if GothicLanternSpawner.GetTemplate() ~= nil then
-					local island = pModel:FindFirstChild("FloatingFortressIsland")
-					local accents = island and island:FindFirstChild("CourtyardAccents")
-					if accents then
-						local courtyardTopCF = HubLayout.PlotIslandCFrame(i)
-							* CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 100))
-						IslandBuilder.SpawnCourtyardLanterns(accents, courtyardTopCF)
-					end
+				local island = pModel:FindFirstChild("FloatingFortressIsland")
+				local accents = island and island:FindFirstChild("CourtyardAccents")
+				if accents then
+					accents:Destroy()
 				end
 			end
 		end

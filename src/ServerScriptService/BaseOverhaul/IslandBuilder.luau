@@ -3,8 +3,6 @@
 -- ModuleScript: Builds a single reusable floating fortress island (flat cobblestone top + jagged tapered rock underside + cloud wisps).
 -- All decorative underside parts have CanCollide, CanTouch, and CanQuery disabled for mobile performance.
 
-local GothicLanternSpawner = require(script.Parent:WaitForChild("GothicLanternSpawner"))
-
 local IslandBuilder = {}
 
 --============================================================================
@@ -475,65 +473,6 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	-- 1B. Mossy Green & Grey Flagstone Courtyard Ground (Concentric Plaza, Radial Walkways & Mossy Scatter)
 	buildMossyFlagstoneCourtyard(islandModel, CFrame.identity, Vector2.new(cfg.TopWidth, courtyardL), cfg.RandomSeed)
 
-	-- 1C. Courtyard Gothic Lampposts & Carved Stone Benches (Phase 2.3 Accent Lighting & Props)
-	local accentsFolder = Instance.new("Folder")
-	accentsFolder.Name = "CourtyardAccents"
-	accentsFolder.Parent = islandModel
-
-	local ironColor = Color3.fromRGB(28, 30, 36)
-	local stoneBenchColor = Color3.fromRGB(92, 96, 106)
-	local goldAccentColor = Color3.fromRGB(196, 152, 58)
-
-	-- 4 Blender-authored Gothic Medieval Lantern Posts at the corners of the radiating paths
-	IslandBuilder.SpawnCourtyardLanterns(accentsFolder, CFrame.identity)
-
-	-- 2 Carved Gothic Stone Benches flanking the outer ring promenade (facing the fountain)
-	for idx, benchAngDeg in ipairs({ -108, 18 }) do
-		local a = math.rad(benchAngDeg)
-		local bx = math.sin(a) * 19.8
-		local bz = math.cos(a) * 19.8
-		local benchCF = CFrame.lookAt(Vector3.new(bx, 0, bz), Vector3.new(0, 0, 0))
-
-		makePart({
-			Name = string.format("GothicBench_Seat_%d", idx),
-			Size = Vector3.new(4.6, 0.35, 1.55),
-			CFrame = benchCF * CFrame.new(0, 1.35, 0),
-			Material = Enum.Material.Slate,
-			Color = stoneBenchColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		makePart({
-			Name = string.format("GothicBench_Backrest_%d", idx),
-			Size = Vector3.new(4.4, 1.35, 0.32),
-			CFrame = benchCF * CFrame.new(0, 2.15, 0.62),
-			Material = Enum.Material.Slate,
-			Color = stoneBenchColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		makePart({
-			Name = string.format("GothicBench_GoldRelief_%d", idx),
-			Size = Vector3.new(3.6, 0.65, 0.08),
-			CFrame = benchCF * CFrame.new(0, 2.20, 0.44),
-			Material = Enum.Material.Metal,
-			Color = goldAccentColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		for _, side in ipairs({ -1, 1 }) do
-			makePart({
-				Name = string.format("GothicBench_Armrest_%d_%s", idx, if side < 0 then "L" else "R"),
-				Size = Vector3.new(0.42, 1.85, 1.65),
-				CFrame = benchCF * CFrame.new(side * 2.15, 0.92, 0),
-				Material = Enum.Material.Slate,
-				Color = stoneBenchColor,
-				Decorative = true,
-				Parent = accentsFolder,
-			})
-		end
-	end
-
 	-- 2. Decorative Tapered Rocky Underside (Non-collidable, low part count for mobile)
 	local undersideFolder = Instance.new("Folder")
 	undersideFolder.Name = "RockyUnderside"
@@ -658,25 +597,6 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	end
 
 	return islandModel
-end
-
--- Spawns the 4 courtyard Gothic Medieval Lantern Posts (overhanging lantern -Z points inward toward the fountain)
-function IslandBuilder.SpawnCourtyardLanterns(accentsFolder: Instance, courtyardTopCF: CFrame?)
-	GothicLanternSpawner.CleanupLegacyLamps(accentsFolder)
-	local origin = courtyardTopCF or CFrame.identity
-	local lampAnglesDeg = { -152, -72, 68, 152 }
-	local lampRadius = 19.6
-	for idx, angDeg in ipairs(lampAnglesDeg) do
-		local name = string.format("GothicLantern_%d", idx)
-		if accentsFolder:FindFirstChild(name) then
-			continue
-		end
-		local a = math.rad(angDeg)
-		local lx = math.sin(a) * lampRadius
-		local lz = math.cos(a) * lampRadius
-		local baseCF = origin * CFrame.new(lx, 0, lz) * CFrame.Angles(0, a, 0)
-		GothicLanternSpawner.Spawn(accentsFolder, baseCF, name)
-	end
 end
 
 return IslandBuilder
