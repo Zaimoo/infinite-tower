@@ -224,6 +224,18 @@ function PlotManager.TeleportPlayerToPlot(player: Player)
 	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if spawnLoc and hrp then
 		local targetCFrame = spawnLoc.CFrame * CFrame.new(0, 4, 0)
+		-- A new Master (no summon yet) spawns facing their Summoning Altar, the guide's first step
+		-- (plan A6).
+		local dm = _G.DataManager
+		local profile = dm and dm.GetProfile and dm.GetProfile(player)
+		local guide = profile and profile.Onboarding and profile.Onboarding.Guide
+		local altar = plotModel:FindFirstChild("Building_Summoning", true)
+		if guide and guide.Enabled and not guide.Facts.Summon and altar and altar:IsA("Model") then
+			local from = targetCFrame.Position
+			local at = altar:GetPivot().Position
+			local flat = Vector3.new(at.X, from.Y, at.Z)
+			if (flat - from).Magnitude > 1 then targetCFrame = CFrame.lookAt(from, flat) end
+		end
 		char:PivotTo(targetCFrame)
 		hrp.AssemblyLinearVelocity = Vector3.zero
 		hrp.AssemblyAngularVelocity = Vector3.zero

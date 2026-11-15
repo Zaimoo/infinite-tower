@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local DuelStateRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TowerRemotes"):WaitForChild("DuelState") :: RemoteEvent
 
+local OPT_IN_DELAY = 4 -- after the outro, before the notifications opt-in prompt
 local CAMERA_BACK = 46 -- studs behind this player's squad
 local CAMERA_UP = 50
 local CAMERA_FOV = 45
@@ -311,6 +312,16 @@ DuelStateRemote.OnClientEvent:Connect(function(message: any)
 		resultLabel.Visible = true
 		resultSub.Visible = true
 		timerLabel.Text = ""
+		-- Winning the Rival lesson's duel is session 1's high point: ask then whether this Master would
+		-- like experience notifications (plan A6). Roblox decides whether the prompt may show.
+		if won and message.Training then
+			task.delay(OPT_IN_DELAY, function()
+				pcall(function()
+					local notifications = game:GetService("ExperienceNotificationService")
+					if notifications:CanPromptOptInAsync() then notifications:PromptOptIn() end
+				end)
+			end)
+		end
 	elseif message.Kind == "CLEAR" then
 		current = nil
 		gui.Enabled = false

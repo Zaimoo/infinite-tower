@@ -541,6 +541,29 @@ local function SettingsApp()
 					}),
 				},
 			}),
+			-- Plan A6: problems reach Creator Hub (Audience > Player Support) with device info.
+			Help = e(Section, {
+				Title = "Help",
+				Subtitle = "Something wrong? Tell us",
+				LayoutOrder = 3,
+				Children = {
+					Report = e(ActionButton, {
+						Text = "Report a Problem",
+						AccentColor = accent,
+						Size = UDim2.new(0.5, 0, 0, 42),
+						LayoutOrder = 1,
+						OnClick = function()
+							task.spawn(function()
+								pcall(function()
+									(game:GetService("SocialService") :: any):PromptFeedbackSubmissionAsync({
+										FeedbackType = (Enum :: any).FeedbackType.PlayerSupport,
+									})
+								end)
+							end)
+						end,
+					}),
+				},
+			}),
 		})
 	elseif activeTab == "Audio" then
 		pageContent = e("Frame", {
