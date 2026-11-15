@@ -179,9 +179,19 @@ Theft and the bounty duel are the core loop, but they need a second real Master 
 **What has to change in the duel code**
 
 - Today both sides of a duel are real players. `startDuel` looks up `Players:GetPlayerByUserId(contest.ThiefUserId)` and reads each side's `ActiveMasters[player].DeployedHeroes`, and the forfeit, `DuelState` and outcome code assume a `Player` on each side.
-- Allow one server-owned side: a `DuelSquad` with `Player = nil` and a rival id (a negative number, which `LootDuel.IsTheft` already treats as someone else's relic). Skip `DuelState`, forfeit checks and lockouts for that side, and give its hero a `SimHero` with no `Owner`.
-- **Start with a one-day spike:** run a duel in Studio against a server-owned squad and find every place that dereferences `hero.Owner` or the side's `Player`. If the spike shows too many, use the fallback: run the Rival's squad as hero-styled mobs in the arena with the duel's camera and UI, and keep the real duel code for players.
 - A7 is the largest item in Part A, so ship it in its own experiment after Phase 1. Until then the chain skips steps 7 and 8.
+
+**Spike result (2026-11-15): the real duel works against a server-run side. No fallback needed.**
+
+- **Approach: a stand-in Master instead of `Player = nil`.** The hero sim reads the owner in 75 places: metadata, snapshots, impact checks, skill context, profile writes. Rather than guard each one, a rival is a stand-in table with only the `Player` fields the sim reads (`UserId` negative, `DisplayName`, `Name`, `Parent`, `Character = nil`). Its `Parent` is a Folder outside `Players`, so every `Parent == Players` check (remotes, toasts, profiles, `MastersOnFloor`) skips it, while every `Owner.Parent ~= nil` check still treats its heroes as live. Its heroes are ordinary `SimHero`s in `ActiveHeroesByNetId`, so they replicate, render and fight with their own kits unchanged.
+- **Changed:** five places in `CombatSimulation`. `startDuel` takes the rival's position, roster and floor instead of its tower state, and doesn't toast it. `finishDuel` removes the rival's heroes instead of restoring them. `duelForfeit` forfeits a rival only when it is dismissed. Plus `newRival`, `dismissRival` and the Studio-only `CombatSimulation.DebugRivalDuel(player, roster?)`.
+- **Verified in a Studio playtest on Floor 2.** The player picked up the rival's relic and became a `[Loot Thief]`, and the rival's claim started the real duel. The client rendered the rival's heroes (owner -1000) and showed the duel HUD ("Jinjinsbakeshop 1 – 2 Rival Master", 38 s clock) with the duel camera. The duel resolved: the winner kept the relic, now owned by them. The rival's heroes were removed afterwards, the camera returned to normal, and the console showed no errors.
+- **Findings the full lesson must handle:**
+  1. **Attunement caps the rival to Floor 1.** A duel holds both squads to the lower Master's cap, and a rival has no profile, so `GetAttunementCap(nil)` is the Floor 1 cap. A level 40 Han and Ignis still lost to one Ignis. Give the rival a `MaxFloorReached` (equal to the player's), read in the duel cap, and tune it by roster.
+  2. **The rival-win path leaves the relic with the thief.** `applyDuelOutcome` only hands the relic over to a winner in `Players`, so after a rival win the thief still carries a relic the rival now owns, and can bank it. The lesson hands it back on a loss anyway, so do that explicitly, as a fumble to the player.
+  3. **Sanctuaries bank on pickup.** A relic picked up inside a `CanBankCargo` zone (the floor's arrival) banks at once. Stage the Rival's drop away from sanctuaries.
+  4. **Names.** The theft toast reads "another Master" because there is no player to look up. Set the relic's `KillerName` to the rival's name.
+- **Still to build:** the Rival's body (an NPC model that walks in, fumbles its relic and walks up to claim the bounty), the private training contest (no public toast or `Claim Bounty` prompt), the `RelicStolen` and `DuelWon` guide events and steps 7–8, the lose-path hand-back, the Notoriety exclusion, and the A7 experiment arm.
 
 **Files:** `CombatSimulation.server.luau` (duel section, training contests), `LootDuel.luau`, `RelicService.server.luau`, a new `RivalMaster.luau` under `Combat`, `DuelController.client.luau`, `GuideLessons.luau`, GDD §4.7 and §6.1.
 

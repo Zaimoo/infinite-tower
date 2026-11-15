@@ -241,7 +241,9 @@ local Contests: { [number]: LootDuel.Contest } = {}
 local ThiefFlagUntil: { [Player]: number } = {}
 local LastChallengeRequest: { [Player]: number } = {}
 
-type DuelSquad = { Player: Player, Heroes: { SimHero }, Saved: { [SimHero]: any }, Frozen: any? }
+-- `Rival`: a server-run side (first-session-and-social-plan.md A7). Its Player is a stand-in
+-- (newRival), never a real Player.
+type DuelSquad = { Player: Player, Heroes: { SimHero }, Saved: { [SimHero]: any }, Frozen: any?, Rival: boolean? }
 type Duel = {
 	Id: number,
 	Contest: LootDuel.Contest,
@@ -259,6 +261,22 @@ type Duel = {
 local Duels: { [number]: Duel } = {}
 local DuelByPlayer: { [Player]: Duel } = {}
 local NextDuelId = 1
+
+-- Server-run rival Masters (first-session-and-social-plan.md A7). A rival is a stand-in for a
+-- Player with only the fields the hero sim reads: UserId (negative, never a real account),
+-- DisplayName, Name, Parent and Character. Parent is a Folder outside Players, so the
+-- `Parent == Players` checks skip it for remotes, toasts and profiles, while the
+-- `Owner.Parent ~= nil` checks still treat its heroes as live. Character is nil: no body to freeze.
+local RivalHolder = Instance.new("Folder")
+RivalHolder.Name = "RivalMasters"
+local NextRivalUserId = -1000
+type Rival = {
+	IsRival: boolean, UserId: number, DisplayName: string, Name: string, Parent: Instance, Character: Model?,
+	Position: Vector3, FloorId: number, RoomGeneration: number, Heroes: { SimHero }, Gone: boolean?,
+}
+local function isRival(owner: any): boolean
+	return type(owner) == "table" and owner.IsRival == true
+end
 
 local CombatSimulation = {}
 local NextNetId = 1
@@ -1157,7 +1175,9 @@ local function findDrop(dropId: number): (any?, Player?)
 end
 
 local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, string?)
-	-- `owner` is the bounty hunter (side A); the thief defends as side B.
+	-- `owner` is the bounty hunter (side A); the thief defends as side B. The hunter may be a
+	-- server-run rival (newRival): it has no character, profile or tower state of its own.
+	local rival: Rival? = if isRival(owner) then (owner :: any) else nil
 	local ok, reason = LootDuel.CanChallenge(contest, owner.UserId, os.clock())
 	if not ok or not contest then return false, reason end
 	if not ok then return false, reason end
@@ -1165,22 +1185,25 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 	if not thief then return false, "The thief has left the server." end
 	if DuelByPlayer[owner] or DuelByPlayer[thief] then return false, "One of you is already in a duel." end
 	if Tower.IsTransitioning(owner) or Tower.IsTransitioning(thief) then return false, "Wait until both Masters have finished travelling." end
-	local ownerState, thiefState = Tower.GetState(owner), Tower.GetState(thief)
+	local ownerState = if rival then { FloorId = rival.FloorId, RoomGeneration = rival.RoomGeneration } else Tower.GetState(owner)
+	local thiefState = Tower.GetState(thief)
 	if ownerState.FloorId == 0 or not Tower.Same(ownerState, thiefState) then
 		return false, string.format("%s is not on your floor.", thief.DisplayName)
 	end
 	local record = findDrop(contest.DropId)
 	if not record then return false, "The stolen drop is gone." end
-	local ownerPos, thiefPos = getMasterRootPosition(owner), getMasterRootPosition(thief)
+	local ownerPos = if rival then rival.Position else getMasterRootPosition(owner)
+	local thiefPos = getMasterRootPosition(thief)
 	local room = Tower.GetRoom(ownerState.FloorId)
-	if not ActiveMasters[owner] or not ActiveMasters[thief] or not ownerPos or not thiefPos or not room then
+	if (not rival and not ActiveMasters[owner]) or not ActiveMasters[thief] or not ownerPos or not thiefPos or not room then
 		return false, "The duel cannot start right now."
 	end
 
 	local squads: { [string]: DuelSquad } = {}
 	for side, player in { A = owner, B = thief } do
 		local heroes = {}
-		for _, h in pairs(ActiveMasters[player].DeployedHeroes) do
+		local roster = if rival and player == owner then rival.Heroes else ActiveMasters[player].DeployedHeroes
+		for _, h in pairs(roster) do
 			if h.State ~= "COMA" and h.CurrentHP > 0 and Tower.Same(h, ownerState) then
 				table.insert(heroes, h)
 			end
@@ -1189,7 +1212,7 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 			return false, string.format("%s has no heroes standing on this floor.", if player == owner then "Your squad" else player.DisplayName)
 		end
 		table.sort(heroes, function(a, b) return a.SlotIndex < b.SlotIndex end)
-		squads[side] = { Player = player, Heroes = heroes, Saved = {} }
+		squads[side] = { Player = player, Heroes = heroes, Saved = {}, Rival = rival ~= nil and player == owner }
 	end
 
 	-- The arena floats just under the room's ceiling bound above the owner, so it stays inside
@@ -1290,10 +1313,10 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 		EndsAt = Workspace:GetServerTimeNow() + LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS,
 	})
 	local dm = getDataManager()
-	dm.SendToast(owner, string.format("Duel: %s|Winner takes the drop", thief.DisplayName), "WARN")
+	if not rival then dm.SendToast(owner, string.format("Duel: %s|Winner takes the drop", thief.DisplayName), "WARN") end
 	dm.SendToast(thief, string.format("Duel: %s|Winner takes the drop", owner.DisplayName), "WARN")
 	if dm.ReportMilestone then
-		dm.ReportMilestone(owner, "FirstDuel")
+		if not rival then dm.ReportMilestone(owner, "FirstDuel") end
 		dm.ReportMilestone(thief, "FirstDuel")
 	end
 	broadcastMetadata(nil)
@@ -1456,6 +1479,14 @@ local function finishDuel(duel: Duel)
 	for _, side in { "A", "B" } :: { LootDuel.Side } do
 		local squad = duelSquad(duel, side)
 		if DuelByPlayer[squad.Player] == duel then DuelByPlayer[squad.Player] = nil end
+		if squad.Rival then
+			-- A rival's heroes exist only for its duel.
+			for _, h in squad.Heroes do
+				HeroNavigation.Clear(h)
+				ActiveHeroesByNetId[h.NetId] = nil
+			end
+			continue
+		end
 		thawMaster(squad)
 		SquadMovement.Reset(squad.Player)
 		local profile = dm.GetProfile(squad.Player)
@@ -1524,7 +1555,9 @@ local function concludeDuel(duel: Duel, winner: LootDuel.Side, reason: string)
 end
 
 local function duelForfeit(duel: Duel, side: LootDuel.Side): boolean
-	local player = duelSquad(duel, side).Player
+	local squad = duelSquad(duel, side)
+	if squad.Rival then return (squad.Player :: any).Gone == true end
+	local player = squad.Player
 	return player.Parent ~= Players or Tower.IsTransitioning(player) or Tower.GetState(player).FloorId ~= duel.FloorId
 end
 
@@ -3396,6 +3429,75 @@ local function isBossLocked(player: Player, floorId: number): boolean
 	if ((boss.DamageLedger and boss.DamageLedger[player.UserId]) or 0) <= 0 then return false end
 	local m = ActiveMasters[player]
 	return m ~= nil and not m.IsSquadWiped
+end
+
+-- A server-run rival Master (A7) standing at `position`, with a squad of fresh 1★ heroes. Its
+-- heroes are live sim heroes (ActiveHeroesByNetId), so they replicate and render like any other;
+-- they are removed when its duel ends (finishDuel) or by dismissRival.
+local function newRival(name: string, position: Vector3, floorId: number, roomGeneration: number, roster: { { TemplateId: string, Level: number? } }): Rival
+	local rival: Rival = {
+		IsRival = true, UserId = NextRivalUserId, DisplayName = name, Name = name, Parent = RivalHolder, Character = nil,
+		Position = position, FloorId = floorId, RoomGeneration = roomGeneration, Heroes = {},
+	}
+	NextRivalUserId -= 1
+	local dm = getDataManager()
+	for slot, spec in roster do
+		local uuid, heroData = dm.CreateHeroFromSeed(spec.TemplateId, 1.0)
+		heroData.Level = spec.Level or 1
+		local effATK, effHP, _, effInterval = StatFormulas.GetEffectiveCombatStats(heroData, false, false, nil, 1, 1)
+		local seed = HeroCatalog.Seeds[heroData.TemplateId]
+		local sim: SimHero = {
+			NetId = allocateNetId(), FloorId = floorId, RoomGeneration = roomGeneration, EntityGeneration = 1,
+			Owner = rival :: any,
+			HeroUUID = uuid, TemplateId = heroData.TemplateId, DisplayName = heroData.DisplayName,
+			Stars = heroData.Stars, Level = heroData.Level,
+			State = "FOLLOW_MASTER", Position = position, Yaw = 0,
+			CurrentHP = effHP, MaxHP = effHP, BaseMaxHP = effHP, EffectiveATK = effATK,
+			AttackRange = heroData.AttackRange or 6, AttackInterval = effInterval, MoveSpeed = 20.0,
+			Stamina = 0, SlotIndex = slot,
+			AttackCooldown = 0.2, PacifiedUntil = 0, OverdriveUntil = 0,
+			Archetype = (seed and seed.Archetype) or "Striker",
+			AttackCount = 0, BarrierHP = 0, BarrierExpires = 0,
+		}
+		ActiveHeroesByNetId[sim.NetId] = sim
+		table.insert(rival.Heroes, sim)
+	end
+	broadcastMetadata(nil)
+	return rival
+end
+
+local function dismissRival(rival: Rival)
+	rival.Gone = true
+	for _, h in rival.Heroes do
+		if not h.DuelId then
+			HeroNavigation.Clear(h)
+			ActiveHeroesByNetId[h.NetId] = nil
+		end
+	end
+	broadcastMetadata(nil)
+end
+
+-- A7 spike, Studio only: the player steals a rival Master's relic on their floor, and the rival
+-- claims the bounty at once, starting a real bounty duel against its server-run squad.
+-- `roster` defaults to one level 1 Shurn. Returns (ok, reason).
+function CombatSimulation.DebugRivalDuel(player: Player, roster: { { TemplateId: string, Level: number? } }?): (boolean, string?)
+	if not RunService:IsStudio() then return false, "Studio only" end
+	local state = Tower.GetState(player)
+	local root = getMasterRootPosition(player)
+	local relics = _G.RelicService
+	if state.FloorId < 1 or state.FloorId > 50 or not root or not relics then return false, "Stand on a tower floor first" end
+	local rival = newRival("Rival Master", root + Vector3.new(6, 0, 6), state.FloorId, state.RoomGeneration,
+		roster or { { TemplateId = "hero_shurn", Level = 1 } })
+	local relic = relics.SpawnRelic("MANA_GEODE", root, rival.UserId)
+	relic.LockedUserId, relic.LockExpiresAt, relic.LockKind = nil, 0, nil -- skip the spawn seal for the test
+	if relic.Prompt then relic.Prompt.Enabled = true end
+	if not relics.TryPickupRelic(player, relic) then
+		dismissRival(rival)
+		return false, "Could not pick up the rival's relic"
+	end
+	local ok, reason = startDuel(rival :: any, Contests[relic.RelicId])
+	if not ok then dismissRival(rival) end
+	return ok, reason
 end
 
 CombatSimulation.Contests = Contests
