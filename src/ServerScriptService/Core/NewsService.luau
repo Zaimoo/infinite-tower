@@ -10,6 +10,7 @@
 --   NewsFeed (server -> client): one NewsRules.Item
 --   Wanted (server -> client): { { ThiefUserId, ThiefName, ItemName, FloorId, EndsAt } }
 --   NewsRequest (client -> server): ("HUNT", thiefUserId)
+--   Boards (server -> client): this week's { Week, Thieves, Hunters } from NotorietyService (B6)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -32,6 +33,8 @@ local feedRemote: RemoteEvent? = nil
 local wantedRemote: RemoteEvent? = nil
 local lastWantedSignature = ""
 local lastWanted: { any } = {}
+local boardsRemote: RemoteEvent? = nil
+local lastBoards: any = nil
 local lastHunt: { [Player]: number } = {}
 
 local HUNT_COOLDOWN = 2
@@ -84,6 +87,12 @@ local function hunt(player: Player, thiefUserId: any)
 	d.VisitFloor(player, target.FloorId)
 end
 
+-- The weekly Top Thieves / Top Hunters boards (B6), to everyone now and to each player who joins.
+function NewsService.PushBoards(boards: any)
+	lastBoards = boards
+	if boardsRemote then boardsRemote:FireAllClients(boards) end
+end
+
 function NewsService.Init(dependencies: Dependencies)
 	deps = dependencies
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -103,12 +112,15 @@ function NewsService.Init(dependencies: Dependencies)
 	end
 	feedRemote = event("NewsFeed")
 	wantedRemote = event("Wanted")
+	boardsRemote = event("Boards")
 	event("NewsRequest").OnServerEvent:Connect(function(player: Player, action: any, value: any)
 		if action == "HUNT" then hunt(player, value) end
 	end)
 	Players.PlayerAdded:Connect(function(player)
 		task.defer(function()
-			if wantedRemote and player.Parent == Players then wantedRemote:FireClient(player, lastWanted) end
+			if player.Parent ~= Players then return end
+			if wantedRemote then wantedRemote:FireClient(player, lastWanted) end
+			if boardsRemote and lastBoards then boardsRemote:FireClient(player, lastBoards) end
 		end)
 	end)
 	Players.PlayerRemoving:Connect(function(player) lastHunt[player] = nil end)

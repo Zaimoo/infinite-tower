@@ -191,7 +191,7 @@ Theft and the bounty duel are the core loop, but they need a second real Master 
   2. **The rival-win path leaves the relic with the thief.** `applyDuelOutcome` only hands the relic over to a winner in `Players`, so after a rival win the thief still carries a relic the rival now owns, and can bank it. The lesson hands it back on a loss anyway, so do that explicitly, as a fumble to the player.
   3. **Sanctuaries bank on pickup.** A relic picked up inside a `CanBankCargo` zone (the floor's arrival) banks at once. Stage the Rival's drop away from sanctuaries.
   4. **Names.** The theft toast reads "another Master" because there is no player to look up. Set the relic's `KillerName` to the rival's name.
-- **Built (2026-11-15):** `RivalLesson.server.luau` (the Rival's avatar walks in, drops its relic, hunts the player and claims the bounty; abandoned attempts clean up and retry), the private training contest, guide chain v5 with Steal, Duel, Climb and Haul, the lose-path hand-back, protection from steal challenges, and the `v2r` arm, which is now the default. Specs cover the chain and the rules. Still to do: the Notoriety exclusion (B6, `Contest.Training`), and tuning the Rival's squad in playtests.
+- **Built (2026-11-15):** `RivalLesson.server.luau` (the Rival's avatar walks in, drops its relic, hunts the player and claims the bounty; abandoned attempts clean up and retry), the private training contest, guide chain v5 with Steal, Duel, Climb and Haul, the lose-path hand-back, protection from steal challenges, and the `v2r` arm, which is now the default. Specs cover the chain and the rules. The Notoriety exclusion is built (B6 skips `Contest.Training`). Still to do: tuning the Rival's squad in playtests.
 
 **Files:** `CombatSimulation.server.luau` (duel section, training contests), `LootDuel.luau`, `RelicService.server.luau`, a new `RivalMaster.luau` under `Combat`, `DuelController.client.luau`, `GuideLessons.luau`, GDD §4.7 and §6.1.
 
@@ -347,7 +347,8 @@ Log custom events for `TheftAnnounced`, `HuntTravel`, `DuelStarted`, `DuelWatche
 
 - **Shipped in #296:** Phase 0 (A1), Phase 1 (A2–A5), A7 (the Rival Master lesson), A8 steps 1–4, and carry challenges (Relic Duels, §6.1 of the GDD).
 - **Phase 2, on `feat/social-news-and-duels`:** B0 (the news channel), B1 (theft headlines and the Wanted list with Hunt; built as a HUD list rather than a board in the Commons), B3 (big-moment broadcasts, the Archon broadcast moved onto it), B2 (VS card, prize-named results, victory poses, watching duels on your floor) and B5 (invite button, Gold-chip boost tag). Not built: the B5 "your friend is climbing" notification, which needs an Open Cloud key on a backend.
-- **Next:** Phase 3 (B4, B6, A6, A8 step 5), then B7 if the data asks for it.
+- **Phase 3, on the same branch:** B4 (Go to event on the HUD badge, Relic Rain after three other events, event starts pushed clear of raids; Relic Rain relics are unowned, so its thefts come from carry challenges and re-steals), A6 (spawn facing the Summoning Altar, the notifications opt-in after the Rival win, Report a Problem in Settings > Help) and B6 (Notoriety, schema v10, titles over the Master's head, weekly Top Thieves and Top Hunters). B4's countdown is the HUD badge, not a hub Tower board; B6's boards are tabs on the Wanted panel, not Leaderboard Pavilion slots, because thefts happen in the tower. A6's popup hold and mobile layout check need a phone playtest. Relic Duels don't count toward Notoriety: a challenger already risks a lockout, and counting them would reward picking on carriers.
+- **Next:** A8 step 5 after a playtest, then B7 if the data asks for it.
 
 ## Order of work
 
@@ -376,4 +377,4 @@ Log custom events for `TheftAnnounced`, `HuntTravel`, `DuelStarted`, `DuelWatche
 | Guide v4 chain (Limited, Squad, Bank, Steal, Duel steps) | A3, A7 | None: guide facts. Credit existing players inside `EnsureState`, as v3 did. |
 | First-relic lock, training contests | A4, A7 | None: runtime only. |
 | `guide.Facts.FirstUltimate` | A5 | None: a new key in an existing map. |
-| `Notoriety = { Thefts, BountiesClaimed, Escapes }` | B6 | Schema v10, zeros. Test in `tests/phase4-progression.luau` or `tests/profile-persistence.spec.luau`. |
+| `Notoriety = { Thefts, BountiesClaimed, Escapes, ... }` | B6 | Schema v10, zeros (`ProfileMigrations.ToV10`, tested in `tests/notoriety.spec.luau`). |

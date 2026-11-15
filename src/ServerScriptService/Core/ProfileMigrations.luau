@@ -9,10 +9,11 @@ local FortressTree = require(ReplicatedStorage.Shared.Util.FortressTree)
 local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
 local RewardRules = require(ReplicatedStorage.Shared.Util.RewardRules)
 local SettingsConfig = require(ReplicatedStorage.Shared.Config.SettingsConfig)
+local NotorietyRules = require(ReplicatedStorage.Shared.Util.NotorietyRules)
 
 local ProfileMigrations = {}
 
-ProfileMigrations.CurrentSchema = 9
+ProfileMigrations.CurrentSchema = 10
 
 -- Rarity a template had when these old saves were written, where it differs from today's catalog.
 -- Han was the Common starter before he became Mythical; Valeria was Superior before moving to Exalted.
@@ -148,6 +149,13 @@ function ProfileMigrations.ToV9(profile: any)
 	profile.SchemaVersion = 9
 end
 
+-- v10: reputation (plan B6, GDD §6.1). Every older save starts with no thefts, bounties or escapes.
+function ProfileMigrations.ToV10(profile: any)
+	if (profile.SchemaVersion or 1) >= 10 then return end
+	profile.Notoriety = NotorietyRules.Ensure(profile.Notoriety)
+	profile.SchemaVersion = 10
+end
+
 -- Hero template ids that were renamed: old id -> new id. Saved heroes keep their template id, so
 -- every load moves them to the new one (cheap and idempotent, so it isn't tied to a schema
 -- version). Rourke became Rook.
@@ -177,6 +185,7 @@ function ProfileMigrations.Run(profile: any)
 	ProfileMigrations.ToV7(profile)
 	ProfileMigrations.ToV8(profile)
 	ProfileMigrations.ToV9(profile)
+	ProfileMigrations.ToV10(profile)
 	profile.Settings = SettingsConfig.Sanitize(profile.Settings)
 end
 

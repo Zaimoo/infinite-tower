@@ -7,6 +7,8 @@
 --     A big pull also raises a light column over that Master's Summoning Altar.
 --   Wanted: every open public bounty. A WANTED chip (top left) opens the list; Hunt asks the server
 --     to travel to the thief's floor (it checks everything, NewsService).
+--   Boards (B6): this week's Top Thieves and Top Hunters, as tabs on the same panel. With no open
+--     bounty the chip reads NOTORIETY and opens the boards; the footer shows this Master's week.
 -- Decorative only: the server decides everything.
 
 local Players = game:GetService("Players")
@@ -23,6 +25,7 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("NewsRemo
 local feedRemote = remotes:WaitForChild("NewsFeed") :: RemoteEvent
 local wantedRemote = remotes:WaitForChild("Wanted") :: RemoteEvent
 local requestRemote = remotes:WaitForChild("NewsRequest") :: RemoteEvent
+local boardsRemote = remotes:WaitForChild("Boards") :: RemoteEvent
 
 local GOLD = Color3.fromRGB(255, 214, 120)
 local BLOOD = Color3.fromRGB(235, 80, 80)
@@ -214,7 +217,7 @@ chip.Visible = false
 local list = Instance.new("Frame")
 list.Name = "WantedList"
 list.Position = UDim2.fromOffset(150, 50)
-list.Size = UDim2.fromOffset(320, 0)
+list.Size = UDim2.fromOffset(340, 0)
 list.AutomaticSize = Enum.AutomaticSize.Y
 list.BackgroundColor3 = PANEL
 list.BackgroundTransparency = 0.08
@@ -231,64 +234,205 @@ listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = list
 
 local rows: { { Frame: Frame, Bounty: any } } = {}
-local function renderWanted()
-	local mine = 0
+local extras: { Instance } = {} -- board rows and empty-state lines, rebuilt on every render
+
+-- The weekly boards (B6): this week's Top Thieves (thefts and escapes) and Top Hunters (bounties
+-- claimed), read by the server every 60 s. They share the Wanted panel as tabs.
+local boards: any = { Week = "", Thieves = {}, Hunters = {} }
+local tab = "WANTED" -- "WANTED" | "THIEVES" | "HUNTERS"
+local TABS = { { Key = "WANTED", Text = "Wanted" }, { Key = "THIEVES", Text = "Top Thieves" }, { Key = "HUNTERS", Text = "Top Hunters" } }
+local MUTED = Color3.fromRGB(170, 160, 186)
+
+local tabsRow = Instance.new("Frame")
+tabsRow.Name = "Tabs"
+tabsRow.LayoutOrder = 0
+tabsRow.BackgroundTransparency = 1
+tabsRow.Size = UDim2.new(1, 0, 0, 26)
+tabsRow.Parent = list
+local tabsLayout = Instance.new("UIListLayout")
+tabsLayout.FillDirection = Enum.FillDirection.Horizontal
+tabsLayout.Padding = UDim.new(0, 6)
+tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tabsLayout.Parent = tabsRow
+local tabButtons: { [string]: TextButton } = {}
+
+local footer = label(list, GildedGrimoire.Fonts.Body, 12, MUTED)
+footer.Name = "Footer"
+footer.LayoutOrder = 10000
+footer.Size = UDim2.new(1, 0, 0, 16)
+
+local function wantedCount(): number
+	local n = 0
 	for _, b in wanted do
-		if b.ThiefUserId ~= player.UserId then mine += 1 end
+		if b.ThiefUserId ~= player.UserId then n += 1 end
 	end
-	chip.Text = string.format("WANTED · %d", mine)
-	chip.Visible = mine > 0
-	list.Visible = listOpen and mine > 0
+	return n
+end
+
+local function boardsHaveRows(): boolean
+	return #boards.Thieves > 0 or #boards.Hunters > 0
+end
+
+local function emptyLine(text: string)
+	local l = label(list, GildedGrimoire.Fonts.Body, 13, MUTED)
+	l.LayoutOrder = 1
+	l.Size = UDim2.new(1, 0, 0, 24)
+	l.Text = text
+	table.insert(extras, l)
+end
+
+local function boardRow(entry: any, order: number, unit: string)
+	local row = Instance.new("Frame")
+	row.Name = "Rank_" .. tostring(entry.Rank)
+	row.LayoutOrder = order
+	row.BackgroundColor3 = GOLD
+	row.BackgroundTransparency = if entry.UserId == player.UserId then 0.85 else 1
+	row.Size = UDim2.new(1, 0, 0, 34)
+	row.Parent = list
+	corner(row, 6)
+	local rank = label(row, GildedGrimoire.Fonts.Title, 15, if (entry.Rank or 99) <= 3 then GOLD else MUTED)
+	rank.Size = UDim2.fromOffset(26, 34)
+	rank.TextXAlignment = Enum.TextXAlignment.Center
+	rank.Text = tostring(entry.Rank)
+	local face = Instance.new("ImageLabel")
+	face.BackgroundColor3 = INK
+	face.Size = UDim2.fromOffset(28, 28)
+	face.Position = UDim2.fromOffset(30, 3)
+	face.Image = headshot(entry.UserId)
+	face.Parent = row
+	corner(face, 14)
+	local who = label(row, GildedGrimoire.Fonts.Title, 14, Color3.fromRGB(240, 232, 220))
+	who.Position = UDim2.fromOffset(66, 0)
+	who.Size = UDim2.new(1, -150, 1, 0)
+	who.Text = tostring(entry.Name)
+	local value = label(row, GildedGrimoire.Fonts.Title, 14, GOLD)
+	value.AnchorPoint = Vector2.new(1, 0)
+	value.Position = UDim2.new(1, -4, 0, 0)
+	value.Size = UDim2.fromOffset(80, 34)
+	value.TextXAlignment = Enum.TextXAlignment.Right
+	value.Text = string.format("%d %s", tonumber(entry.Value) or 0, unit)
+	table.insert(extras, row)
+end
+
+local function wantedRow(b: any, order: number, serverNow: number)
+	local row = Instance.new("Frame")
+	row.Name = "Bounty_" .. tostring(b.ThiefUserId)
+	row.LayoutOrder = order
+	row.BackgroundTransparency = 1
+	row.Size = UDim2.new(1, 0, 0, 40)
+	row.Parent = list
+	local face = Instance.new("ImageLabel")
+	face.BackgroundColor3 = INK
+	face.Size = UDim2.fromOffset(36, 36)
+	face.Position = UDim2.fromOffset(0, 2)
+	face.Image = headshot(b.ThiefUserId)
+	face.Parent = row
+	corner(face, 18)
+	local who = label(row, GildedGrimoire.Fonts.Title, 14, GOLD)
+	who.Position = UDim2.fromOffset(44, 2)
+	who.Size = UDim2.new(1, -124, 0, 18)
+	who.Text = tostring(b.ThiefName)
+	local what = label(row, GildedGrimoire.Fonts.Body, 12, Color3.fromRGB(220, 214, 230))
+	what.Name = "Detail"
+	what.Position = UDim2.fromOffset(44, 21)
+	what.Size = UDim2.new(1, -124, 0, 16)
+	what.Text = string.format("%s · Floor %d · %s", tostring(b.ItemName), b.FloorId or 0, clock((b.EndsAt or serverNow) - serverNow))
+	local go = button(row, "HUNT", BLOOD)
+	go.AnchorPoint = Vector2.new(1, 0.5)
+	go.Position = UDim2.new(1, 0, 0.5, 0)
+	go.Size = UDim2.fromOffset(68, 28)
+	return row, go
+end
+
+local render: () -> ()
+
+-- The chip reads WANTED while someone can be hunted, NOTORIETY otherwise (the boards).
+render = function()
+	local mine = wantedCount()
+	chip.Text = if mine > 0 then string.format("WANTED · %d", mine) else "NOTORIETY"
+	chip.BackgroundColor3 = if mine > 0 then BLOOD else GOLD
+	chip.Visible = mine > 0 or boardsHaveRows()
+	list.Visible = listOpen and chip.Visible
+	for key, b in tabButtons do
+		local on = key == tab
+		b.BackgroundColor3 = if on then (if key == "WANTED" then BLOOD else GOLD) else INK
+		b.TextColor3 = if on then INK else GOLD
+	end
 	for _, row in rows do row.Frame:Destroy() end
 	table.clear(rows)
-	local serverNow = Workspace:GetServerTimeNow()
-	for i, b in wanted do
-		if b.ThiefUserId == player.UserId then continue end
-		local row = Instance.new("Frame")
-		row.Name = "Bounty_" .. tostring(b.ThiefUserId)
-		row.LayoutOrder = i
-		row.BackgroundTransparency = 1
-		row.Size = UDim2.new(1, 0, 0, 40)
-		row.Parent = list
-		local face = Instance.new("ImageLabel")
-		face.BackgroundColor3 = INK
-		face.Size = UDim2.fromOffset(36, 36)
-		face.Position = UDim2.fromOffset(0, 2)
-		face.Image = headshot(b.ThiefUserId)
-		face.Parent = row
-		corner(face, 18)
-		local who = label(row, GildedGrimoire.Fonts.Title, 14, GOLD)
-		who.Position = UDim2.fromOffset(44, 2)
-		who.Size = UDim2.new(1, -124, 0, 18)
-		who.Text = tostring(b.ThiefName)
-		local what = label(row, GildedGrimoire.Fonts.Body, 12, Color3.fromRGB(220, 214, 230))
-		what.Name = "Detail"
-		what.Position = UDim2.fromOffset(44, 21)
-		what.Size = UDim2.new(1, -124, 0, 16)
-		what.Text = string.format("%s · Floor %d · %s", tostring(b.ItemName), b.FloorId or 0, clock((b.EndsAt or serverNow) - serverNow))
-		local go = button(row, "HUNT", BLOOD)
-		go.AnchorPoint = Vector2.new(1, 0.5)
-		go.Position = UDim2.new(1, 0, 0.5, 0)
-		go.Size = UDim2.fromOffset(68, 28)
-		go.Activated:Connect(function()
-			hunt(b.ThiefUserId)
-			listOpen = false
-			renderWanted()
-		end)
-		table.insert(rows, { Frame = row, Bounty = b })
+	for _, extra in extras do extra:Destroy() end
+	table.clear(extras)
+	if tab == "WANTED" then
+		if mine == 0 then emptyLine("No open bounties right now") end
+		local serverNow = Workspace:GetServerTimeNow()
+		for i, b in wanted do
+			if b.ThiefUserId == player.UserId then continue end
+			local row, go = wantedRow(b, i, serverNow)
+			go.Activated:Connect(function()
+				hunt(b.ThiefUserId)
+				listOpen = false
+				render()
+			end)
+			table.insert(rows, { Frame = row, Bounty = b })
+		end
+	else
+		local entries = if tab == "THIEVES" then boards.Thieves else boards.Hunters
+		if #entries == 0 then emptyLine("No one on the board yet this week") end
+		for i, entry in entries do boardRow(entry, i, if tab == "THIEVES" then "stolen" else "claimed") end
 	end
+	local thefts = tonumber(player:GetAttribute("NotorietyWeekThefts")) or 0
+	local hunts = tonumber(player:GetAttribute("NotorietyWeekHunts")) or 0
+	local title = player:GetAttribute("NotorietyTitle")
+	footer.Text = string.format("%sYour week: %d stolen · %d claimed",
+		if type(title) == "string" and title ~= "" then title .. " · " else "", thefts, hunts)
+end
+
+for i, spec in TABS do
+	local b = button(tabsRow, spec.Text, INK)
+	b.Name = "Tab_" .. spec.Key
+	b.LayoutOrder = i
+	b.TextSize = 13
+	b.Size = UDim2.new(1 / #TABS, -4, 1, 0)
+	b.Activated:Connect(function()
+		tab = spec.Key
+		render()
+	end)
+	tabButtons[spec.Key] = b
 end
 
 chip.Activated:Connect(function()
 	listOpen = not listOpen
-	renderWanted()
+	if listOpen then tab = if wantedCount() > 0 then "WANTED" elseif tab == "WANTED" then "THIEVES" else tab end
+	render()
 end)
 
 wantedRemote.OnClientEvent:Connect(function(incoming: any)
 	if type(incoming) ~= "table" then return end
 	wanted = incoming
-	renderWanted()
+	render()
 end)
+
+local function rowsOf(value: any): { any }
+	local out = {}
+	if type(value) ~= "table" then return out end
+	for _, entry in value do
+		if type(entry) == "table" and type(entry.UserId) == "number" then table.insert(out, entry) end
+	end
+	return out
+end
+
+boardsRemote.OnClientEvent:Connect(function(incoming: any)
+	if type(incoming) ~= "table" then return end
+	boards = { Week = tostring(incoming.Week or ""), Thieves = rowsOf(incoming.Thieves), Hunters = rowsOf(incoming.Hunters) }
+	render()
+end)
+
+for _, attribute in { "NotorietyWeekThefts", "NotorietyWeekHunts", "NotorietyTitle" } do
+	player:GetAttributeChangedSignal(attribute):Connect(function()
+		if listOpen then render() end
+	end)
+end
+render()
 
 --== Clocks ===================================================================================
 

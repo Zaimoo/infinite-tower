@@ -47,6 +47,7 @@ local TowerProgress=require(Shared.Util.TowerProgress)
 local TowerRoomBuilder=require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("TowerRoomBuilder"))
 local TowerPortalKit=require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("TowerPortalKit"))
 local LootDuel=require(Shared.Util.LootDuel)
+local NotorietyRules=require(Shared.Util.NotorietyRules)
 local DuelArena=require(script.Parent.DuelArena)
 local Encounters: any=nil
 local CombatLifecycleRevision=0
@@ -1079,6 +1080,13 @@ registerPickup = function(player: Player, dropId: number, killerUserId: number, 
 	end
 	if dm.ReportMilestone then dm.ReportMilestone(player, "FirstTheft") end
 	if dm.ReportProgress then dm.ReportProgress(player, "RelicStolen") end -- the guide's Steal step
+	-- Reputation (B6): a fair theft counts toward the thief track and Top Thieves (not a lesson, and
+	-- not low-floor farming).
+	if dm.RecordNotoriety then
+		local profile = dm.GetProfile(player)
+		local farming = NotorietyRules.Overlevel(if profile then profile.HighestClearedFloor or 0 else 0, thiefState.FloorId)
+		dm.RecordNotoriety(player, "THEFT", killerUserId, contest.Training or farming)
+	end
 	return true
 end
 
@@ -1578,6 +1586,13 @@ local function applyDuelOutcome(duel: Duel)
 			item.Kind = "BOUNTY_CLAIMED"
 		end
 		dm.PostNews(item)
+	end
+	-- Reputation (B6): a bounty duel between two Masters is a bounty claimed for the hunter who
+	-- wins it, or an escape for the thief who does. Carry challenges and lessons don't count.
+	if contest.Kind ~= "CARRY" and winner.Parent == Players and loser.Parent == Players and dm.RecordNotoriety then
+		local profile = dm.GetProfile(winner)
+		local farming = NotorietyRules.Overlevel(if profile then profile.HighestClearedFloor or 0 else 0, Tower.GetState(winner).FloorId)
+		dm.RecordNotoriety(winner, if hunterLost then "ESCAPE" else "CLAIM", loser.UserId, contest.Training or farming)
 	end
 	if winner.Parent == Players then
 		dm.SendToast(winner, string.format("Duel won|%s's drop is yours", loser.DisplayName), "SUCCESS")

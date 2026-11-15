@@ -25,10 +25,12 @@ local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"
 local MirrorBanner = require(Shared:WaitForChild("Util"):WaitForChild("MirrorBanner"))
 local AnvilBanner = require(Shared:WaitForChild("Util"):WaitForChild("AnvilBanner"))
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
+local NotorietyRules = require(Shared:WaitForChild("Util"):WaitForChild("NotorietyRules"))
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
 local RewardsService = require(script.Parent:WaitForChild("RewardsService"))
 local NewsService = require(script.Parent:WaitForChild("NewsService"))
+local NotorietyService = require(script.Parent:WaitForChild("NotorietyService"))
 local RewardRules = require(Shared:WaitForChild("Util"):WaitForChild("RewardRules"))
 local ProfileMigrations = require(script.Parent:WaitForChild("ProfileMigrations"))
 local ProfilePersistence = require(script.Parent:WaitForChild("ProfilePersistence"))
@@ -534,6 +536,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		LastLogoutTimestamp = os.time(),
 		LastActiveTimestamp = os.time(),
 		Rewards = RewardRules.NewState(),
+		Notoriety = NotorietyRules.NewState(), -- thefts, bounties claimed, escapes (B6, schema v10)
 	}
 end
 
@@ -559,6 +562,13 @@ end
 -- `endsIn`: seconds until its countdown (a bounty) runs out.
 function DataManager.PostNews(item: any, endsIn: number?)
 	NewsService.Post(item, endsIn)
+end
+
+-- Reputation (NotorietyService, B6): a theft, a bounty claimed or an escape by `player` against
+-- `victimUserId`. Training, friends and the daily per-victim cap are filtered there.
+function DataManager.RecordNotoriety(player: Player, kind: string, victimUserId: number, training: boolean?)
+	if kind ~= "THEFT" and kind ~= "CLAIM" and kind ~= "ESCAPE" then return end
+	NotorietyService.Record(player, kind :: any, victimUserId, training)
 end
 
 -- Build a sanitized copy of profile for client UI (hiding secret directive of rented mercenary!)
@@ -2242,6 +2252,11 @@ NewsService.Init({
 	FloorOf = function(player: Player): number return TowerFloorService.GetState(player).FloorId end,
 })
 
+NotorietyService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	PushBoards = NewsService.PushBoards,
+})
+
 --============================================================================
 -- 7. PLAYER LIFECYCLE INITIALIZATION
 --============================================================================
@@ -2292,6 +2307,7 @@ local function onPlayerAdded(player: Player)
 	persistentPlayers[player] = loaded.Persistent or nil
 	releasedPlayers[player] = nil
 	DataManager.ApplySettingsAttributes(player, profile.Settings)
+	NotorietyService.Refresh(player)
 	-- Claim the new player's record right away so the first visit survives a crash.
 	if loaded.Persistent and not loaded.Data then task.spawn(DataManager.SaveProfile, player) end
 
@@ -2319,6 +2335,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	if profile then
 		OfflineRewardService.RecordLogout(player, profile)
 	end
+	NotorietyService.Forget(player)
 	releaseProfile(player)
 	if profile then forgeTransactions.Forget(profile) end
 	pit:Forget(player)
