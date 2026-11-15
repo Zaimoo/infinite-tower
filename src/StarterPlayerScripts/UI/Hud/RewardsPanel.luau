@@ -140,12 +140,15 @@ local function RewardsPanel(props: { Width: number, OnClose: () -> () })
 		rows.Friends = Panel({ LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 64), Radius = 14,
 			Top = if active then Tones.Jade.Top else Tones.Slate.Top, Bottom = Tones.Deep.Bottom, Rail = if active then Tones.Jade.Rail else Tones.Slate.Rail }, {
 			Icon = IconAt("Squad", 44, { Position = UDim2.fromOffset(12, 10), ZIndex = 4 }),
-			Title = Heavy({ Position = UDim2.fromOffset(66, 8), Size = UDim2.new(1, -200, 0, 24), MaxSize = 20, TextXAlignment = Enum.TextXAlignment.Left,
+			Title = Heavy({ Position = UDim2.fromOffset(66, 8), Size = UDim2.new(1, -300, 0, 24), MaxSize = 20, TextXAlignment = Enum.TextXAlignment.Left,
 				Text = "FRIEND BOOST", ZIndex = 4 }),
-			Sub = Body({ Position = UDim2.fromOffset(66, 34), Size = UDim2.new(1, -200, 0, 18), TextSize = 13, TextColor3 = if active then TEXT.Parchment else TEXT.Muted,
+			-- B5: invite friends here; the boost pays for playing together, not for the invite itself.
+			Invite = claimButton({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -140, 0.5, 0), Size = UDim2.fromOffset(96, 34),
+				Text = "INVITE", OnClaim = function() require(script.Parent.Parent:WaitForChild("FriendInvite")).Prompt() end }),
+			Sub = Body({ Position = UDim2.fromOffset(66, 34), Size = UDim2.new(1, -300, 0, 18), TextSize = 13, TextColor3 = if active then TEXT.Parchment else TEXT.Muted,
 				Text = if active
-					then string.format("%d friend%s in this server. Kills, floor bosses and relics pay more Gold.", friends, if friends == 1 then "" else "s")
-					else string.format("Play in a server with friends: +%d%% Gold each, up to +%d%%.", math.round(boost.PerFriend * 100), math.round(boost.PerFriend * boost.MaxFriends * 100)),
+					then string.format("%d friend%s here: more Gold from kills and relics.", friends, if friends == 1 then "" else "s")
+					else string.format("Friends here: +%d%% Gold each, up to +%d%%.", math.round(boost.PerFriend * 100), math.round(boost.PerFriend * boost.MaxFriends * 100)),
 				ZIndex = 4 }),
 			Value = Heavy({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(120, 36), MaxSize = 28,
 				TextXAlignment = Enum.TextXAlignment.Right, Gold = active, TextColor3 = if active then Color3.new(1, 1, 1) else TEXT.Muted,

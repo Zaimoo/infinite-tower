@@ -343,6 +343,12 @@ Log custom events for `TheftAnnounced`, `HuntTravel`, `DuelStarted`, `DuelWatche
 | Guide reorder strands a player behind a lock | A3 moves the unlock keys and both hint tables with the steps. Floor 3 still opens everything. |
 | Animation changes muddy the experiment | A8 ships to every arm at once, and its ship date is noted against the baseline. |
 
+## Progress (2026-11-15)
+
+- **Shipped in #296:** Phase 0 (A1), Phase 1 (A2–A5), A7 (the Rival Master lesson), A8 steps 1–4, and carry challenges (Relic Duels, §6.1 of the GDD).
+- **Phase 2, on `feat/social-news-and-duels`:** B0 (the news channel), B1 (theft headlines and the Wanted list with Hunt; built as a HUD list rather than a board in the Commons), B3 (big-moment broadcasts, the Archon broadcast moved onto it), B2 (VS card, prize-named results, victory poses, watching duels on your floor) and B5 (invite button, Gold-chip boost tag). Not built: the B5 "your friend is climbing" notification, which needs an Open Cloud key on a backend.
+- **Next:** Phase 3 (B4, B6, A6, A8 step 5), then B7 if the data asks for it.
+
 ## Order of work
 
 | Phase | Items | Why first |

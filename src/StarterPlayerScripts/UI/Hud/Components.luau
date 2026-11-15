@@ -4,6 +4,7 @@
 -- Card and the Squad Power badge. Pure presentation; data arrives as props.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local TweenService = game:GetService("TweenService")
 
@@ -1210,7 +1211,7 @@ Components.CurrencyChipWidth = 144
 Components.CurrencyBarHeight = 40
 Components.CurrencyBarWidth = 296
 
-local function CurrencyChip(props: { Icon: string, Value: number, Order: number, Color: Color3 })
+local function CurrencyChip(props: { Icon: string, Value: number, Order: number, Color: Color3, Boost: number? })
 	local shown, setShown = React.useState(props.Value)
 	local delta, setDelta = React.useState(0)
 	local serial, setSerial = React.useState(0)
@@ -1241,10 +1242,31 @@ local function CurrencyChip(props: { Icon: string, Value: number, Order: number,
 			}),
 		}),
 		["Floater" .. serial] = if delta ~= 0 then e(Floater, { Delta = delta, Position = UDim2.new(1, -4, 1, -34), Size = UDim2.fromOffset(110, 16) }) else nil,
+		-- The friend boost (GDD §4.8, plan B5) rides on the Gold chip; tapping it invites friends.
+		Boost = if props.Boost and props.Boost > 0 then e("TextButton", {
+			Name = "FriendBoostTag", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 2, 0, -6),
+			Size = UDim2.fromOffset(52, 18), AutoButtonColor = true, BackgroundColor3 = Color3.fromRGB(46, 150, 104),
+			BorderSizePixel = 0, Text = string.format("+%d%%", props.Boost), TextColor3 = Color3.new(1, 1, 1),
+			FontFace = G.Fonts.Number, TextSize = 13, ZIndex = 5,
+			[React.Event.Activated] = function()
+				require(script.Parent.Parent:WaitForChild("FriendInvite")).Prompt()
+			end,
+		}, { Corner = corner(9) }) else nil,
 	})
 end
 
 function Components.CurrencyBar(props: { Gold: number, Gems: number, Bottom: number?, Width: number?, Position: UDim2? })
+	-- The friend boost multiplier the server sets on the player (RewardsService), as a percent.
+	local player = Players.LocalPlayer
+	local function boostPercent(): number
+		local multiplier = player:GetAttribute("FriendBoost")
+		return if type(multiplier) == "number" then math.round((multiplier - 1) * 100) else 0
+	end
+	local boost, setBoost = React.useState(boostPercent())
+	React.useEffect(function()
+		local connection = player:GetAttributeChangedSignal("FriendBoost"):Connect(function() setBoost(boostPercent()) end)
+		return function() connection:Disconnect() end
+	end, {})
 	return e("Frame", {
 		Name = "CurrencyRow",
 		AnchorPoint = Vector2.new(0, 1),
@@ -1258,7 +1280,7 @@ function Components.CurrencyBar(props: { Gold: number, Gems: number, Bottom: num
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 		}),
-		Gold = e(CurrencyChip, { Icon = "Gold", Value = props.Gold, Order = 1, Color = G.Royal }),
+		Gold = e(CurrencyChip, { Icon = "Gold", Value = props.Gold, Order = 1, Color = G.Royal, Boost = boost }),
 		Gems = e(CurrencyChip, { Icon = "Gems", Value = props.Gems, Order = 2, Color = G.Text }),
 	})
 end
