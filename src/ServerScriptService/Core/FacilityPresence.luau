@@ -203,6 +203,22 @@ function FacilityPresence.Reapply(plot: Instance)
 	end
 end
 
+-- Returns the live or off-tree stashed facility model if one is present for this plot.
+function FacilityPresence.GetBuilding(plot: Instance, facility: string): Model?
+	local name = BUILDINGS[facility]
+	if not name then
+		return nil
+	end
+	local folder = plot:FindFirstChild("PlotBuildings")
+	local live = folder and folder:FindFirstChild(name)
+	if live and live:IsA("Model") then
+		return live
+	end
+	local stash = hidden[plot]
+	local stashed = if stash then stash[facility] else nil
+	return if stashed and stashed:IsA("Model") then stashed else nil
+end
+
 -- The owner left: hide everything and forget the levels so the next owner's join builds silently.
 function FacilityPresence.Reset(plot: Instance)
 	for _, facility in GATED do

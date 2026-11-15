@@ -239,9 +239,9 @@ FacilityConfig.FacilityLayout = {
 		RotationY = math.rad(-90),
 	},
 	Market = {
-		Offset = Vector3.new(42, 0, 30),
-		RotationY = math.rad(-145),
-		Radius = 26,
+		Offset = Vector3.new(50, 0, 36),
+		RotationY = math.atan2(-50, -36),
+		Radius = 32,
 		PromptText = "Open Market",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},

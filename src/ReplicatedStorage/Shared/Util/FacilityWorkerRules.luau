@@ -42,9 +42,9 @@ local TRAINING_CENTER_DIST = 49.0
 
 FacilityWorkerRules.Facilities = table.freeze({
 	Market = table.freeze({
-		Center = Vector3.new(42, 0, 30),
-		RotationY = math.rad(-145),
-		FloorY = 0.30,
+		Center = Vector3.new(50, 0, 36),
+		RotationY = math.atan2(-50, -36),
+		FloorY = 0.06,
 		BuildingName = "Building_Market",
 		LevelAttr = "FacilityLevel_Market",
 	}),
@@ -122,9 +122,9 @@ end
 -- Courtyard run-in paths start clear of PlazaFountain (radius 16.5) and lead to each facility apron.
 FacilityWorkerRules.CourtyardRunIn = table.freeze({
 	Market = table.freeze({
-		Vector3.new(14, 0, 10),
-		Vector3.new(26, 0, 18),
-		FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(0, 0.30, 6.8)),
+		Vector3.new(16, 0, 11.5),
+		Vector3.new(30, 0, 21.5),
+		FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(0, 0.06, 9.5)),
 	}),
 	TrainingGrounds = table.freeze({
 		Vector3.new(TRAINING_AXIS_X * 19.65, 0, TRAINING_AXIS_Z * 19.65),
@@ -137,10 +137,10 @@ FacilityWorkerRules.CourtyardRunIn = table.freeze({
 -- Quiet sideline rest spots when a stationed worker is recovering from coma.
 FacilityWorkerRules.ComaRestSpots = table.freeze({
 	Market = table.freeze({
-		makeStation("Market", Vector3.new(-14.2, 0.30, 2.6), Vector3.new(0, 0.30, 0)),
-		makeStation("Market", Vector3.new(-7.4, 0.30, -10.4), Vector3.new(0, 0.30, -2.0)),
-		makeStation("Market", Vector3.new(8.2, 0.30, -10.2), Vector3.new(0, 0.30, -2.0)),
-		makeStation("Market", Vector3.new(14.4, 0.30, 2.8), Vector3.new(0, 0.30, 0)),
+		makeStation("Market", Vector3.new(-16.5, 0.06, 3.2), Vector3.new(0, 0.06, 1.0)),
+		makeStation("Market", Vector3.new(-8.5, 0.06, -12.6), Vector3.new(0, 0.06, -3.0)),
+		makeStation("Market", Vector3.new(8.5, 0.06, -12.4), Vector3.new(0, 0.06, -3.0)),
+		makeStation("Market", Vector3.new(15.2, 0.06, -7.8), Vector3.new(0, 0.06, -1.0)),
 	}),
 	TrainingGrounds = table.freeze({
 		makeStation("TrainingGrounds", Vector3.new(12.2, 0.08, -6.2), Vector3.new(0, 0.08, 0)),
@@ -156,7 +156,7 @@ FacilityWorkerRules.ComaRestSpots = table.freeze({
 local marketFloorY = FacilityWorkerRules.Facilities.Market.FloorY
 
 local marketSlots: { FacilitySlotSpec } = {
-	-- Slot 1: Stall_RedAmber (-11.5, 0, -3.5), yaw +28 deg — Bazaar Hawker
+	-- Slot 1: Awning_Left_RedYellow (-10.8, 0, -3.8), yaw +15 deg — Bazaar Hawker
 	table.freeze({
 		SlotIndex = 1,
 		FacilityId = "Market" :: WorkerFacilityId,
@@ -166,14 +166,14 @@ local marketSlots: { FacilitySlotSpec } = {
 		SecondaryClip = "MarketHawker",
 		PropKind = "NONE" :: PropKind,
 		EquipHeroWeapon = false,
-		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(-6.6, marketFloorY, -4.8)),
-		Primary = makeStallStation(-11.5, -3.5, math.rad(28), -2.0, marketFloorY, -0.75, -2.0, 4.5),
-		Secondary = makeStallStation(-11.5, -3.5, math.rad(28), 2.0, marketFloorY, -0.75, 2.0, 4.5),
-		Tertiary = makeStallStation(-11.5, -3.5, math.rad(28), 0.0, marketFloorY, -0.18, 0.0, 4.5),
+		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(-8.0, marketFloorY, -7.2)),
+		Primary = makeStallStation(-10.8, -3.8, math.rad(15), -1.5, marketFloorY, -1.55, -1.5, 4.5),
+		Secondary = makeStallStation(-10.8, -3.8, math.rad(15), 2.0, marketFloorY, -1.55, 2.0, 4.5),
+		Tertiary = makeStallStation(-10.8, -3.8, math.rad(15), 0.2, marketFloorY, -1.55, 0.2, 4.5),
 		DummyIndices = table.freeze({}),
 		BullseyeTargetPlot = nil,
 	}),
-	-- Slot 2: Stall_TanLeft (-4.2, 0, -8.5), yaw +8 deg — Crate Hauler & Stockist
+	-- Slot 2: Awning_Center_Tan Left Bay (0.9, 0, -7.6), yaw -2 deg — Crate Hauler & Stockist
 	table.freeze({
 		SlotIndex = 2,
 		FacilityId = "Market" :: WorkerFacilityId,
@@ -183,18 +183,18 @@ local marketSlots: { FacilitySlotSpec } = {
 		SecondaryClip = "MarketCarry",
 		PropKind = "CRATE" :: PropKind,
 		EquipHeroWeapon = false,
-		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(-6.8, marketFloorY, -5.6)),
-		Primary = makeStallStation(-4.2, -8.5, math.rad(8), -1.8, marketFloorY, -0.75, -1.8, 4.2),
+		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(-5.5, marketFloorY, -8.5)),
+		Primary = makeStallStation(0.9, -7.6, math.rad(-2), -2.4, marketFloorY, -1.65, -2.4, 4.2),
 		Secondary = makeStation(
 			"Market",
-			Vector3.new(-7.1, marketFloorY, -11.0),
-			Vector3.new(-8.5, marketFloorY, -11.5)
+			Vector3.new(-4.8, marketFloorY, -12.8),
+			Vector3.new(-6.8, marketFloorY, -13.6)
 		),
-		Tertiary = makeStallStation(-4.2, -8.5, math.rad(8), 1.8, marketFloorY, -0.75, 1.8, 4.2),
+		Tertiary = makeStallStation(0.9, -7.6, math.rad(-2), -1.0, marketFloorY, -1.65, -1.0, 4.2),
 		DummyIndices = table.freeze({}),
 		BullseyeTargetPlot = nil,
 	}),
-	-- Slot 3: Stall_TanRight (6.2, 0, -8.0), yaw -12 deg — Relic Appraiser
+	-- Slot 3: Awning_Center_Tan Right Bay (0.9, 0, -7.6), yaw -2 deg — Relic Appraiser
 	table.freeze({
 		SlotIndex = 3,
 		FacilityId = "Market" :: WorkerFacilityId,
@@ -204,18 +204,18 @@ local marketSlots: { FacilitySlotSpec } = {
 		SecondaryClip = "MarketStock",
 		PropKind = "RELIC_ORB" :: PropKind,
 		EquipHeroWeapon = false,
-		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(8.2, marketFloorY, -4.4)),
-		Primary = makeStallStation(6.2, -8.0, math.rad(-12), 1.8, marketFloorY, -0.75, 1.8, 4.2),
+		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(6.8, marketFloorY, -8.8)),
+		Primary = makeStallStation(0.9, -7.6, math.rad(-2), 3.0, marketFloorY, -1.65, 3.0, 4.2),
 		Secondary = makeStation(
 			"Market",
-			Vector3.new(8.9, marketFloorY, -10.3),
-			Vector3.new(11.0, marketFloorY, -10.5)
+			Vector3.new(7.6, marketFloorY, -11.4),
+			Vector3.new(9.6, marketFloorY, -12.0)
 		),
-		Tertiary = makeStallStation(6.2, -8.0, math.rad(-12), -1.8, marketFloorY, -0.75, -1.8, 4.2),
+		Tertiary = makeStallStation(0.9, -7.6, math.rad(-2), 1.2, marketFloorY, -1.65, 1.2, 4.2),
 		DummyIndices = table.freeze({}),
 		BullseyeTargetPlot = nil,
 	}),
-	-- Slot 4: Stall_GreenWhite (12.5, 0, -1.5), yaw -38 deg — Quartermaster Ledger (Extra Stall perk)
+	-- Slot 4: Awning_Right_GreenWhite (11.4, 0, -1.6), yaw -26 deg — Quartermaster Ledger (Extra Stall perk)
 	table.freeze({
 		SlotIndex = 4,
 		FacilityId = "Market" :: WorkerFacilityId,
@@ -225,18 +225,14 @@ local marketSlots: { FacilitySlotSpec } = {
 		SecondaryClip = "MarketLedger",
 		PropKind = "LEDGER" :: PropKind,
 		EquipHeroWeapon = false,
-		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(8.4, marketFloorY, -3.8)),
-		Primary = makeStallStation(12.5, -1.5, math.rad(-38), -1.8, marketFloorY, -0.75, -1.8, 4.2),
+		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(9.5, marketFloorY, -5.8)),
+		Primary = makeStallStation(11.4, -1.6, math.rad(-26), -0.4, marketFloorY, -1.65, -0.4, 4.5),
 		Secondary = makeStation(
 			"Market",
-			Vector3.new(10.8, marketFloorY, 5.4),
-			Vector3.new(13.5, marketFloorY, 7.0)
+			Vector3.new(6.8, marketFloorY, 4.8),
+			Vector3.new(10.0, marketFloorY, 3.5)
 		),
-		Tertiary = makeStation(
-			"Market",
-			Vector3.new(8.6, marketFloorY, 1.8),
-			Vector3.new(12.5, marketFloorY, 3.0)
-		),
+		Tertiary = makeStallStation(11.4, -1.6, math.rad(-26), -2.4, marketFloorY, -1.65, -1.5, 4.5),
 		DummyIndices = table.freeze({}),
 		BullseyeTargetPlot = nil,
 	}),
