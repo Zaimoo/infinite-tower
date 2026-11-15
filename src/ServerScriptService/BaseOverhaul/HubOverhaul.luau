@@ -29,7 +29,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 29 -- Bump to force a rebuild of baked geometry (29: align TrainingGrounds & Path_TrainingArea ray with SE bastion tip)
+HubOverhaul.Version = 31 -- Bump to force a rebuild of baked geometry (31: extend Path_Market into enlarged Market Bazaar at 50,0,36)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
