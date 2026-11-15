@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local HeroAnimator = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("HeroRig"):WaitForChild("HeroAnimator"))
+local AudioManager = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("AudioManager"))
 
 local LocalPlayer = Players.LocalPlayer
 local TAG = "MirrorHero"
@@ -62,6 +63,7 @@ local function playThread(model: Model)
 	local source = sourceModel(model)
 	local fromRoot, toRoot = rootOf(model), source and rootOf(source)
 	if not fromRoot or not toRoot then return end
+	AudioManager.Play3D("LightChimeSparkle", fromRoot.Position, nil, 0.45)
 	local beam = Instance.new("Beam")
 	beam.Name = "MirrorThread"
 	beam.Attachment0 = attachmentOn(fromRoot, "MirrorThreadA", Vector3.new(0, 1.5, 0))
@@ -89,6 +91,7 @@ end
 local function glint(model: Model)
 	local root = rootOf(model)
 	if not root or reducedMotion() then return end
+	AudioManager.Play3D("LightChimeSparkle", root.Position, 1.25, 0.35)
 	local att = attachmentOn(root, "MirrorGlint", Vector3.new(0, 2, 0))
 	local emitter = att:FindFirstChild("Sparkle") :: ParticleEmitter?
 	if not emitter then
@@ -113,6 +116,7 @@ end
 local function shatter(model: Model)
 	local root = rootOf(model)
 	if not root then return end
+	AudioManager.Play3D("ChronoParadoxGlitch", root.Position, nil, 0.85)
 	local att = attachmentOn(root, "MirrorShatter", Vector3.new(0, 2, 0))
 	local e = Instance.new("ParticleEmitter")
 	e.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 225, 255)), ColorSequenceKeypoint.new(1, GOLD) })

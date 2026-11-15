@@ -118,6 +118,8 @@ function SettingsComponents.Slider(props: {
 })
 	local isDragging, setDragging = useState(false)
 	local trackRef = useRef(nil :: Frame?)
+	local onChangeRef = useRef(props.OnChange)
+	onChangeRef.current = props.OnChange
 
 	local updateFromPos = useCallback(function(inputX: number)
 		local track = trackRef.current
@@ -135,8 +137,8 @@ function SettingsComponents.Slider(props: {
 		end
 
 		local percent = math.round(math.clamp(rawAlpha, 0, 1) * 100)
-		props.OnChange(percent / 100)
-	end, { props.OnChange })
+		onChangeRef.current(percent / 100)
+	end, {})
 
 	-- Global mouse movement listener while dragging to ensure smooth dragging across screen
 	useEffect(function()
@@ -154,9 +156,14 @@ function SettingsComponents.Slider(props: {
 			end
 		end)
 
+		local focusConn = UserInputService.WindowFocusReleased:Connect(function()
+			setDragging(false)
+		end)
+
 		return function()
 			moveConn:Disconnect()
 			endConn:Disconnect()
+			focusConn:Disconnect()
 		end
 	end, { isDragging, updateFromPos })
 
@@ -188,13 +195,15 @@ function SettingsComponents.Slider(props: {
 				Size = UDim2.new(0.35, 0, 1, 0),
 			}),
 		}),
-		Track = e("Frame", {
-			ref = trackRef,
-			Name = "Track",
-			BackgroundColor3 = Color3.fromRGB(8, 6, 14),
-			BackgroundTransparency = 0.45,
-			Position = UDim2.new(0, 2, 0, 30),
-			Size = UDim2.new(1, -4, 0, 14),
+		HitArea = e("TextButton", {
+			Name = "TrackHit",
+			BackgroundTransparency = 1,
+			Text = "",
+			AutoButtonColor = false,
+			Selectable = false,
+			Active = true,
+			Position = UDim2.new(0, 2, 0, 23),
+			Size = UDim2.new(1, -4, 0, 28),
 			[React.Event.InputBegan] = function(_rbx, input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 					setDragging(true)
@@ -202,40 +211,50 @@ function SettingsComponents.Slider(props: {
 				end
 			end,
 		}, {
-			TrackCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			TrackStroke = e("UIStroke", {
-				Thickness = 1,
-				Color = Color3.fromRGB(255, 255, 255),
-				Transparency = 0.82,
-				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-			}),
-			Fill = e("Frame", {
-				BackgroundColor3 = Color3.fromRGB(253, 224, 71),
-				BackgroundTransparency = 0.12,
-				Size = UDim2.new(clampedValue, 0, 1, 0),
+			Track = e("Frame", {
+				ref = trackRef,
+				Name = "Track",
+				AnchorPoint = Vector2.new(0, 0.5),
+				BackgroundColor3 = Color3.fromRGB(8, 6, 14),
+				BackgroundTransparency = 0.45,
+				Position = UDim2.fromScale(0, 0.5),
+				Size = UDim2.new(1, 0, 0, 14),
 			}, {
-				FillCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-				FillGradient = e("UIGradient", {
-					Rotation = 0,
-					Color = ColorSequence.new(Color3.fromRGB(253, 224, 71), Color3.fromRGB(217, 119, 6)),
-				}),
-			}),
-			Knob = e("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(clampedValue, 0, 0.5, 0),
-				Size = UDim2.fromOffset(20, 20),
-				BackgroundColor3 = Color3.fromRGB(250, 204, 21),
-				ZIndex = 4,
-			}, {
-				KnobCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-				KnobStroke = e("UIStroke", {
-					Thickness = 1.5,
+				TrackCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				TrackStroke = e("UIStroke", {
+					Thickness = 1,
 					Color = Color3.fromRGB(255, 255, 255),
-					Transparency = 0.3,
+					Transparency = 0.82,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 				}),
-				KnobGradient = e("UIGradient", {
-					Rotation = 90,
-					Color = ColorSequence.new(Color3.fromRGB(255, 240, 160), Color3.fromRGB(217, 119, 6)),
+				Fill = e("Frame", {
+					BackgroundColor3 = Color3.fromRGB(253, 224, 71),
+					BackgroundTransparency = 0.12,
+					Size = UDim2.new(clampedValue, 0, 1, 0),
+				}, {
+					FillCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+					FillGradient = e("UIGradient", {
+						Rotation = 0,
+						Color = ColorSequence.new(Color3.fromRGB(253, 224, 71), Color3.fromRGB(217, 119, 6)),
+					}),
+				}),
+				Knob = e("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new(clampedValue, 0, 0.5, 0),
+					Size = UDim2.fromOffset(20, 20),
+					BackgroundColor3 = Color3.fromRGB(250, 204, 21),
+					ZIndex = 4,
+				}, {
+					KnobCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+					KnobStroke = e("UIStroke", {
+						Thickness = 1.5,
+						Color = Color3.fromRGB(255, 255, 255),
+						Transparency = 0.3,
+					}),
+					KnobGradient = e("UIGradient", {
+						Rotation = 90,
+						Color = ColorSequence.new(Color3.fromRGB(255, 240, 160), Color3.fromRGB(217, 119, 6)),
+					}),
 				}),
 			}),
 		}),

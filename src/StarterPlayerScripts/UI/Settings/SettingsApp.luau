@@ -275,6 +275,7 @@ local function SettingsApp()
 				_G.SetModalFocusMode(true)
 			end
 		else
+			setConfirmDiscard(false)
 			if _G.SetModalFocusMode then
 				_G.SetModalFocusMode(false)
 			end
@@ -358,6 +359,18 @@ local function SettingsApp()
 		setSettings(function(prev)
 			local nextCopy: any = table.clone(prev)
 			nextCopy[key] = val
+			return nextCopy
+		end)
+	end, {})
+
+	-- Raising a volume slider above 0 automatically clears its channel mute so previews play immediately.
+	local updateVolumeSetting = useCallback(function(key: string, muteKey: string, val: number)
+		setSettings(function(prev)
+			local nextCopy: any = table.clone(prev)
+			nextCopy[key] = val
+			if val > 0 and nextCopy[muteKey] == true then
+				nextCopy[muteKey] = false
+			end
 			return nextCopy
 		end)
 	end, {})
@@ -585,21 +598,21 @@ local function SettingsApp()
 						Value = settings.Sound,
 						AccentColor = accent,
 						LayoutOrder = 1,
-						OnChange = function(v) updateSetting("Sound", v) end,
+						OnChange = function(v) updateVolumeSetting("Sound", "MuteSFX", v) end,
 					}),
 					S2 = e(Slider, {
 						Label = "Music Track",
 						Value = settings.Music,
 						AccentColor = accent,
 						LayoutOrder = 2,
-						OnChange = function(v) updateSetting("Music", v) end,
+						OnChange = function(v) updateVolumeSetting("Music", "MuteMusic", v) end,
 					}),
 					S3 = e(Slider, {
 						Label = "Atmosphere & Ambience",
 						Value = settings.Ambience,
 						AccentColor = accent,
 						LayoutOrder = 3,
-						OnChange = function(v) updateSetting("Ambience", v) end,
+						OnChange = function(v) updateVolumeSetting("Ambience", "MuteAmbience", v) end,
 					}),
 				},
 			}),
@@ -728,24 +741,25 @@ local function SettingsApp()
 		Size = UDim2.fromScale(1, 1),
 		Visible = isOpen,
 	}, {
-		-- Focus Modal Backdrop Dimmer (dismisses on click outside)
+		-- Focus Modal Backdrop Dimmer (blocks world clicks; only the close button dismisses/prompts)
 		Dim = e("TextButton", {
 			Name = "Dim",
 			AutoButtonColor = false,
 			Text = "",
+			Selectable = false,
 			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 			BackgroundTransparency = 0.55,
 			Size = UDim2.fromScale(1, 1),
 			ZIndex = 1,
-			[React.Event.Activated] = function()
-				requestClose()
-			end,
 		}),
 
-		-- Centered Settings Window (Clear Glass Crystal Frame)
-		Window = e("Frame", {
+		-- Centered Settings Window (TextButton so clicks/drags inside never fall through behind the panel)
+		Window = e("TextButton", {
 			Name = "SettingsPanel",
 			ref = panelRef,
+			AutoButtonColor = false,
+			Text = "",
+			Selectable = false,
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.new(0, 960, 0, 620),

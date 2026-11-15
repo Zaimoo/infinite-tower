@@ -18,6 +18,7 @@ local EventRules = require(Shared:WaitForChild("Util"):WaitForChild("TowerEventR
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Components = require(script.Parent:WaitForChild("Components"))
+local UIFeel = require(script.Parent.Parent:WaitForChild("UIFeel"))
 
 local e = React.createElement
 local G = Theme.Glass
@@ -266,6 +267,7 @@ function TowerEventHud.Popup(props: { Blocked: boolean })
 		local group = groupRef.current :: CanvasGroup?
 		local scale = scaleRef.current :: UIScale?
 		if not showing or not group or not scale then return nil end
+		UIFeel.Sfx("MysteryChestPop", nil, 0.78)
 		group.GroupTransparency, scale.Scale = 1, 0.85
 		local popIn = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 		TweenService:Create(group, popIn, { GroupTransparency = 0 }):Play()

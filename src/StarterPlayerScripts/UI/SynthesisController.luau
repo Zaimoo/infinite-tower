@@ -29,6 +29,7 @@ local PitBalanceConfig = require(Shared:WaitForChild("Config"):WaitForChild("Pit
 local PitMath = require(Shared:WaitForChild("Util"):WaitForChild("PitMath"))
 local Kit = require(script.Parent:WaitForChild("Kit"))
 local PitTabs = require(script.Parent:WaitForChild("PitTabs"))
+local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 
 local Synth = {}
 Synth.__index = Synth
@@ -1214,8 +1215,10 @@ function Synth.Commit(self: any, preview: any)
 				self.ActivePreviewTween:Cancel()
 				self.ActivePreviewTween = nil
 			end
-			self:Celebrate()
+			local leveledUp = (before ~= nil and after ~= nil and after.Level > before.Level)
+			self:Celebrate(leveledUp)
 		else
+			UIFeel.Sfx("UpgradeFailure", nil, 0.7)
 			self:ShowPopup("SYNTHESIS UNAVAILABLE", response.Message or "Synthesis failed. Check your selection.")
 			self:QueuePreview()
 		end
@@ -1649,7 +1652,15 @@ function Synth.SetStatus(self: any, text: string, severity: string)
 	self.StatusCallout.Update({ Text = if text ~= "" then text else nil, Severity = severity })
 end
 
-function Synth.Celebrate(self: any)
+function Synth.Celebrate(self: any, leveledUp: boolean?)
+	UIFeel.Sfx("UpgradeSuccess", nil, 0.85)
+	if leveledUp then
+		task.delay(0.2, function()
+			if self.Root and self.Root.Parent and self.Root.Visible then
+				UIFeel.Sfx("RelicRevealMagic", 1.05, 0.75)
+			end
+		end)
+	end
 	local flash = new("Frame", {
 		BackgroundColor3 = C.Line, BackgroundTransparency = 0.2, BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1), ZIndex = Z + 15,

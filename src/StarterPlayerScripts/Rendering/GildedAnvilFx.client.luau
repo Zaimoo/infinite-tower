@@ -28,6 +28,7 @@ local WeaponVfx = require(Assets:WaitForChild("CombatVfx"):WaitForChild("WeaponV
 local HeroSockets = require(Assets:WaitForChild("HeroRig"):WaitForChild("HeroSockets"))
 local WeaponVfxConfig = require(Shared:WaitForChild("Config"):WaitForChild("WeaponVfxConfig"))
 local WeaponModelBuilder = require(Assets:WaitForChild("WeaponModelBuilder"))
+local AudioManager = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("AudioManager"))
 
 -- Fetch the six weapons' uploaded meshes up front so the first equip or preview does not wait on them.
 task.spawn(WeaponModelBuilder.PreloadGildedMeshes)
@@ -467,6 +468,7 @@ local function updateIdleExtras(entry: TrackedWeapon, now: number, rig: Model?, 
 		local heart = partNamed(model, "WyrmHeart")
 		if heart and near and now - entry.LastBeat >= 1.2 then
 			entry.LastBeat = now
+			AudioManager.Play3D("WyrmheartPulse", heart.Position, nil, 0.55)
 			if not reduce then
 				flash(Vector3.new(0.4, 0.4, 0.4), heart.CFrame, EMBER, Enum.PartType.Ball, 0.35, 0.35, Vector3.new(1.3, 1.3, 1.3))
 				burst(heart.Position, { EMBER, GOLD }, 3, Vector3.new(0.07, 0.07, 0.07), 0.9, 0.5, 0.5, Enum.PartType.Ball)
@@ -938,8 +940,11 @@ function GildedCombat.OnHit(pos: Vector3, kind: string, crit: boolean)
 		return
 	end
 	playHit(templateId, pos, kind)
-	if crit and not reducedMotion() then
-		playSignatureBurst(templateId, pos)
+	if crit then
+		AudioManager.Play3D("ForgePowerUp", pos, 1.15, 0.65)
+		if not reducedMotion() then
+			playSignatureBurst(templateId, pos)
+		end
 	end
 end
 
@@ -949,6 +954,7 @@ function GildedCombat.OnKill(pos: Vector3)
 	end
 	local templateId = attribute(pos, KILL_WINDOW)
 	if templateId then
+		AudioManager.Play3D("ForgePowerUp", pos, nil, 0.72)
 		playSignatureBurst(templateId, pos)
 	end
 end

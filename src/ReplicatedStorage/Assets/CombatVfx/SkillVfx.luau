@@ -58,6 +58,7 @@ export type PlayArgs = {
 	Blink: ((position: Vector3, yaw: number, from: number, to: number) -> ())?,
 	Now: number, -- server time
 	Shake: ((magnitude: number) -> ())?, -- set only for the local player's own heroes
+	Sfx: ((soundKey: string, pos: Vector3, delaySeconds: number?, pitch: number?, volumeScale: number?) -> ())?,
 }
 
 type Recipe = SkillVfxCatalog.TierRecipe
@@ -2206,6 +2207,185 @@ local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
 }
 SkillVfx.Chargers = table.freeze(table.clone(CHARGERS))
 
+-- Audio dispatch tables ----------------------------------------------------------------------
+type StyleExtraSfx = {
+	Key: string,
+	DelayFromStart: number?,
+	AtTarget: boolean?,
+	Pitch: number?,
+	VolumeScale: number?,
+}
+
+type StyleSfxSpec = {
+	Cast: string?,
+	CastPitch: number?,
+	CastVolume: number?,
+	Impact: string?,
+	ImpactPitch: number?,
+	ImpactVolume: number?,
+	Extra: { StyleExtraSfx }?,
+}
+
+local STYLE_CHARGE_SFX: { [string]: string } = {
+	BEAM = "BeamChargeBlast",
+	CONSTELLATION = "ChronoEchoChime",
+	SINGULARITY = "VaneChronoTick",
+	LOOKING_GLASS = "ManaFlowLoop",
+	MIRROR_STEP = "ManaFlowLoop",
+	SHATTERDANCE = "ManaFlowLoop",
+	REFRACTION = "ManaFlowLoop",
+	HALL_OF_MIRRORS = "ManaFlowLoop",
+	WHIRL = "SwordUnsheath",
+	EXECUTE = "KatanaUnsheath",
+	LAST_STAND = "SwordUnsheath",
+	GILDED_FRENZY = "SwordUnsheath",
+	PIERCER = "BowDraw",
+	TWIN = "BowDraw",
+}
+
+local WEAPON_CHARGE_SFX: { [string]: string } = {
+	BOW = "BowDraw",
+	CROSSBOW = "BowDraw",
+	KATANA = "KatanaUnsheath",
+	GREATSWORD = "SwordUnsheath",
+	SWORD = "SwordUnsheath",
+	SWORD_SHIELD = "SwordUnsheath",
+	STAFF = "MagicSpark",
+	TOME = "MagicSpark",
+	ORB = "MagicSpark",
+}
+
+local STYLE_SFX: { [string]: StyleSfxSpec } = {
+	BOLT = { Cast = "ArcaneBoltPew", CastVolume = 0.85 },
+	VOLLEY = { Cast = "BarrageVolley", CastVolume = 0.9 },
+	PIERCER = { Cast = "RailBeamPierce", CastVolume = 0.95, Impact = "VoidBeamDetonation", ImpactVolume = 0.85 },
+	WHIRL = { Cast = "WhirlwindSpin", CastVolume = 0.9 },
+	CLEAVE = { Cast = "SlashSword", CastPitch = 0.84, CastVolume = 0.9 },
+	CROSS = {
+		Cast = "SlashSword",
+		CastVolume = 0.88,
+		Extra = { { Key = "SlashDagger", DelayFromStart = 0.14, Pitch = 1.15, VolumeScale = 0.8 } },
+	},
+	PLUNGE = { Cast = "HeroDashJump", CastVolume = 0.8, Impact = "HammerImpact", ImpactVolume = 0.95 },
+	BEAM = { Cast = "AstralLaserBurst", CastVolume = 0.95, Impact = "VoidBeamDetonation", ImpactVolume = 0.85 },
+	TREMOR = { Cast = "HammerImpact", CastVolume = 0.9, Impact = "ExplosiveWaveShock", ImpactVolume = 0.9 },
+	CHAIN = { Cast = "LightningArc", CastVolume = 0.92, Impact = "SilenceDisruptPulse", ImpactVolume = 0.78 },
+	RICOCHET = { Cast = "KunaiThrow", CastVolume = 0.85, Impact = "MirrorShatterEmp", ImpactVolume = 0.75 },
+	TWIN = {
+		Cast = "BowRelease",
+		CastVolume = 0.9,
+		Extra = { { Key = "BowRelease", DelayFromStart = 0.12, Pitch = 1.12, VolumeScale = 0.85 } },
+		Impact = "MarkDetonation",
+		ImpactVolume = 0.82,
+	},
+	MEND = { Cast = "LightChimeSparkle", CastVolume = 0.88 },
+	STORM = { Cast = "BarrageVolley", CastVolume = 0.92, Impact = "ExplosiveWaveShock", ImpactVolume = 0.88 },
+	CONSTELLATION = { Cast = "HeroAscensionTransform", CastVolume = 0.88, Impact = "MarkDetonation", ImpactVolume = 0.95 },
+	EXECUTE = { Cast = "KatanaUnsheath", CastVolume = 0.95, Impact = "MarkDetonation", ImpactVolume = 0.95 },
+	BULWARK = { Cast = "FortressAegis", CastVolume = 0.95 },
+	TEMPEST = { Cast = "TwinBladeTempest", CastVolume = 0.95, Impact = "FlurryEightStrikes", ImpactVolume = 0.85 },
+	GILT_CUT = { Cast = "SlashSword", CastPitch = 1.12, CastVolume = 0.88 },
+	GILT_CLEAVE = { Cast = "SlashSword", CastPitch = 0.88, CastVolume = 0.9, Impact = "HammerImpact", ImpactVolume = 0.8 },
+	LAST_STAND = { Cast = "HeroDashJump", CastVolume = 0.85, Impact = "SeismicCataclysm", ImpactVolume = 0.98 },
+	GILDED_FRENZY = {
+		Cast = "AuraPowerUp",
+		CastVolume = 0.92,
+		Extra = { { Key = "HeavyFlurryBarrage", DelayFromStart = 0.25, VolumeScale = 0.92 } },
+		Impact = "LargeExplosion",
+		ImpactVolume = 0.95,
+	},
+	POLISHED_BASH = { Cast = "HitHeavy", CastVolume = 0.88, Impact = "FortressAegis", ImpactVolume = 0.78 },
+	DIAGONAL_SLASH = { Cast = "WhipCrack", CastVolume = 0.9 },
+	LOOKING_GLASS = { Cast = "EyeFocusTrigger", CastVolume = 0.9, Impact = "DimensionalShiftGlitch", ImpactVolume = 0.85 },
+	MIRROR_STEP = { Cast = "ShadowStepTechnique", CastVolume = 0.9, Impact = "SlashDagger", ImpactVolume = 0.82 },
+	SHATTERDANCE = {
+		Cast = "MirrorShatterEmp",
+		CastVolume = 0.95,
+		Extra = { { Key = "ChronoParadoxGlitch", DelayFromStart = 0.3, VolumeScale = 0.88 } },
+		Impact = "FlurryEightStrikes",
+		ImpactVolume = 0.9,
+	},
+	REFRACTION = { Cast = "WhipCrack", CastVolume = 0.88, Impact = "MirrorShatterEmp", ImpactVolume = 0.82 },
+	HALL_OF_MIRRORS = { Cast = "ChronoEchoChime", CastVolume = 0.95, Impact = "AbyssalNukeDetonation", ImpactVolume = 0.98 },
+	WAKE = { Cast = "ShadowStepTechnique", CastVolume = 0.92, Impact = "ExplosiveWaveShock", ImpactVolume = 0.92 },
+	CRYSTALS = { Cast = "SeismicCataclysm", CastVolume = 0.92, Impact = "ExplosiveWaveShock", ImpactVolume = 0.88 },
+	PILLAR = { Cast = "BeamChargeBlast", CastVolume = 0.92, Impact = "SupernovaCataclysm", ImpactVolume = 0.98 },
+	SANCTUARY = { Cast = "SanctuaryMiracle", CastVolume = 0.95 },
+	SINGULARITY = {
+		Cast = "TeleportWarp",
+		CastVolume = 0.95,
+		Extra = { { Key = "ChronoParadoxGlitch", DelayFromStart = 0.35, VolumeScale = 0.9 } },
+		Impact = "VoidBeamDetonation",
+		ImpactVolume = 0.98,
+	},
+}
+
+local function emitChargeSfx(args: PlayArgs, recipe: Recipe, tierNum: number?)
+	local sfx = args.Sfx
+	if not sfx then
+		return
+	end
+	local weapon = string.upper(tostring(args.WeaponType or ""))
+	local soundKey = STYLE_CHARGE_SFX[recipe.Style] or WEAPON_CHARGE_SFX[weapon] or "AbilityActivation"
+	local scale = if (tierNum or 1) >= 2 then 0.78 else 0.55
+	sfx(soundKey, args.Origin, 0, nil, scale)
+end
+
+local function resolveWeaponStyleSfx(style: string, weaponType: string?): StyleSfxSpec?
+	local weapon = string.upper(tostring(weaponType or ""))
+	if style == "SHOT" then
+		if weapon == "BOW" then
+			return { Cast = "BowRelease", CastVolume = 0.85 }
+		elseif weapon == "CROSSBOW" or weapon == "PISTOL" or weapon == "GUN" then
+			return { Cast = "GunShotCannon", CastVolume = 0.82 }
+		end
+		return { Cast = "KunaiThrow", CastVolume = 0.82 }
+	elseif style == "SLASH" then
+		if weapon == "DAGGER" or weapon == "DUAL_DAGGER" or weapon == "CLAW" then
+			return { Cast = "SlashDagger", CastVolume = 0.85 }
+		elseif weapon == "GREATSWORD" then
+			return { Cast = "SlashSword", CastPitch = 0.85, CastVolume = 0.9 }
+		elseif weapon == "HAMMER" or weapon == "MACE" then
+			return { Cast = "AirWhoosh", CastPitch = 0.85, CastVolume = 0.85, Impact = "HammerImpact", ImpactVolume = 0.85 }
+		end
+		return { Cast = "SlashSword", CastVolume = 0.85 }
+	end
+	return STYLE_SFX[style]
+end
+
+local function emitStyleSfx(args: PlayArgs, recipe: Recipe, startAt: number, arriveAt: number, now: number, tierNum: number?)
+	local sfx = args.Sfx
+	if not sfx then
+		return
+	end
+	local spec = resolveWeaponStyleSfx(recipe.Style, args.WeaponType)
+	if not spec then
+		return
+	end
+	local tierMult = if (tierNum or 1) >= 3 then 1.0 elseif tierNum == 2 then 0.88 else 0.76
+	local castDelay = math.max(0, startAt - now)
+	local impactDelay = math.max(0, arriveAt - now)
+
+	if spec.Cast then
+		sfx(spec.Cast, args.Origin, castDelay, spec.CastPitch, (spec.CastVolume or 1.0) * tierMult)
+	end
+	local targetPos: Vector3? = nil
+	if spec.Extra then
+		for _, extra in ipairs(spec.Extra) do
+			local p = args.Origin
+			if extra.AtTarget then
+				targetPos = targetPos or args.Target()
+				p = targetPos
+			end
+			sfx(extra.Key, p, castDelay + (extra.DelayFromStart or 0), extra.Pitch, (extra.VolumeScale or 1.0) * tierMult)
+		end
+	end
+	if spec.Impact then
+		targetPos = targetPos or args.Target()
+		sfx(spec.Impact, targetPos, impactDelay, spec.ImpactPitch, (spec.ImpactVolume or 1.0) * tierMult)
+	end
+end
+
 -- Plays the wind-up for the cue's attack, if its style has one. Returns false when there is
 -- nothing to play or release has already passed.
 function SkillVfx.PlayCharge(pool: VfxPool.VfxPool, args: PlayArgs): boolean
@@ -2220,7 +2400,7 @@ function SkillVfx.PlayCharge(pool: VfxPool.VfxPool, args: PlayArgs): boolean
 	if not charger or args.Now >= releaseAt or not pool:Visible(args.Origin) then
 		return false
 	end
-	return charger({
+	local ok = charger({
 		Pool = pool,
 		Args = args,
 		Recipe = recipe,
@@ -2228,11 +2408,22 @@ function SkillVfx.PlayCharge(pool: VfxPool.VfxPool, args: PlayArgs): boolean
 		StartAt = args.Now,
 		ReleaseAt = releaseAt,
 	})
+	if ok then
+		emitChargeSfx(args, recipe, cue.Tier)
+	end
+	return ok
 end
 
 -- A reflected hit (Caspian's Looking-Glass Bulwark, the server's REFLECT message): a mirror glint
 -- on the hero and a bolt of light flying back into the shooter, in the hero's palette.
-function SkillVfx.PlayReflect(pool: VfxPool.VfxPool, heroId: string?, from: Vector3, to: Vector3, now: number)
+function SkillVfx.PlayReflect(
+	pool: VfxPool.VfxPool,
+	heroId: string?,
+	from: Vector3,
+	to: Vector3,
+	now: number,
+	sfx: ((soundKey: string, pos: Vector3, delaySeconds: number?, pitch: number?, volumeScale: number?) -> ())?
+)
 	if not pool:Visible(from, to) then
 		return
 	end
@@ -2241,6 +2432,9 @@ function SkillVfx.PlayReflect(pool: VfxPool.VfxPool, heroId: string?, from: Vect
 	local travel = math.clamp(VfxMath.Distance(from, to) / 80, 0.1, 0.3)
 	VfxPrimitives.Flare(pool, fixed(from), 4, palette.Core, now, 0.3)
 	VfxPrimitives.FlightRing(pool, from, to - from, 1.8, palette.Secondary, now)
+	if sfx then
+		sfx("MirrorShatterEmp", from, 0, 1.2, 0.72)
+	end
 	local body = projectile({ Style = "SHOT", Projectile = "BOLT", Scale = 0.9, Trail = 0.25 } :: any, palette)
 	fly(pool, body, from, fixed(to), now, now + travel, 0.4, function(at: Vector3)
 		VfxPrimitives.Burst(pool, at, palette.Primary, 2.6, now + travel, 0.3)
@@ -2265,14 +2459,16 @@ function SkillVfx.Play(pool: VfxPool.VfxPool, args: PlayArgs): boolean
 	if args.Now > arriveAt + LATE_GRACE or not pool:Visible(args.Origin, cue.Aim) then
 		return false
 	end
+	local startAt = math.max(releaseAt, args.Now)
 	player({
 		Pool = pool,
 		Args = args,
 		Recipe = recipe,
 		Palette = palette,
-		StartAt = math.max(releaseAt, args.Now),
+		StartAt = startAt,
 		ArriveAt = arriveAt,
 	})
+	emitStyleSfx(args, recipe, startAt, arriveAt, args.Now, cue.Tier)
 	return true
 end
 

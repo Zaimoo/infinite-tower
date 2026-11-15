@@ -832,6 +832,13 @@ function SummonReveal.Beat(self: any, run: number, item: Item): boolean
 	if reduced then self.Flash.BackgroundTransparency = 0.6 end
 	tween(self.Flash, 0.5, { BackgroundTransparency = 1 })
 	UIFeel.Sfx(if item.Emphasis == 2 then "SummonBurstJackpot" elseif item.Emphasis == 1 then "SummonBurstRare" else "SummonBurstCommon")
+	if item.Emphasis == 2 and not self.IsArtifact then
+		task.delay(0.18, function()
+			if self.Run == run and self.Scrim.Visible then
+				UIFeel.Sfx("SummonJackpotWoah", nil, 0.55)
+			end
+		end)
+	end
 	UIFeel.Haptic(if item.Emphasis == 2 then "Impact" elseif item.Emphasis == 1 then "Notify" else "Click")
 	self.Fast = false -- the card itself always lands properly
 	Fx.Ring(self.Stage, CENTER, item.Color, Z + 5, 140, 900, 0.6)
