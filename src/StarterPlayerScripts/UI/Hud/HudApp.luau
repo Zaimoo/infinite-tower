@@ -871,7 +871,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() WindowManager.Close("Index") end }) else nil,
 		Rewards = if rewardsOpen then e(RewardsPanel, { Width = screen.X, OnClose = function() WindowManager.Close("Index") end }) else nil,
-		BattlePass = if passOpen then e(BattlePassPanel, { Profile = profile, Width = screen.X, OnClose = function() WindowManager.Close("Index") end }) else nil,
+		BattlePass = if passOpen then e(BattlePassPanel, { Profile = profile, Width = screen.X, Height = screen.Y, OnClose = function() WindowManager.Close("Index") end }) else nil,
 		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or rewardsOpen or passOpen or indexOpen or modalFocus }),
 		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or rewardsOpen or passOpen or indexOpen or modalFocus }),
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() WindowManager.Close("Index") end }) else nil,
