@@ -15,11 +15,17 @@ export type Pose = { [string]: { number } } -- joint -> {rx, ry, rz}; "RootOffse
 -- Linear: the blend into this key is linear instead of eased, so a run of keys moves at a
 -- steady rate (a full-body spin through several Root keys) instead of pausing on each one.
 export type Key = { T: number, Pose: Pose, Linear: boolean? }
+export type Draw = { Set: number, Full: number, Anchor: { number }? }
 export type Clip = {
 	Duration: number, -- seconds at speed 1 (attacks are rescaled to the attack interval)
 	Looped: boolean,
 	Keys: { Key },
 	Markers: { [string]: number }?, -- event name -> fraction of the clip (see RELEASE_MARKERS)
+	-- Bow attacks: when the draw hand takes the string (Set) and when it reaches full draw
+	-- (Full), as fractions of the clip, and optionally where it anchors (Anchor: Head space, as
+	-- fractions of the head's size). HeroAnimator's procedural draw (SolveBowDraw) reads it;
+	-- clips without it use DRAW_DEFAULT (fractions of the Release) and the chin anchor.
+	Draw: Draw?,
 }
 
 local HeroClips = {}
@@ -249,15 +255,15 @@ end
 
 -- BOW (bow in the left hand) ----------------------------------------------------------------
 do
-	-- Low ready carry: stave canted ~30 deg forward, arrow pointing forward and down.
+	-- Walking carry: stave canted ~30 deg forward, arrow pointing forward and down.
 	local carry = merge(STANCE, {
 		Waist = { -2, -8, 0 }, Neck = { 0, 8, 0 },
 		LeftShoulder = { 10, 0, -10 }, LeftElbow = { 50, 0, 0 },
 		RightShoulder = { 14, 10, -14 }, RightElbow = { 45, 0, 0 },
 	})
-	-- Arm straight forward: stave vertical, arrow at the target. Draw hand back at the cheek.
-	-- The archer's body turn lives in the waist; a shoulder yaw after the 90 deg pitch would
-	-- roll the bow off vertical.
+	-- Square-on aim poses (arm straight forward: stave vertical, arrow at the target). The
+	-- marksman heroes' signature clips are built from these (Overrides below), so they stay as
+	-- they were; the shared clips use the side-on archer's stance further down.
 	local aim = merge(ATTACK_STANCE, {
 		Waist = { -2, -10, 0 }, Neck = { 0, 10, 0 },
 		LeftShoulder = { 90, 0, 0 }, LeftElbow = { 0, 0, 0 },
@@ -267,43 +273,117 @@ do
 	local release = merge(aim, { LeftShoulder = { 96, 0, 0 }, RightShoulder = { 70, 40, -30 }, RightElbow = { 120, 0, 0 } })
 	local crouch: Pose = { LeftHip = { 40, 0, -8 }, RightHip = { -10, 0, 8 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -70, 0, 0 }, LeftAnkle = { 15, 0, 0 }, RightAnkle = { 60, 0, 0 }, RootOffset = { 0, -0.55, 0 } }
 	local skyAim = merge(aim, { Waist = { 18, -10, 0 }, Neck = { 15, 10, 0 }, LeftShoulder = { 140, 0, 0 }, RightShoulder = { 138, 14, 0 } })
-	WeaponPoses.BOW = { Carry = carry, Aim = aim, Drawn = drawn, Release = release, Crouch = crouch, SkyAim = skyAim }
-	-- Basic: square up and nock, lean back into a full draw, then loose: the bow arm kicks up,
-	-- the draw hand flies back past the ear and the shot is held a beat before settling.
-	local nocked = merge(aim, { Waist = { -4, -14, 0 }, Neck = { 0, 14, 0 }, RootOffset = { 0, -0.14, 0 } })
-	local fullDraw = merge(drawn, { Waist = { 3, -20, 0 }, Neck = { -2, 18, 0 }, RightShoulder = { 88, 32, -14 }, RightElbow = { 150, 0, 0 } })
-	local loose = merge(release, { Waist = { -3, -16, 0 }, Neck = { 0, 14, 0 }, LeftShoulder = { 100, 0, 0 }, RightShoulder = { 62, 46, -40 }, RightElbow = { 112, 0, 0 }, RootOffset = { 0, -0.1, 0.05 } })
-	local looseHeld = merge(loose, { LeftShoulder = { 97, 0, 0 }, RightShoulder = { 58, 48, -44 }, RightElbow = { 104, 0, 0 } })
+
+	-- The archer's stance (solved in Studio against the rig and a mesh bow, then checked by
+	-- eye). The whole body turns side-on with Root (-50) and Waist (-32), so the bow shoulder
+	-- points at the target; the head turns back to look down the arrow. The bow arm is straight
+	-- out at shoulder height with the stave upright and a slight cant; the draw hand anchors
+	-- under the chin with its elbow high and behind, in line with the arrow. The draw hand's
+	-- angles here are where it rests between keys: during an attack HeroAnimator.SolveBowDraw
+	-- puts it on the string and pulls it back along the arrow (the Draw timings), and
+	-- HeroBowString bends the string and carries the arrow with it.
+	local archerLegs: Pose = {
+		LeftHip = { 8, 0, -10 }, RightHip = { -6, 0, 10 },
+		LeftKnee = { -12, 0, 0 }, RightKnee = { -10, 0, 0 },
+		LeftAnkle = { 4, 0, 10 }, RightAnkle = { 16, 0, -10 },
+		RootOffset = { 0, -0.1, 0 },
+	}
+	local sideOn: Pose = merge(archerLegs, {
+		Root = { 0, -50, 0 }, Waist = { 2, -32, 0 }, Neck = { -3, 82, 0 },
+		LeftShoulder = { 88, -2, -80 }, LeftElbow = { 1, 0, 0 }, LeftWrist = { -4, -5, -2 },
+	})
+	-- Set: the bow comes up on the target with the bow arm still bent and the chest still square,
+	-- so the draw hand can take the resting string (these rigs' shoulders are wide for their
+	-- arms: side-on, the string at arm's length is out of the draw hand's reach). From Set to
+	-- Anchor the archer pushes the bow out and coils side-on while drawing.
+	-- Anchor: full draw at the chin. Loose: the hand flies back past the ear off the string; the
+	-- bow arm rides the kick.
+	local set = merge(sideOn, {
+		Waist = { 2, 38, 0 }, Neck = { -2, 13, 0 },
+		LeftShoulder = { 77, -23, 13 }, LeftElbow = { 45, 0, 0 }, LeftWrist = { -30, 12, -29 },
+		RightShoulder = { -49, 6, -139 }, RightElbow = { 62, 0, 0 },
+	})
+	local anchor = merge(sideOn, { RightShoulder = { -125, 57, -90 }, RightElbow = { 90, 0, 0 } })
+	local loose = merge(sideOn, { LeftShoulder = { 91, -2, -80 }, RightShoulder = { 141, 81, -36 }, RightElbow = { 119, 0, 0 } })
+	local looseHeld = merge(loose, { Waist = { 0, -32, 0 }, LeftShoulder = { 89, -2, -80 }, RightElbow = { 112, 0, 0 } })
+	-- The same stance shooting 50 deg up: leaning back, chin up.
+	local skyOn: Pose = merge(archerLegs, {
+		Root = { 0, -50, 0 }, Waist = { 14, -30, 0 }, Neck = { 19, 72, 0 },
+		LeftShoulder = { 120, -47, -50 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -16, -25, -6 },
+	})
+	local skySet = merge(skyOn, {
+		Waist = { 14, 27, 0 }, Neck = { 14, 19, 0 },
+		LeftShoulder = { 115, -46, 6 }, LeftElbow = { 45, 0, 0 }, LeftWrist = { -35, 12, -24 },
+		RightShoulder = { 75, -7, -54 }, RightElbow = { 62, 0, 0 },
+	})
+	local skyAnchor = merge(skyOn, { RightShoulder = { -155, 60, -80 }, RightElbow = { 91, 0, 0 } })
+	local skyLoose = merge(skyOn, { RightShoulder = { 121, 77, -39 }, RightElbow = { 121, 0, 0 } })
+	-- Ready (idle): turned a third of the way, bow low in front and canted, arrow nocked and
+	-- pointing at the ground ahead, the draw hand resting on the string.
+	local ready: Pose = {
+		Root = { 0, -30, 0 }, Waist = { 2, -10, 0 }, Neck = { -12, 40, 0 },
+		LeftShoulder = { 2, -1, -8 }, LeftElbow = { 60, 0, 0 }, LeftWrist = { -12, -7, -22 },
+		RightShoulder = { 120, 48, -92 }, RightElbow = { 15, 0, 0 },
+		LeftHip = { 6, 0, -6 }, RightHip = { -4, 0, 6 },
+		LeftKnee = { -10, 0, 0 }, RightKnee = { -8, 0, 0 },
+		LeftAnkle = { 2, 0, 6 }, RightAnkle = { 12, 0, -6 },
+		RootOffset = { 0, -0.06, 0 },
+	}
+	-- Kneeling: the crouch's legs under the side-on body.
+	local kneel: Pose = merge(crouch, {})
+	WeaponPoses.BOW = {
+		Carry = carry, Aim = aim, Drawn = drawn, Release = release, Crouch = crouch, SkyAim = skyAim,
+		Ready = ready, Set = set, Anchor = anchor, Loose = loose, SkySet = skySet, SkyAnchor = skyAnchor, SkyLoose = skyLoose,
+	}
 	local bowUp = merge(STANCE, { Waist = { 4, -6, 0 }, Neck = { 8, 6, 0 }, LeftShoulder = { 158, 0, -8 }, LeftElbow = { 12, 0, 0 }, RightShoulder = { 20, 0, 18 }, RightElbow = { 40, 0, 0 } })
+	local function attack(duration: number, keys: { { any } }, draw: Draw): Clip
+		local result = clip(duration, false, keys)
+		result.Draw = draw
+		return result
+	end
 	ByWeapon.BOW = {
 		Victory = cheer(bowUp, "LeftShoulder"),
-		Idle = breathe(carry),
+		Idle = breathe(ready),
 		-- A light scout's walk: long, easy strides, leaning a little into them.
 		Move = walk(carry, nil, { Stride = 26, Lean = -3 }),
-		AttackBasic = clip(0.8, false, { { 0, carry }, { 0.24, nocked }, { 0.62, fullDraw }, { 0.72, loose, true }, { 0.86, looseHeld }, { 1, carry } }),
-		-- Special: drop into a low kneel squaring up, nock, lean back into a long trembling full
-		-- draw (the Charge glow builds here), loose with the bow arm kicking up and the body
-		-- rocking back off the shot, hold it, rise.
-		AttackSpecial = clip(0.95, false, {
-			{ 0, carry },
-			{ 0.18, merge(merge(aim, crouch), { Waist = { -6, -14, 0 }, RootOffset = { 0, -0.62, 0.04 } }) },
-			{ 0.48, merge(merge(drawn, crouch), { Waist = { -8, -20, 0 }, RightShoulder = { 88, 30, -12 }, RightElbow = { 148, 0, 0 } }) },
-			{ 0.7, merge(merge(drawn, crouch), { Waist = { -12, -24, 0 }, Neck = { -2, 20, 0 }, RightShoulder = { 88, 34, -16 }, RightElbow = { 152, 0, 0 } }) },
-			{ 0.78, merge(merge(release, crouch), { Waist = { 10, -18, 0 }, LeftShoulder = { 102, 0, 0 }, RightShoulder = { 60, 46, -42 }, RightElbow = { 110, 0, 0 }, RootOffset = { 0, -0.52, 0.12 } }), true },
-			{ 0.88, merge(merge(release, crouch), { Waist = { 6, -17, 0 }, LeftShoulder = { 98, 0, 0 }, RightShoulder = { 56, 48, -46 }, RightElbow = { 102, 0, 0 }, RootOffset = { 0, -0.55, 0.08 } }) },
-			{ 1, carry },
-		}),
-		-- Skill: sink to gather, spring up onto the toes aiming at the sky, a long held sky draw,
-		-- then loose straight up with a recoil that rocks the archer back.
-		AttackSkill = clip(1.1, false, {
-			{ 0, carry },
-			{ 0.2, merge(merge(aim, crouch), { Waist = { -14, -10, 0 }, Neck = { -6, 10, 0 }, RootOffset = { 0, -0.5, 0 } }) },
-			{ 0.42, merge(skyAim, { RootOffset = { 0, 0.12, 0 } }) },
-			{ 0.64, merge(skyAim, { Waist = { 22, -12, 0 }, RightShoulder = { 136, 28, -10 }, RightElbow = { 150, 0, 0 }, RootOffset = { 0, 0.14, 0 } }) },
-			{ 0.72, merge(skyAim, { Waist = { 26, -10, 0 }, LeftShoulder = { 150, 0, 0 }, RightShoulder = { 112, 42, -32 }, RightElbow = { 118, 0, 0 }, RootOffset = { 0, 0.04, 0.12 } }), true },
-			{ 0.86, merge(skyAim, { Waist = { 20, -10, 0 }, LeftShoulder = { 146, 0, 0 }, RightShoulder = { 108, 44, -36 }, RightElbow = { 112, 0, 0 }, RootOffset = { 0, 0, 0.08 } }) },
-			{ 1, carry },
-		}),
+		-- Basic: turn side-on raising the bow with the hand on the string, draw to the chin,
+		-- loose (the hand flies back past the ear), hold the follow-through, settle.
+		AttackBasic = attack(0.8, {
+			{ 0, ready },
+			{ 0.22, set },
+			{ 0.6, anchor },
+			{ 0.72, loose, true },
+			{ 0.86, looseHeld },
+			{ 1, ready },
+		}, { Set = 0.22, Full = 0.6 }),
+		-- Special: drop to a kneel side-on with the bow up (Charge), a long full draw that
+		-- creeps deeper while the shot gathers, loose and hold low, rise.
+		AttackSpecial = attack(0.95, {
+			{ 0, ready },
+			{ 0.18, merge(set, kneel) },
+			{ 0.48, merge(anchor, kneel) },
+			{ 0.7, merge(merge(anchor, kneel), { Waist = { 4, -35, 0 }, RootOffset = { 0, -0.6, 0.04 } }) },
+			{ 0.78, merge(merge(loose, kneel), { RootOffset = { 0, -0.52, 0.1 } }), true },
+			{ 0.88, merge(looseHeld, kneel) },
+			{ 1, ready },
+		}, { Set = 0.18, Full = 0.48 }),
+		-- Skill: sink low over the bow to gather (Charge), spring up onto the toes into the
+		-- sky stance, a long held draw at the sky, then loose with a recoil that rocks the
+		-- archer back.
+		AttackSkill = attack(1.1, {
+			{ 0, ready },
+			{ 0.2, merge(merge(sideOn, crouch), {
+				Waist = { -10, -32, 0 }, Neck = { -10, 80, 0 },
+				LeftShoulder = { 55, -2, -80 }, LeftElbow = { 20, 0, 0 },
+				RightShoulder = { 60, 0, 40 }, RightElbow = { 60, 0, 0 },
+				RootOffset = { 0, -0.5, 0 },
+			}) },
+			{ 0.42, merge(skySet, { RootOffset = { 0, 0.12, 0 } }) },
+			{ 0.64, merge(skyAnchor, { RootOffset = { 0, 0.14, 0 } }) },
+			{ 0.72, merge(skyLoose, { Waist = { 20, -30, 0 }, RootOffset = { 0, 0.04, 0.12 } }), true },
+			{ 0.86, merge(skyLoose, { Waist = { 16, -30, 0 }, RightElbow = { 112, 0, 0 }, RootOffset = { 0, 0, 0.08 } }) },
+			{ 1, ready },
+		}, { Set = 0.42, Full = 0.64 }),
 	}
 end
 
@@ -929,9 +1009,11 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_rook = "AXE",
 }
 
-local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
+-- `draw` (bow clips): when the draw hand takes the string and reaches full draw (Clip.Draw).
+local function signature(duration: number, keys: { { any } }, markers: { [string]: number }, draw: Draw?): Clip
 	local result = clip(duration, false, keys)
 	result.Markers = markers
+	result.Draw = draw
 	return result
 end
 
@@ -963,7 +1045,7 @@ do
 			{ 0.72, merge(airborne, { LeftShoulder = { 150, 0, 0 }, RightShoulder = { 110, 45, -35 }, RightElbow = { 115, 0, 0 }, RootOffset = { 0, 0.3, 0.4 } }) },
 			{ 0.86, merge(merge(p.Release, p.Crouch), { Waist = { -14, -10, 0 } }) },
 			{ 1, p.Carry },
-		}, { Release = 0.72, Nock = 0.92 }),
+		}, { Release = 0.72, Nock = 0.92 }, { Set = 0.18, Full = 0.62 }),
 	}
 end
 
@@ -996,32 +1078,48 @@ do
 		RightShoulder = { 4, -14, 54 }, RightElbow = { 44, 0, 0 }, RightWrist = { -18, 0, 14 },
 	})
 
-	-- Astral Arrow
-	local aim = merge(merge(p.Aim, legs), { Waist = { -2, -16, 0 }, Neck = { 0, 16, 0 } })
-	local drawn = merge(merge(p.Drawn, legs), { Waist = { -4, -18, 0 }, Neck = { 0, 18, 0 } })
-	local flourish = merge(merge(p.Release, legs), { Waist = { 2, -14, 0 }, Neck = { 0, 14, 0 }, RightShoulder = { 68, 48, -40 }, RightElbow = { 110, 0, 0 } })
-	local settle = merge(flourish, { LeftShoulder = { 80, 0, -6 }, RightShoulder = { 40, 40, -50 }, RightElbow = { 60, 0, 0 } })
-
-	-- Nebula Piercer
-	local wide: Pose = {
-		LeftHip = { 30, -10, -10 }, LeftKnee = { -30, 0, 0 }, LeftAnkle = { 4, 0, 10 },
-		RightHip = { -22, 10, 12 }, RightKnee = { -12, 0, 0 }, RightAnkle = { 30, 0, -12 },
-		RootOffset = { 0, -0.22, 0 },
+	-- Astral Arrow: a dancer's archer. Fully side-on and upright with the chest lifted and the
+	-- chin raised, her front foot pointed at the target and her weight on the back leg; a high
+	-- anchor at the corner of her mouth; the loose flows back and out wide.
+	local astralLegs: Pose = {
+		LeftHip = { 4, -20, -8 }, LeftKnee = { -2, 0, 0 }, LeftAnkle = { 20, 0, 4 },
+		RightHip = { -4, 10, 6 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 12, 0, -6 },
+		RootOffset = { 0, -0.06, 0 },
 	}
-	local sideOn = merge(merge(p.Aim, wide), { Waist = { -6, -28, 0 }, Neck = { 2, 26, 0 } })
-	local fullDraw = merge(merge(p.Drawn, wide), { Waist = { -10, -32, 0 }, Neck = { 4, 30, 0 }, RightShoulder = { 86, 30, -14 }, RightElbow = { 150, 0, 0 } })
-	-- The held charge: deeper, further back, with a tremor between the keys.
-	local gather = merge(fullDraw, { Waist = { -12, -34, 0 }, LeftShoulder = { 92, 0, 0 }, RightElbow = { 152, 0, 0 }, RootOffset = { 0, -0.3, 0 } })
-	local tremble = merge(gather, { Waist = { -10, -32, 2 }, Neck = { 6, 31, 0 }, LeftShoulder = { 89, 0, 2 }, RightShoulder = { 87, 32, -15 } })
-	local peak = merge(gather, { Waist = { -15, -37, 0 }, Neck = { 4, 34, 0 }, LeftShoulder = { 93, 0, -1 }, RightShoulder = { 84, 35, -18 }, RightElbow = { 156, 0, 0 }, RootOffset = { 0, -0.35, 0 } })
-	local strain = merge(peak, { Waist = { -13, -36, -2 }, LeftShoulder = { 90, 0, 1 } })
-	local recoil = merge(merge(p.Release, wide), {
-		Waist = { 6, -22, 0 }, Neck = { 0, 22, 0 },
-		LeftShoulder = { 100, 0, 0 }, RightShoulder = { 60, 50, -50 }, RightElbow = { 100, 0, 0 },
-		RootOffset = { 0, -0.18, 0.25 },
+	local astral: Pose = merge(astralLegs, { Root = { 0, -60, 0 }, Waist = { 4, -25, 0 }, Neck = { 34, 84, -38 },
+		LeftShoulder = { 95, -8, -81 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -10, -6, -4 } })
+	local aim = merge(astral, { Waist = { 4, 43, 0 }, Neck = { 4, 17, -5 },
+		LeftShoulder = { 80, -21, 13 }, LeftElbow = { 50, 0, 0 }, LeftWrist = { -37, 16, -32 },
+		RightShoulder = { -51, 20, -147 }, RightElbow = { 62, 0, 0 } })
+	local drawn = merge(astral, { RightShoulder = { -134, 63, -82 }, RightElbow = { 84, 0, 0 } })
+	local flourish = merge(astral, { RightShoulder = { 66, 70, 46 }, RightElbow = { 96, 0, 0 } })
+	local settle = merge(flourish, { Neck = { 20, 80, -20 }, LeftShoulder = { 82, -8, -81 }, LeftElbow = { 12, 0, 0 }, RightElbow = { 70, 0, 0 } })
+
+	-- Nebula Piercer: a wide, low side-on stance, the bow level over the front knee; the long
+	-- draw goes deeper than her Basic, back past her jaw, and creeps while the shot gathers.
+	local wide: Pose = {
+		LeftHip = { 30, -10, -14 }, LeftKnee = { -40, 0, 0 }, LeftAnkle = { 10, 0, 12 },
+		RightHip = { -20, 10, 14 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 28, 0, -12 },
+		RootOffset = { 0, -0.3, 0 },
+	}
+	local nebula: Pose = merge(wide, { Root = { 0, -70, 0 }, Waist = { -4, -22, 0 }, Neck = { 4, 90, 0 },
+		LeftShoulder = { 97, -4, -93 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -5, -3, 1 } })
+	local sideOn = merge(nebula, { Waist = { -4, 54, 0 }, Neck = { -1, 16, 4 },
+		LeftShoulder = { 71, -12, 16 }, LeftElbow = { 50, 0, 0 }, LeftWrist = { -26, 10, -34 },
+		RightShoulder = { -51, 11, -141 }, RightElbow = { 62, 0, 0 } })
+	local fullDraw = merge(nebula, { RightShoulder = { 153, 84, -11 }, RightElbow = { 130, 0, 0 } })
+	-- The held charge: lower, with a tremor in the bow arm between the keys.
+	local gather = merge(fullDraw, { Waist = { -6, -24, 0 }, RootOffset = { 0, -0.38, 0 } })
+	local tremble = merge(gather, { Waist = { -5, -23, 2 }, LeftShoulder = { 95, -4, -91 } })
+	local peak = merge(gather, { Waist = { -8, -26, 0 }, LeftShoulder = { 98, -4, -94 }, RootOffset = { 0, -0.42, 0 } })
+	local strain = merge(peak, { Waist = { -7, -25, -2 }, LeftShoulder = { 96, -4, -92 } })
+	local recoil = merge(nebula, {
+		Waist = { 4, -20, 0 }, LeftShoulder = { 106, -4, -93 },
+		RightShoulder = { 23, 26, 80 }, RightElbow = { 140, 0, 0 },
+		RootOffset = { 0, -0.26, 0.25 },
 	})
-	local kick = merge(recoil, { Waist = { 11, -18, 0 }, Neck = { -4, 20, 0 }, LeftShoulder = { 114, 0, 0 }, RightShoulder = { 46, 54, -62 }, RightElbow = { 70, 0, 0 }, RootOffset = { 0, -0.14, 0.4 } })
-	local recover = merge(recoil, { LeftShoulder = { 70, 0, -8 }, RightShoulder = { 30, 30, -30 }, RightElbow = { 60, 0, 0 }, RootOffset = { 0, -0.12, 0.15 } })
+	local kick = merge(recoil, { Waist = { 9, -18, 0 }, LeftShoulder = { 118, -4, -93 }, RootOffset = { 0, -0.2, 0.4 } })
+	local recover = merge(recoil, { LeftShoulder = { 78, -4, -93 }, LeftElbow = { 18, 0, 0 }, RightElbow = { 90, 0, 0 }, RootOffset = { 0, -0.16, 0.15 } })
 
 	-- Constellation Judgment
 	local coil: Pose = {
@@ -1047,16 +1145,21 @@ do
 	local spinA = merge(pirouette, { Root = { 0, 100, 0 } })
 	local spinB = merge(pirouette, { Root = { 0, -140, 0 }, Waist = { 6, 18, 0 }, LeftShoulder = { 60, 0, -70 }, RightShoulder = { 50, 0, 65 }, RootOffset = { 0, 0.26, 0 } })
 	local spinC = merge(pirouette, { Root = { 0, -30, 0 }, Waist = { 10, 8, 0 }, Neck = { 4, 16, 0 }, LeftShoulder = { 110, 0, -30 }, RightShoulder = { 80, 10, 30 }, RightElbow = { 40, 0, 0 }, RightHip = { 20, 0, 12 }, RightKnee = { -50, 0, 0 }, RootOffset = { 0, 0.12, 0 } })
-	local land = merge(p.SkyAim, {
-		Waist = { 14, -10, 0 }, Neck = { 14, 10, 0 },
+	-- She lands planted and side-on, arched back with the bow raised 60 degrees to the stars.
+	local skyLegs: Pose = {
 		LeftHip = { 26, -8, -10 }, LeftKnee = { -30, 0, 0 }, LeftAnkle = { 4, 0, 8 },
 		RightHip = { -18, 8, 10 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 24, 0, -8 },
 		RootOffset = { 0, -0.22, 0 },
-	})
-	local skyDraw = merge(land, { Waist = { 22, -10, 0 }, Neck = { 22, 10, 0 }, RightShoulder = { 140, 20, -10 }, RightElbow = { 150, 0, 0 }, RootOffset = { 0, -0.12, 0 } })
-	local skyHold = merge(skyDraw, { Waist = { 26, -12, 0 }, LeftShoulder = { 144, 0, 0 }, RightElbow = { 154, 0, 0 }, RootOffset = { 0, -0.08, 0 } })
-	local loose = merge(skyHold, { Waist = { 28, -8, 0 }, LeftShoulder = { 156, 0, 0 }, RightShoulder = { 110, 45, -60 }, RightElbow = { 60, 0, 0 }, RootOffset = { 0, 0.06, 0 } })
-	local watch = merge(loose, { Waist = { 20, -8, 0 }, Neck = { 26, 8, 0 }, LeftShoulder = { 150, 0, -6 }, RightShoulder = { 70, 30, -70 }, RightElbow = { 30, 0, 0 }, RootOffset = { 0, 0, 0 } })
+	}
+	local starward: Pose = merge(skyLegs, { Root = { 0, -40, 0 }, Waist = { 22, -20, 0 }, Neck = { 39, 43, -40 },
+		LeftShoulder = { 116, -54, -27 }, LeftElbow = { 14, 0, 0 }, LeftWrist = { -24, 7, -11 } })
+	local land = merge(starward, { Waist = { 22, 12, 0 }, Neck = { 29, 16, -25 },
+		LeftShoulder = { 121, -39, 10 }, LeftElbow = { 42, 0, 0 }, LeftWrist = { -33, 11, -24 },
+		RightShoulder = { 82, -6, -52 }, RightElbow = { 63, 0, 0 } })
+	local skyDraw = merge(starward, { RightShoulder = { 85, 37, -65 }, RightElbow = { 103, 0, 0 } })
+	local skyHold = merge(skyDraw, { Waist = { 26, -20, 0 }, RootOffset = { 0, -0.18, 0 } })
+	local loose = merge(starward, { Waist = { 26, -18, 0 }, RightShoulder = { 4, 54, 32 }, RightElbow = { 130, 0, 0 }, RootOffset = { 0, -0.14, 0.06 } })
+	local watch = merge(loose, { Waist = { 20, -16, 0 }, LeftShoulder = { 120, -54, -27 }, RightElbow = { 110, 0, 0 }, RootOffset = { 0, -0.12, 0 } })
 	local command: Pose = {
 		Waist = { 10, -6, 0 }, Neck = { 18, 6, 0 },
 		LeftShoulder = { 60, 0, -24 }, LeftElbow = { 20, 0, 0 },
@@ -1083,7 +1186,7 @@ do
 			{ 0.68, flourish },
 			{ 0.84, settle },
 			{ 1, poised },
-		}, { Release = 0.68, Nock = 0.92 }),
+		}, { Release = 0.68, Nock = 0.92 }, { Set = 0.22, Full = 0.55, Anchor = { 0.12, -0.22, -0.45 } }),
 		-- Played over her 0.7 s attack interval, so the draw is quick and the charge takes more
 		-- than half the clip (Charge to Release).
 		AttackSpecial = signature(0.8, {
@@ -1099,7 +1202,7 @@ do
 			{ 0.8, kick },
 			{ 0.9, recover },
 			{ 1, poised },
-		}, { Charge = 0.22, Release = 0.74, Nock = 0.94 }),
+		}, { Charge = 0.22, Release = 0.74, Nock = 0.94 }, { Set = 0.1, Full = 0.24, Anchor = { 0.1, -0.35, 0.1 } }),
 		AttackSkill = signature(1.4, {
 			{ 0, poised },
 			{ 0.07, coil },
@@ -1114,7 +1217,7 @@ do
 			{ 0.8, command },
 			{ 0.91, judgment },
 			{ 1, poised },
-		}, { Charge = 0.07, Release = 0.56, Nock = 0.95 }),
+		}, { Charge = 0.07, Release = 0.56, Nock = 0.95 }, { Set = 0.38, Full = 0.48 }),
 	}
 end
 
@@ -1132,7 +1235,6 @@ end
 do
 	local p = WeaponPoses.BOW
 	local kneel: Pose = { LeftHip = { 70, 0, -6 }, RightHip = { -20, 0, 6 }, LeftKnee = { -80, 0, 0 }, RightKnee = { -95, 0, 0 }, LeftAnkle = { 10, 0, 0 }, RightAnkle = { 70, 0, 0 }, RootOffset = { 0, -0.75, 0 } }
-	local skyKneel = merge(merge(p.SkyAim, kneel), { Waist = { 20, -10, 0 }, Neck = { 18, 10, 0 } })
 	local ranger: Pose = {
 		Waist = { 0, -8, 2 }, Neck = { -4, 10, -2 },
 		LeftShoulder = { 72, 0, -22 }, LeftElbow = { 14, 0, 0 },
@@ -1141,36 +1243,55 @@ do
 		RightHip = { 8, -8, 2 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 6, 0, -2 },
 		RootOffset = { 0, -0.04, 0 },
 	}
-	-- Her stance's legs, so the Basic keeps her footing.
+	-- Leafwind Arrow: an elven ranger's shot. Narrow feet as in her stance, leaning into the shot
+	-- side-on, the bow canted 15 degrees and drawn high to her cheekbone with her head tipped down
+	-- the arrow; on the loose the hand opens and rises up and away like a leaf on the wind.
 	local rangerLegs: Pose = {
-		LeftHip = ranger.LeftHip, LeftKnee = ranger.LeftKnee, LeftAnkle = ranger.LeftAnkle,
-		RightHip = ranger.RightHip, RightKnee = ranger.RightKnee, RightAnkle = ranger.RightAnkle,
-		RootOffset = ranger.RootOffset,
+		LeftHip = { 6, -10, -4 }, LeftKnee = { -6, 0, 0 }, LeftAnkle = { 2, 0, 4 },
+		RightHip = { -2, 6, 4 }, RightKnee = { -16, 0, 0 }, RightAnkle = { 10, 0, -4 },
+		RootOffset = { 0, -0.05, 0 },
 	}
-	local snapAim = merge(merge(p.Aim, rangerLegs), { Waist = { 0, -14, 2 }, Neck = { -4, 14, -2 } })
-	local shortDraw = merge(merge(p.Drawn, rangerLegs), { Waist = { 2, -16, 2 }, Neck = { -4, 16, -2 }, RightShoulder = { 88, 30, -12 }, RightElbow = { 146, 0, 0 } })
-	local leafLoose = merge(merge(p.Release, rangerLegs), {
-		Waist = { -2, -12, 0 }, Neck = { -4, 12, 0 }, LeftShoulder = { 98, 0, 0 },
-		RightShoulder = { 90, 20, 40 }, RightElbow = { 20, 0, 0 },
-	})
-	-- The open hand keeps rising after the loose (picked by eye from candidates in Studio).
-	local leafHeld = merge(leafLoose, { LeftShoulder = { 95, 0, 0 }, RightShoulder = { 112, 10, 36 }, RightElbow = { 24, 0, 0 } })
-	-- Side-on lunge for the power shot: left foot through, weight dropped onto it.
+	local leafwind: Pose = merge(rangerLegs, { Root = { 0, -45, 0 }, Waist = { -6, -30, 2 }, Neck = { 23, 74, -30 },
+		LeftShoulder = { 105, -21, -60 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -21, -14, -13 } })
+	local snapAim = merge(leafwind, { Waist = { -6, 26, 2 }, Neck = { 5, 20, -12 },
+		LeftShoulder = { 96, -29, 12 }, LeftElbow = { 45, 0, 0 }, LeftWrist = { -44, 16, -30 },
+		RightShoulder = { -45, 27, -153 }, RightElbow = { 62, 0, 0 } })
+	local shortDraw = merge(leafwind, { RightShoulder = { -114, 73, -94 }, RightElbow = { 83, 0, 0 } })
+	local leafLoose = merge(leafwind, { RightShoulder = { 18, 85, 125 }, RightElbow = { 66, 0, 0 } })
+	-- The open hand keeps rising after the loose.
+	local leafHeld = merge(leafLoose, { Waist = { -4, -30, 2 }, RightShoulder = { -88, 67, -125 }, RightElbow = { 15, 0, 0 } })
+	-- Thornbriar Volley: left foot through into a deep braced lunge, a square, uncanted power
+	-- draw back past her jaw with the arrow laid down the line, then her whole body thrusts after
+	-- the arrow.
 	local braced: Pose = {
 		LeftHip = { 50, 0, -12 }, LeftKnee = { -58, 0, 0 }, LeftAnkle = { 10, 0, 0 },
 		RightHip = { -28, 0, 12 }, RightKnee = { -12, 0, 0 }, RightAnkle = { 30, 0, 0 },
 		RootOffset = { 0, -0.4, -0.14 },
 	}
-	local stepIn = merge(merge(p.Aim, braced), { Waist = { -4, -38, 0 }, Neck = { 0, 34, 0 } })
-	local heavyDraw = merge(merge(p.Drawn, braced), {
-		Waist = { 4, -42, 0 }, Neck = { -2, 38, 0 }, LeftShoulder = { 92, 0, 0 },
-		RightShoulder = { 86, 36, -16 }, RightElbow = { 155, 0, 0 },
+	local thorn: Pose = merge(braced, { Root = { 0, -55, 0 }, Waist = { -10, -30, 0 }, Neck = { 27, 84, -18 },
+		LeftShoulder = { 105, -5, -82 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -5, -5, -3 } })
+	local stepIn = merge(thorn, { Waist = { -10, 40, 0 }, Neck = { 3, 16, 8 },
+		LeftShoulder = { 73, -11, 17 }, LeftElbow = { 50, 0, 0 }, LeftWrist = { -24, 12, -34 },
+		RightShoulder = { -47, 9, -139 }, RightElbow = { 62, 0, 0 } })
+	local heavyDraw = merge(thorn, { RightShoulder = { 114, 85, 40 }, RightElbow = { 135, 0, 0 } })
+	local thornLoose = merge(thorn, {
+		Waist = { -20, -28, 0 }, LeftShoulder = { 100, -5, -82 },
+		RightShoulder = { 37, 28, 76 }, RightElbow = { 152, 0, 0 }, RootOffset = { 0, -0.46, -0.32 },
 	})
-	local thornLoose = merge(merge(p.Release, braced), {
-		Waist = { -14, -34, 0 }, Neck = { 8, 30, 0 }, LeftShoulder = { 100, 0, 0 },
-		RightShoulder = { 60, 50, -42 }, RightElbow = { 100, 0, 0 }, RootOffset = { 0, -0.46, -0.32 },
+	local thornHeld = merge(thornLoose, { Waist = { -18, -28, 0 }, RightElbow = { 140, 0, 0 }, RootOffset = { 0, -0.44, -0.3 } })
+	-- Canopy's Wrath: down on one knee side-on, the bow raised nearly straight up for the seed-arrow.
+	local canopy: Pose = merge(kneel, { Root = { 0, -50, 0 }, Waist = { 16, -25, 0 }, Neck = { 40, 31, -40 },
+		LeftShoulder = { 145, -76, -12 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { -29, 6, -9 } })
+	local canopySet = merge(canopy, { Waist = { 16, -5, 0 }, Neck = { 40, 20, -40 },
+		LeftShoulder = { 98, -103, -55 }, LeftElbow = { 24, 0, 0 }, LeftWrist = { -45, 39, -1 },
+		RightShoulder = { 119, 15, -30 }, RightElbow = { 60, 0, 0 } })
+	local canopyDraw = merge(canopy, { RightShoulder = { 90, 40, -56 }, RightElbow = { 108, 0, 0 } })
+	local canopyLoose = merge(canopy, { Waist = { 20, -25, 0 }, RightShoulder = { 18, 50, 19 }, RightElbow = { 106, 0, 0 } })
+	local canopyRise = merge(canopyLoose, {
+		Waist = { 10, -20, 0 }, LeftShoulder = { 120, -60, -20 }, RightElbow = { 80, 0, 0 },
+		LeftHip = { 35, 0, -6 }, RightHip = { -5, 0, 6 }, LeftKnee = { -40, 0, 0 }, RightKnee = { -50, 0, 0 },
+		LeftAnkle = { 6, 0, 0 }, RightAnkle = { 30, 0, 0 }, RootOffset = { 0, -0.38, 0 },
 	})
-	local thornHeld = merge(thornLoose, { Waist = { -12, -32, 0 }, RightShoulder = { 56, 52, -46 }, RightElbow = { 94, 0, 0 }, RootOffset = { 0, -0.44, -0.3 } })
 	Overrides.hero_aeli = {
 		Idle = breathe(ranger, 3.6),
 		-- Release and Nock match the shared bow clips, so her hits land on the same beat.
@@ -1181,7 +1302,7 @@ do
 			{ 0.72, leafLoose, true },
 			{ 0.88, leafHeld },
 			{ 1, ranger },
-		}, { Release = 0.72, Nock = 0.9 }),
+		}, { Release = 0.72, Nock = 0.9 }, { Set = 0.22, Full = 0.6, Anchor = { 0.15, -0.05, -0.45 } }),
 		AttackSpecial = signature(0.95, {
 			{ 0, ranger },
 			{ 0.2, stepIn },
@@ -1189,15 +1310,15 @@ do
 			{ 0.78, thornLoose, true },
 			{ 0.9, thornHeld },
 			{ 1, ranger },
-		}, { Release = 0.78, Nock = 0.9 }),
+		}, { Release = 0.78, Nock = 0.9 }, { Set = 0.2, Full = 0.62, Anchor = { 0.1, -0.35, 0.15 } }),
 		AttackSkill = signature(1.1, {
 			{ 0, p.Carry },
-			{ 0.28, skyKneel },
-			{ 0.56, merge(skyKneel, { RightShoulder = { 138, 18, -10 }, RightElbow = { 148, 0, 0 } }) },
-			{ 0.7, merge(skyKneel, { LeftShoulder = { 150, 0, 0 }, RightShoulder = { 105, 45, -55 }, RightElbow = { 60, 0, 0 } }) },
-			{ 0.86, merge(merge(p.Release, p.Crouch), { Waist = { 8, -10, 0 }, LeftShoulder = { 128, 0, -18 } }) },
+			{ 0.28, canopySet },
+			{ 0.56, canopyDraw },
+			{ 0.7, canopyLoose, true },
+			{ 0.86, canopyRise },
 			{ 1, p.Carry },
-		}, { Release = 0.7, Nock = 0.92 }),
+		}, { Release = 0.7, Nock = 0.92 }, { Set = 0.28, Full = 0.56 }),
 	}
 end
 
@@ -1280,97 +1401,255 @@ do
 	}
 end
 
--- Han (DAGGERS).
--- Nightfall Fangs (Special): he sinks into a crouch, leaps, and comes down on the target with both
--- daggers reversed, points down. A blade points straight down when its arm's shoulder, elbow and
--- wrist pitch add up to 270 degrees minus the waist's pitch (measured in Studio: a forward lean of
--- -34 needs 304), so the wrists turn as the arms fall and the points stay down from the top of the
--- jump to the landing. A wrist past 180 is written as its negative equivalent (216 is -144).
--- Abyssal Wake (Skill): he coils with both blades chambered at his left hip, dashes through the
--- target with a wide cut, skids to a stop with his back to it while the wake of slashes he left
--- behind keeps cutting (the kit's five waves), then springs back to his place.
+-- Han (DAGGERS). He holds both daggers reversed (HeroSockets.HERO_GRIPS: an assassin's ice-pick
+-- grip, the blades running back along his forearms), so every pose here is his own. With a
+-- reversed grip a blade points back when its arm's shoulder + elbow + wrist pitch is 0, down at
+-- 90 and forward at 180 (less the waist's lean); a wrist of -90 lays it along the forearm.
+-- Idle: an assassin's low crouch, left foot forward and weight sunk, leaning in with his head up;
+-- the lead (left) blade raised before his chin along the forearm, the rear blade trailing out low
+-- at his right side. He settles a little lower and rises as he breathes.
+-- Move: a sprint, leaning in with the knees driving, the arms pumping close to his sides and the
+-- reversed blades tucked back along his forearms.
+-- Gloam Cut (Basic): he winds the lead arm across his body, lunges and hooks it out wide (the
+-- hit), then follows with a rising backhand of the rear blade. It alternates with a full spinning
+-- cut: he winds left, then spins right through a whole turn with both blades flung out wide.
+-- Nightfall Fangs (Special): he sinks, springs into a tucked front flip (Charge: the leap streak),
+-- comes out of it with both fists high, and drives both blades down into the target (the hit),
+-- pulls them up and stabs again (the kit's second blow), then rises.
+-- Abyssal Wake (Skill): both blades crossed low before his chest (Charge: the wake's circle closes
+-- in), he coils, then flashes from point to point round the circle, low and high in turn, cutting
+-- through it with every flash (SkillVfx WAKE draws him there, with trails and afterimages), and
+-- flashes home into a low crouch.
+-- The flip and the spins are Root keys under 180 degrees apart, so they turn the long way round.
 do
-	local p = WeaponPoses.DAGGERS
-	-- Special
-	local sink = merge(p.Crouched, {
-		Waist = { -16, 0, 0 }, Neck = { 12, 0, 0 },
-		LeftShoulder = { -40, 0, -14 }, RightShoulder = { -40, 0, 14 }, LeftElbow = { 35, 0, 0 }, RightElbow = { 35, 0, 0 },
-		LeftWrist = { 20, 0, 0 }, RightWrist = { 20, 0, 0 },
-		LeftHip = { 48, 0, -8 }, RightHip = { 30, 0, 8 }, LeftKnee = { -75, 0, 0 }, RightKnee = { -80, 0, 0 },
-		LeftAnkle = { 26, 0, 0 }, RightAnkle = { 48, 0, 0 }, RootOffset = { 0, -0.6, 0.1 },
+	local stalk: Pose = {
+		Waist = { -24, -20, 0 }, Neck = { 18, 18, 0 },
+		LeftShoulder = { 55, 0, -30 }, LeftElbow = { 95, 0, 0 }, LeftWrist = { -65, 0, 0 },
+		RightShoulder = { 0, 0, 55 }, RightElbow = { 30, 0, 0 }, RightWrist = { -40, 0, 0 },
+		LeftHip = { 40, 0, -14 }, LeftKnee = { -75, 0, 0 }, LeftAnkle = { 35, 0, 14 },
+		RightHip = { -20, 0, 18 }, RightKnee = { -28, 0, 0 }, RightAnkle = { 48, 0, -18 },
+		RootOffset = { 0, -0.52, 0 },
+	}
+	local settle = merge(stalk, {
+		Waist = { -26, -22, 0 }, Neck = { 19, 20, 0 },
+		LeftWrist = { -55, 0, 0 }, RightShoulder = { 2, 0, 58 }, RightWrist = { -48, 0, 0 },
+		LeftKnee = { -79, 0, 0 }, RightKnee = { -31, 0, 0 }, RootOffset = { 0, -0.56, 0 },
 	})
-	local apex = merge(p.Crouched, {
-		Waist = { 14, 0, 0 }, Neck = { -16, 0, 0 },
-		LeftShoulder = { 166, 0, -10 }, RightShoulder = { 166, 0, 10 }, LeftElbow = { 26, 0, 0 }, RightElbow = { 26, 0, 0 },
-		LeftWrist = { 64, 0, 0 }, RightWrist = { 64, 0, 0 },
-		LeftHip = { 62, 0, -6 }, RightHip = { 18, 0, 6 }, LeftKnee = { -85, 0, 0 }, RightKnee = { -100, 0, 0 },
-		LeftAnkle = { 20, 0, 0 }, RightAnkle = { 30, 0, 0 }, RootOffset = { 0, 1.9, -0.5 },
+	-- The sprint, sampled at eight points round the stride like walk() and played at a steady rate.
+	-- `a` runs once round the cycle; c = cos(a) is +1 with the left foot forward, -1 with the right.
+	-- The leg swinging forward folds its heel up and drives the knee; the arms pump against the
+	-- legs, close to his sides with the elbows bent and the wrists turned so the reversed blades lie
+	-- back along the forearms; the torso leans in and twists with the stride, the head stays level,
+	-- and he is lowest as each foot lands and rides up over the straight standing leg.
+	local function sprintPose(a: number): Pose
+		local c = math.cos(a)
+		local leftSwing = math.max(0, -math.sin(a)) -- the left leg travelling forward
+		local rightSwing = math.max(0, math.sin(a))
+		local function leg(hip: number, swing: number): ({ number }, { number }, { number })
+			local knee = -18 - 88 * swing
+			return { hip, 0, 0 }, { knee, 0, 0 }, { math.clamp(-(hip + knee) * 0.5 + 18 * swing, -20, 45), 0, 0 }
+		end
+		local lh, lk, la = leg(10 + 40 * c, leftSwing)
+		local rh, rk, ra = leg(10 - 40 * c, rightSwing)
+		lh[3], rh[3] = -3, 3
+		return {
+			Waist = { -20 - 2 * math.abs(c), 10 * c, 2 * c }, Neck = { 14, -9 * c, -2 * c },
+			LeftShoulder = { 12 - 42 * c, 0, -8 }, LeftElbow = { 95 + 12 * c, 0, 0 }, LeftWrist = { -90, 0, 0 },
+			RightShoulder = { 12 + 42 * c, 0, 8 }, RightElbow = { 95 - 12 * c, 0, 0 }, RightWrist = { -90, 0, 0 },
+			LeftHip = lh, LeftKnee = lk, LeftAnkle = la,
+			RightHip = rh, RightKnee = rk, RightAnkle = ra,
+			RootOffset = { 0, -0.16 - 0.2 * math.cos(2 * a), 0 },
+		}
+	end
+	local function sprint(duration: number): Clip
+		local SAMPLES = 8
+		local keys: { { any } } = { { 0, sprintPose(0) } }
+		for i = 1, SAMPLES - 1 do
+			table.insert(keys, { i / SAMPLES, sprintPose(2 * math.pi * i / SAMPLES), true })
+		end
+		table.insert(keys, { 1, sprintPose(0), true })
+		return clip(duration, true, keys)
+	end
+	-- Both arms flung out wide to the sides, and both wrapped across the chest.
+	local wide: Pose = {
+		LeftShoulder = { 90, 0, -85 }, LeftElbow = { 8, 0, 0 }, LeftWrist = { -10, 0, 0 },
+		RightShoulder = { 90, 0, 85 }, RightElbow = { 8, 0, 0 }, RightWrist = { -10, 0, 0 },
+	}
+	local wrapped: Pose = {
+		LeftShoulder = { 60, 0, 30 }, LeftElbow = { 110, 0, 0 }, LeftWrist = { -60, 0, 0 },
+		RightShoulder = { 60, 0, -30 }, RightElbow = { 110, 0, 0 }, RightWrist = { -60, 0, 0 },
+	}
+
+	-- Gloam Cut
+	local lungeLegs: Pose = {
+		LeftHip = { 62, 0, -12 }, LeftKnee = { -88, 0, 0 }, LeftAnkle = { 26, 0, 12 },
+		RightHip = { -38, 0, 16 }, RightKnee = { -18, 0, 0 }, RightAnkle = { 56, 0, -16 },
+	}
+	local windUp = merge(stalk, {
+		Waist = { -16, -55, 0 }, Neck = { 12, 45, 0 },
+		LeftShoulder = { 70, 0, 40 }, LeftElbow = { 105, 0, 0 }, LeftWrist = { -40, 0, 0 },
+		RightShoulder = { -30, 0, 40 }, RightElbow = { 55, 0, 0 }, RightWrist = { -60, 0, 0 },
+		RootOffset = { 0, -0.56, 0.15 },
 	})
-	local falling = merge(apex, {
-		Waist = { -10, 0, 0 }, Neck = { -4, 0, 0 },
-		LeftShoulder = { 118, 0, -4 }, RightShoulder = { 118, 0, 4 }, LeftWrist = { 136, 0, 0 }, RightWrist = { 136, 0, 0 },
-		LeftHip = { 50, 0, -6 }, RightHip = { 0, 0, 6 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -70, 0, 0 },
-		RootOffset = { 0, 0.95, -0.95 },
+	local hook = merge(merge(stalk, lungeLegs), {
+		Waist = { -26, 42, 0 }, Neck = { 16, -34, 0 },
+		LeftShoulder = { 85, 0, -80 }, LeftElbow = { 12, 0, 0 }, LeftWrist = { -20, 0, 0 },
+		RightShoulder = { 45, 0, 25 }, RightElbow = { 105, 0, 0 }, RightWrist = { -50, 0, 0 },
+		RootOffset = { 0, -0.78, -0.85 },
 	})
-	local plunge = merge(p.Crouched, {
-		Waist = { -34, 0, 0 }, Neck = { 20, 0, 0 },
-		LeftShoulder = { 60, 0, 12 }, RightShoulder = { 60, 0, -12 }, LeftElbow = { 28, 0, 0 }, RightElbow = { 28, 0, 0 },
-		LeftWrist = { -144, 0, 0 }, RightWrist = { -144, 0, 0 },
-		LeftHip = { 66, 0, -8 }, RightHip = { -28, 0, 8 }, LeftKnee = { -70, 0, 0 }, RightKnee = { -55, 0, 0 },
-		LeftAnkle = { 12, 0, 0 }, RightAnkle = { 42, 0, 0 }, RootOffset = { 0, -0.74, -1.25 },
+	local rising = merge(merge(stalk, lungeLegs), {
+		Waist = { -6, -32, 0 }, Neck = { 6, 26, 0 },
+		LeftShoulder = { 35, 0, -60 }, LeftElbow = { 45, 0, 0 }, LeftWrist = { -40, 0, 0 },
+		RightShoulder = { 160, 0, 25 }, RightElbow = { 18, 0, 0 }, RightWrist = { -30, 0, 0 },
+		RootOffset = { 0, -0.82, -0.95 },
 	})
-	-- Skill
-	local chambered = merge(p.Crouched, {
-		Waist = { -14, 52, 0 }, Neck = { 4, -40, 0 },
-		RightShoulder = { 52, 0, -58 }, RightElbow = { 82, 0, 0 }, RightWrist = { -20, 0, 0 },
-		LeftShoulder = { -32, 0, -18 }, LeftElbow = { 58, 0, 0 }, LeftWrist = { -40, 0, 0 },
-		LeftHip = { 38, 0, -8 }, RightHip = { -30, 0, 10 }, LeftKnee = { -58, 0, 0 }, RightKnee = { -42, 0, 0 },
-		LeftAnkle = { 14, 0, 0 }, RightAnkle = { 44, 0, 0 }, RootOffset = { 0, -0.4, 0.45 },
+	local spinWind = merge(merge(stalk, wrapped), { Waist = { -18, 30, 0 }, Neck = { 12, -24, 0 }, RootOffset = { 0, -0.6, 0.1 } })
+	local spinning = merge(merge(stalk, wide), { Waist = { -14, 0, 0 }, Neck = { 10, 0, 0 } })
+	local spunLow = merge(merge(merge(stalk, lungeLegs), wrapped), { Waist = { -28, 0, 0 }, Neck = { 20, 0, 0 }, RootOffset = { 0, -0.78, -0.8 } })
+
+	-- Nightfall Fangs
+	local sink = merge(stalk, {
+		Waist = { -30, 0, 0 }, Neck = { 24, 0, 0 },
+		LeftShoulder = { -50, 0, -20 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { -30, 0, 0 },
+		RightShoulder = { -50, 0, 20 }, RightElbow = { 20, 0, 0 }, RightWrist = { -30, 0, 0 },
+		LeftHip = { 70, 0, -10 }, LeftKnee = { -110, 0, 0 }, LeftAnkle = { 40, 0, 10 },
+		RightHip = { 50, 0, 10 }, RightKnee = { -110, 0, 0 }, RightAnkle = { 60, 0, -10 },
+		RootOffset = { 0, -1.0, 0.2 },
 	})
-	local dashing = merge(chambered, {
-		Waist = { -40, 30, 0 }, Neck = { 30, -22, 0 },
-		LeftHip = { 78, 0, -6 }, RightHip = { -52, 0, 8 }, LeftKnee = { -48, 0, 0 }, RightKnee = { -20, 0, 0 },
-		LeftAnkle = { 0, 0, 0 }, RightAnkle = { 50, 0, 0 }, RootOffset = { 0, -0.95, -3.2 },
+	local launch = merge(stalk, {
+		Waist = { 8, 0, 0 }, Neck = { -6, 0, 0 },
+		LeftShoulder = { 165, 0, -15 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { 0, 0, 0 },
+		RightShoulder = { 165, 0, 15 }, RightElbow = { 15, 0, 0 }, RightWrist = { 0, 0, 0 },
+		LeftHip = { 20, 0, -4 }, LeftKnee = { -30, 0, 0 }, LeftAnkle = { 10, 0, 4 },
+		RightHip = { -14, 0, 4 }, RightKnee = { -10, 0, 0 }, RightAnkle = { 30, 0, -4 },
+		RootOffset = { 0, 1.1, -0.3 },
 	})
-	local cutThrough = merge(p.Crouched, {
-		Waist = { -26, -58, 0 }, Neck = { 14, 40, 0 },
-		RightShoulder = { 84, 0, 78 }, RightElbow = { 8, 0, 0 }, RightWrist = { -12, 0, 0 },
-		LeftShoulder = { 58, 0, -72 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -12, 0, 0 },
-		LeftHip = { -30, 0, -10 }, RightHip = { 64, 0, 8 }, LeftKnee = { -30, 0, 0 }, RightKnee = { -62, 0, 0 },
-		LeftAnkle = { 40, 0, 0 }, RightAnkle = { 8, 0, 0 }, RootOffset = { 0, -0.72, -6.2 },
+	local tuck = merge(stalk, {
+		Waist = { -40, 0, 0 }, Neck = { 20, 0, 0 },
+		LeftShoulder = { 70, 0, 10 }, LeftElbow = { 120, 0, 0 }, LeftWrist = { -20, 0, 0 },
+		RightShoulder = { 70, 0, -10 }, RightElbow = { 120, 0, 0 }, RightWrist = { -20, 0, 0 },
+		LeftHip = { 120, 0, -8 }, LeftKnee = { -130, 0, 0 }, LeftAnkle = { 30, 0, 8 },
+		RightHip = { 115, 0, 8 }, RightKnee = { -130, 0, 0 }, RightAnkle = { 30, 0, -8 },
 	})
-	local skid = merge(cutThrough, {
-		Waist = { -20, -72, 0 }, Neck = { 6, 58, 0 },
-		RightShoulder = { 30, 0, 98 }, RightElbow = { 12, 0, 0 }, RightWrist = { -30, 0, 0 },
-		LeftShoulder = { 16, 0, -50 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -50, 0, 0 },
-		LeftHip = { -38, 0, -12 }, RightHip = { 72, 0, 10 }, LeftKnee = { -38, 0, 0 }, RightKnee = { -78, 0, 0 },
-		RootOffset = { 0, -0.88, -6.9 },
+	local raised = merge(stalk, {
+		Waist = { 10, 0, 0 }, Neck = { 6, 0, 0 },
+		LeftShoulder = { 170, 0, -8 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -60, 0, 0 },
+		RightShoulder = { 170, 0, 8 }, RightElbow = { 40, 0, 0 }, RightWrist = { -60, 0, 0 },
+		LeftHip = { 40, 0, -8 }, LeftKnee = { -60, 0, 0 }, LeftAnkle = { 20, 0, 8 },
+		RightHip = { 10, 0, 8 }, RightKnee = { -40, 0, 0 }, RightAnkle = { 30, 0, -8 },
+		RootOffset = { 0, 1.2, -1.2 },
 	})
-	local springBack = merge(p.Crouched, {
-		Waist = { 6, -20, 0 }, Neck = { -4, 14, 0 },
-		LeftHip = { 30, 0, -6 }, RightHip = { 20, 0, 6 }, LeftKnee = { -50, 0, 0 }, RightKnee = { -60, 0, 0 },
-		RootOffset = { 0, 0.55, -3.0 },
+	local plunge = merge(stalk, {
+		Waist = { -40, 0, 0 }, Neck = { 26, 0, 0 },
+		LeftShoulder = { 50, 0, 14 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { 65, 0, 0 },
+		RightShoulder = { 50, 0, -14 }, RightElbow = { 15, 0, 0 }, RightWrist = { 65, 0, 0 },
+		LeftHip = { 80, 0, -10 }, LeftKnee = { -100, 0, 0 }, LeftAnkle = { 20, 0, 10 },
+		RightHip = { -10, 0, 12 }, RightKnee = { -95, 0, 0 }, RightAnkle = { 60, 0, -12 },
+		RootOffset = { 0, -1.07, -1.4 },
 	})
+	local pull = merge(plunge, {
+		Waist = { -32, 0, 0 }, LeftShoulder = { 80, 0, 14 }, LeftElbow = { 50, 0, 0 },
+		RightShoulder = { 80, 0, -14 }, RightElbow = { 50, 0, 0 }, RootOffset = { 0, -1.0, -1.4 },
+	})
+
+	-- Abyssal Wake. The clip runs over the kit's 1.3s cast; the flashes start at Release (0.3) and
+	-- come every 0.09s, one per damage tick, so flash k is at (0.39 + 0.09 * (k - 1)) / 1.3. SkillVfx
+	-- (WAKE) draws him at each flash point, low and high in turn; the clip only poses him there.
+	-- Every flash pose is a leaping cut, so it reads on the ground or in the air: the low flashes
+	-- cut wide one way and the other, the high ones come in tucked with both blades overhead and
+	-- swing them down on the way to the next.
+	local crossed = merge(merge(stalk, wrapped), {
+		Waist = { -30, 0, 0 }, Neck = { 24, 0, 0 },
+		LeftHip = { 60, 0, -12 }, LeftKnee = { -100, 0, 0 }, LeftAnkle = { 40, 0, 12 },
+		RightHip = { -10, 0, 16 }, RightKnee = { -70, 0, 0 }, RightAnkle = { 60, 0, -16 },
+		RootOffset = { 0, -0.85, 0.35 },
+	})
+	local coiled = merge(crossed, { Waist = { -36, 0, 0 }, LeftKnee = { -110, 0, 0 }, RightKnee = { -85, 0, 0 }, RootOffset = { 0, -1.0, 0.45 } })
+	local leapLeft: Pose = {
+		LeftHip = { 75, 0, -10 }, LeftKnee = { -110, 0, 0 }, LeftAnkle = { 30, 0, 10 },
+		RightHip = { -35, 0, 12 }, RightKnee = { -55, 0, 0 }, RightAnkle = { 40, 0, -12 },
+	}
+	local leapRight: Pose = {
+		RightHip = { 75, 0, 10 }, RightKnee = { -110, 0, 0 }, RightAnkle = { 30, 0, -10 },
+		LeftHip = { -35, 0, -12 }, LeftKnee = { -55, 0, 0 }, LeftAnkle = { 40, 0, 12 },
+	}
+	local tucked: Pose = {
+		LeftHip = { 100, 0, -8 }, LeftKnee = { -125, 0, 0 }, LeftAnkle = { 30, 0, 8 },
+		RightHip = { 95, 0, 8 }, RightKnee = { -125, 0, 0 }, RightAnkle = { 30, 0, -8 },
+	}
+	-- The left blade swept out wide, the right drawn across his chest; and the mirror of it.
+	local cutLeft = merge(merge(stalk, leapLeft), {
+		Waist = { -18, 40, 0 }, Neck = { 10, -32, 0 },
+		LeftShoulder = { 90, 0, -85 }, LeftElbow = { 8, 0, 0 }, LeftWrist = { -10, 0, 0 },
+		RightShoulder = { 70, 0, -35 }, RightElbow = { 70, 0, 0 }, RightWrist = { -60, 0, 0 },
+		RootOffset = { 0, 0, 0 },
+	})
+	local cutRight = merge(merge(stalk, leapRight), {
+		Waist = { -18, -40, 0 }, Neck = { 10, 32, 0 },
+		RightShoulder = { 90, 0, 85 }, RightElbow = { 8, 0, 0 }, RightWrist = { -10, 0, 0 },
+		LeftShoulder = { 70, 0, 35 }, LeftElbow = { 70, 0, 0 }, LeftWrist = { -60, 0, 0 },
+		RootOffset = { 0, 0, 0 },
+	})
+	local overhead = merge(merge(stalk, tucked), {
+		Waist = { 8, 0, 0 }, Neck = { 0, 0, 0 },
+		LeftShoulder = { 170, 0, -12 }, LeftElbow = { 30, 0, 0 }, LeftWrist = { -60, 0, 0 },
+		RightShoulder = { 170, 0, 12 }, RightElbow = { 30, 0, 0 }, RightWrist = { -60, 0, 0 },
+		RootOffset = { 0, 0, 0 },
+	})
+	local landed = merge(crossed, { Waist = { -34, 0, 0 }, RootOffset = { 0, -0.95, 0.2 } })
+
 	Overrides.hero_han = {
+		Idle = clip(2.6, true, { { 0, stalk }, { 0.5, settle }, { 1, stalk } }),
+		Move = sprint(0.56),
+		AttackBasic = signature(0.85, {
+			{ 0, stalk },
+			{ 0.18, windUp },
+			{ 0.36, hook },
+			{ 0.52, rising },
+			{ 0.7, merge(rising, { Waist = { -10, -36, 0 }, RootOffset = { 0, -0.82, -0.9 } }) },
+			{ 1, stalk },
+		}, { Release = 0.36 }),
 		AttackSpecial = signature(0.85, {
-			{ 0, p.Crouched },
-			{ 0.17, sink },
-			{ 0.42, apex },
-			{ 0.53, falling },
-			{ 0.62, plunge },
-			{ 0.8, merge(plunge, { Waist = { -30, 0, 0 }, LeftWrist = { -148, 0, 0 }, RightWrist = { -148, 0, 0 }, RootOffset = { 0, -0.66, -1.15 } }) },
-			{ 1, p.Crouched },
-		}, { Release = 0.62 }),
-		AttackSkill = signature(1.0, {
-			{ 0, p.Crouched },
-			{ 0.16, chambered },
-			{ 0.3, dashing },
-			{ 0.4, cutThrough },
-			{ 0.56, skid },
-			{ 0.8, merge(skid, { Waist = { -16, -76, 0 }, RootOffset = { 0, -0.84, -6.9 } }) },
-			{ 0.92, springBack },
-			{ 1, p.Crouched },
-		}, { Release = 0.4 }),
+			{ 0, stalk },
+			{ 0.14, sink },
+			{ 0.23, launch },
+			{ 0.32, merge(tuck, { Root = { -120, 0, 0 }, RootOffset = { 0, 2.2, -0.7 } }), true },
+			{ 0.42, merge(tuck, { Root = { 120, 0, 0 }, RootOffset = { 0, 2.3, -1.0 } }), true },
+			{ 0.52, merge(raised, { Root = { 0, 0, 0 } }), true },
+			{ 0.62, plunge, true },
+			{ 0.68, pull },
+			{ 0.74, plunge, true },
+			{ 0.88, merge(plunge, { Waist = { -30, 0, 0 }, RootOffset = { 0, -0.97, -1.3 } }) },
+			{ 1, stalk },
+		}, { Charge = 0.14, Release = 0.62 }),
+		AttackSkill = signature(1.3, {
+			{ 0, stalk },
+			{ 0.12, crossed },
+			{ 0.24, coiled },
+			{ 0.3, cutLeft }, -- flash 1, low
+			{ 0.369, merge(overhead, { Root = { -20, 0, 25 } }) }, -- flash 2, high
+			{ 0.438, cutRight },
+			{ 0.508, merge(overhead, { Root = { -20, 0, -25 } }) },
+			{ 0.577, cutLeft },
+			{ 0.646, merge(overhead, { Root = { -20, 0, 25 } }) },
+			{ 0.715, cutRight },
+			{ 0.785, merge(overhead, { Root = { -30, 0, 0 } }) }, -- flash 8, high
+			{ 0.854, landed }, -- back home
+			{ 0.93, merge(crossed, { Waist = { -26, 0, 0 } }) },
+			{ 1, stalk },
+		}, { Charge = 0.05, Release = 0.3 }),
+	}
+	-- The spinning cut lands on the same Release as the hook.
+	Alternates.hero_han = {
+		AttackBasic = signature(0.85, {
+			{ 0, stalk },
+			{ 0.16, spinWind },
+			{ 0.26, merge(spinning, { Root = { 0, -120, 0 }, RootOffset = { 0, -0.5, -0.4 } }), true },
+			{ 0.36, merge(spinning, { Root = { 0, 120, 0 }, RootOffset = { 0, -0.5, -0.7 } }), true },
+			{ 0.48, merge(spunLow, { Root = { 0, 0, 0 } }), true },
+			{ 0.7, merge(spunLow, { Waist = { -24, 0, 0 }, RootOffset = { 0, -0.78, -0.7 } }) },
+			{ 1, stalk },
+		}, { Release = 0.36 }),
 	}
 end
 
@@ -1908,38 +2187,75 @@ do
 		RightShoulder = { -4, 0, 9 }, RightElbow = { 12, 0, 0 },
 		LeftHip = { -8, 0, -3 }, RightHip = { 14, 0, 3 }, LeftKnee = { -4, 0, 0 }, RightKnee = { -14, 0, 0 },
 		RootOffset = { 0, -0.04, 0 } })
-	local snap: Pose = { LeftWrist = { 0, 35, 0 }, Waist = { -4, -18, 0 }, Neck = { -6, 8, 6 } }
-	local flat: Pose = { LeftWrist = { 0, 80, 0 }, Waist = { -8, -32, 0 }, Neck = { 0, 22, 0 } }
-	local rise = merge(p.Drawn, { Waist = { 10, -24, 0 }, Neck = { 8, 10, 0 }, LeftShoulder = { 110, 0, 0 },
-		RightShoulder = { 108, 28, -10 }, RootOffset = { 0, 0.05, 0.25 } })
+	-- Glint Shot: a huntress's snap shot from a low, stalking crouch, side-on, the bow canted
+	-- 35 degrees and her head tipped over the arrow to sight down it, anchored at her jaw; the
+	-- draw hand snaps straight back off the string.
+	local stalk: Pose = {
+		LeftHip = { 20, -6, -6 }, LeftKnee = { -24, 0, 0 }, LeftAnkle = { 6, 0, 4 },
+		RightHip = { -10, 6, 6 }, RightKnee = { -22, 0, 0 }, RightAnkle = { 22, 0, -4 },
+		RootOffset = { 0, -0.18, 0 },
+	}
+	local glint: Pose = merge(stalk, { Root = { 0, -40, 0 }, Waist = { -12, -28, 0 }, Neck = { 24, 67, -34 },
+		LeftShoulder = { 93, -24, -59 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -16, -16, -9 } })
+	local glintSet = merge(glint, { Waist = { -12, 26, 0 }, Neck = { 10, 15, -15 },
+		LeftShoulder = { 92, -42, 6 }, LeftElbow = { 48, 0, 0 }, LeftWrist = { -45, 13, -22 },
+		RightShoulder = { -40, 9, -141 }, RightElbow = { 62, 0, 0 } })
+	local glintDraw = merge(glint, { RightShoulder = { -97, 66, -108 }, RightElbow = { 91, 0, 0 } })
+	local glintLoose = merge(glint, { Waist = { -10, -26, 0 }, RightShoulder = { 70, 79, 42 }, RightElbow = { 111, 0, 0 } })
+	-- Ricochet: she turns away, drops into a deep crouch and pivots back side-on with the bow
+	-- laid almost flat and her head tipped right over it.
+	local turnAway = merge(p.Carry, { Waist = { 0, 40, 0 }, Neck = { 0, -10, 0 } })
+	local ricochet: Pose = merge(p.Crouch, { Root = { 0, -60, 0 }, Waist = { -14, -20, 0 }, Neck = { 20, 79, -40 },
+		LeftShoulder = { 41, -16, -95 }, LeftElbow = { 9, 0, 0 }, LeftWrist = { -12, -12, 5 } })
+	local ricochetSet = merge(ricochet, { Waist = { -14, 53, 0 }, Neck = { 7, 8, -24 },
+		LeftShoulder = { 82, -81, -15 }, LeftElbow = { 45, 0, 0 }, LeftWrist = { -45, 18, -4 },
+		RightShoulder = { -27, -12, -119 }, RightElbow = { 59, 0, 0 } })
+	local ricochetDraw = merge(ricochet, { RightShoulder = { -124, 64, -92 }, RightElbow = { 102, 0, 0 } })
+	local ricochetLoose = merge(ricochet, { Waist = { -10, -20, 0 }, RightShoulder = { 21, 71, 79 }, RightElbow = { 117, 0, 0 } })
+	-- Twin Reflection: a step back into a tall stance, a long rising draw held at 25 degrees
+	-- while the arrow glows, a release with a small hop and the draw hand sweeping wide.
+	local stepBack: Pose = {
+		LeftHip = { 14, -6, -8 }, LeftKnee = { -8, 0, 0 }, LeftAnkle = { 4, 0, 6 },
+		RightHip = { -16, 6, 8 }, RightKnee = { -10, 0, 0 }, RightAnkle = { 20, 0, -6 },
+		RootOffset = { 0, 0.05, 0.25 },
+	}
+	local twin: Pose = merge(stepBack, { Root = { 0, -55, 0 }, Waist = { 10, -28, 0 }, Neck = { 35, 77, -40 },
+		LeftShoulder = { 96, -29, -75 }, LeftElbow = { 0, 0, 0 }, LeftWrist = { -11, -16, -4 } })
+	local twinSet = merge(twin, { Waist = { 10, 36, 0 }, Neck = { 10, 18, -12 },
+		LeftShoulder = { 67, -80, -37 }, LeftElbow = { 50, 0, 0 }, LeftWrist = { -44, 55, -16 },
+		RightShoulder = { -36, 4, -136 }, RightElbow = { 60, 0, 0 } })
+	local rise = merge(twin, { RightShoulder = { 174, 56, -73 }, RightElbow = { 91, 0, 0 } })
+	local hop = merge(twin, { Waist = { 6, -24, 0 }, RightShoulder = { 55, 67, 28 }, RightElbow = { 92, 0, 0 }, RootOffset = { 0, 0.3, 0.25 } })
+	local sweep = merge(twin, { Waist = { 2, -20, 0 }, LeftShoulder = { 88, -29, -75 }, RightShoulder = { -133, 59, -127 }, RightElbow = { 15, 0, 0 }, RootOffset = { 0, 0.1, 0.25 } })
 	Overrides.hero_isabelle = {
 		Idle = breathe(poised, 3.4),
 		Move = walk(poised), -- her stance's upper body (bow low, draw hand loose) over walking legs
 		AttackBasic = signature(0.7, {
 			{ 0, p.Carry },
-			{ 0.25, merge(p.Aim, snap) },
-			{ 0.5, merge(p.Drawn, snap) },
-			{ 0.58, merge(p.Release, merge(snap, { Waist = { 0, -12, 0 }, RightShoulder = { 60, 50, -40 } })) },
+			{ 0.25, glintSet },
+			{ 0.5, glintDraw },
+			{ 0.58, glintLoose, true },
+			{ 0.74, glintLoose },
 			{ 1, p.Carry },
-		}, { Release = 0.58, Nock = 0.85 }),
+		}, { Release = 0.58, Nock = 0.85 }, { Set = 0.25, Full = 0.5, Anchor = { 0.1, -0.3, -0.45 } }),
 		AttackSpecial = signature(0.95, {
 			{ 0, p.Carry },
-			{ 0.28, merge(p.Carry, { Waist = { 0, 40, 0 }, Neck = { 0, -10, 0 } }) }, -- turns away
-			{ 0.5, merge(merge(p.Aim, p.Crouch), flat) }, -- pivots back low, bow flat
-			{ 0.66, merge(merge(p.Drawn, p.Crouch), flat) },
-			{ 0.74, merge(merge(p.Release, p.Crouch), merge(flat, { Waist = { 4, -20, 0 } })) },
+			{ 0.28, turnAway }, -- turns away
+			{ 0.5, ricochetSet }, -- pivots back low, bow flat
+			{ 0.66, ricochetDraw },
+			{ 0.74, ricochetLoose, true },
+			{ 0.86, ricochetLoose },
 			{ 1, p.Carry },
-		}, { Release = 0.74, Nock = 0.9 }),
+		}, { Release = 0.74, Nock = 0.9 }, { Set = 0.5, Full = 0.66, Anchor = { 0.05, -0.42, -0.3 } }),
 		AttackSkill = signature(1.5, {
 			{ 0, p.Carry },
-			{ 0.2, merge(p.Aim, { Waist = { 4, -20, 0 }, RootOffset = { 0, 0, 0.3 } }) }, -- a step back
+			{ 0.2, twinSet }, -- a step back
 			{ 0.4, rise },
-			{ 0.62, merge(rise, { Waist = { 12, -26, 0 } }) }, -- the arrow glows while she holds the draw
-			{ 0.68, merge(p.Release, { Waist = { 6, -10, 0 }, LeftShoulder = { 100, 0, 0 }, RightShoulder = { 95, 70, -60 },
-				RightElbow = { 20, 0, 0 }, RootOffset = { 0, 0.3, 0 } }) }, -- release with a hop
-			{ 0.82, merge(p.Release, { Waist = { 0, 10, 0 }, RightShoulder = { 40, 80, -70 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, 0.1, 0 } }) },
+			{ 0.62, merge(rise, { Waist = { 14, -30, 0 } }) }, -- the arrow glows while she holds the draw
+			{ 0.68, hop, true }, -- release with a hop
+			{ 0.82, sweep },
 			{ 1, p.Carry },
-		}, { Charge = 0.2, Release = 0.68, Nock = 0.9 }),
+		}, { Charge = 0.2, Release = 0.68, Nock = 0.9 }, { Set = 0.2, Full = 0.4 }),
 	}
 end
 
@@ -2346,6 +2662,9 @@ HeroClips.OverrideWeapon = OVERRIDE_WEAPON
 -- Resolves a state for a hero and weapon type, or nil when no clip exists. A hero override
 -- only applies while the hero holds its signature weapon.
 function HeroClips.Get(heroId: string?, weaponType: string?, state: string): Clip?
+	if state == "SkillWindup" then
+		return HeroClips.Windup(heroId, weaponType)
+	end
 	local override = heroId and Overrides[heroId]
 	if override and override[state] and OVERRIDE_WEAPON[heroId :: string] == weaponType then
 		return override[state]
@@ -2354,11 +2673,101 @@ function HeroClips.Get(heroId: string?, weaponType: string?, state: string): Cli
 	return set[state] or Shared[state] or ByWeapon.UNARMED[state]
 end
 
+-- The Skill wind-up, the opening WINDUP_SECONDS of every Skill (GDD §4.4): the hero sinks into a
+-- crouch with its upper body in its own Skill's anticipation pose (the last key before the clip's
+-- Release), then pulses there, gathering power, and the Skill's own clip follows. The server adds
+-- this time to every Skill's cast (HeroActionTiming.WithSkillWindup), so the strike still lines up.
+-- Built from each hero's clips, so every hero and weapon has one and every grip is one already
+-- authored. Only the upper body is borrowed: legs, root rotation and root drift come from the
+-- idle stance, so a Skill that leaps or spins still winds up standing and facing ahead.
+HeroClips.WINDUP_STATE = "SkillWindup"
+HeroClips.WINDUP_SECONDS = 0.8
+local WINDUP_CROUCH, WINDUP_SURGE = 20, 27 -- knee bend (deg), split over hip and ankle as `walk` does
+local WINDUP_TWIST = 75 -- the borrowed waist turn is capped at this, either way
+local windups: { [string]: Clip } = {}
+
+local function anticipation(skill: Clip): Pose
+	local release = HeroClips.Marker(skill, "Release", 0.5)
+	local chosen = skill.Keys[1].Pose
+	for _, key in skill.Keys do
+		if key.T > 0 and key.T < release - 0.01 then
+			chosen = key.Pose
+		end
+	end
+	return chosen
+end
+
+local function windupPose(stance: Pose, upper: Pose, crouch: number, pulse: number): Pose
+	local pose: Pose = {}
+	for joint, value in stance do
+		if joint ~= "Root" and joint ~= "RootOffset" and not HeroClips.UPPER_BODY[joint] then
+			pose[joint] = value
+		end
+	end
+	for joint in HeroClips.UPPER_BODY do
+		local value = upper[joint]
+		if value then pose[joint] = value end
+	end
+	local waist = pose.Waist or { 0, 0, 0 }
+	pose.Waist = { waist[1] + 3 * pulse, math.clamp(waist[2], -WINDUP_TWIST, WINDUP_TWIST), waist[3] }
+	nudge(pose, "Neck", { -3 * pulse, 0, 0 })
+	for _, side in { "Left", "Right" } do
+		nudge(pose, side .. "Hip", { crouch * 0.6, 0, 0 })
+		nudge(pose, side .. "Knee", { -crouch, 0, 0 })
+		nudge(pose, side .. "Ankle", { crouch * 0.4, 0, 0 })
+	end
+	local root = stance.RootOffset or { 0, 0, 0 }
+	pose.RootOffset = { root[1], root[2] - crouch * 0.008, root[3] }
+	return pose
+end
+
+function HeroClips.Windup(heroId: string?, weaponType: string?): Clip?
+	local cacheKey = `{heroId or "-"}|{weaponType or "UNARMED"}`
+	local cached = windups[cacheKey]
+	if cached then return cached end
+	local skill = HeroClips.Get(heroId, weaponType, "AttackSkill")
+	local idle = HeroClips.Get(heroId, weaponType, "Idle")
+	if not skill or not idle or #skill.Keys == 0 or #idle.Keys == 0 then return nil end
+	local stance = idle.Keys[1].Pose
+	local upper = anticipation(skill)
+	local gather = windupPose(stance, upper, WINDUP_CROUCH, 0)
+	local surge = windupPose(stance, upper, WINDUP_SURGE, 1)
+	-- Sink in over the first 0.2 s, then pulse, quickening as the charge builds, and rise out of it
+	-- in the last few frames as the Skill's own clip takes over.
+	local keys: { { any } } = { { 0, stance }, { 0.25, gather } }
+	local t, step, high = 0.25, 0.13, true
+	while t + step < 0.9 do
+		t += step
+		table.insert(keys, { t, if high then surge else gather })
+		high = not high
+		step *= 0.92
+	end
+	table.insert(keys, { 0.95, surge })
+	table.insert(keys, { 1, stance })
+	local result = clip(HeroClips.WINDUP_SECONDS, false, keys)
+	windups[cacheKey] = result
+	return result
+end
+
 -- A clip's marker as a fraction of its length, or the fallback when the clip has none.
 function HeroClips.Marker(clip: Clip?, name: string, fallback: number): number
 	local markers = clip and clip.Markers
 	local value = markers and markers[name]
 	return if value then value else fallback
+end
+
+-- A bow attack's draw: when the hand takes the string (set), reaches full draw (full) and lets go
+-- (release), as clip fractions. Clips without a Draw table take the string at DRAW_DEFAULT.Set
+-- and reach full draw at DRAW_DEFAULT.Full of the way to their Release.
+HeroClips.DRAW_DEFAULT = table.freeze({ Set = 0.3, Full = 0.85 })
+function HeroClips.DrawTiming(clip: Clip): (number, number, number)
+	local release = HeroClips.Marker(clip, "Release", 0.7)
+	local draw = clip.Draw
+	local set = if draw then draw.Set else release * HeroClips.DRAW_DEFAULT.Set
+	local full = if draw then draw.Full else release * HeroClips.DRAW_DEFAULT.Full
+	set = math.clamp(set, 0.01, release)
+	full = math.clamp(full, set, release)
+	return set, full, release
 end
 
 -- Names of the clip's markers with from < fraction <= to, in clip order. HeroAnimator calls this

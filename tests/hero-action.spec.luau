@@ -28,6 +28,12 @@ do
 
 	-- Skill holds the hero for at least its CastSeconds and lands as a 4-tick area.
 	local skill = Timing.For("hero_jenna", "BOW", "SKILL", marksman.Skill, 0.8, 20)
+	local wound = Timing.WithSkillWindup(skill)
+	near(Timing.SKILL_WINDUP_SECONDS, 0.8, "every Skill opens with a 0.8 s wind-up")
+	near(wound.CastSeconds, skill.CastSeconds + 0.8, "the wind-up lengthens the cast")
+	near(wound.ReleaseSeconds, skill.ReleaseSeconds + 0.8, "the strike comes after the wind-up")
+	near(wound.ImpactSeconds, skill.ImpactSeconds + 0.8, "so does the impact")
+	near(wound.TravelSeconds, skill.TravelSeconds, "travel is unchanged")
 	near(skill.CastSeconds, 1.1, "marksman skill cast lock")
 	near(skill.TravelSeconds, 0.35, "marksman skill flare travel ignores distance")
 	local ticks, gap = Timing.Ticks(marksman.Skill)

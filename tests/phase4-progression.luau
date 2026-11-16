@@ -558,7 +558,7 @@ test("Phase 5: store summon packs become Gems for players restricted from paid r
 	local safe = Shop.SafeGrant(pack.Grant, true)
 	assert(safe.Kind == "Gems" and safe.Amount == 10 * Shop.GemsPerSummon(pack.Grant.Banner) and Shop.GemsPerSummon("A_STARS_ARRIVAL") == 200, "restricted players get Gems")
 	assert(Shop.SafeGrant(pack.Grant, false).Kind == "Summons", "others get the summons")
-	local gems = assert(Shop.ById("gems_550"))
+	local gems = assert(Shop.ById("gems_2840"))
 	assert(Shop.SafeGrant(gems.Grant, true) == gems.Grant, "currency grants are unchanged")
 	for _, list in { Shop.Featured.Offers, Shop.Gems, Shop.Gold } do
 		for _, offer in list do

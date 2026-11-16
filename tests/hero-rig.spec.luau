@@ -354,9 +354,29 @@ do
 		end
 	end
 
+	-- Skill wind-up (first-skill cutscene): every weapon and every hero with its signature weapon has
+	-- one, built from its own clips, standing (no Root rotation borrowed from a leaping Skill).
+	local function checkWindup(label: string, heroId: string?, weaponType: string?)
+		local windup = HeroClips.Get(heroId, weaponType, HeroClips.WINDUP_STATE)
+		check(windup ~= nil and windup == HeroClips.Windup(heroId, weaponType), `{label} has a cached wind-up`)
+		if not windup then return end
+		checkClip(`{label}.SkillWindup`, windup, false)
+		check(windup.Duration == HeroClips.WINDUP_SECONDS, `{label} wind-up lasts WINDUP_SECONDS`)
+		check(#windup.Keys >= 8, `{label} wind-up pulses`)
+		for i = 2, #windup.Keys - 1 do
+			check(windup.Keys[i].Pose.Root == nil, `{label} wind-up key {i} keeps the root upright`)
+		end
+	end
+	for _, weaponType in HeroClips.WEAPON_TYPES do
+		checkWindup(weaponType, nil, weaponType)
+	end
+	for heroId in HeroCostumes.ById do
+		checkWindup(heroId, heroId, HeroClips.OverrideWeapon[heroId])
+	end
+
 	-- Lookup order: hero override -> weapon type -> shared -> unarmed.
 	check(HeroClips.Get("hero_jenna", "BOW", "Idle") == HeroClips.Overrides.hero_jenna.Idle, "hero override wins")
-	check(HeroClips.Get("hero_han", "DAGGERS", "Idle") == HeroClips.ByWeapon.DAGGERS.Idle, "weapon clip for heroes without an override")
+	check(HeroClips.Get("hero_velkist", "DAGGERS", "AttackBasic") == HeroClips.ByWeapon.DAGGERS.AttackBasic, "weapon clip for heroes without an override")
 	check(HeroClips.Get(nil, "BOW", "Hit") == HeroClips.Shared.Hit, "shared state fallback")
 	check(HeroClips.Get(nil, "NOT_A_WEAPON", "AttackBasic") == HeroClips.ByWeapon.UNARMED.AttackBasic, "unknown weapon falls back to UNARMED")
 	check(HeroClips.Get(nil, nil, "Idle") == HeroClips.ByWeapon.UNARMED.Idle, "no weapon uses UNARMED")
@@ -396,6 +416,47 @@ do
 		check(clip.Keys[1].Pose == clip.Keys[#clip.Keys].Pose, `Vane's {state} starts and ends on the same pose`)
 	end
 	check(HeroClips.Get("hero_archon", "DAGGERS", "AttackSpecial") == HeroClips.ByWeapon.DAGGERS.AttackSpecial, "other specials use the weapon clip")
+
+	-- Bow draws (HeroAnimator.SolveBowDraw): the hand takes the string, reaches full draw and
+	-- lets go in that order, all before the Release; the shared clips time theirs explicitly.
+	local function checkDraw(label: string, clip: any)
+		local release = HeroClips.Marker(clip, "Release", -1)
+		if clip.Draw then
+			check(clip.Draw.Set > 0 and clip.Draw.Set <= clip.Draw.Full and clip.Draw.Full <= release, `{label} draws Set <= Full <= Release`)
+		end
+		local set, full, rel = HeroClips.DrawTiming(clip)
+		check(set > 0 and set <= full and full <= rel and rel == release, `{label} draw timing is ordered`)
+	end
+	for _, state in { "AttackBasic", "AttackSpecial", "AttackSkill" } do
+		local clip = HeroClips.ByWeapon.BOW[state]
+		check(clip.Draw ~= nil, `BOW {state} times its draw`)
+		checkDraw(`BOW {state}`, clip)
+	end
+	for heroId, states in HeroClips.Overrides do
+		if HeroClips.OverrideWeapon[heroId] == "BOW" then
+			for state, clip in states do
+				if string.sub(state, 1, 6) == "Attack" then
+					checkDraw(`Overrides.{heroId}.{state}`, clip)
+				end
+			end
+		end
+	end
+
+	-- HeroBowString: the string follows a hand behind it, up to the bow's deepest draw, and
+	-- ignores a hand in front of it or well off the arrow line.
+	local HeroBowString = require(ReplicatedStorage.Assets.HeroRig.HeroBowString)
+	local heldPoint = HeroBowString._heldPoint
+	local g: any = { StringRestH = Vector3.new(0, 0, 0), ArrowH = Vector3.new(0, 0, 1), MaxPull = 2 }
+	local p, pull = heldPoint(g, Vector3.new(0, 0, -1))
+	check(math.abs(p.Z + 1) < 1e-6 and math.abs(pull - 1) < 1e-6, "string follows the hand back")
+	p, pull = heldPoint(g, Vector3.new(0, 0, 0.5))
+	check(p.Magnitude < 1e-6 and pull == 0, "a hand in front of the string leaves it at rest")
+	p, pull = heldPoint(g, Vector3.new(0, 0, -5))
+	check(math.abs(p.Z + 2) < 1e-6 and pull == 2, "the draw stops at the bow's deepest pull")
+	p, pull = heldPoint(g, Vector3.new(0.1, 0, -1))
+	check(math.abs(p.X - 0.1) < 1e-6, "a drawn string takes the hand's sideways offset")
+	p, pull = heldPoint(g, Vector3.new(1.5, 0, -1))
+	check(p.Magnitude < 1e-6 and pull == 0, "a hand far off the arrow line is not on the string")
 end
 
 -- 6. Weapon sockets (Phase 2) ---------------------------------------------------

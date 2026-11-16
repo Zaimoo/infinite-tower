@@ -47,9 +47,9 @@ ShopConfig.Featured = table.freeze({
 	Banner = "A_STARS_ARRIVAL",
 	ShowcaseTiers = table.freeze({ 7, 6, 5, 4 }), -- LimitedBanner.HeroesByStar tiers shown, top tier largest
 	Offers = table.freeze({
-		table.freeze({ Id = "pack_summon_1", ProductId = 0, RobuxPrice = 80, Label = "Buy 1", Grant = { Kind = "Summons", Amount = 1, Banner = "A_STARS_ARRIVAL" } }),
-		table.freeze({ Id = "pack_summon_5", ProductId = 0, RobuxPrice = 400, Label = "Buy 5", Grant = { Kind = "Summons", Amount = 5, Banner = "A_STARS_ARRIVAL" } }),
-		table.freeze({ Id = "pack_summon_10", ProductId = 0, RobuxPrice = 720, WasPrice = 800, Label = "Buy 10", Tag = "-10%",
+		table.freeze({ Id = "pack_summon_1", ProductId = 0, RobuxPrice = 39, Label = "Buy 1", Grant = { Kind = "Summons", Amount = 1, Banner = "A_STARS_ARRIVAL" } }),
+		table.freeze({ Id = "pack_summon_5", ProductId = 0, RobuxPrice = 149, Label = "Buy 5", Grant = { Kind = "Summons", Amount = 5, Banner = "A_STARS_ARRIVAL" } }),
+		table.freeze({ Id = "pack_summon_10", ProductId = 0, RobuxPrice = 239, WasPrice = 390, Label = "Buy 10", Tag = "-39%",
 			Grant = { Kind = "Summons", Amount = 10, Banner = "A_STARS_ARRIVAL" } }),
 	} :: { Offer }),
 })
@@ -60,8 +60,8 @@ ShopConfig.Mirror = table.freeze({
 	Subtitle = "Heroes that copy your best hero",
 	Banner = "GILDED_MIRROR",
 	Offers = table.freeze({
-		table.freeze({ Id = "pack_mirror_1", ProductId = 0, RobuxPrice = 55, Label = "Buy 1", Grant = { Kind = "Summons", Amount = 1, Banner = "GILDED_MIRROR" } }),
-		table.freeze({ Id = "pack_mirror_10", ProductId = 0, RobuxPrice = 499, WasPrice = 550, Label = "Buy 10", Tag = "-9%",
+		table.freeze({ Id = "pack_mirror_1", ProductId = 0, RobuxPrice = 49, Label = "Buy 1", Grant = { Kind = "Summons", Amount = 1, Banner = "GILDED_MIRROR" } }),
+		table.freeze({ Id = "pack_mirror_10", ProductId = 0, RobuxPrice = 499, Label = "Buy 10",
 			Grant = { Kind = "Summons", Amount = 10, Banner = "GILDED_MIRROR" } }),
 	} :: { Offer }),
 })
@@ -79,16 +79,16 @@ ShopConfig.Anvil = table.freeze({
 })
 
 ShopConfig.Gems = table.freeze({
-	table.freeze({ Id = "gems_160", ProductId = 0, RobuxPrice = 80, Label = "Pouch of Gems", Grant = { Kind = "Gems", Amount = 160 } }),
-	table.freeze({ Id = "gems_550", ProductId = 0, RobuxPrice = 250, Label = "Sack of Gems", Tag = "+10%", Grant = { Kind = "Gems", Amount = 550 } }),
-	table.freeze({ Id = "gems_1200", ProductId = 0, RobuxPrice = 500, Label = "Chest of Gems", Tag = "+20%", Grant = { Kind = "Gems", Amount = 1200 } }),
-	table.freeze({ Id = "gems_3000", ProductId = 0, RobuxPrice = 1000, Label = "Vault of Gems", Tag = "BEST VALUE", Grant = { Kind = "Gems", Amount = 3000 } }),
+	table.freeze({ Id = "gems_1000", ProductId = 0, RobuxPrice = 19, Label = "Pouch of Gems", Grant = { Kind = "Gems", Amount = 1000 } }),
+	table.freeze({ Id = "gems_2840", ProductId = 0, RobuxPrice = 49, Label = "Sack of Gems", Tag = "+10%", Grant = { Kind = "Gems", Amount = 2840 } }),
+	table.freeze({ Id = "gems_6250", ProductId = 0, RobuxPrice = 99, Label = "Chest of Gems", Tag = "+20%", Grant = { Kind = "Gems", Amount = 6250 } }),
+	table.freeze({ Id = "gems_15700", ProductId = 0, RobuxPrice = 199, Label = "Vault of Gems", Tag = "BEST VALUE", Grant = { Kind = "Gems", Amount = 15700 } }),
 } :: { Offer })
 
 ShopConfig.Gold = table.freeze({
-	table.freeze({ Id = "gold_5k", ProductId = 0, RobuxPrice = 50, Label = "Coin Purse", Grant = { Kind = "Gold", Amount = 5000 } }),
-	table.freeze({ Id = "gold_25k", ProductId = 0, RobuxPrice = 200, Label = "Gold Strongbox", Tag = "+25%", Grant = { Kind = "Gold", Amount = 25000 } }),
-	table.freeze({ Id = "gold_80k", ProductId = 0, RobuxPrice = 500, Label = "Dragon's Hoard", Tag = "BEST VALUE", Grant = { Kind = "Gold", Amount = 80000 } }),
+	table.freeze({ Id = "gold_100k", ProductId = 0, RobuxPrice = 19, Label = "Coin Purse", Grant = { Kind = "Gold", Amount = 100000 } }),
+	table.freeze({ Id = "gold_520k", ProductId = 0, RobuxPrice = 79, Label = "Gold Strongbox", Tag = "+25%", Grant = { Kind = "Gold", Amount = 520000 } }),
+	table.freeze({ Id = "gold_1680k", ProductId = 0, RobuxPrice = 199, Label = "Dragon's Hoard", Tag = "BEST VALUE", Grant = { Kind = "Gold", Amount = 1680000 } }),
 } :: { Offer })
 
 -- Every offer, by ProductId (live products only) and by Id.

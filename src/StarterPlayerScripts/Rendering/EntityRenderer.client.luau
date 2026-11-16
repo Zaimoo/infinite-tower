@@ -49,12 +49,18 @@ local CombatVfx = ReplicatedStorage.Assets:WaitForChild("CombatVfx")
 local SkillVfx = require(CombatVfx:WaitForChild("SkillVfx"))
 -- Own folder: clearView empties VisualFolder, and pooled VFX must survive that.
 local CombatVfxPool = require(CombatVfx:WaitForChild("VfxPool")).new(Workspace)
+-- The skill cutscene's wind-up gets a pool of its own, so a busy fight's effects (the shared pool
+-- refuses new effects past VfxPool.MAX_EFFECTS) can never crowd it out.
+local WindupVfxPool = require(CombatVfx:WaitForChild("VfxPool")).new(Workspace)
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
 local HeroRig = ReplicatedStorage.Assets:WaitForChild("HeroRig")
 local HeroRigSpec = require(HeroRig:WaitForChild("HeroRigSpec"))
 local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
 local HeroLoadout = require(HeroRig:WaitForChild("HeroLoadout"))
 local HeroSockets = require(HeroRig:WaitForChild("HeroSockets"))
+local HeroClips = require(HeroRig:WaitForChild("HeroClips"))
+local ArchetypeCombatSkills = require(Shared.Config:WaitForChild("ArchetypeCombatSkills"))
+local SkillCutscene = require(script.Parent:WaitForChild("SkillCutscene"))
 
 local AudioFolder = script.Parent.Parent:WaitForChild("Audio")
 local AudioManager = require(AudioFolder:WaitForChild("AudioManager"))
@@ -74,6 +80,13 @@ end)
 
 -- Attack tier codes in the HERO_CUE (TowerProtocol.EncodeHeroCue) -> HeroClips action states.
 local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "AttackSkill" }
+
+-- The hero's and its Skill's names for the first-skill cutscene's caption.
+local function cutsceneNames(meta: any): (string, string)
+	local seed = HeroCatalog.Seeds[meta.TemplateId]
+	local profile = ArchetypeCombatSkills.GetSkillProfile(meta.TemplateId, seed and (seed :: any).Archetype)
+	return meta.Name or (seed and (seed :: any).Name) or "Hero", profile.Skill.Name
+end
 
 -- Hero walk/idle switching (studs of interpolation gap, seconds of grace).
 local MOVE_START_GAP = 0.3
@@ -373,7 +386,10 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 		Blink = function(position: Vector3, yaw: number, from: number, to: number)
 			local node = VisualNodesByNetId[cue.NetId] :: any
 			if node then
-				node.Blink = { Position = position, Yaw = yaw, From = from, To = to }
+				-- A queue, so one skill can chain blinks (Han's Abyssal Wake flashes round the circle).
+				local blinks = node.Blinks or {}
+				table.insert(blinks, { Position = position, Yaw = yaw, From = from, To = to })
+				node.Blinks = blinks
 			end
 		end,
 		Twin = function(): Vector3?
@@ -389,7 +405,10 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 		end,
 		Now = Workspace:GetServerTimeNow(),
 		Shake = if meta and meta.OwnerUserId == LocalPlayer.UserId then function(magnitude: number)
-			CombatFeedback:ScreenShake(magnitude)
+			-- In a skill cutscene the cutscene camera shakes instead (it would overwrite this one).
+			if not SkillCutscene.Shake(magnitude) then
+				CombatFeedback:ScreenShake(magnitude)
+			end
 		end else nil,
 		Sfx = playCombatSfx,
 	}
@@ -416,6 +435,76 @@ end
 local function playChargeVfx(rig: Model, animator: any, meta: any, cue: any)
 	local args = attackArgs(rig, animator, meta, cue)
 	SkillVfx.PlayCharge(CombatVfxPool, args)
+end
+
+-- A Skill's cue (GDD §4.4): every Skill opens with the hero's wind-up (HeroClips.Windup) and its
+-- charge effects for HeroClips.WINDUP_SECONDS, then plays its own clip; the server added the
+-- wind-up to the cue's cast and release, so the strike still lines up. The Skill's clip and its
+-- effects get the cue shifted past the wind-up (their own timeline, as SkillVfx expects it).
+local function playSkillCue(node: any, animator: any, cue: any, elapsed: number)
+	if elapsed >= cue.CastSeconds then
+		return
+	end
+	local meta = MetadataByNetId[cue.NetId]
+	local windup = math.min(HeroClips.WINDUP_SECONDS, math.max(0, cue.CastSeconds - 0.1))
+	local clipCue = table.clone(cue)
+	clipCue.StartServerTime = cue.StartServerTime + windup
+	clipCue.CastSeconds = cue.CastSeconds - windup
+	clipCue.ReleaseSeconds = math.max(0, cue.ReleaseSeconds - windup)
+	node.PendingSkillCue = nil
+	if elapsed < windup then
+		animator:PlayAction(HeroClips.WINDUP_STATE, windup, elapsed)
+		node.PendingSkillCue = clipCue
+		-- The charge runs from the cue until the Skill strikes, then bursts out on the strike.
+		local rig = animator.Rig
+		local height = 5
+		local okSize, size = pcall(function() return rig:GetExtentsSize() end)
+		if okSize then height = size.Y end
+		local function chest(): Vector3
+			local torso = rig:FindFirstChild("UpperTorso")
+			return if torso and torso:IsA("BasePart") then torso.Position else node.RootPart.Position
+		end
+		local own = meta ~= nil and meta.OwnerUserId == LocalPlayer.UserId
+		local shake = if own then function(magnitude: number)
+			if not SkillCutscene.Shake(magnitude) then
+				CombatFeedback:ScreenShake(magnitude)
+			end
+		end else nil
+		local strikeAt = clipCue.StartServerTime + clipCue.ReleaseSeconds
+		local ok, err = pcall(function()
+			if SkillVfx.PlayWindup(WindupVfxPool, {
+				HeroId = meta and meta.TemplateId,
+				WeaponType = animator.WeaponType,
+				Feet = node.CurrentPos,
+				Chest = chest,
+				Tip = function(): Vector3?
+					return castPoint(rig, "STAFF_TIP")
+				end,
+				Height = height,
+				StartAt = cue.StartServerTime,
+				EndAt = strikeAt,
+				Lite = not own,
+				Sfx = playCombatSfx,
+				Shake = shake,
+			}) then
+				SkillVfx.PlayWindupRelease(WindupVfxPool, {
+					HeroId = meta and meta.TemplateId,
+					WeaponType = animator.WeaponType,
+					Feet = node.CurrentPos,
+					Chest = chest,
+					Height = height,
+					At = strikeAt,
+					Sfx = playCombatSfx,
+					Shake = shake,
+				}, Workspace:GetServerTimeNow())
+			end
+		end)
+		if not ok then
+			warn(`CombatVfx: wind-up effect failed: {err}`)
+		end
+	else
+		animator:PlayAction("AttackSkill", clipCue.CastSeconds, elapsed - windup, clipCue)
+	end
 end
 
 local function playComaVFX(node: any)
@@ -872,6 +961,7 @@ end
 local function clearView()
  CombatFeedback:Clear()
  CombatVfxPool:Clear()
+ WindupVfxPool:Clear()
  table.clear(RecentHits)
  EnemyAnimation.Clear()
  for _,node in pairs(DyingNodes) do node.Model:Destroy() end;table.clear(DyingNodes)
@@ -1093,6 +1183,7 @@ local function stepRender(dt: number)
 	CombatFeedback:Step(os.clock())
 	local serverNow=Workspace:GetServerTimeNow();EnemyAnimation.StepEffects(serverNow)
 	CombatVfxPool:Step(serverNow)
+	WindupVfxPool:Step(serverNow)
 	for key,node in pairs(DyingNodes) do
 		if serverNow>=node.DeathEnd then node.Model:Destroy();DyingNodes[key]=nil else EnemyAnimation.Step(node,dt,serverNow) end
 	end
@@ -1139,12 +1230,24 @@ local function stepRender(dt: number)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, yaw, 0)
 		-- A skill effect (Nyx's Mirror Step) can draw the hero somewhere else for a moment; the
 		-- server position, and everything that reads it, is untouched.
-		local blink = n.Blink
-		if blink then
-			if serverNow >= blink.To then
-				n.Blink = nil
-			elseif serverNow >= blink.From then
-				cf = CFrame.new(blink.Position + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, blink.Yaw, 0)
+		-- Positions may sit above the ground (a blink into the air). The latest blink that has
+		-- started wins; finished ones drop out.
+		local blinks = n.Blinks
+		if blinks then
+			local active: any = nil
+			for i = #blinks, 1, -1 do
+				local blink = blinks[i]
+				if serverNow >= blink.To then
+					table.remove(blinks, i)
+				elseif serverNow >= blink.From and (not active or blink.From > active.From) then
+					active = blink
+				end
+			end
+			if #blinks == 0 then
+				n.Blinks = nil
+			end
+			if active then
+				cf = CFrame.new(active.Position + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, active.Yaw, 0)
 			end
 		end
 		node.Model:PivotTo(cf)
@@ -1166,6 +1269,15 @@ local function stepRender(dt: number)
 			-- StateEnum 5: a duel's winner posing through the outro (CombatSimulation VICTORY).
 			local cheering = node.StateEnum == 5 and not isKnockedOut
 			animator:SetLocomotion(if isKnockedOut then "Coma" elseif cheering then "Victory" elseif walking then "Move" else "Idle")
+			-- A Skill opens with its wind-up; its own clip starts once the wind-up's time is up.
+			local pendingSkill = (node :: any).PendingSkillCue
+			if pendingSkill and serverNow >= pendingSkill.StartServerTime then
+				(node :: any).PendingSkillCue = nil
+				local into = serverNow - pendingSkill.StartServerTime
+				if into < pendingSkill.CastSeconds and not isKnockedOut then
+					animator:PlayAction("AttackSkill", pendingSkill.CastSeconds, into, pendingSkill)
+				end
+			end
 			local moveSpeedScale = if walking then math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2) else 1.0
 			animator:Step(stepDt, moveSpeedScale)
 			debug.profileend()
@@ -1262,8 +1374,30 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 		local animator = node and (node :: any).HeroAnimator
 		if cue and animator and node.Model:GetAttribute("EntityGeneration") == cue.EntityGeneration then
 			local elapsed = math.max(0, Workspace:GetServerTimeNow() - cue.StartServerTime)
-			if elapsed < cue.CastSeconds then
+			if cue.Tier == 3 then
+				playSkillCue(node, animator, cue, elapsed)
+			elseif elapsed < cue.CastSeconds then
 				animator:PlayAction(ATTACK_TIER_STATES[cue.Tier] or "AttackBasic", cue.CastSeconds, elapsed, cue)
+			end
+			if elapsed < cue.CastSeconds then
+				-- A Skill of this Master's heroes gets its cutscene, if one is due, or a cut-in banner when
+				-- another hero's Skill has the camera (SkillCutscene.OnSkill).
+				local meta = MetadataByNetId[cue.NetId]
+				if cue.Tier == 3 and meta and meta.OwnerUserId == LocalPlayer.UserId and meta.TemplateId then
+					local heroName, skillName = cutsceneNames(meta)
+					local ok, err = pcall(SkillCutscene.OnSkill, {
+						Key = meta.TemplateId,
+						HeroName = heroName,
+						SkillName = skillName,
+						Root = node.RootPart,
+						Aim = cue.Aim,
+						CastSeconds = cue.CastSeconds,
+						ReleaseSeconds = cue.ReleaseSeconds,
+						Elapsed = elapsed,
+						WeaponType = animator.WeaponType,
+					})
+					if not ok then warn(`SkillCutscene failed: {err}`) end
+				end
 			end
 		end
 		return

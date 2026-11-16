@@ -61,6 +61,7 @@ $modulePaths = @(
     'ReplicatedStorage/Assets/HeroRig/HeroCostumeMath.luau',
     'ReplicatedStorage/Assets/HeroRig/HeroCostumes.luau',
     'ReplicatedStorage/Assets/HeroRig/HeroClips.luau',
+    'ReplicatedStorage/Assets/HeroRig/HeroBowString.luau',
     'ReplicatedStorage/Shared/Util/HeroActionTiming.luau',
     'ReplicatedStorage/Shared/Config/SkillVfxCatalog.luau',
     'ReplicatedStorage/Assets/CombatVfx/VfxMath.luau',

@@ -78,6 +78,21 @@ function HeroActionTiming.For(heroId: string?, weaponType: string?, tier: Tier, 
 	}
 end
 
+-- Every Skill opens with the hero's Skill wind-up (HeroClips.Windup, GDD §4.4): this long is added
+-- to its cast, release and impact. The server applies it to Skills after For; clients play the
+-- wind-up over the first SKILL_WINDUP_SECONDS of a Skill's cue and the Skill's clip after it.
+HeroActionTiming.SKILL_WINDUP_SECONDS = HeroClips.WINDUP_SECONDS
+
+function HeroActionTiming.WithSkillWindup(timing: Timing): Timing
+	local windup = HeroActionTiming.SKILL_WINDUP_SECONDS
+	return {
+		CastSeconds = timing.CastSeconds + windup,
+		ReleaseSeconds = timing.ReleaseSeconds + windup,
+		TravelSeconds = timing.TravelSeconds,
+		ImpactSeconds = timing.ImpactSeconds + windup,
+	}
+end
+
 -- Number of damage ticks and the gap between them for a tier definition.
 function HeroActionTiming.Ticks(tierDef: any): (number, number)
 	local ticks = tierDef and tierDef.Ticks

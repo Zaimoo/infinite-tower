@@ -91,6 +91,7 @@ local function applySettingsAttributes(player: Player, s: SettingsConfig.Setting
 	player:SetAttribute("Settings_DamageNumbers", clean.DamageNumbers)
 	player:SetAttribute("Settings_CompactMode", clean.CompactMode)
 	player:SetAttribute("Settings_ReduceMotion", clean.ReduceMotion)
+	player:SetAttribute("Settings_AlwaysSkillCutscenes", clean.AlwaysSkillCutscenes == true) -- saves from before it: off
 	player:SetAttribute("Settings_HighContrast", clean.HighContrast)
 	player:SetAttribute("Settings_LivePreview", clean.LivePreview)
 	player:SetAttribute("Settings_Scale", clean.Scale)
