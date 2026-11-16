@@ -12,8 +12,10 @@
 --   Summons:     free pulls on a hero banner. These are paid random items, so players whose
 --                PolicyService marks paid random items as restricted never see them, and the
 --                server converts any such purchase into Gems (the banner's 1x price per summon).
+--   BattlePass:  unlocks the premium Battle Pass row for the season in which the receipt is granted
+--                (GDD §4.9). Not random: every reward and its level is shown before purchase.
 
-export type Grant = { Kind: "Gems" | "Gold" | "Summons", Amount: number, Banner: string? }
+export type Grant = { Kind: "Gems" | "Gold" | "Summons" | "BattlePass", Amount: number, Banner: string? }
 
 export type Offer = {
 	Id: string,
@@ -91,10 +93,15 @@ ShopConfig.Gold = table.freeze({
 	table.freeze({ Id = "gold_80k", ProductId = 0, RobuxPrice = 500, Label = "Dragon's Hoard", Tag = "BEST VALUE", Grant = { Kind = "Gold", Amount = 80000 } }),
 } :: { Offer })
 
+-- Premium Battle Pass (GDD §4.9). One purchase per season; the Battle Pass window sells it.
+ShopConfig.Pass = table.freeze({
+	table.freeze({ Id = "pass_premium", ProductId = 0, RobuxPrice = 399, Label = "Premium Pass", Grant = { Kind = "BattlePass", Amount = 1 } }),
+} :: { Offer })
+
 -- Every offer, by ProductId (live products only) and by Id.
 local byProduct: { [number]: Offer } = {}
 local byId: { [string]: Offer } = {}
-for _, list in { ShopConfig.Featured.Offers, ShopConfig.Mirror.Offers, ShopConfig.Anvil.Offers, ShopConfig.Gems, ShopConfig.Gold } do
+for _, list in { ShopConfig.Featured.Offers, ShopConfig.Mirror.Offers, ShopConfig.Anvil.Offers, ShopConfig.Gems, ShopConfig.Gold, ShopConfig.Pass } do
 	for _, offer in list :: { Offer } do
 		byId[offer.Id] = offer
 		if offer.ProductId ~= 0 then

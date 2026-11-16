@@ -337,6 +337,7 @@ local function payout()
 		if killed and reward.Qualified then raid.Kills += 1 end
 		profile.Currencies.Gems += gems
 		profile.Currencies.Gold += reward.Gold
+		if reward.Qualified and dm.AddPassXp then dm.AddPassXp(player, "Raid") end -- Battle Pass XP (GDD §4.9)
 		dm.SyncProfile(player)
 		if dm.SaveProfile then task.spawn(dm.SaveProfile, player) end
 		ResultRemote:FireClient(player, {

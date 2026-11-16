@@ -10,10 +10,12 @@ local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
 local RewardRules = require(ReplicatedStorage.Shared.Util.RewardRules)
 local SettingsConfig = require(ReplicatedStorage.Shared.Config.SettingsConfig)
 local NotorietyRules = require(ReplicatedStorage.Shared.Util.NotorietyRules)
+local PotionRules = require(ReplicatedStorage.Shared.Util.PotionRules)
+local BattlePassRules = require(ReplicatedStorage.Shared.Util.BattlePassRules)
 
 local ProfileMigrations = {}
 
-ProfileMigrations.CurrentSchema = 10
+ProfileMigrations.CurrentSchema = 11
 
 -- Rarity a template had when these old saves were written, where it differs from today's catalog.
 -- Han was the Common starter before he became Mythical; Valeria was Superior before moving to Exalted.
@@ -156,6 +158,15 @@ function ProfileMigrations.ToV10(profile: any)
 	profile.SchemaVersion = 10
 end
 
+-- v11: Battle Pass and potions (GDD §4.9). Older saves start the current season at level 0 with no
+-- potions and no running boosts.
+function ProfileMigrations.ToV11(profile: any)
+	if (profile.SchemaVersion or 1) >= 11 then return end
+	PotionRules.EnsureState(profile)
+	BattlePassRules.EnsureState(profile, os.time())
+	profile.SchemaVersion = 11
+end
+
 -- Hero template ids that were renamed: old id -> new id. Saved heroes keep their template id, so
 -- every load moves them to the new one (cheap and idempotent, so it isn't tied to a schema
 -- version). Rourke became Rook.
@@ -186,6 +197,7 @@ function ProfileMigrations.Run(profile: any)
 	ProfileMigrations.ToV8(profile)
 	ProfileMigrations.ToV9(profile)
 	ProfileMigrations.ToV10(profile)
+	ProfileMigrations.ToV11(profile)
 	profile.Settings = SettingsConfig.Sanitize(profile.Settings)
 end
 

@@ -71,7 +71,7 @@ test("notoriety: a broken save is repaired, and v10 adds zeros to old profiles",
 	local repaired = Rules.Ensure({ Thefts = -3, BountiesClaimed = 0 / 0, Escapes = "x", ByVictim = { ["7"] = 2, [5] = 1 }, Week = 4 })
 	assert(repaired.Thefts == 0 and repaired.BountiesClaimed == 0 and repaired.Escapes == 0)
 	assert(repaired.ByVictim["7"] == 2 and repaired.Week == "")
-	assert(Migrations.CurrentSchema == 10)
+	assert(Migrations.CurrentSchema == 11)
 	local old: any = { SchemaVersion = 9, Heroes = {}, Settings = {} }
 	Migrations.ToV10(old)
 	assert(old.SchemaVersion == 10 and old.Notoriety.Thefts == 0 and old.Notoriety.WeekHunts == 0)

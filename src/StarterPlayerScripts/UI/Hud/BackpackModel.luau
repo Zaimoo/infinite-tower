@@ -6,13 +6,19 @@ local HeroCatalog = require(Config:WaitForChild("HeroCatalog"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local ArtifactCatalog = require(Config:WaitForChild("ArtifactCatalog"))
 local InventoryCapacity = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("InventoryCapacity"))
+local PotionConfig = require(Config:WaitForChild("PotionConfig"))
+local PotionRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("PotionRules"))
 
-export type Tab = "Artifacts" | "Heroes" | "Materials"
+export type Tab = "Artifacts" | "Heroes" | "Materials" | "Potions"
 export type Row = {
 	Id: string, Name: string, Summary: string, Description: string, Status: string?,
 	Icon: string, Color: Color3, Rarity: number, Stars: number, TemplateId: string?, Archetype: string?,
 	ArtifactTemplateId: string?, AssignedArtifact: string?,
+	PotionId: string?, PotionEffect: string?, Owned: number?, -- Potions tab (GDD §4.9)
+	Badge: string?, -- the short line under a grid slot: stars, level or a stack count
+	Marked: boolean?, -- in use: an equipped artifact, a squad hero, a running boost
 }
+export type Sort = "Rarity" | "Stars" | "Name"
 
 local GOLD = Color3.fromRGB(250, 211, 125)
 local MATERIALS: { [string]: { Name: string, Description: string, Icon: string } } = {
@@ -45,6 +51,7 @@ local function assignment(tag: string?): string
 end
 
 local Model = {}
+Model.Sorts = { "Rarity", "Stars", "Name" } :: { Sort }
 
 -- How many heroes and artifacts the player holds against the inventory caps (50 each, raised by the
 -- Storage branch of the Fortress Tree). Heroes working in a facility are not in the backpack and don't
@@ -63,7 +70,21 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 	local rows: { Row } = {}
 	local heroes = profile.Heroes or {}
 	local artifacts = profile.Artifacts or {}
-	if tab == "Materials" then
+	if tab == "Potions" then
+		-- Owned potions, plus any whose boost is running (so its timer stays visible at zero owned).
+		for index, id in PotionConfig.Order do
+			local potion = PotionConfig.Potions[id]
+			local owned = PotionRules.Owned(profile, id)
+			if owned <= 0 and PotionRules.Remaining(profile, potion.Effect) <= 0 then continue end
+			table.insert(rows, {
+				Id = id, Name = potion.Name,
+				Summary = ("%d owned  ·  %s  ·  %d min"):format(owned, potion.Summary, potion.Minutes),
+				Description = potion.Description .. " Boost time only counts down while you are in the game.",
+				Icon = potion.Icon, Color = potion.Tint, Rarity = #PotionConfig.Order - index, Stars = 0,
+				PotionId = id, PotionEffect = potion.Effect, Owned = owned, Badge = "×" .. owned,
+			})
+		end
+	elseif tab == "Materials" then
 		local materials = table.clone(profile.PitMaterials or {})
 		materials.PromotionStone = number(materials.PromotionStone, 0)
 		for id, amount in materials do
@@ -75,7 +96,7 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 				Summary = ("%d owned"):format(count),
 				Description = if pit then pit.Description else "Stored in your materials.",
 				Icon = if pit then pit.Icon else "Gems",
-				Color = GOLD, Rarity = if id == "PromotionStone" then 1 else 0, Stars = 0,
+				Color = GOLD, Rarity = if id == "PromotionStone" then 1 else 0, Stars = 0, Badge = "×" .. count,
 			})
 		end
 	elseif tab == "Artifacts" then
@@ -96,6 +117,7 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 				Description = (seed and seed.Description) or "An artifact in your collection.",
 				Status = if carrier then "Equipped by " .. (carrier.DisplayName or "a hero") else "Unequipped",
 				Icon = "Forge", Color = info.Color, Rarity = rarity, Stars = stars, ArtifactTemplateId = item.TemplateId,
+				Badge = stars .. "★", Marked = carrier ~= nil,
 			})
 		end
 	else
@@ -115,6 +137,8 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 				ArtifactTemplateId = if item then item.TemplateId else nil,
 				Status = assignment(hero.Assignment), Icon = "Squad", Color = GOLD, Rarity = rarity, Stars = stars,
 				TemplateId = if seed then hero.TemplateId else nil, Archetype = role,
+				Badge = if StatFormulas.IsMirror(hero) then stars .. "★" else ("%d★ Lv %d"):format(stars, number(hero.Level, 1)),
+				Marked = string.find(hero.Assignment or "", "^SQUAD_SLOT_") ~= nil,
 			})
 		end
 	end
@@ -125,6 +149,20 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 		return a.Id < b.Id
 	end)
 	return rows
+end
+
+-- A sorted copy for the grid. Rarity is Build's own order; the others fall back to it on ties.
+function Model.Sorted(rows: { Row }, sort: Sort): { Row }
+	local out = table.clone(rows)
+	if sort == "Rarity" then return out end
+	local order: { [Row]: number } = {}
+	for i, row in rows do order[row] = i end
+	table.sort(out, function(a, b)
+		if sort == "Stars" and a.Stars ~= b.Stars then return a.Stars > b.Stars end
+		if sort == "Name" and a.Name ~= b.Name then return a.Name < b.Name end
+		return order[a] < order[b]
+	end)
+	return out
 end
 
 -- Compare only fields that affect the Backpack. Full profile syncs can resend equivalent records,
@@ -151,9 +189,19 @@ end
 function Model.Track(tab: Tab): (any) -> (boolean, { Row }?)
 	local loaded = false
 	local previousHeroes, previousArtifacts, previousMaterials = {}, {}, {}
+	local previousPotions = ""
 	return function(profile: any): (boolean, { Row }?)
 		if not profile then return false, nil end
-		if tab == "Materials" then
+		if tab == "Potions" then
+			-- Counts and which boosts are running; the time left is drawn live by the panel.
+			local parts = {}
+			for _, id in PotionConfig.Order do
+				table.insert(parts, PotionRules.Owned(profile, id) .. (if PotionRules.Remaining(profile, PotionConfig.Potions[id].Effect) > 0 then "+" else ""))
+			end
+			local signature = table.concat(parts, ",")
+			if loaded and signature == previousPotions then return false, nil end
+			previousPotions = signature
+		elseif tab == "Materials" then
 			local materials = profile.PitMaterials or {}
 			if loaded and sameRecords(previousMaterials, materials, nil) then return false, nil end
 			previousMaterials = table.clone(materials)

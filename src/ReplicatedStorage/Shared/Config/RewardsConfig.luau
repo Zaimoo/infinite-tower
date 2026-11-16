@@ -6,7 +6,8 @@
 --
 -- All resets use UTC: days roll over at 00:00 UTC and weeks on Monday 00:00 UTC.
 
-export type Reward = { Gold: number?, Gems: number?, PromotionStones: number? }
+-- `Potions` maps a PotionConfig id to a count (GDD §4.9); every reward source can pay them.
+export type Reward = { Gold: number?, Gems: number?, PromotionStones: number?, Potions: { [string]: number }? }
 export type PlaytimeTier = { Minutes: number, Reward: Reward }
 
 local RewardsConfig = {}

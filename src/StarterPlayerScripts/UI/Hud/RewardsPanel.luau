@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RewardsConfig = require(Shared:WaitForChild("Config"):WaitForChild("RewardsConfig"))
+local PotionConfig = require(Shared:WaitForChild("Config"):WaitForChild("PotionConfig"))
 local RewardRules = require(Shared:WaitForChild("Util"):WaitForChild("RewardRules"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local Components = require(script.Parent:WaitForChild("Components"))
@@ -31,7 +32,13 @@ local CARD = Vector2.new(128, 168)
 local CENTER = Enum.TextXAlignment.Center
 
 local function rewardIcon(reward: RewardsConfig.Reward): string
-	return if reward.Gems then "Gems" elseif reward.Gold then "Gold" else "Spark"
+	if reward.Gems then return "Gems" elseif reward.Gold then return "Gold" end
+	-- A potion-only reward (a promo code, say) shows its flask.
+	for id in reward.Potions or {} do
+		local potion = PotionConfig.Potions[id]
+		if potion then return potion.Icon end
+	end
+	return "Spark"
 end
 
 local function rewardLines(reward: RewardsConfig.Reward): string

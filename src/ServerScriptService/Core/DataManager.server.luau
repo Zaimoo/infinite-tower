@@ -30,6 +30,10 @@ local NotorietyRules = require(Shared:WaitForChild("Util"):WaitForChild("Notorie
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
 local RewardsService = require(script.Parent:WaitForChild("RewardsService"))
+local PotionService = require(script.Parent:WaitForChild("PotionService"))
+local BattlePassService = require(script.Parent:WaitForChild("BattlePassService"))
+local PotionRules = require(Shared:WaitForChild("Util"):WaitForChild("PotionRules"))
+local BattlePassRules = require(Shared:WaitForChild("Util"):WaitForChild("BattlePassRules"))
 local NewsService = require(script.Parent:WaitForChild("NewsService"))
 local NotorietyService = require(script.Parent:WaitForChild("NotorietyService"))
 local RewardRules = require(Shared:WaitForChild("Util"):WaitForChild("RewardRules"))
@@ -277,6 +281,9 @@ export type PlayerProfile = {
 	LastLogoutTimestamp: number?,
 	LastActiveTimestamp: number?,
 	Rewards: RewardRules.State?, -- daily / weekly / playtime claims and redeemed codes (RewardsService)
+	BattlePass: BattlePassRules.State?, -- season, XP, premium and claimed rewards (BattlePassService)
+	Potions: { [string]: number }?, -- potions owned, by PotionConfig id (PotionService)
+	Boosts: { [string]: number }?, -- seconds left on each running potion boost, by effect
 }
 
 --============================================================================
@@ -537,6 +544,9 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		LastLogoutTimestamp = os.time(),
 		LastActiveTimestamp = os.time(),
 		Rewards = RewardRules.NewState(),
+		BattlePass = BattlePassRules.NewState(os.time()), -- schema v11
+		Potions = {},
+		Boosts = {},
 		Notoriety = NotorietyRules.NewState(), -- thefts, bounties claimed, escapes (B6, schema v10)
 	}
 end
@@ -878,7 +888,9 @@ end
 function DataManager.GetSummonLuck(player: Player): number
 	local profile = ActiveProfiles[player]
 	local blessing = profile and profile.Facilities and profile.Facilities.GodsBlessing
-	if not profile or not blessing or blessing.Level <= 0 then return 0 end
+	if not profile then return 0 end
+	-- A Luck Potion (GDD §4.9) works with or without the fountain, and adds on top of its cap.
+	if not blessing or blessing.Level <= 0 then return PotionRules.Bonus(profile, "Luck") end
 	local sumLabor = 0
 	local now = os.time()
 	for _, uuid in ipairs(blessing.AssignedHeroUUIDs) do
@@ -888,7 +900,7 @@ function DataManager.GetSummonLuck(player: Player): number
 		end
 	end
 	local perks = FortressTree.PerkBonuses(profile.FortressTree)
-	return SummonLuck.Luck(blessing.Level, sumLabor, perks.BlessingLuck)
+	return SummonLuck.Luck(blessing.Level, sumLabor, perks.BlessingLuck) + PotionRules.Bonus(profile, "Luck")
 end
 
 -- Rolls one rarity tier on a hero banner. Each tier holds one hero, summoned at its template star.
@@ -1234,7 +1246,8 @@ local pit = PitService.new({
 })
 DataManager.PitService = pit
 function DataManager.GrantCombatXP(player: Player, uuid: string, amount: number): (boolean, any)
-	return pit:GrantCombatXP(player, uuid, amount)
+	-- Hero XP Potion (GDD §4.9). PitService still applies its own per-grant cap.
+	return pit:GrantCombatXP(player, uuid, amount * PotionService.Multiplier(player, "HeroXP"))
 end
 (PitRequestFunc :: RemoteFunction).OnServerInvoke = function(player: Player, command: any, payload: any, targetPlot: any?)
 	if not validateCallerPlotOwnership(player, targetPlot) then
@@ -2162,6 +2175,21 @@ function DataManager.GetFriendBoostMultiplier(player: Player): number
 	return RewardsService.GetFriendBoostMultiplier(player)
 end
 
+-- Multiplier from a running potion boost (GDD §4.9): "Gold", "Gems", "HeroXP" or "PassXP". 1 when off.
+function DataManager.GetPotionMultiplier(player: Player, effect: string): number
+	return PotionService.Multiplier(player, effect)
+end
+
+-- Battle Pass XP for a gameplay action (a key of BattlePassConfig.Xp).
+function DataManager.AddPassXp(player: Player, source: string, count: number?)
+	BattlePassService.AddXp(player, source, count)
+end
+
+-- Unlocks this season's premium Battle Pass row (ShopService, from a granted receipt). Returns the toast line.
+function DataManager.UnlockPremiumPass(player: Player): string
+	return BattlePassService.UnlockPremium(player)
+end
+
 function DataManager.GetTrainingMultiplier(player: Player): number
 	local profile = ActiveProfiles[player]
 	if not profile or not profile.Facilities or not profile.Facilities.TrainingGrounds then return 1.0 end
@@ -2275,6 +2303,25 @@ RewardsService.Init({
 	GetProfile = function(player: Player) return ActiveProfiles[player] end,
 	SendToast = DataManager.SendToast,
 	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
+	-- Claiming free rewards earns Battle Pass XP (codes do not).
+	OnClaim = function(player: Player, action: string)
+		local source = if action == "CLAIM_DAILY" then "DailyClaim" elseif action == "CLAIM_WEEKLY" then "WeeklyClaim"
+			elseif action == "CLAIM_PLAYTIME" then "PlaytimeClaim" else nil
+		if source then BattlePassService.AddXp(player, source) end
+	end,
+})
+
+PotionService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	SendToast = DataManager.SendToast,
+	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
+})
+
+BattlePassService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	SendToast = DataManager.SendToast,
+	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
+	XpMultiplier = function(player: Player) return PotionService.Multiplier(player, "PassXP") end,
 })
 
 NewsService.Init({
@@ -2335,6 +2382,8 @@ local function onPlayerAdded(player: Player)
 	OnboardingService.EnsureState(profile)
 	FortressTreeService.ApplyLevels(profile)
 	RewardsService.EnsureState(profile)
+	PotionService.EnsureState(profile)
+	BattlePassService.EnsureState(profile)
 	ActiveProfiles[player] = profile
 	persistentPlayers[player] = loaded.Persistent or nil
 	releasedPlayers[player] = nil
