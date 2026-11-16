@@ -5,6 +5,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local FacilityConfig = require(ReplicatedStorage.Shared.Config.FacilityConfig)
+local PotionRules = require(ReplicatedStorage.Shared.Util.PotionRules)
 
 local SummonLuck = {}
 
@@ -62,12 +63,14 @@ function SummonLuck.RollAtLeast(rates: { number }, minTier: number, r: number): 
 	return minTier
 end
 
--- The luck a profile's God's Blessing grants right now: level, awake Acolytes' labor and the
--- Saint's Favor perk. Mirrors DataManager.GetSummonLuck so client previews match the server.
+-- The summon luck a profile has right now: God's Blessing (level, awake Acolytes' labor and the
+-- Saint's Favor perk) plus a running Luck Potion, which adds on top of the Blessing's cap
+-- (GDD §4.9). Mirrors DataManager.GetSummonLuck so client previews match the server.
 function SummonLuck.ForProfile(profile: any): number
+	local potion = PotionRules.Bonus(profile, "Luck")
 	local blessing = profile and profile.Facilities and profile.Facilities.GodsBlessing
 	if not blessing or (blessing.Level or 0) <= 0 then
-		return 0
+		return potion
 	end
 	local StatFormulas = require(ReplicatedStorage.Shared.Util.StatFormulas)
 	local FortressTree = require(ReplicatedStorage.Shared.Util.FortressTree)
@@ -79,7 +82,7 @@ function SummonLuck.ForProfile(profile: any): number
 			sumLabor += StatFormulas.GetEffectiveLabor(hero, "FACILITY_GODS_BLESSING")
 		end
 	end
-	return SummonLuck.Luck(blessing.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree).BlessingLuck)
+	return SummonLuck.Luck(blessing.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree).BlessingLuck) + potion
 end
 
 return table.freeze(SummonLuck)

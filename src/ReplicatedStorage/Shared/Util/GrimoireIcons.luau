@@ -36,6 +36,18 @@ export type ShapeSpec = {
 	Rot: number?, Radius: number?, Round: boolean?, Outline: number?, Sheen: boolean?,
 }
 
+-- Potions (GDD §4.9): one corked glass flask, filled with the boost's colour.
+local function flask(hi: Color3, lo: Color3): { ShapeSpec }
+	return {
+		{ X = 32, Y = 8, W = 12, H = 9, Hi = P.LeatherHi, Lo = P.LeatherLo, Radius = 3 },
+		{ X = 32, Y = 20, W = 14, H = 16, Hi = P.PageHi, Lo = P.StoneHi, Radius = 3, Sheen = false },
+		{ X = 32, Y = 14, W = 22, H = 7, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 3 },
+		{ X = 32, Y = 41, W = 42, H = 40, Hi = P.PageHi, Lo = P.StoneHi, Round = true },
+		{ X = 32, Y = 44, W = 32, H = 29, Hi = hi, Lo = lo, Round = true, Outline = 2, Sheen = false },
+		{ X = 24, Y = 37, W = 7, H = 7, Hi = P.White, Lo = P.White, Round = true, Outline = 1.2, Sheen = false },
+	}
+end
+
 -- Each icon is a list of shapes, back to front.
 GrimoireIcons.Drawings = {
 	-- Forge controls use the same top-lit shapes and ink as the other windows.
@@ -408,6 +420,19 @@ GrimoireIcons.Drawings = {
 		{ X = 34, Y = 9, W = 36, H = 7, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2 },
 		{ X = 30, Y = 55, W = 36, H = 7, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2 },
 	},
+	-- Battle Pass: a tilted violet season ticket with a gold band and a star.
+	Pass = {
+		{ X = 32, Y = 32, W = 54, H = 36, Rot = -12, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 7 },
+		{ X = 32, Y = 32, W = 54, H = 9, Rot = -12, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Outline = 2, Sheen = false },
+		{ X = 32, Y = 32, W = 9, H = 30, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 4, Outline = 2 },
+		{ X = 32, Y = 32, W = 30, H = 9, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 4, Outline = 2, Sheen = false },
+		{ X = 32, Y = 32, W = 14, H = 14, Rot = 45, Hi = P.White, Lo = P.GoldHi, Radius = 3, Outline = 1.8 },
+	},
+	PotionGold = flask(P.GoldHi, P.GoldLo),
+	PotionGems = flask(P.CyanHi, P.CyanLo),
+	PotionLuck = flask(P.LeafHi, P.LeafLo),
+	PotionXp = flask(P.VioletHi, P.VioletLo),
+	PotionPass = flask(P.EmberHi, P.EmberLo),
 }
 
 -- Aliases so callers can use game names directly.

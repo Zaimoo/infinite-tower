@@ -13,6 +13,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config.RewardsConfig)
+local PotionConfig = require(ReplicatedStorage.Shared.Config.PotionConfig)
+local PotionRules = require(ReplicatedStorage.Shared.Util.PotionRules)
 
 export type Reward = Config.Reward
 export type State = {
@@ -181,6 +183,25 @@ function RewardRules.Grant(profile: any, reward: Reward)
 		profile.PitMaterials = profile.PitMaterials or {}
 		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + reward.PromotionStones
 	end
+	if reward.Potions then
+		for id, amount in reward.Potions do PotionRules.Add(profile, id, amount) end
+	end
+end
+
+-- Adds several rewards into one (Battle Pass "claim all" and season rollover). Returns a new table.
+function RewardRules.Merge(rewards: { Reward }): Reward
+	local total: Reward = {}
+	for _, reward in rewards do
+		if reward.Gold then total.Gold = (total.Gold or 0) + reward.Gold end
+		if reward.Gems then total.Gems = (total.Gems or 0) + reward.Gems end
+		if reward.PromotionStones then total.PromotionStones = (total.PromotionStones or 0) + reward.PromotionStones end
+		if reward.Potions then
+			local potions = total.Potions or {}
+			total.Potions = potions
+			for id, amount in reward.Potions do potions[id] = (potions[id] or 0) + amount end
+		end
+	end
+	return total
 end
 
 local function grouped(n: number): string
@@ -201,6 +222,15 @@ function RewardRules.Describe(reward: Reward, plus: boolean?): string
 	if reward.Gold then table.insert(parts, string.format("%s%s Gold", sign, grouped(reward.Gold))) end
 	if reward.PromotionStones then
 		table.insert(parts, string.format("%s%d Promotion Stone%s", sign, reward.PromotionStones, if reward.PromotionStones == 1 then "" else "s"))
+	end
+	if reward.Potions then
+		-- PotionConfig.Order keeps the text stable (dictionary order is not).
+		for _, id in PotionConfig.Order do
+			local amount = reward.Potions[id]
+			if amount and amount > 0 then
+				table.insert(parts, string.format("%s%d %s%s", sign, amount, PotionConfig.Potions[id].Name, if amount == 1 then "" else "s"))
+			end
+		end
 	end
 	return table.concat(parts, " · ")
 end
