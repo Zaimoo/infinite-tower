@@ -560,9 +560,6 @@ local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 		end
 	end
 	spawnOrchardLanterns(f, o)
-	for _, side in { -1, 1 } do
-		bench("OrchardBench", o * CFrame.new(side * 16, 0, 0) * CFrame.Angles(0, side * math.pi * 0.5, 0), f)
-	end
 	local anchor = makePart({ Name = "FireflyAnchor", Size = Vector3.new(90, 1, 80), CFrame = o * CFrame.new(0, 3, 0), Transparency = 1, Decorative = true, Parent = f })
 	local flies = Instance.new("ParticleEmitter")
 	flies.Name = "Fireflies"
@@ -578,7 +575,7 @@ local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 end
 
 --============================================================================
--- P. GARDEN PROPS (trees, benches, lamps, flower beds)
+-- P. GARDEN PROPS (trees, lamps, flower beds)
 --============================================================================
 local OAK_LEAVES = { Color3.fromRGB(72, 128, 60), Color3.fromRGB(88, 142, 66), Color3.fromRGB(64, 116, 56) }
 local PINE_NEEDLES = Color3.fromRGB(46, 92, 52)
@@ -680,7 +677,7 @@ local function spawnGardenLanterns(f: Instance, root: CFrame, clearPoints: { { n
 	end
 end
 
--- Lamps down both sides of every path, then trees, flower beds and benches scattered over the open lawn
+-- Lamps down both sides of every path, then trees and flower beds scattered over the open lawn
 -- (kept off the paths, features, landings and the rim).
 local function buildGarden(model: Model, root: CFrame, rng: Random)
 	local f = folder("Garden", model)
@@ -714,8 +711,6 @@ local function buildGarden(model: Model, root: CFrame, rng: Random)
 					pineTree(f, base, rng)
 				elseif roll < 0.82 then
 					flowerBed(f, base, FLOWERS[(placed % #FLOWERS) + 1])
-				elseif roll < 0.92 then
-					bench("GardenBench", CFrame.lookAt(pos, Vector3.new(root.Position.X, pos.Y, root.Position.Z)), f)
 				end
 			end
 		end

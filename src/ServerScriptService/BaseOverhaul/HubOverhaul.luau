@@ -30,7 +30,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 33 -- Bump to force a rebuild of baked geometry (33: stop Path_TrainingArea & scatter tiles clear of Arena_Floor)
+HubOverhaul.Version = 34 -- Bump to force a rebuild of baked geometry (34: remove GardenBench and OrchardBench from Cloister Commons)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
