@@ -69,6 +69,10 @@ local function grant(player: Player, offer: ShopConfig.Offer): string
 		profile.Currencies.Gold += g.Amount
 		dm.SyncProfile(player)
 		return string.format("Purchase complete: +%d Gold!", g.Amount)
+	elseif g.Kind == "BattlePass" then
+		local message = dm.UnlockPremiumPass(player)
+		dm.SyncProfile(player)
+		return message
 	else
 		if AnvilBanner.IsBanner(g.Banner) then
 			local cap = InventoryCapacity.ArtifactCap(profile.FortressTree)
@@ -132,5 +136,7 @@ MarketplaceService.ProcessReceipt = function(receipt: any): Enum.ProductPurchase
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	dm.SendToast(player, result :: string, "SUCCESS")
+	-- Checkpoint the grant now rather than at the next autosave.
+	if dm.SaveProfile then task.spawn(dm.SaveProfile, player) end
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end

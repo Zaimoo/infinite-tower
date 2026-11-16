@@ -3306,14 +3306,18 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
      local masterHere = Tower.GetState(killer).FloorId == mob.FloorId
      local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(killer) or 1.0
      marketMult *= dm.GetFriendBoostMultiplier and dm.GetFriendBoostMultiplier(killer) or 1.0 -- friend boost (GDD §4.8)
+     marketMult *= dm.GetPotionMultiplier and dm.GetPotionMultiplier(killer, "Gold") or 1.0 -- Gold Potion (GDD §4.9)
      local profile = dm.GetProfile(killer)
      if profile then
       local reward = TowerRewards.GetKillRewards(mob.FloorId, mob.Role)
       local eventMods = (mob :: any).EventMods -- stamped at spawn by a timed tower event (Phase G)
       local killGold = math.round(reward.Gold * marketMult * AffixRules.GoldMultiplierFor(mob) * (eventMods and eventMods.GoldMult or 1))
+      local killGems = math.round(reward.Gems * (dm.GetPotionMultiplier and dm.GetPotionMultiplier(killer, "Gems") or 1.0)) -- Gem Potion
       profile.Currencies.Gold += killGold
-      profile.Currencies.Gems += reward.Gems
-      TowerRuns.AddEarnings(killer, killGold, reward.Gems, if masterHere then 1 else 0)
+      profile.Currencies.Gems += killGems
+      TowerRuns.AddEarnings(killer, killGold, killGems, if masterHere then 1 else 0)
+      -- Battle Pass XP by enemy role (GDD §4.9); it travels with the SyncLight below.
+      if dm.AddPassXp then dm.AddPassXp(killer, if mob.Role == "ALPHA" then "KillAlpha" elseif mob.Role == "ELITE" then "KillElite" else "KillRegular") end
       local stones = TowerRewards.RollPromotionStones(mob.FloorId, mob.Role, math.random(), math.random())
       if stones > 0 then
        profile.PitMaterials = profile.PitMaterials or {}
@@ -3363,6 +3367,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       if TowerProgress.CheckParticipation(damage, mob.MaxHP, p == killer) then
        local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(p) or 1.0
        marketMult *= dm.GetFriendBoostMultiplier and dm.GetFriendBoostMultiplier(p) or 1.0 -- friend boost (GDD §4.8)
+       marketMult *= dm.GetPotionMultiplier and dm.GetPotionMultiplier(p, "Gold") or 1.0 -- Gold Potion (GDD §4.9)
        local profile = dm.GetProfile(p)
        local reward = TowerRewards.GetKillRewards(mob.FloorId, "BOSS")
        -- Phase 6 M4: the first clear of a floor is the big payout (Gold x3, gems that grow with depth, a guaranteed relic);
@@ -3374,6 +3379,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        local bossGold = math.round(reward.Gold * marketMult * (if firstClear then 3 else 1) * (bossEventMods and bossEventMods.GoldMult or 1))
        -- Kill gems: Biome Bosses pay the BOSS rate, other floor bosses the ALPHA rate, plus first-clear bonuses.
        local bossGems = TowerRewards.GetKillRewards(mob.FloorId, if bossTier > 0 then "BOSS" else "ALPHA").Gems
+       -- Gem Potion: the kill rate only; the first-clear bonuses below are fixed.
+       bossGems = math.round(bossGems * (dm.GetPotionMultiplier and dm.GetPotionMultiplier(p, "Gems") or 1.0))
        if firstClear then bossGems += 10 + 2 * mob.FloorId end
        if firstBiomeClear then bossGems += 300 * bossTier end
        local stoneRole = if bossTier > 0 then "BOSS" else "ALPHA"
@@ -3390,6 +3397,10 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, mob.FloorId)
         profile.MaxFloorReached = math.max(profile.MaxFloorReached or 0, mob.FloorId + 1)
         if dm.ReportProgress then dm.ReportProgress(p, "FloorCleared", mob.FloorId) end
+        if dm.AddPassXp then
+         dm.AddPassXp(p, if bossTier > 0 then "BiomeBoss" else "FloorBoss")
+         if firstClear then dm.AddPassXp(p, "FirstClear") end
+        end
         dm.SyncProfile(p)
         TowerRuns.AddEarnings(p, bossGold, bossGems, 0)
         TowerRuns.RecordFloorClear(p, mob.FloorId, firstClear)

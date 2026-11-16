@@ -24,6 +24,7 @@ export type Dependencies = {
 	GetProfile: (Player) -> any,
 	SendToast: (Player, string, string?) -> (),
 	SyncProfile: (Player) -> (), -- progression-only sync: balances changed, the squad did not
+	OnClaim: ((Player, string) -> ())?, -- after a paid claim, with its action (Battle Pass XP)
 }
 
 local RewardsService = {}
@@ -197,6 +198,7 @@ local function handle(player: Player, action: any, arg: any): any
 	RewardRules.Grant(profile, reward)
 	local text = RewardRules.Describe(reward)
 	d.SendToast(player, title .. "|" .. text, "SUCCESS")
+	if d.OnClaim then d.OnClaim(player, action) end
 	d.SyncProfile(player)
 	return reply(player, profile, true, text)
 end

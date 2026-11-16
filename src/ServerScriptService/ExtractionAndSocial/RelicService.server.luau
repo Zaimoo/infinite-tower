@@ -408,10 +408,13 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 	local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
 	-- Friend boost (GDD §4.8): more Gold while Roblox friends are in this server.
 	marketMult *= dm.GetFriendBoostMultiplier and dm.GetFriendBoostMultiplier(player) or 1.0
+	-- Potions (GDD §4.9): a Gold Potion multiplies the same Gold; a Gem Potion the relic's Gems.
+	marketMult *= dm.GetPotionMultiplier and dm.GetPotionMultiplier(player, "Gold") or 1.0
+	local gemPotion = dm.GetPotionMultiplier and dm.GetPotionMultiplier(player, "Gems") or 1.0
 	-- Gold and Gems both scale with the floor the relic dropped on (separate slopes, TowerFloorConfig).
 	-- Phase 6 M5: a relic banked during a climb streak pays more, Gold and gems alike.
 	local streakMult = TowerRuns.RelicMultiplier(player)
-	local gems, streakGems = TowerRun.RelicCredit(spec.Payout.Gems * scalar * (gemMultiplier or 1), streakMult)
+	local gems, streakGems = TowerRun.RelicCredit(spec.Payout.Gems * scalar * (gemMultiplier or 1) * gemPotion, streakMult)
 	local gold, streakGold = TowerRun.RelicCredit(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1), streakMult)
 	local stones = spec.Payout.PromotionStones or 0
 
@@ -422,6 +425,7 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
 	end
 	TowerRuns.AddRelicPayout(player, gold, gems)
+	if dm.AddPassXp and (gold > 0 or gems > 0 or stones > 0) then dm.AddPassXp(player, "RelicBanked") end
 	if dm.ReportProgress and (gold > 0 or gems > 0 or stones > 0) then dm.ReportProgress(player, "RelicBanked", if stolen then "Stolen" else nil) end
 
 	-- Apex Cores / Calamity Heart: a small chance of a free Exalted Archon
