@@ -6,7 +6,8 @@
 --
 -- Remote (ReplicatedStorage.Remotes.BattlePassRemotes):
 --   BattlePassRequest (RemoteFunction): action "CLAIM" (track "Free" | "Premium", level) or
---       "CLAIM_ALL". Returns { Ok, Message }. The state itself reaches the client in the profile
+--       "CLAIM_ALL"; "QUEST_CLAIM" (quest id) or "QUEST_CLAIM_ALL" for quest XP. Returns
+--       { Ok, Message }. The state itself reaches the client in the profile
 --       sync (profile.BattlePass).
 -- Premium is unlocked only by ShopService, from a granted Robux receipt (UnlockPremium). In Studio
 -- the action "DEV_UNLOCK" does the same so the premium row can be play-tested without a product.
@@ -65,14 +66,41 @@ local function rollover(player: Player, profile: any, state: BattlePassRules.Sta
 	end
 end
 
+-- Quest XP with the Pass XP Potion applied.
+local function boosted(player: Player, xp: number): number
+	local d = deps
+	return math.round(xp * (if d then d.XpMultiplier(player) else 1))
+end
+
 local function current(player: Player): (any, BattlePassRules.State?)
 	local d = deps
 	local profile = d and d.GetProfile(player)
 	if not profile then return nil, nil end
 	local now = os.time()
 	local state = BattlePassRules.EnsureState(profile, now)
+	-- Quests reset before the season does: XP from finished quests of the day or week that just
+	-- ended lands in the season it was earned in.
+	local questsReset, owedXp = BattlePassRules.QuestReset(state, now)
+	if owedXp > 0 then
+		local xp = boosted(player, owedXp)
+		BattlePassRules.AddXp(state, xp)
+		if d then d.SendToast(player, string.format("Quests reset|+%d Battle Pass XP from finished quests", xp), "SUCCESS") end
+	end
 	rollover(player, profile, state, now)
+	if questsReset and d then d.SyncProfile(player) end
 	return profile, state
+end
+
+-- Counts an action towards the quests that track `metric`. Returns true when one finished.
+local function recordQuests(player: Player, state: BattlePassRules.State, metric: string, count: number): boolean
+	local finished = BattlePassRules.QuestRecord(state, metric, count)
+	local d = deps
+	if d then
+		for _, quest in finished do
+			d.SendToast(player, string.format("Quest complete|%s · +%d XP to claim", quest.Text, quest.Xp), "SUCCESS")
+		end
+	end
+	return #finished > 0
 end
 
 -- Old saves gain profile.BattlePass here too (ProfileMigrations v11 also adds it).
@@ -88,13 +116,28 @@ function BattlePassService.AddXp(player: Player, source: string, count: number?)
 	if not base or not d then return end
 	local profile, state = current(player)
 	if not profile or not state then return end
-	local amount = math.round(base * math.max(1, count or 1) * d.XpMultiplier(player))
+	local times = math.max(1, count or 1)
+	local amount = math.round(base * times * d.XpMultiplier(player))
 	local gained = BattlePassRules.AddXp(state, amount)
+	local questDone = false
+	for _, metric in Config.QuestMetrics[source] or {} do
+		if recordQuests(player, state, metric, times) then questDone = true end
+	end
 	if gained > 0 then
 		local level = BattlePassRules.LevelOf(state.Xp)
 		d.SendToast(player, string.format("Battle Pass|Level %d reached · reward ready", level), "SUCCESS")
-		d.SyncProfile(player)
 	end
+	if gained > 0 or questDone then d.SyncProfile(player) end
+end
+
+-- Quest progress for an action that pays no XP of its own: "Heroes" and "Artifacts" (summons).
+-- The caller syncs the profile; a finished quest syncs here.
+function BattlePassService.Progress(player: Player, metric: string, count: number?)
+	local d = deps
+	if not d then return end
+	local _, state = current(player)
+	if not state then return end
+	if recordQuests(player, state, metric, math.max(1, count or 1)) then d.SyncProfile(player) end
 end
 
 -- Unlocks the premium row for the current season (ShopService, after a granted receipt). Returns
@@ -126,6 +169,25 @@ local function handle(player: Player, action: any, track: any, level: any): any
 		local rewards = BattlePassRules.ClaimAll(state)
 		if #rewards == 0 then return { Ok = false, Message = "Nothing to claim yet." } end
 		reward = RewardRules.Merge(rewards)
+	elseif action == "QUEST_CLAIM" or action == "QUEST_CLAIM_ALL" then
+		-- The quest id travels in the `track` argument. The claim is recorded and the XP added
+		-- in the same step, so a repeated request can never pay twice.
+		local xp: number
+		if action == "QUEST_CLAIM" then
+			local claimed, problem = BattlePassRules.QuestClaim(state, track)
+			if not claimed then return { Ok = false, Message = problem or "Not available." } end
+			xp = claimed
+		else
+			xp = BattlePassRules.QuestClaimAll(state)
+			if xp == 0 then return { Ok = false, Message = "No quests to claim yet." } end
+		end
+		xp = boosted(player, xp)
+		local gained = BattlePassRules.AddXp(state, xp)
+		local text = string.format("+%d Battle Pass XP", xp)
+		if gained > 0 then text ..= string.format(" · Level %d reached", BattlePassRules.LevelOf(state.Xp)) end
+		d.SendToast(player, "Quest|" .. text, "SUCCESS")
+		d.SyncProfile(player)
+		return { Ok = true, Message = text }
 	elseif action == "DEV_UNLOCK" and RunService:IsStudio() then
 		local message = BattlePassService.UnlockPremium(player)
 		d.SyncProfile(player)

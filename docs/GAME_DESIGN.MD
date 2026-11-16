@@ -920,9 +920,22 @@ Opened from the **Pass** button on the Right Rail, which shows a badge with the 
   | Raid (qualified) | 200 |
   | Daily / weekly / playtime reward claimed | 150 / 500 / 30 |
 
+- **Quests** (`BattlePassConfig.DailyQuests` / `WeeklyQuests`): simple goals on the window's **Quests** tab that pay Battle Pass XP. Every player has the same list. Daily quests reset at 00:00 UTC and weekly quests on Monday 00:00 UTC. A finished quest is claimed from its row or with **CLAIM ALL**; a finished quest left unclaimed is paid automatically when its day or week ends. Quest XP is multiplied by the Pass XP Potion at the moment it is paid. All quests together pay 4,200 XP a week from dailies and 3,600 from weeklies.
+
+  | Daily quest | XP | Weekly quest | XP |
+  | --- | --- | --- | --- |
+  | Clear 3 tower floors | 150 | Clear 25 tower floors | 600 |
+  | Summon a hero | 100 | Summon 10 heroes | 600 |
+  | Summon an artifact at the Forge | 100 | Summon 10 artifacts at the Forge | 600 |
+  | Defeat 50 enemies | 150 | Defeat 500 enemies | 600 |
+  | Bank 2 relics | 100 | Bank 15 relics | 600 |
+  | | | Defeat 2 Biome Bosses | 600 |
+
+  A floor counts as cleared when its boss falls. Progress is counted on the server, from the same hooks that pay XP (`BattlePassConfig.QuestMetrics`) plus the hero and artifact summon handlers (`BattlePassService.Progress`).
+- **Window:** two tabs, **Rewards** and **Quests**, each showing its count of ready claims. On Rewards the premium row is gold (gilt cards over a gold wash, bright gold when a reward is ready), and a fixed **Final Reward** column on the right previews the level 30 reward of each row; tapping it scrolls the track to the end. The Pass button's badge counts ready rewards plus finished quests.
 - **Purchase flow:** the window opens Roblox's checkout; `ShopService.ProcessReceipt` grants it through the same idempotent receipt claim as every Store product, then saves the profile. A second Premium receipt in one season (a retry that slipped past, or a gift) is paid as 10 levels of XP rather than nothing. While `ProductId` is 0 the button shows COMING SOON; in Studio it unlocks the row directly (`DEV_UNLOCK`, refused outside Studio) for play-testing.
-- **Remote:** `Remotes.BattlePassRemotes.BattlePassRequest` (`CLAIM` + track + level, `CLAIM_ALL`; 4 requests per second) returns `{ Ok, Message }`. The state reaches the client in the profile sync.
-- **Save data:** `profile.BattlePass = { Season, Xp, Premium, Free, Paid }` (schema v11, §8.3). `Free` and `Paid` are bitmasks of claimed levels, so the state stays small: XP changes on every kill and profile sync resends a changed key whole.
+- **Remote:** `Remotes.BattlePassRemotes.BattlePassRequest` (`CLAIM` + track + level, `CLAIM_ALL`, `QUEST_CLAIM` + quest id, `QUEST_CLAIM_ALL`; 4 requests per second) returns `{ Ok, Message }`. The state reaches the client in the profile sync.
+- **Save data:** `profile.BattlePass = { Season, Xp, Premium, Free, Paid, Quests }` (schema v11, §8.3). `Quests = { Day, Week, Progress, Claimed }` holds the UTC day and week the progress belongs to; `BattlePassRules.EnsureState` adds or repairs it on every load, so it needs no schema step of its own. `Free` and `Paid` are bitmasks of claimed levels, so the state stays small: XP changes on every kill and profile sync resends a changed key whole.
 
 **Potions**
 

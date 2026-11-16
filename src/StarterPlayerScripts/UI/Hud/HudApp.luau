@@ -597,7 +597,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 
 	local openSquad = function() call("OpenMasterModal", "SQUAD") end
 	local passState = BattlePassRules.Read(profile)
-	local passClaimable = if passState then BattlePassRules.ClaimableCount(passState) else 0
+	local passClaimable = if passState then BattlePassRules.ClaimableCount(passState) + BattlePassRules.QuestClaimableCount(passState) else 0
 	-- Left Rail: the Master's own things (squad, bag, collection, fortress).
 	local leftButtons = {
 		{

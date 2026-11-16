@@ -250,4 +250,82 @@ test("battle pass: schema v11 gives old saves a pass and potion tables", functio
 	assert(current.BattlePass.Xp == 4200 and current.Potions.GoldPotion == 2 and current.Boosts.Gold == 90, "a current save is untouched")
 end)
 
+test("quests: progress counts towards daily and weekly quests and stops at the goal", function()
+	local now = PassConfig.Epoch + 3 * 86400 + 500
+	local state = Pass.NewState(now)
+	assert(state.Quests.Day == Pass.DayOf(now) and state.Quests.Week == 0, "a new state starts in the current day and week")
+	local byId: { [string]: any } = {}
+	for _, list in { PassConfig.DailyQuests, PassConfig.WeeklyQuests } do
+		for _, quest in list do byId[quest.Id] = quest end
+	end
+	local finished = Pass.QuestRecord(state, "Floors", 2)
+	assert(#finished == 0 and Pass.QuestStatus(state, byId.d_floor) == 2, "two floors of three")
+	finished = Pass.QuestRecord(state, "Floors", 5)
+	assert(#finished == 1 and finished[1].Id == "d_floor", "the daily finished, the weekly did not")
+	local count, status = Pass.QuestStatus(state, byId.d_floor)
+	assert(count == byId.d_floor.Goal and status == "Claim", "progress stops at the goal")
+	assert(select(1, Pass.QuestStatus(state, byId.w_floor)) == 7, "the weekly quest counted every floor")
+	assert(#Pass.QuestRecord(state, "Nothing", 5) == 0 and #Pass.QuestRecord(state, "Floors", -3) == 0, "unknown metrics and bad amounts do nothing")
+	assert(Pass.QuestClaimableCount(state) == 1, "one quest is ready")
+end)
+
+test("quests: a finished quest pays its XP once", function()
+	local state = Pass.NewState(PassConfig.Epoch)
+	local xp, problem = Pass.QuestClaim(state, "d_hero")
+	assert(xp == nil and problem ~= nil, "an unfinished quest cannot be claimed")
+	Pass.QuestRecord(state, "Heroes", 1)
+	xp = Pass.QuestClaim(state, "d_hero")
+	assert(xp == 100, "the daily hero quest pays 100 XP")
+	assert(Pass.QuestClaim(state, "d_hero") == nil, "never twice")
+	assert(Pass.QuestClaim(state, "nope") == nil and Pass.QuestClaim(state, 7) == nil, "unknown ids are refused")
+	Pass.QuestRecord(state, "Artifacts", 10)
+	assert(Pass.QuestClaimAll(state) == 100 + 600, "claim all pays the daily and weekly artifact quests")
+	assert(Pass.QuestClaimAll(state) == 0 and Pass.QuestClaimableCount(state) == 0, "nothing left")
+end)
+
+test("quests: a new day clears dailies, a new week clears weeklies, and finished quests are owed", function()
+	local monday = PassConfig.Epoch
+	local state = Pass.NewState(monday)
+	Pass.QuestRecord(state, "Heroes", 10) -- finishes d_hero and w_hero
+	Pass.QuestRecord(state, "Kills", 20)
+	local changed, owed = Pass.QuestReset(state, monday + 3600)
+	assert(changed == false and owed == 0, "the same day resets nothing")
+	changed, owed = Pass.QuestReset(state, monday + 86400)
+	assert(changed and owed == 100, "the unclaimed daily is owed at the day's end")
+	assert(state.Quests.Progress.d_hero == nil and state.Quests.Progress.d_kills == nil, "daily progress is cleared")
+	assert(state.Quests.Progress.w_hero == 10 and state.Quests.Progress.w_kills == 20, "weekly progress stays")
+	assert(Pass.QuestClaim(state, "w_hero") == 600, "the weekly is claimed by hand")
+	changed, owed = Pass.QuestReset(state, monday + 7 * 86400)
+	assert(changed and owed == 0 and next(state.Quests.Progress) == nil and next(state.Quests.Claimed) == nil, "a claimed weekly is not owed again")
+	changed = Pass.QuestReset(state, monday)
+	assert(changed == false and state.Quests.Week == 1, "a clock that went backwards resets nothing")
+	assert(Pass.WeekEndsAt(0) == monday + 7 * 86400 and Pass.DayEndsAt(Pass.DayOf(monday)) == monday + 86400, "reset times")
+end)
+
+test("quests: old and damaged saves are repaired", function()
+	local now = PassConfig.Epoch + 100
+	local old: any = { BattlePass = { Season = 1, Xp = 500, Premium = false, Free = 0, Paid = 0 } }
+	local state = Pass.EnsureState(old, now)
+	assert(type(state.Quests) == "table" and next(state.Quests.Progress) == nil, "a save without quests gains them")
+	local bad: any = { BattlePass = { Season = 1, Xp = 0, Premium = false, Free = 0, Paid = 0,
+		Quests = { Day = "x", Week = 0 / 0, Progress = { d_kills = 9999, w_hero = -4, junk = 3 }, Claimed = { d_kills = true, d_floor = true, junk = true } } } }
+	state = Pass.EnsureState(bad, now)
+	assert(state.Quests.Day == Pass.DayOf(now) and state.Quests.Week == 0, "bad clocks become now")
+	assert(state.Quests.Progress.d_kills == 50 and state.Quests.Progress.w_hero == nil and state.Quests.Progress.junk == nil, "progress is clamped to known quests")
+	assert(state.Quests.Claimed.d_kills == true and state.Quests.Claimed.d_floor == nil and state.Quests.Claimed.junk == nil, "a claim needs a finished quest")
+	local client: any = { Season = 1, Xp = 0, Premium = false, Free = 0, Paid = 0 }
+	assert(select(2, Pass.QuestStatus(client, PassConfig.DailyQuests[1])) == "Progress" and Pass.QuestClaimableCount(client) == 0, "reads survive a missing quest table")
+end)
+
+test("quests: every quest metric has a source", function()
+	local fed: { [string]: boolean } = { Heroes = true, Artifacts = true } -- reported by the summon handlers
+	for source, metrics in PassConfig.QuestMetrics do
+		assert(PassConfig.Xp[source] ~= nil, source .. " is an XP source")
+		for _, metric in metrics do fed[metric] = true end
+	end
+	for _, list in { PassConfig.DailyQuests, PassConfig.WeeklyQuests } do
+		for _, quest in list do assert(fed[quest.Metric], quest.Id .. " counts something the server reports") end
+	end
+end)
+
 print(string.format("battlepass.spec: %d passed", passed))

@@ -41,6 +41,39 @@ BattlePassConfig.Xp = table.freeze({
 	PlaytimeClaim = 30,
 } :: { [string]: number })
 
+-- Quests (GDD §4.9): small goals that pay Battle Pass XP when claimed. Every player has the same
+-- list. Daily quests reset at 00:00 UTC, weekly quests on Monday 00:00 UTC. `Metric` is what the
+-- quest counts; QuestMetrics maps the XP sources above to metrics, and the server reports
+-- "Heroes" and "Artifacts" from the two summon handlers.
+export type Quest = { Id: string, Metric: string, Goal: number, Xp: number, Text: string, Icon: string }
+
+BattlePassConfig.DailyQuests = table.freeze({
+	{ Id = "d_floor", Metric = "Floors", Goal = 3, Xp = 150, Text = "Clear 3 tower floors", Icon = "Tower" },
+	{ Id = "d_hero", Metric = "Heroes", Goal = 1, Xp = 100, Text = "Summon a hero", Icon = "Summon" },
+	{ Id = "d_artifact", Metric = "Artifacts", Goal = 1, Xp = 100, Text = "Summon an artifact at the Forge", Icon = "Forge" },
+	{ Id = "d_kills", Metric = "Kills", Goal = 50, Xp = 150, Text = "Defeat 50 enemies", Icon = "Power" },
+	{ Id = "d_relic", Metric = "Relics", Goal = 2, Xp = 100, Text = "Bank 2 relics", Icon = "Gems" },
+} :: { Quest })
+
+BattlePassConfig.WeeklyQuests = table.freeze({
+	{ Id = "w_floor", Metric = "Floors", Goal = 25, Xp = 600, Text = "Clear 25 tower floors", Icon = "Tower" },
+	{ Id = "w_hero", Metric = "Heroes", Goal = 10, Xp = 600, Text = "Summon 10 heroes", Icon = "Summon" },
+	{ Id = "w_artifact", Metric = "Artifacts", Goal = 10, Xp = 600, Text = "Summon 10 artifacts at the Forge", Icon = "Forge" },
+	{ Id = "w_kills", Metric = "Kills", Goal = 500, Xp = 600, Text = "Defeat 500 enemies", Icon = "Power" },
+	{ Id = "w_boss", Metric = "BiomeBosses", Goal = 2, Xp = 600, Text = "Defeat 2 Biome Bosses", Icon = "EventAlphaHunt" },
+	{ Id = "w_relic", Metric = "Relics", Goal = 15, Xp = 600, Text = "Bank 15 relics", Icon = "Gems" },
+} :: { Quest })
+
+-- Quest metrics each XP source counts towards (one per action).
+BattlePassConfig.QuestMetrics = table.freeze({
+	KillRegular = { "Kills" },
+	KillElite = { "Kills" },
+	KillAlpha = { "Kills" },
+	FloorBoss = { "Floors" }, -- a floor is cleared when its boss falls
+	BiomeBoss = { "Floors", "BiomeBosses" },
+	RelicBanked = { "Relics" },
+} :: { [string]: { string } })
+
 -- A second Premium purchase in the same season (it can only come from a retried or gifted receipt;
 -- the window hides the button) is paid as this many levels of XP instead.
 BattlePassConfig.DuplicatePremiumLevels = 10
@@ -113,6 +146,15 @@ BattlePassConfig.Premium = table.freeze({
 
 assert(#BattlePassConfig.Free == BattlePassConfig.MaxLevel, "BattlePassConfig: the free row needs one reward per level")
 assert(#BattlePassConfig.Premium == BattlePassConfig.MaxLevel, "BattlePassConfig: the premium row needs one reward per level")
+do
+	local seen: { [string]: boolean } = {}
+	for _, list in { BattlePassConfig.DailyQuests, BattlePassConfig.WeeklyQuests } do
+		for _, quest in list do
+			assert(not seen[quest.Id] and quest.Goal >= 1 and quest.Xp > 0, "BattlePassConfig: bad quest " .. quest.Id)
+			seen[quest.Id] = true
+		end
+	end
+end
 assert(BattlePassConfig.Epoch % 86400 == 0, "BattlePassConfig: seasons start at 00:00 UTC")
 
 return BattlePassConfig

@@ -1098,6 +1098,7 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	local summonedList, bestTier, luck, banner, bannerKey, isLimited = DataManager.RollSummons(player, bannerId, count)
 
 	local pityRemaining = math.max(1, banner.MaxPity - (profile[bannerKey] or 0))
+	BattlePassService.Progress(player, "Heroes", #summonedList) -- quests (GDD §4.9)
 	DataManager.SyncProfile(player)
 	OnboardingService.Report(player, "HeroSummoned")
 	if isLimited then OnboardingService.Report(player, "LimitedSummoned") end
@@ -1601,6 +1602,7 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 		table.insert(summonedList, artifact)
 	end
 
+	BattlePassService.Progress(player, "Artifacts", #summonedList) -- quests (GDD §4.9)
 	DataManager.SyncProfile(player)
 	OnboardingService.Report(player, "ArtifactSummoned")
 	-- An Exalted or rarer weapon is server news (B3).
