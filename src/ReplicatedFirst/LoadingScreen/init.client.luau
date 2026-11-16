@@ -4,12 +4,15 @@
 -- preloads the critical assets in PreloadManifest, then executes the diagonal curtain wipe-across
 -- reveal and sets the LocalPlayer attribute "ClientLoaded" so popups (OfflineRewardModal,
 -- OnboardingGuide) wait for it.
--- A slow asset never blocks: Skip appears after SKIP_AFTER seconds and the screen always closes
--- by HARD_CAP. Background assets keep preloading after the reveal.
+-- The screen stays up until the critical assets and the hub have finished loading. Skip appears after
+-- SKIP_AFTER seconds, and HARD_CAP is only a safety net against a stalled connection. Background
+-- assets keep preloading after the reveal.
 -- While it is up, PreviewWarmup renders every hero and weapon template behind it, so their meshes
 -- and textures are decoded before a hero card or artifact card first shows them.
 -- It also streams the whole hub in (HubLayout.StreamPreloadPoints), so walking past plots and the tower
 -- later does not hitch on streaming bursts; the place keeps it loaded (StreamOutBehavior = LowMemory).
+-- A stream request can return before its area has fully arrived, so the hub counts as loaded once every
+-- request is done and no hub part has streamed in for HUB_SETTLE_QUIET seconds.
 
 local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
@@ -18,7 +21,7 @@ local ReplicatedFirst = game:GetService("ReplicatedFirst")
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 
 local SKIP_AFTER = 8 -- seconds before the Skip button appears
-local HARD_CAP = 20 -- seconds before the screen closes no matter what
+local HARD_CAP = 90 -- safety net: seconds before the screen closes no matter what
 local LOADED_GUARD = 15 -- longest wait for game.Loaded
 local CHARACTER_GUARD = 3 -- brief wait for character / Waiting Room camera to settle
 local MIN_VISIBLE = 1.35 -- keep the centered logo up long enough to read cleanly, even on warm cache
@@ -26,8 +29,11 @@ local CHUNK = 20 -- assets per PreloadAsync call
 local WIPE_TIME = 0.60
 local WARMUP_DISPLAY_ORDER = -1000 -- under the HUD as well as under this screen
 local WARMUP_LINGER = 2 -- seconds the warm-up keeps rendering after the critical pass
-local HUB_STREAM_CAP = 8 -- longest the screen waits for the hub to stream in
 local HUB_STREAM_PARALLEL = 6 -- stream requests in flight at once
+local HUB_REQUEST_TIMEOUT = 30 -- longest a single stream request may take
+local HUB_SETTLE_QUIET = 1 -- seconds with no hub part arriving before the hub counts as loaded
+-- Server-built hub geometry; client effects live elsewhere, so arrivals here are streaming.
+local HUB_CONTAINERS = { "WaitingRoomPlots", "BaseOverhaulGeometry" }
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -95,8 +101,8 @@ local function startWarmup()
 	end
 end
 
--- Streams the hub in behind the screen, a few points at a time. Gives up after HUB_STREAM_CAP; whatever is
--- left streams in normally as the player walks.
+-- Streams the hub in behind the screen, a few points at a time, and returns once it has all arrived (every
+-- request done, then HUB_SETTLE_QUIET seconds without a hub part streaming in) or the player skips.
 local function streamHub(configFolder: Instance?)
 	local module = configFolder and configFolder:WaitForChild("HubLayout", 10)
 	if not (module and module:IsA("ModuleScript")) then
@@ -110,15 +116,30 @@ local function streamHub(configFolder: Instance?)
 		return
 	end
 	local points = result :: { Vector3 }
-	local startedStreaming = os.clock()
+
+	local lastArrival = os.clock()
+	local connections: { RBXScriptConnection } = {}
+	for _, name in HUB_CONTAINERS do
+		local container = workspace:FindFirstChild(name)
+		if container then
+			table.insert(connections, container.DescendantAdded:Connect(function(inst)
+				if inst:IsA("BasePart") then
+					lastArrival = os.clock()
+				end
+			end))
+		end
+	end
+
 	local nextIndex = 1
 	local inFlight = 0
 	local function worker()
-		while nextIndex <= #points and not finished and os.clock() - startedStreaming < HUB_STREAM_CAP do
+		while nextIndex <= #points and not finished do
 			local point = points[nextIndex]
 			nextIndex += 1
-			local remaining = math.max(0.1, HUB_STREAM_CAP - (os.clock() - startedStreaming))
-			pcall(player.RequestStreamAroundAsync, player, point, remaining)
+			local requested, err = pcall(player.RequestStreamAroundAsync, player, point, HUB_REQUEST_TIMEOUT)
+			if not requested then
+				warn(`[LoadingScreen] hub stream request failed: {err}`)
+			end
 		end
 		inFlight -= 1
 	end
@@ -126,8 +147,11 @@ local function streamHub(configFolder: Instance?)
 		inFlight += 1
 		task.spawn(worker)
 	end
-	while inFlight > 0 and not finished and os.clock() - startedStreaming < HUB_STREAM_CAP do
+	while not finished and (inFlight > 0 or os.clock() - lastArrival < HUB_SETTLE_QUIET) do
 		task.wait(0.05)
+	end
+	for _, connection in connections do
+		connection:Disconnect()
 	end
 end
 
