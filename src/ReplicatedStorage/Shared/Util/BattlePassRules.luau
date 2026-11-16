@@ -11,6 +11,8 @@
 --   Premium = the premium row is unlocked this season
 --   Free    = bitmask of claimed free rewards (bit level - 1)
 --   Paid    = bitmask of claimed premium rewards
+--   Quests  = { Day, Week, Progress = { [questId] = count }, Claimed = { [questId] = true } }:
+--             the UTC day and week the quest progress belongs to (a new day or week clears it)
 -- The claims are bitmasks, not arrays, because XP changes on every kill and profile sync resends a
 -- changed top-level key whole: the state stays five small values.
 
@@ -19,15 +21,24 @@ local Config = require(ReplicatedStorage.Shared.Config.BattlePassConfig)
 
 export type Reward = Config.Reward
 export type Track = "Free" | "Premium"
+export type Quest = Config.Quest
+export type QuestState = {
+	Day: number,
+	Week: number,
+	Progress: { [string]: number },
+	Claimed: { [string]: boolean },
+}
 export type State = {
 	Season: number,
 	Xp: number,
 	Premium: boolean,
 	Free: number,
 	Paid: number,
+	Quests: QuestState,
 }
 
 local DAY = 86400
+local WEEK = 7 * DAY
 local SEASON = Config.SeasonDays * DAY
 local MAX_XP = Config.MaxLevel * Config.XpPerLevel
 assert(Config.MaxLevel <= 32, "BattlePassRules: claims are 32-bit masks")
@@ -55,8 +66,62 @@ function BattlePassRules.SeasonName(season: number): string
 	return string.format("Season %d: %s", season, names[(season - 1) % #names + 1])
 end
 
+-- Quest clocks: days are UTC days, weeks start on Monday 00:00 UTC (the epoch is a Monday).
+function BattlePassRules.DayOf(now: number): number
+	return math.floor(now / DAY)
+end
+
+function BattlePassRules.WeekOf(now: number): number
+	return math.floor((now - Config.Epoch) / WEEK)
+end
+
+function BattlePassRules.DayEndsAt(day: number): number
+	return (day + 1) * DAY
+end
+
+function BattlePassRules.WeekEndsAt(week: number): number
+	return Config.Epoch + (week + 1) * WEEK
+end
+
+local QUEST_LISTS = { Config.DailyQuests, Config.WeeklyQuests }
+local QUEST_BY_ID: { [string]: Quest } = {}
+for _, list in QUEST_LISTS do
+	for _, quest in list do QUEST_BY_ID[quest.Id] = quest end
+end
+
+local function newQuests(now: number): QuestState
+	return { Day = BattlePassRules.DayOf(now), Week = BattlePassRules.WeekOf(now), Progress = {}, Claimed = {} }
+end
+
 function BattlePassRules.NewState(now: number): State
-	return { Season = BattlePassRules.SeasonOf(now), Xp = 0, Premium = false, Free = 0, Paid = 0 }
+	return { Season = BattlePassRules.SeasonOf(now), Xp = 0, Premium = false, Free = 0, Paid = 0, Quests = newQuests(now) }
+end
+
+-- Creates or repairs state.Quests. Progress is kept only for known quests and never above the
+-- goal; a claim is kept only for a finished quest, so a bad value can never pay XP twice.
+local function ensureQuests(raw: any, now: number)
+	local quests = raw.Quests
+	if type(quests) ~= "table" then
+		raw.Quests = newQuests(now)
+		return
+	end
+	local function clock(value: any, fallback: number): number
+		if type(value) ~= "number" or value ~= value or math.abs(value) > 1e9 then return fallback end
+		return math.floor(value)
+	end
+	quests.Day = clock(quests.Day, BattlePassRules.DayOf(now))
+	quests.Week = clock(quests.Week, BattlePassRules.WeekOf(now))
+	local savedProgress = if type(quests.Progress) == "table" then quests.Progress else {}
+	local savedClaimed = if type(quests.Claimed) == "table" then quests.Claimed else {}
+	local progress: { [string]: number } = {}
+	local claimed: { [string]: boolean } = {}
+	for id, quest in QUEST_BY_ID do
+		local count = int(savedProgress[id], 0, quest.Goal)
+		if count > 0 then progress[id] = count end
+		if count >= quest.Goal and savedClaimed[id] == true then claimed[id] = true end
+	end
+	quests.Progress = progress
+	quests.Claimed = claimed
 end
 
 local function mask(saved: any): number
@@ -81,6 +146,7 @@ function BattlePassRules.EnsureState(profile: any, now: number): State
 	raw.Premium = raw.Premium == true
 	raw.Free = mask(raw.Free)
 	raw.Paid = mask(raw.Paid)
+	ensureQuests(raw, now)
 	return raw
 end
 
@@ -186,6 +252,106 @@ function BattlePassRules.Rollover(state: State, now: number): { Reward }?
 	state.Free = 0
 	state.Paid = 0
 	return owed
+end
+
+-- Quests ---------------------------------------------------------------------------------------
+
+-- The quest state, or nil when it is missing or damaged (the client reads a synced copy).
+local function questsOf(state: State): QuestState?
+	local quests = (state :: any).Quests
+	if type(quests) ~= "table" or type(quests.Progress) ~= "table" or type(quests.Claimed) ~= "table" then return nil end
+	return quests
+end
+
+-- A quest's count and its status: "Claimed", "Claim" (finished, XP ready) or "Progress".
+function BattlePassRules.QuestStatus(state: State, quest: Quest): (number, string)
+	local quests = questsOf(state)
+	if not quests then return 0, "Progress" end
+	local saved = quests.Progress[quest.Id]
+	local count = if type(saved) == "number" then math.clamp(saved, 0, quest.Goal) else 0
+	if quests.Claimed[quest.Id] == true then return quest.Goal, "Claimed" end
+	return count, if count >= quest.Goal then "Claim" else "Progress"
+end
+
+-- Counts `amount` of `metric` towards every unfinished quest that tracks it. Returns the quests
+-- this finished.
+function BattlePassRules.QuestRecord(state: State, metric: string, amount: number?): { Quest }
+	local finished: { Quest } = {}
+	local quests = questsOf(state)
+	local n = if type(amount) == "number" and amount == amount then math.floor(amount) else 1
+	if not quests or n < 1 then return finished end
+	for _, list in QUEST_LISTS do
+		for _, quest in list do
+			if quest.Metric ~= metric then continue end
+			local before = quests.Progress[quest.Id] or 0
+			if before >= quest.Goal then continue end
+			local after = math.min(quest.Goal, before + n)
+			quests.Progress[quest.Id] = after
+			if after >= quest.Goal then table.insert(finished, quest) end
+		end
+	end
+	return finished
+end
+
+-- Claims a finished quest. Returns its XP (before the Pass XP Potion), or nil and the reason.
+function BattlePassRules.QuestClaim(state: State, id: any): (number?, string?)
+	local quest = if type(id) == "string" then QUEST_BY_ID[id] else nil
+	local quests = questsOf(state)
+	if not quest or not quests then return nil, "Unknown quest." end
+	local _, status = BattlePassRules.QuestStatus(state, quest)
+	if status == "Claimed" then return nil, "Already claimed." end
+	if status ~= "Claim" then return nil, "Finish the quest first." end
+	quests.Claimed[quest.Id] = true
+	return quest.Xp, nil
+end
+
+-- Claims every finished quest. Returns the XP (0 when nothing was ready).
+function BattlePassRules.QuestClaimAll(state: State): number
+	local xp = 0
+	for id in QUEST_BY_ID do
+		xp += BattlePassRules.QuestClaim(state, id) or 0
+	end
+	return xp
+end
+
+-- Finished quests with XP waiting (the rail badge and the Quests tab).
+function BattlePassRules.QuestClaimableCount(state: State): number
+	local count = 0
+	for _, quest in QUEST_BY_ID do
+		local _, status = BattlePassRules.QuestStatus(state, quest)
+		if status == "Claim" then count += 1 end
+	end
+	return count
+end
+
+-- Moves the quests to the day and week at `now`. A period that ended has its progress cleared;
+-- finished quests nobody claimed are returned as XP owed, so nothing earned is lost. Returns
+-- (anything reset, XP owed). A clock that moved backwards resets nothing.
+function BattlePassRules.QuestReset(state: State, now: number): (boolean, number)
+	local quests = questsOf(state)
+	if not quests then return false, 0 end
+	local owed = 0
+	local function expire(list: { Quest })
+		for _, quest in list do
+			local _, status = BattlePassRules.QuestStatus(state, quest)
+			if status == "Claim" then owed += quest.Xp end
+			quests.Progress[quest.Id] = nil
+			quests.Claimed[quest.Id] = nil
+		end
+	end
+	local changed = false
+	local day, week = BattlePassRules.DayOf(now), BattlePassRules.WeekOf(now)
+	if day > quests.Day then
+		expire(Config.DailyQuests)
+		quests.Day = day
+		changed = true
+	end
+	if week > quests.Week then
+		expire(Config.WeeklyQuests)
+		quests.Week = week
+		changed = true
+	end
+	return changed, owed
 end
 
 -- Read-only version of EnsureState for the client: nil until the profile carries a state.
