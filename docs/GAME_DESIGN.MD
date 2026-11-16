@@ -349,7 +349,7 @@ A solid rounded rectangle (480 × 640, corners R 60, top surface $Y = 12$), buil
 - **Centre:** the **Wayfinder Dais**: a compass-rose plaza with 8 cyan arrows pointing to the plots, the Statue of the First Master with sword raised toward the tower, the floating Wayfinder Crystal, and five squad plinths. To the north is the **Reflecting Pool** with stepping stones, a footbridge, lily pads, willows and a fountain jet. East of the pool (its right side seen from the dais), at hub-local `(100, −160)`, stands the **Raid Portal** (§5.6), turned diagonally to face the hub centre.
 - **South lawns:** the **Gazebo** (west) and the **Leaderboard Pavilion** (east) either side of the Pilgrim's Way (Top Playtime faces the dais, Top Power faces the South Gate, `SharedLeaderboards.luau`). In the south corners, the **Overlook Terrace** (west), with telescopes aimed at the tower, and the **Biome Stones** (east, 10 menhirs, one per tower biome).
 - **West and east lawns:** a **Lantern Orchard** on each side, between the middle and north landings.
-- **Garden:** oaks, pines, flower beds and benches are scattered over the remaining lawn, kept clear of the paths, landings and features.
+- **Garden:** oaks, pines and flower beds are scattered over the remaining lawn, kept clear of the paths, landings and features.
 
 All slopes are $\le 15°$ and steps $\le 1$ stud, except the overlook, which is reached by ramps. Plots fill nearest-to-the-gate first (`HubLayout.AssignmentOrder`). The farthest plots (4 and 5) are about 700 studs' walk from the gate.
 
