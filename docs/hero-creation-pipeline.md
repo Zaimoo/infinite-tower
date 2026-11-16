@@ -271,7 +271,29 @@ Grip facts measured in Studio (blade = the weapon's head):
 
 - **Forward grip:** the blade leaves past the thumb, perpendicular to the forearm; shoulder +
   elbow + wrist pitch tilts it up from pointing forward (90° = upright).
-- **Reverse grip:** the blade runs along the forearm.
+- **Reverse grip:** the blade runs along the forearm. Measured on Han (both daggers reversed):
+  with the arm's shoulder + elbow + wrist pitch at 0 the blade points back, at 90 down, at 180
+  forward (add the waist's forward lean: with the waist at −40, 130 points straight down); a
+  wrist of −90 lays the blade along the forearm towards the elbow.
+- **Bow draw is procedural:** during a bow attack `HeroAnimator.SolveBowDraw` solves the right
+  arm onto the string (two-bone IK, elbow behind the arrow and up) and pulls it back along the
+  arrow to an anchor under the chin, between the clip's `Draw.Set` and `Draw.Full` (default 30% and
+  85% of the way to `Release`), and lets go at `Release`. So a bow clip only has to place the bow
+  (the left arm) and the body; the right arm's keys matter before Set and after Release. The
+  hand reaches for the string over the last 40% before Set, so give a clip whose early keys move
+  the arms (a spin, a turn away) a `Draw` that starts after them (`signature(..., draw)`).
+  `Draw.Anchor` (Head space, fractions of the head's size) moves the anchor: higher to the cheek
+  (Aeli), deeper past the jaw (Astrea's Nebula Piercer); along the arrow it sets the draw depth.
+  Pose a hero's archery with the Studio solver in `references/studio-snippets.md`'s spirit: solve
+  the bow arm so the arrow points where you want with the cant you want and its line passes the
+  anchor, then the draw hand by two-bone IK; the Set key must keep the resting string within the
+  draw hand's reach (about 2.1 studs from the right shoulder joint).
+  `HeroBowString` bends the string to the hand (two beams from `TipUpper`/`TipLower`), carries
+  the arrow on it and shivers the string after the release.
+- **Bow reach:** these rigs' shoulders are wide for their arms. Side-on, with the bow arm straight,
+  the resting string is out of the draw hand's reach (the shared Set pose keeps the bow arm bent
+  and the chest square, then the draw coils side-on). A deep draw on a short bow is about 2.4
+  studs, a V of about 50° at the tips.
 - **Bow:** a `LeftWrist` turn about **Y** cants the bow sideways (60° ≈ a strong cant, 80° ≈
   flat); X tilts it fore and aft; Z does nothing visible.
 - **Forearm across the chest:** twist the upper arm in (`RightShoulder {40, 45, 0}`,
@@ -309,7 +331,8 @@ set. When the user reports "default animations", check that the hero has the wea
 `Release` is not just cosmetic: `HeroActionTiming.ReleaseFraction` reads it, so the **server's
 hit time is `CastSeconds × Release` (+ travel)**. Moving a Release marker moves the damage.
 Other markers: `Charge` (when the wind-up effect starts: `SkillVfx` chargers), `Nock` (bow:
-when the arrow reappears).
+when the arrow reappears). Bow clips also carry `Draw = { Set, Full }` (not a marker: the
+procedural draw reads it, see §7).
 
 ### 8.4 Reading the art into poses
 
@@ -384,7 +407,9 @@ hair, weapon) with its scripts, humanoid, tags and effects stripped, anchored, u
 hero's own clips (`HeroAnimator.Sample`). A clone copies the rig as it is, grip included.
 
 Renderer blink: `PlayArgs.Blink` sets a window in which `EntityRenderer` draws the hero at
-another spot (feet position and yaw); the server position, targeting and HP all stay put.
+another spot (feet position and yaw); the server position, targeting and HP all stay put. Calls
+queue, so one effect can chain blinks (the latest started window wins), and the position may sit
+above the ground (a blink into the air).
 Yaw for facing direction `d`: `math.atan2(-d.X, -d.Z)`.
 
 For effects that last longer than a few frames, use `pool:Run({ Update = fn(now) -> done,
@@ -417,6 +442,11 @@ What the user accepted after asking for "more pop":
 - **Blink** (`MIRROR_STEP`): the charger leaves a clone in place, streaks to behind the target
   and calls `Blink` until the return; the player draws the strike from there; the return
   streaks home and shatters the clone.
+- **Flash chain** (`WAKE`, Han): one `Blink` per server damage tick, to points round the circle
+  at mixed heights, each with a streak from the last point, a fading afterimage (a few
+  `MirrorClones` cycled) and `Trail`s added to the rendered rig for the window: a rig redrawn
+  elsewhere draws its trail straight across the gap. The clip poses each flash at the tick's
+  fraction of the cast.
 
 ---
 

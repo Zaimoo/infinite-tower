@@ -22,6 +22,7 @@ local HeroRigSpec = require(script.Parent:WaitForChild("HeroRigSpec"))
 local HeroRigBuilder = require(script.Parent:WaitForChild("HeroRigBuilder"))
 local HeroClips = require(script.Parent:WaitForChild("HeroClips"))
 local HeroSockets = require(script.Parent:WaitForChild("HeroSockets"))
+local HeroBowString = require(script.Parent:WaitForChild("HeroBowString"))
 
 export type Options = { HeroId: string?, WeaponType: string? }
 
@@ -61,6 +62,7 @@ export type HeroAnimator = typeof(setmetatable({} :: {
 	OffhandWeld: Weld?,
 	OffhandAttachment: Attachment?,
 	Alternations: { [string]: number }, -- per state, how many times it has played (alternate clips)
+	BowHeld: boolean, -- the draw hand holds the bowstring this frame (SolveBowDraw -> HeroBowString)
 	Halo: { Head: BasePart, Spec: HaloRing, Shards: { BasePart }, Welds: { Weld }, Phases: { number } }?,
 }, HeroAnimator))
 
@@ -197,6 +199,7 @@ function HeroAnimator.new(rig: Model, options: Options?): HeroAnimator
 		OffhandWeld = nil :: Weld?,
 		OffhandAttachment = nil :: Attachment?,
 		Alternations = {} :: { [string]: number },
+		BowHeld = false,
 		Halo = findHaloRig(rig),
 	}, HeroAnimator)
 	self.LocomotionClip = HeroClips.Get(self.HeroId, self.WeaponType, "Idle")
@@ -266,6 +269,37 @@ local function jointCFrame(motor: Motor6D, transform: CFrame?): CFrame
 	return motor.C0 * (transform or CFrame.identity) * motor.C1:Inverse()
 end
 
+-- Two-bone arm solve in UpperTorso space: the shoulder and elbow Transforms that put the hand's
+-- grip attachment on `target`, with the elbow swung towards `pole`. A target out of reach
+-- leaves the arm stretched towards it. Nil when the arm is degenerate.
+local function solveArm(shoulder: Motor6D, elbow: Motor6D, wrist: Motor6D, gripAttachment: Attachment, target: Vector3, pole: Vector3): (CFrame?, CFrame?)
+	-- Arm segments hang down -Y at rest: shoulder -> elbow, then elbow -> grip with a straight wrist.
+	local upper = (elbow.C0.Position - shoulder.C1.Position).Magnitude
+	local lower = ((wrist.C0.Position - elbow.C1.Position) + (gripAttachment.Position - wrist.C1.Position)).Magnitude
+	local reach = target - shoulder.C0.Position
+	if upper < 1e-3 or lower < 1e-3 or reach.Magnitude < 1e-3 then
+		return nil, nil
+	end
+	local distance = math.clamp(reach.Magnitude, math.abs(upper - lower) + 0.02, upper + lower - 0.02)
+	local direction = reach.Unit
+	local flex = math.pi - math.acos(math.clamp((upper * upper + lower * lower - distance * distance) / (2 * upper * lower), -1, 1))
+
+	-- The bent arm in its own frame, then the rotation carrying it onto the target with the
+	-- elbow swung towards the pole.
+	local gripLocal = Vector3.new(0, -upper - lower * math.cos(flex), -lower * math.sin(flex)).Unit
+	local elbowLocal = Vector3.new(0, -upper, 0)
+	local bendLocal = elbowLocal - gripLocal * elbowLocal:Dot(gripLocal)
+	bendLocal = if bendLocal.Magnitude > 1e-4 then bendLocal.Unit else Vector3.zAxis
+	local bend = pole - direction * pole:Dot(direction)
+	if bend.Magnitude < 1e-3 then
+		bend = Vector3.zAxis - direction * direction.Z
+	end
+	bend = bend.Unit
+	local shoulderRotation = CFrame.fromMatrix(Vector3.zero, direction, bend, direction:Cross(bend))
+		* CFrame.fromMatrix(Vector3.zero, gripLocal, bendLocal, gripLocal:Cross(bendLocal)):Inverse()
+	return shoulderRotation, CFrame.Angles(flex, 0, 0)
+end
+
 -- Two-bone solve for the hand that is not welded to a two-handed weapon. Works in UpperTorso
 -- space (both shoulders hang off it): follows the welded arm's pose down to the weapon, finds
 -- the weapon's off-hand grip, then overwrites that arm's shoulder, elbow and wrist in `pose`
@@ -316,32 +350,10 @@ function HeroAnimator.SolveOffhand(self: HeroAnimator, pose: { [string]: CFrame 
 		* jointCFrame(mainWrist, pose[main .. "Wrist"])
 	local target = mainHand * weld.C0 * weld.C1:Inverse() * attachment.CFrame
 
-	-- Arm segments hang down -Y at rest: shoulder -> elbow, then elbow -> grip with a straight wrist.
-	local upper = (elbow.C0.Position - shoulder.C1.Position).Magnitude
-	local lower = ((wrist.C0.Position - elbow.C1.Position) + (gripAttachment.Position - wrist.C1.Position)).Magnitude
-	local reach = target.Position - shoulder.C0.Position
-	if upper < 1e-3 or lower < 1e-3 or reach.Magnitude < 1e-3 then
+	local shoulderRotation, elbowRotation = solveArm(shoulder, elbow, wrist, gripAttachment, target.Position, OFFHAND_POLE[side])
+	if not shoulderRotation or not elbowRotation then
 		return
 	end
-	local distance = math.clamp(reach.Magnitude, math.abs(upper - lower) + 0.02, upper + lower - 0.02)
-	local direction = reach.Unit
-	local flex = math.pi - math.acos(math.clamp((upper * upper + lower * lower - distance * distance) / (2 * upper * lower), -1, 1))
-
-	-- The bent arm in its own frame, then the rotation carrying it onto the target with the
-	-- elbow swung towards the pole.
-	local gripLocal = Vector3.new(0, -upper - lower * math.cos(flex), -lower * math.sin(flex)).Unit
-	local elbowLocal = Vector3.new(0, -upper, 0)
-	local bendLocal = elbowLocal - gripLocal * elbowLocal:Dot(gripLocal)
-	bendLocal = if bendLocal.Magnitude > 1e-4 then bendLocal.Unit else Vector3.zAxis
-	local pole = OFFHAND_POLE[side]
-	local bend = pole - direction * pole:Dot(direction)
-	if bend.Magnitude < 1e-3 then
-		bend = Vector3.zAxis - direction * direction.Z
-	end
-	bend = bend.Unit
-	local shoulderRotation = CFrame.fromMatrix(Vector3.zero, direction, bend, direction:Cross(bend))
-		* CFrame.fromMatrix(Vector3.zero, gripLocal, bendLocal, gripLocal:Cross(bendLocal)):Inverse()
-	local elbowRotation = CFrame.Angles(flex, 0, 0)
 
 	-- Roll the fist about the forearm so its knuckle line (hand -Z) follows the haft.
 	local haft = (shoulderRotation * elbowRotation):VectorToObjectSpace(target.UpVector)
@@ -350,6 +362,86 @@ function HeroAnimator.SolveOffhand(self: HeroAnimator, pose: { [string]: CFrame 
 	pose[side .. "Shoulder"] = shoulderRotation
 	pose[side .. "Elbow"] = elbowRotation
 	pose[side .. "Wrist"] = CFrame.Angles(0, roll, 0)
+end
+
+-- The bow draw (docs/hero-creation-pipeline.md §7): during a bow attack the draw hand takes the
+-- string, pulls it back along the arrow to an anchor under the chin and lets go at the Release.
+-- It works on any bow clip whatever its stance: the bow arm's keyed pose places the bow, and the
+-- right arm is solved onto the string from there. Over the last BOW_REACH of the way to the clip's
+-- Draw Set the hand blends from its keyed pose onto the resting string (earlier keys, such as a
+-- gather, play as keyed); Set -> Full pulls it back (as far as the anchor's place along the arrow,
+-- never deeper than the bow allows); after the Release the keyed follow-through takes the hand
+-- back over BOW_LET_GO of the clip. Sets self.BowHeld (Set to Release) for HeroBowString.
+local BOW_REACH = 0.4
+local BOW_LET_GO = 0.08
+-- Under the chin, a touch to the draw side: Head space, as fractions of the head's size. A clip's
+-- Draw.Anchor replaces it (a higher anchor at the cheek, a deeper one past the jaw).
+local BOW_ANCHOR = Vector3.new(0.08, -0.4, -0.42)
+-- Where the draw elbow points, added to "behind along the arrow": out to its side and up a little.
+local BOW_ELBOW_POLE = Vector3.new(0.35, 0.25, 0)
+
+local function smooth(x: number): number
+	x = math.clamp(x, 0, 1)
+	return x * x * (3 - 2 * x)
+end
+
+function HeroAnimator.SolveBowDraw(self: HeroAnimator, pose: { [string]: CFrame })
+	self.BowHeld = false
+	local action = self.Action
+	if self.WeaponType ~= "BOW" or not action or string.sub(action.Name, 1, 6) ~= "Attack" then
+		return
+	end
+	local set, full, release = HeroClips.DrawTiming(action.Clip)
+	local t = math.clamp((self.Clock - action.Started) / action.Duration, 0, 1)
+	local reachFrom = set * (1 - BOW_REACH)
+	local weight = if t < set then smooth((t - reachFrom) / (set - reachFrom))
+		elseif t <= release then 1
+		else 1 - smooth((t - release) / BOW_LET_GO)
+	if weight <= 0 then
+		return
+	end
+	local draw = if t < set then 0 else smooth((t - set) / math.max(full - set, 1e-3))
+
+	local weapon = self.Rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)
+	local geometry = HeroBowString.Geometry(weapon)
+	local primary = if weapon and weapon:IsA("Model") then weapon.PrimaryPart else nil
+	local weld = primary and primary:FindFirstChild(HeroSockets.WELD_PREFIX .. "Grip")
+	local joints = self.Joints
+	local neck = joints.Neck
+	local lShoulder, lElbow, lWrist = joints.LeftShoulder, joints.LeftElbow, joints.LeftWrist
+	local shoulder, elbow, wrist = joints.RightShoulder, joints.RightElbow, joints.RightWrist
+	local hand = wrist and wrist.Part1
+	local gripAttachment = hand and hand:FindFirstChild("RightGripAttachment")
+	if not (geometry and weld and weld:IsA("Weld") and neck and lShoulder and lElbow and lWrist and shoulder and elbow and wrist) then
+		return
+	end
+	if not (gripAttachment and gripAttachment:IsA("Attachment")) then
+		return
+	end
+
+	-- The bow handle and the anchor in UpperTorso space, from this frame's pose.
+	local bowHand = jointCFrame(lShoulder, pose.LeftShoulder) * jointCFrame(lElbow, pose.LeftElbow) * jointCFrame(lWrist, pose.LeftWrist)
+	local handle = bowHand * weld.C0 * weld.C1:Inverse()
+	local head = neck.Part1
+	local headSize = if head and head:IsA("BasePart") then head.Size else Vector3.one
+	local drawSpec = action.Clip.Draw
+	local anchorSpec = drawSpec and drawSpec.Anchor
+	local anchorFraction = if anchorSpec then Vector3.new(anchorSpec[1], anchorSpec[2], anchorSpec[3]) else BOW_ANCHOR
+	local anchor = jointCFrame(neck, pose.Neck) * (anchorFraction * headSize)
+	local stringRest = handle * geometry.StringRestH
+	local arrow = handle:VectorToWorldSpace(geometry.ArrowH)
+
+	-- Full draw brings the string back level with the anchor, measured along the arrow.
+	local fullPull = math.clamp((stringRest - anchor):Dot(arrow), 0, geometry.MaxPull)
+	local target = stringRest - arrow * (fullPull * draw)
+	local shoulderRotation, elbowRotation = solveArm(shoulder, elbow, wrist, gripAttachment, target, -arrow + BOW_ELBOW_POLE)
+	if not shoulderRotation or not elbowRotation then
+		return
+	end
+	pose.RightShoulder = (pose.RightShoulder or CFrame.identity):Lerp(shoulderRotation, weight)
+	pose.RightElbow = (pose.RightElbow or CFrame.identity):Lerp(elbowRotation, weight)
+	pose.RightWrist = (pose.RightWrist or CFrame.identity):Lerp(CFrame.identity, weight)
+	self.BowHeld = t >= set and t <= release
 end
 
 -- Target pose for this frame (joint -> Transform), without smoothing. Exposed for tests.
@@ -379,6 +471,7 @@ function HeroAnimator.Evaluate(self: HeroAnimator): { [string]: CFrame }
 		end
 	end
 	HeroAnimator.SolveOffhand(self, pose)
+	HeroAnimator.SolveBowDraw(self, pose)
 	return pose
 end
 
@@ -406,6 +499,9 @@ function HeroAnimator.Step(self: HeroAnimator, dt: number, moveSpeedScale: numbe
 		motor.Transform = motor.Transform:Lerp(pose[joint] or CFrame.identity, alpha)
 	end
 	stepHalo(self)
+	if self.WeaponType == "BOW" then
+		HeroBowString.Step(self.Rig, self.Rig:FindFirstChild(HeroSockets.EQUIPPED_NAME), self.BowHeld, self.Clock)
+	end
 end
 
 -- Applies a pose immediately with no smoothing (rigs in the simulated world).

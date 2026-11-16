@@ -186,6 +186,14 @@ HeroSockets.GRIP_SHIFT = table.freeze({
 -- (HeroClips) must be posed for this grip.
 export type HeroGrip = { Reverse: boolean?, Shift: number?, Offset: CFrame?, OneHandCarry: boolean? }
 HeroSockets.HERO_GRIPS = table.freeze({
+	-- Han: both daggers reversed, blades running back along the forearms (an assassin's
+	-- ice-pick grip), unlike Nyx's forward/reverse pair.
+	hero_han = table.freeze({
+		DAGGERS = table.freeze({
+			Main = table.freeze({ Reverse = true }),
+			LeftDagger = table.freeze({ Reverse = true }),
+		}),
+	}),
 	-- Nyx: the main-hand dagger held forward, the off-hand dagger reversed along the forearm.
 	hero_nyx = table.freeze({
 		DAGGERS = table.freeze({
