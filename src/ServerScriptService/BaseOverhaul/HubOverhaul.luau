@@ -30,7 +30,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 34 -- Bump to force a rebuild of baked geometry (34: remove GardenBench and OrchardBench from Cloister Commons)
+HubOverhaul.Version = 35 -- Bump to force a rebuild of baked geometry (35: remove non-path hub lanterns and island fountain lanterns)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
@@ -427,6 +427,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 					desc:Destroy()
 				end
 			end
+			CloisterBuilder.CleanupNonPathLanterns(bakedCommons)
 			if GothicLanternSpawner.GetTemplate() ~= nil then
 				CloisterBuilder.SpawnHubLanterns(bakedCommons)
 			end
@@ -435,14 +436,10 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 			local pModel = plotsFolder:FindFirstChild("Plot_" .. tostring(i))
 			if pModel and pModel:IsA("Model") then
 				alignPlotSpawnAndBeacon(pModel, HubLayout.PlotIslandCFrame(i))
-				if GothicLanternSpawner.GetTemplate() ~= nil then
-					local island = pModel:FindFirstChild("FloatingFortressIsland")
-					local accents = island and island:FindFirstChild("CourtyardAccents")
-					if accents then
-						local courtyardTopCF = HubLayout.PlotIslandCFrame(i)
-							* CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 100))
-						IslandBuilder.SpawnCourtyardLanterns(accents, courtyardTopCF)
-					end
+				local island = pModel:FindFirstChild("FloatingFortressIsland")
+				local accents = island and island:FindFirstChild("CourtyardAccents")
+				if accents then
+					IslandBuilder.CleanupCourtyardLanterns(accents)
 				end
 			end
 		end

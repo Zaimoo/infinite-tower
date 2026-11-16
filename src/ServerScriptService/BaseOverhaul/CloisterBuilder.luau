@@ -371,32 +371,11 @@ local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuild
 end
 
 --============================================================================
--- B. RIM WALL, VOID BALUSTRADES, LAMPS AND PROMENADE
+-- B. RIM WALL AND GARDEN PATHS
 --============================================================================
-local function spawnRimLanterns(lamps: Instance, root: CFrame)
-	local hx, hz, ro = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
-	local n = 0
-	local openings = outerOpenings()
-	walkRoundedRect(hx - 6, hz - 6, ro - 6, 70, function(x, z, nx, nz)
-		if nearAny(x, z, openings, 10) then
-			return
-		end
-		n += 1
-		local name = string.format("GothicLantern_Rim_%d", n)
-		if lamps:FindFirstChild(name) then
-			return
-		end
-		local cf = edgeCF(root, x, z, nx, nz, 0)
-		GothicLanternSpawner.Spawn(lamps, cf, name)
-	end)
-end
-
 local function buildEdges(model: Model, root: CFrame, cfg: typeof(CloisterBuilder.Config))
 	local hx, hz, ro = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
 	edgeWall(folder("RimWall", model), root, hx, hz, ro, 1.5, cfg.WallHeight, outerOpenings(), true)
-
-	-- Gothic medieval lantern posts along the outer rim
-	spawnRimLanterns(folder("LampPylons", model), root)
 
 	-- Cobbled paths from every landing to the dais. Neighbouring paths cross near the dais, so each sits at
 	-- its own height to avoid z-fighting. (The last entry is the Pilgrim's Way, built by the terrace.)
@@ -522,23 +501,9 @@ local function buildGrandTerrace(model: Model, root: CFrame)
 end
 
 --============================================================================
--- K. LANTERN ORCHARD (a square grove of blossom trees round a lantern walk)
+-- K. BLOSSOM ORCHARD (a square grove of cherry blossom trees)
 --============================================================================
--- o: frame at the grove centre, its Z axis running along the lantern walk, X across it.
-local function spawnOrchardLanterns(f: Instance, o: CFrame)
-	for k, z in { -24, 24 } do
-		for _, side in { -1, 1 } do
-			local name = string.format("GothicLantern_Orchard_%d_%s", k, if side < 0 then "W" else "E")
-			if f:FindFirstChild(name) then
-				continue
-			end
-			local p = o * CFrame.new(side * 12, 0, z)
-			local baseCF = CFrame.lookAt(p.Position, (o * CFrame.new(0, 0, z)).Position)
-			GothicLanternSpawner.Spawn(f, baseCF, name)
-		end
-	end
-end
-
+-- o: frame at the grove centre, its Z axis running along the grove, X across it.
 local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 	local f = folder(name, model)
 	local i = 0
@@ -559,7 +524,6 @@ local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 			end
 		end
 	end
-	spawnOrchardLanterns(f, o)
 	local anchor = makePart({ Name = "FireflyAnchor", Size = Vector3.new(90, 1, 80), CFrame = o * CFrame.new(0, 3, 0), Transparency = 1, Decorative = true, Parent = f })
 	local flies = Instance.new("ParticleEmitter")
 	flies.Name = "Fireflies"
@@ -1095,31 +1059,27 @@ function CloisterBuilder.Build(container: Instance): Model
 	return model
 end
 
--- Populates (or backfills after prefab import) every hub perimeter, garden pathway & orchard Gothic lantern.
+-- Removes non-path hub lanterns (outer rim LampPylons and orchard lanterns) from existing geometry.
+function CloisterBuilder.CleanupNonPathLanterns(commons: Instance)
+	local lamps = commons:FindFirstChild("LampPylons")
+	if lamps then
+		lamps:Destroy()
+	end
+	for _, desc in commons:GetDescendants() do
+		if desc.Parent and (desc.Name:find("^GothicLantern_Rim_") or desc.Name:find("^GothicLantern_Orchard_")) then
+			desc:Destroy()
+		end
+	end
+end
+
+-- Populates (or backfills after prefab import) garden pathway Gothic lanterns and strips non-path hub lanterns.
 function CloisterBuilder.SpawnHubLanterns(commons: Instance)
 	GothicLanternSpawner.CleanupLegacyLamps(commons)
+	CloisterBuilder.CleanupNonPathLanterns(commons)
 	local root = CFrame.new(HubLayout.HubCentre)
-	local lamps = commons:FindFirstChild("LampPylons")
-	if not lamps then
-		lamps = folder("LampPylons", commons)
-	end
-	spawnRimLanterns(lamps, root)
-
 	local garden = commons:FindFirstChild("Garden")
 	if garden then
 		spawnGardenLanterns(garden, root)
-	end
-
-	for _, orchardInfo in {
-		{ Name = "OrchardWest", Feat = FEATURES.OrchardWest },
-		{ Name = "OrchardEast", Feat = FEATURES.OrchardEast },
-	} do
-		local orchardFolder = commons:FindFirstChild(orchardInfo.Name)
-		if orchardFolder then
-			local pos = (root * CFrame.new(orchardInfo.Feat[1], 0, orchardInfo.Feat[2])).Position
-			local o = CFrame.lookAt(pos, pos - Vector3.zAxis)
-			spawnOrchardLanterns(orchardFolder, o)
-		end
 	end
 end
 

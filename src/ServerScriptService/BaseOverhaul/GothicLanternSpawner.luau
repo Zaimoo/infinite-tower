@@ -233,7 +233,7 @@ function GothicLanternSpawner.Spawn(parent: Instance, baseCFrame: CFrame, name: 
 end
 
 -- Destroys any legacy 3-part / 5-part / orchard primitive streetlamps left over from pre-Blender builds
--- without removing the LampPylons container itself so existing GothicLantern_Rim_* instances stay intact.
+-- without removing active pathway GothicLantern_Path_* instances.
 function GothicLanternSpawner.CleanupLegacyLamps(root: Instance): number
 	local removed = 0
 	for _, desc in root:GetDescendants() do
