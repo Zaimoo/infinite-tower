@@ -35,6 +35,9 @@ function B.Build()
 	-- Plot bridges belong to the hopeful fortress side: pale warm stone and cream marble rails
 	local SANCTUARY_DECK = { Color = Color3.fromRGB(168, 156, 138), Material = Enum.Material.Cobblestone }
 	local SANCTUARY_RAIL = { Color = Color3.fromRGB(226, 216, 192), Material = Enum.Material.Marble }
+	-- A plot bridge's ends rest on the island's grass and the Commons ground. A deck flush with them
+	-- (both at IslandSurfaceY) z-fights, so the deck sits this much higher: too little to feel underfoot.
+	local PLOT_DECK_LIFT = Vector3.new(0, 0.1, 0)
 
 	local function span(n: string, a: Vector3, b: Vector3, w: number, rails: boolean, railInset: number?, railEndInset: number?, sanctuary: boolean?)
 		local cf = CFrame.lookAt((a + b) / 2, b)
@@ -136,7 +139,7 @@ function B.Build()
 				connected += 1
 				local slot = HubLayout.PlotSlots[i]
 				local landing = HubLayout.HubLandingPoint(i) - Vector3.new(slot.DX, 0, slot.DZ) * 2
-				span("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth, true, 4, 6, true)
+				span("IslandBridge_" .. i, start + PLOT_DECK_LIFT, landing + PLOT_DECK_LIFT, HubLayout.PlotBridgeWidth, true, 4, 6, true)
 				createUnderBridgeAbyss("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth)
 				local edgeBarriers = walls and (walls:FindFirstChild("InvisibleEdgeBarriers") or walls:FindFirstChild("InvisibleEdgeBarriers", true))
 				local barrier = edgeBarriers and edgeBarriers:FindFirstChild("Barrier_Front")
