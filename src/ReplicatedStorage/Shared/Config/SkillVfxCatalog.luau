@@ -200,12 +200,15 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- Striker ----------------------------------------------------------------------------------
-	-- Gloam Cut / Nightfall Fangs / Abyssal Wake: smoky black and cold blue.
+	-- Gloam Cut / Nightfall Fangs / Abyssal Wake: smoky black and cold blue. Nightfall Fangs'
+	-- wind-up draws his leap (a take-off burst, a streak to the top of the flip and the dive onto
+	-- the target); Abyssal Wake's marks the wake's circle closing in, then he flashes round it (WAKE
+	-- in SkillVfx: streaks, trails on him, afterimages, Slashes crescents inside per flash).
 	hero_han = {
 		Palette = { Primary = rgb(70, 140, 255), Secondary = rgb(22, 24, 34), Core = rgb(170, 215, 255) },
-		Basic = { Style = "SLASH", Scale = 0.9, Impact = 1.3 },
-		Special = { Style = "PLUNGE", Scale = 1.15, Radius = 4, Impact = 2.2 },
-		Skill = { Style = "WAKE", Radius = 12, Slashes = 5, Linger = 0.35, Impact = 3.4, Shake = 0.3 },
+		Basic = { Style = "SLASH", Scale = 1.05, Impact = 1.6 },
+		Special = { Style = "PLUNGE", Scale = 1.35, Radius = 5, Impact = 2.6, Shake = 0.15 },
+		Skill = { Style = "WAKE", Radius = 12, Slashes = 3, Linger = 0.35, Impact = 3.4, Shake = 0.25 },
 	},
 	-- Twin Fang Cut / Shadow Rend / Phantom Lotus Execution: shadow purple and lotus pink.
 	hero_velkist = {

@@ -383,13 +383,15 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		Basic = { Name = "Gloam Cut" },
 		-- A leaping double stab with both daggers reversed: the 1.60x hit lands as two blows.
 		Special = { Name = "Nightfall Fangs", Ticks = 2, TickSeconds = 0.1 },
-		-- He dashes through the target and the cuts he leaves behind keep slashing the circle:
-		-- the 3.20x burst is split over five waves instead of landing at once.
+		-- He flashes from point to point round the circle, on the ground and in the air, cutting
+		-- through it each time: the 3.20x burst is split over eight waves, one per flash. The
+		-- longer cast (1.3s) gives the flashes room.
 		Skill = {
 			Name = "Abyssal Wake",
-			Description = "Han dashes through the target and leaves a circle of lingering slashes behind him: 3.20x ATK over 5 waves to every enemy within 12 studs.",
-			Ticks = 5,
-			TickSeconds = 0.12,
+			Description = "Han flashes from point to point around the target, on the ground and in the air, cutting through the circle with every flash: 3.20x ATK over 8 flashes to every enemy within 12 studs.",
+			Ticks = 8,
+			TickSeconds = 0.09,
+			CastSeconds = 1.3,
 		},
 	},
 	hero_aaron = {

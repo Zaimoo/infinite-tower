@@ -1,0 +1,3841 @@
+{
+	"art_iron_broadsword": {
+		"id": "art_iron_broadsword",
+		"tier": 1,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			3.24
+		],
+		"base": [
+			0,
+			0,
+			0.5900000000000001
+		],
+		"core": [
+			0,
+			0,
+			1.7550000000000001
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.6900000000000001
+		],
+		"trail_top": [
+			0,
+			0,
+			3.1900000000000004
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.52,
+			2.4,
+			0.56
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0021,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.201,
+					0.1747,
+					0.86
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					75,
+					52,
+					38
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.003,
+					0.0,
+					-0.615
+				],
+				"size": [
+					0.2866,
+					0.2895,
+					0.47
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					98,
+					101,
+					108
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					0.525
+				],
+				"size": [
+					1.3533,
+					0.2103,
+					0.31
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					95,
+					98,
+					105
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					1.89
+				],
+				"size": [
+					0.4,
+					0.075,
+					2.7
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					150,
+					154,
+					162
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.0708
+				],
+				"size": [
+					0.4301,
+					0.0712,
+					2.356
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					192,
+					197,
+					207
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0006,
+					0.0,
+					1.7129
+				],
+				"size": [
+					0.2851,
+					0.093,
+					1.8738
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					108,
+					111,
+					119
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					70,
+					50,
+					36
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.3162,
+					2.4,
+					0.425
+				],
+				"size": [
+					0.1796,
+					1.5,
+					2.05
+				],
+				"assembly": "OffhandShield",
+				"material": "WoodPlanks",
+				"color": [
+					122,
+					86,
+					52
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.3214,
+					2.4,
+					0.425
+				],
+				"size": [
+					0.2778,
+					1.62,
+					2.148
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					85,
+					88,
+					95
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.4821,
+					2.4,
+					0.56
+				],
+				"size": [
+					0.1958,
+					0.48,
+					0.468
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					115,
+					118,
+					125
+				]
+			}
+		},
+		"tris": 3000
+	},
+	"art_tempered_bastard_sword": {
+		"id": "art_tempered_bastard_sword",
+		"tier": 1,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			3.6100000000000003
+		],
+		"base": [
+			0,
+			0,
+			0.7100000000000001
+		],
+		"core": [
+			0,
+			0,
+			1.9875000000000003
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.81
+		],
+		"trail_top": [
+			0,
+			0,
+			3.5600000000000005
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.5,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.002,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.1905,
+					0.1655,
+					1.08
+				],
+				"assembly": "",
+				"material": "Fabric",
+				"color": [
+					55,
+					42,
+					35
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.675
+				],
+				"size": [
+					0.4,
+					0.1992,
+					0.37
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					185,
+					145,
+					65
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					0.6185
+				],
+				"size": [
+					1.48,
+					0.1992,
+					0.277
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					88,
+					92,
+					102
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.135
+				],
+				"size": [
+					0.37,
+					0.075,
+					2.95
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					88,
+					93,
+					104
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.3233
+				],
+				"size": [
+					0.379,
+					0.0712,
+					2.5836
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					198,
+					205,
+					218
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					1.85
+				],
+				"size": [
+					0.0999,
+					0.093,
+					1.75
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					62,
+					66,
+					76
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					60,
+					44,
+					34
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.2579,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.11,
+					1.45,
+					1.45
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					132,
+					137,
+					147
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.2752,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.2362,
+					1.548,
+					1.548
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					185,
+					145,
+					65
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.5746,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.4308,
+					0.52,
+					0.507
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					160,
+					165,
+					175
+				]
+			}
+		},
+		"tris": 2960
+	},
+	"art_runic_longsword": {
+		"id": "art_runic_longsword",
+		"tier": 2,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			3.73
+		],
+		"base": [
+			0,
+			0,
+			0.6300000000000001
+		],
+		"core": [
+			0,
+			0,
+			1.9975
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.7300000000000001
+		],
+		"trail_top": [
+			0,
+			0,
+			3.68
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.53,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.1944,
+					0.1672,
+					0.92
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					34,
+					40,
+					52
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.655
+				],
+				"size": [
+					0.38,
+					0.2012,
+					0.49
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					70,
+					82,
+					105
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					0.6575
+				],
+				"size": [
+					1.4676,
+					0.209,
+					0.515
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					70,
+					82,
+					105
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.155
+				],
+				"size": [
+					0.36,
+					0.075,
+					3.15
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					122,
+					140,
+					172
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.3317
+				],
+				"size": [
+					0.3846,
+					0.0712,
+					2.8071
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					205,
+					215,
+					232
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					1.85
+				],
+				"size": [
+					0.0972,
+					0.093,
+					1.996
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					66,
+					80,
+					112
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					0.9797
+				],
+				"size": [
+					0.13,
+					0.245,
+					3.4833
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					60,
+					230,
+					140
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					40,
+					44,
+					54
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.318,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.1839,
+					1.3,
+					2.4
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					92,
+					108,
+					140
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.3104,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.2642,
+					1.406,
+					2.506
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					160,
+					170,
+					190
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.4449,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.1702,
+					0.3284,
+					2.16
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					118,
+					132,
+					160
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.3942,
+					2.4,
+					0.44
+				],
+				"size": [
+					0.0592,
+					1.0194,
+					1.648
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					60,
+					230,
+					140
+				]
+			}
+		},
+		"tris": 3160
+	},
+	"art_knightly_estoc": {
+		"id": "art_knightly_estoc",
+		"tier": 2,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			3.9000000000000004
+		],
+		"base": [
+			0,
+			0,
+			0.6000000000000001
+		],
+		"core": [
+			0,
+			0,
+			2.0575
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.7000000000000001
+		],
+		"trail_top": [
+			0,
+			0,
+			3.8500000000000005
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.52,
+			2.4,
+			0.588
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.1836,
+					0.1579,
+					0.9
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					60,
+					30,
+					32
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.615
+				],
+				"size": [
+					0.28,
+					0.28,
+					0.43
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					195,
+					160,
+					80
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0484,
+					0.0,
+					0.05
+				],
+				"size": [
+					0.9367,
+					0.3875,
+					1.1589
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					62,
+					64,
+					72
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.225
+				],
+				"size": [
+					0.22,
+					0.13,
+					3.35
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					210,
+					214,
+					224
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.4014
+				],
+				"size": [
+					0.2368,
+					0.0525,
+					2.9985
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					235,
+					238,
+					245
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.7006
+				],
+				"size": [
+					0.08,
+					0.158,
+					1.7188
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					120,
+					210,
+					255
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					60,
+					30,
+					32
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.3037,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.1927,
+					1.3,
+					2.35
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					150,
+					40,
+					48
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.2929,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.2767,
+					1.404,
+					2.456
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					200,
+					165,
+					85
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.4792,
+					2.4,
+					0.588
+				],
+				"size": [
+					0.2015,
+					0.48,
+					0.468
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					200,
+					165,
+					85
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.3806,
+					2.4,
+					0.3765
+				],
+				"size": [
+					0.0768,
+					0.988,
+					1.927
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					120,
+					210,
+					255
+				]
+			}
+		},
+		"tris": 3870
+	},
+	"art_paladin_spatha": {
+		"id": "art_paladin_spatha",
+		"tier": 3,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			3.93
+		],
+		"base": [
+			0,
+			0,
+			0.63
+		],
+		"core": [
+			0,
+			0,
+			2.0875
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.73
+		],
+		"trail_top": [
+			0,
+			0,
+			3.8800000000000003
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.53,
+			2.4,
+			0.584
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0014,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.1958,
+					0.1697,
+					0.9
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					235,
+					230,
+					220
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.645
+				],
+				"size": [
+					0.4,
+					0.2042,
+					0.49
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					230,
+					185,
+					75
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					-0.0048,
+					0.0,
+					0.618
+				],
+				"size": [
+					1.4432,
+					0.2255,
+					0.456
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					225,
+					230,
+					240
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.255
+				],
+				"size": [
+					0.4,
+					0.08,
+					3.35
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					205,
+					210,
+					222
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.4156
+				],
+				"size": [
+					0.4375,
+					0.074,
+					3.0577
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					240,
+					242,
+					248
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					1.9803
+				],
+				"size": [
+					0.108,
+					0.098,
+					2.2245
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					225,
+					182,
+					80
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.1326
+				],
+				"size": [
+					0.14,
+					0.282,
+					3.7664
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					255,
+					205,
+					90
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					120,
+					90,
+					60
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.3098,
+					2.4,
+					0.425
+				],
+				"size": [
+					0.2005,
+					1.6,
+					2.35
+				],
+				"assembly": "OffhandShield",
+				"material": "SmoothPlastic",
+				"color": [
+					232,
+					230,
+					224
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.3016,
+					2.4,
+					0.425
+				],
+				"size": [
+					0.2818,
+					1.714,
+					2.464
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					230,
+					185,
+					75
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.4673,
+					2.4,
+					0.584
+				],
+				"size": [
+					0.1653,
+					0.84,
+					0.84
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					235,
+					190,
+					80
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.4246,
+					2.4,
+					0.584
+				],
+				"size": [
+					0.0727,
+					1.044,
+					1.044
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					255,
+					205,
+					90
+				]
+			}
+		},
+		"tris": 3888
+	},
+	"art_vanguard_warden_bastion": {
+		"id": "art_vanguard_warden_bastion",
+		"tier": 3,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			3.9050000000000002
+		],
+		"base": [
+			0,
+			0,
+			0.7050000000000001
+		],
+		"core": [
+			0,
+			0,
+			2.1175
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.805
+		],
+		"trail_top": [
+			0,
+			0,
+			3.8550000000000004
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.55,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0016,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.2129,
+					0.1844,
+					0.95
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					48,
+					40,
+					36
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.625
+				],
+				"size": [
+					0.2944,
+					0.34,
+					0.4
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					72,
+					76,
+					84
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					0.575
+				],
+				"size": [
+					1.34,
+					0.3476,
+					0.32
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					72,
+					76,
+					84
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.28
+				],
+				"size": [
+					0.54,
+					0.1,
+					3.25
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					118,
+					124,
+					136
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.4341
+				],
+				"size": [
+					0.5773,
+					0.085,
+					2.9734
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					205,
+					210,
+					222
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					2.2575
+				],
+				"size": [
+					0.1188,
+					0.118,
+					2.775
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					52,
+					55,
+					62
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					2.035
+				],
+				"size": [
+					0.22,
+					0.317,
+					2.96
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					90,
+					170,
+					255
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					48,
+					40,
+					36
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.3014,
+					2.4,
+					0.3931
+				],
+				"size": [
+					0.2572,
+					1.8,
+					2.7362
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					88,
+					92,
+					102
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.3014,
+					2.4,
+					0.3915
+				],
+				"size": [
+					0.3272,
+					1.914,
+					2.8471
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					140,
+					145,
+					158
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.435,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.1395,
+					1.368,
+					2.2
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					120,
+					125,
+					138
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.409,
+					2.4,
+					0.8475
+				],
+				"size": [
+					0.0683,
+					1.24,
+					0.52
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					90,
+					170,
+					255
+				]
+			}
+		},
+		"tris": 4268
+	},
+	"art_crystal_claymore": {
+		"id": "art_crystal_claymore",
+		"tier": 4,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			4.39
+		],
+		"base": [
+			0,
+			0,
+			0.6900000000000001
+		],
+		"core": [
+			0,
+			0,
+			2.3275
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.79
+		],
+		"trail_top": [
+			0,
+			0,
+			4.34
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.53,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.2052,
+					0.172,
+					1.0
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					48,
+					36,
+					62
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.71
+				],
+				"size": [
+					0.247,
+					0.2078,
+					0.6
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					170,
+					110,
+					230
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0034,
+					0.0,
+					0.6203
+				],
+				"size": [
+					1.1,
+					0.22,
+					0.3605
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					175,
+					168,
+					200
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.515
+				],
+				"size": [
+					0.4533,
+					0.1,
+					3.75
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					150,
+					92,
+					210
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.6677
+				],
+				"size": [
+					0.4933,
+					0.085,
+					3.4563
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					215,
+					180,
+					255
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					1.8688
+				],
+				"size": [
+					0.154,
+					0.118,
+					2.0425
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					105,
+					58,
+					170
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					-0.0052,
+					0.2804
+				],
+				"size": [
+					1.0392,
+					0.2166,
+					2.1353
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					195,
+					125,
+					255
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					48,
+					36,
+					62
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.2941,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.2604,
+					2.1988,
+					2.2912
+				],
+				"assembly": "OffhandShield",
+				"material": "Glass",
+				"color": [
+					140,
+					100,
+					215
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.2778,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.1844,
+					2.3616,
+					2.454
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					185,
+					178,
+					210
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.5,
+					2.4015,
+					0.3977
+				],
+				"size": [
+					0.6,
+					0.2556,
+					0.2618
+				],
+				"assembly": "OffhandShield",
+				"material": "Glass",
+				"color": [
+					200,
+					150,
+					255
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.4296,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.1147,
+					0.9546,
+					0.8361
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					195,
+					125,
+					255
+				]
+			}
+		},
+		"tris": 4506
+	},
+	"art_resonant_bulwark": {
+		"id": "art_resonant_bulwark",
+		"tier": 4,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			4.115
+		],
+		"base": [
+			0,
+			0,
+			0.665
+		],
+		"core": [
+			0,
+			0,
+			2.19
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.765
+		],
+		"trail_top": [
+			0,
+			0,
+			4.065
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.54,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.2052,
+					0.172,
+					0.95
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					40,
+					44,
+					52
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.73
+				],
+				"size": [
+					0.39,
+					0.2925,
+					0.61
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					150,
+					160,
+					178
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					0.6984
+				],
+				"size": [
+					1.27,
+					0.2948,
+					0.6332
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					150,
+					160,
+					178
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.365
+				],
+				"size": [
+					0.4885,
+					0.085,
+					3.5
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					170,
+					182,
+					200
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.5058
+				],
+				"size": [
+					0.5285,
+					0.0768,
+					3.2369
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					225,
+					235,
+					248
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					2.1125
+				],
+				"size": [
+					0.1242,
+					0.103,
+					2.465
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					80,
+					92,
+					112
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.16
+				],
+				"size": [
+					0.24,
+					0.3088,
+					4.11
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					80,
+					220,
+					255
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					40,
+					44,
+					52
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.2406,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.1837,
+					2.0001,
+					2.3
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					82,
+					92,
+					110
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.256,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.3245,
+					2.0867,
+					2.3866
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					165,
+					175,
+					192
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.4553,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.1294,
+					0.7275,
+					0.84
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					120,
+					132,
+					150
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.3789,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.0502,
+					1.36,
+					1.558
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					80,
+					220,
+					255
+				]
+			}
+		},
+		"tris": 4098
+	},
+	"art_paladin_claymore": {
+		"id": "art_paladin_claymore",
+		"tier": 5,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			4.635
+		],
+		"base": [
+			0,
+			0,
+			0.7350000000000001
+		],
+		"core": [
+			0,
+			0,
+			2.4625000000000004
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.8350000000000001
+		],
+		"trail_top": [
+			0,
+			0,
+			4.585
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.54,
+			2.4,
+			0.62
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0012,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.2136,
+					0.1847,
+					1.05
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					238,
+					234,
+					226
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.72
+				],
+				"size": [
+					0.4,
+					0.2224,
+					0.49
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					240,
+					195,
+					80
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					-0.0021,
+					0.0,
+					0.7805
+				],
+				"size": [
+					1.8712,
+					0.282,
+					0.6311
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					232,
+					236,
+					246
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.66
+				],
+				"size": [
+					0.5,
+					0.09,
+					3.95
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					226,
+					229,
+					238
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.8075
+				],
+				"size": [
+					0.5385,
+					0.0795,
+					3.6922
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					250,
+					250,
+					255
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					2.3935
+				],
+				"size": [
+					0.135,
+					0.108,
+					2.903
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					236,
+					192,
+					82
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.4697
+				],
+				"size": [
+					0.15,
+					0.156,
+					4.5906
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					255,
+					225,
+					120
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					150,
+					110,
+					70
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.2957,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.2485,
+					1.75,
+					2.75
+				],
+				"assembly": "OffhandShield",
+				"material": "SmoothPlastic",
+				"color": [
+					238,
+					236,
+					230
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.2898,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.3504,
+					1.874,
+					2.88
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					240,
+					195,
+					80
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.4546,
+					2.4,
+					0.62
+				],
+				"size": [
+					0.1108,
+					0.52,
+					0.52
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					245,
+					200,
+					85
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.4681,
+					2.4,
+					0.62
+				],
+				"size": [
+					0.1958,
+					1.244,
+					1.244
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					255,
+					225,
+					120
+				]
+			}
+		},
+		"tris": 6010
+	},
+	"art_aegis_of_valor": {
+		"id": "art_aegis_of_valor",
+		"tier": 5,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			4.315
+		],
+		"base": [
+			0,
+			0,
+			0.665
+		],
+		"core": [
+			0,
+			0,
+			2.2800000000000002
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.765
+		],
+		"trail_top": [
+			0,
+			0,
+			4.265000000000001
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.53,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0011,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.1965,
+					0.17,
+					0.95
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					120,
+					30,
+					38
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.675
+				],
+				"size": [
+					0.44,
+					0.2046,
+					0.5
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					245,
+					200,
+					80
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					-0.0,
+					0.5944
+				],
+				"size": [
+					1.8074,
+					0.3515,
+					0.3712
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					245,
+					200,
+					80
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.465
+				],
+				"size": [
+					0.4,
+					0.08,
+					3.7
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					222,
+					224,
+					232
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.6599
+				],
+				"size": [
+					0.4212,
+					0.074,
+					3.3186
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					250,
+					248,
+					240
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					2.105
+				],
+				"size": [
+					0.108,
+					0.098,
+					2.348
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					242,
+					196,
+					72
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.216
+				],
+				"size": [
+					0.17,
+					0.3947,
+					3.966
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					255,
+					235,
+					150
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					120,
+					30,
+					38
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.2043,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.14,
+					2.15,
+					2.15
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					238,
+					190,
+					72
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.1655,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.2329,
+					2.7325,
+					2.7325
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					250,
+					225,
+					140
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.5182,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.3236,
+					1.01,
+					1.0045
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					255,
+					215,
+					100
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.5468,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.4405,
+					1.596,
+					1.596
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					255,
+					235,
+					150
+				]
+			}
+		},
+		"tris": 6176
+	},
+	"art_blade_of_the_rift": {
+		"id": "art_blade_of_the_rift",
+		"tier": 6,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			4.88
+		],
+		"base": [
+			0,
+			0,
+			0.73
+		],
+		"core": [
+			0,
+			0,
+			2.5700000000000003
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.83
+		],
+		"trail_top": [
+			0,
+			0,
+			4.83
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.55,
+			2.4,
+			0.632
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.2052,
+					0.1765,
+					1.0
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					30,
+					26,
+					46
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.71
+				],
+				"size": [
+					0.247,
+					0.2124,
+					0.6
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					120,
+					80,
+					220
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					0.945
+				],
+				"size": [
+					1.68,
+					0.25,
+					1.01
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					190,
+					160,
+					95
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0002,
+					3.244
+				],
+				"size": [
+					0.5,
+					0.1253,
+					5.1281
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					58,
+					46,
+					120
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.9174
+				],
+				"size": [
+					0.5335,
+					0.0822,
+					3.9386
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					170,
+					150,
+					255
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					2.517
+				],
+				"size": [
+					0.21,
+					0.113,
+					3.214
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					140,
+					80,
+					220
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.5998
+				],
+				"size": [
+					0.9311,
+					0.3182,
+					4.7741
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					225,
+					200,
+					255
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					30,
+					26,
+					46
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.3056,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.2488,
+					1.9,
+					2.9
+				],
+				"assembly": "OffhandShield",
+				"material": "Slate",
+				"color": [
+					40,
+					34,
+					62
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.3035,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.3536,
+					2.038,
+					3.038
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					190,
+					160,
+					95
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.4473,
+					2.4,
+					0.748
+				],
+				"size": [
+					0.0651,
+					0.42,
+					0.4095
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					200,
+					170,
+					105
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.4467,
+					2.3791,
+					0.728
+				],
+				"size": [
+					0.1274,
+					0.487,
+					0.518
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					170,
+					110,
+					255
+				]
+			}
+		},
+		"tris": 5354
+	},
+	"art_aegis_core": {
+		"id": "art_aegis_core",
+		"tier": 6,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			4.8100000000000005
+		],
+		"base": [
+			0,
+			0,
+			0.71
+		],
+		"core": [
+			0,
+			0,
+			2.5275
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.8099999999999999
+		],
+		"trail_top": [
+			0,
+			0,
+			4.760000000000001
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.54,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.216,
+					0.1858,
+					1.0
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					32,
+					30,
+					40
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.755
+				],
+				"size": [
+					0.39,
+					0.3,
+					0.61
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					238,
+					188,
+					72
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					2.0509
+				],
+				"size": [
+					1.316,
+					0.5412,
+					3.402
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					238,
+					188,
+					72
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.735
+				],
+				"size": [
+					0.52,
+					0.09,
+					4.15
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					236,
+					186,
+					70
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					2.8728
+				],
+				"size": [
+					0.554,
+					0.084,
+					3.8898
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					255,
+					228,
+					140
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					2.715
+				],
+				"size": [
+					0.0562,
+					0.1126,
+					3.775
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					120,
+					230,
+					255
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.3815
+				],
+				"size": [
+					1.1511,
+					0.24,
+					4.603
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					140,
+					90,
+					255
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					32,
+					30,
+					40
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.365,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.19,
+					2.3942,
+					2.496
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					236,
+					186,
+					70
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.45,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.05,
+					1.643,
+					1.8278
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					255,
+					228,
+					140
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.54,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.6135,
+					1.0367,
+					0.9748
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					70,
+					60,
+					90
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.52,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.52,
+					1.2075,
+					1.377
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					140,
+					90,
+					255
+				]
+			}
+		},
+		"tris": 4854
+	},
+	"art_astral_executioner": {
+		"id": "art_astral_executioner",
+		"tier": 7,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			5.02
+		],
+		"base": [
+			0,
+			0,
+			0.77
+		],
+		"core": [
+			0,
+			0,
+			2.6550000000000002
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.87
+		],
+		"trail_top": [
+			0,
+			0,
+			4.97
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.57,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.0009,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.2142,
+					0.185,
+					1.08
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					26,
+					28,
+					52
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.765
+				],
+				"size": [
+					0.48,
+					0.2226,
+					0.55
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					215,
+					222,
+					245
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					0.64
+				],
+				"size": [
+					1.98,
+					0.265,
+					1.7
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					215,
+					222,
+					245
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.87
+				],
+				"size": [
+					0.56,
+					0.1,
+					4.3
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					205,
+					214,
+					238
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					3.0024
+				],
+				"size": [
+					0.5974,
+					0.085,
+					4.0735
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					245,
+					248,
+					255
+				]
+			},
+			"Fuller": {
+				"centre": [
+					0.0,
+					0.0,
+					2.6865
+				],
+				"size": [
+					0.2688,
+					0.118,
+					3.463
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					30,
+					34,
+					72
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.7273
+				],
+				"size": [
+					1.77,
+					0.3082,
+					5.1413
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					255,
+					238,
+					170
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					26,
+					28,
+					52
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.3206,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.2128,
+					1.85,
+					3.05
+				],
+				"assembly": "OffhandShield",
+				"material": "Glass",
+				"color": [
+					34,
+					40,
+					80
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.3257,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.3232,
+					1.996,
+					3.196
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					215,
+					222,
+					245
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.4668,
+					2.4,
+					0.6
+				],
+				"size": [
+					0.0665,
+					0.72,
+					0.72
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					230,
+					236,
+					252
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.4622,
+					2.3532,
+					0.4559
+				],
+				"size": [
+					0.1532,
+					1.1784,
+					2.2104
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					255,
+					238,
+					170
+				]
+			}
+		},
+		"tris": 3814
+	},
+	"art_genesis_worldbreaker": {
+		"id": "art_genesis_worldbreaker",
+		"tier": 7,
+		"type": "SWORD_SHIELD",
+		"grip": [
+			0,
+			0,
+			0
+		],
+		"tip": [
+			0,
+			0,
+			5.2
+		],
+		"base": [
+			0,
+			0,
+			0.8
+		],
+		"core": [
+			0,
+			0,
+			2.7525
+		],
+		"trail_bottom": [
+			0,
+			0,
+			0.9
+		],
+		"trail_top": [
+			0,
+			0,
+			5.15
+		],
+		"shield_mount": [
+			-0.18,
+			2.4,
+			0.4
+		],
+		"shield_centre": [
+			-0.56,
+			2.4,
+			0.4
+		],
+		"shield_origin": [
+			0.0,
+			2.4,
+			0.4
+		],
+		"parts": {
+			"Handle": {
+				"centre": [
+					0.001,
+					0.0,
+					0.0
+				],
+				"size": [
+					0.2356,
+					0.2035,
+					1.1
+				],
+				"assembly": "",
+				"material": "Leather",
+				"color": [
+					30,
+					22,
+					40
+				]
+			},
+			"Pommel": {
+				"centre": [
+					0.0,
+					0.0,
+					-0.805
+				],
+				"size": [
+					0.39,
+					0.2987,
+					0.61
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					60,
+					45,
+					85
+				]
+			},
+			"Crossguard": {
+				"centre": [
+					0.0,
+					0.0,
+					0.88
+				],
+				"size": [
+					1.869,
+					0.3445,
+					1.1796
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					60,
+					45,
+					85
+				]
+			},
+			"Blade": {
+				"centre": [
+					0.0,
+					0.0,
+					2.975
+				],
+				"size": [
+					0.64,
+					0.11,
+					4.45
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					40,
+					30,
+					60
+				]
+			},
+			"BladeEdge": {
+				"centre": [
+					0.0,
+					0.0,
+					3.111
+				],
+				"size": [
+					0.6747,
+					0.0905,
+					4.2006
+				],
+				"assembly": "",
+				"material": "Metal",
+				"color": [
+					232,
+					212,
+					255
+				]
+			},
+			"Fuller": {
+				"centre": [
+					-0.1084,
+					0.0,
+					2.718
+				],
+				"size": [
+					0.4087,
+					0.13,
+					3.54
+				],
+				"assembly": "",
+				"material": "Glass",
+				"color": [
+					18,
+					12,
+					28
+				]
+			},
+			"RuneInlay": {
+				"centre": [
+					0.0,
+					0.0,
+					1.7386
+				],
+				"size": [
+					1.148,
+					0.2639,
+					5.4173
+				],
+				"assembly": "",
+				"material": "Neon",
+				"color": [
+					255,
+					130,
+					70
+				]
+			},
+			"HandleS": {
+				"centre": [
+					-0.0975,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.425,
+					0.5,
+					0.8
+				],
+				"assembly": "OffhandShield",
+				"material": "Leather",
+				"color": [
+					30,
+					22,
+					40
+				]
+			},
+			"ShieldPlate": {
+				"centre": [
+					-0.2087,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.17,
+					2.6,
+					2.6
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					30,
+					24,
+					46
+				]
+			},
+			"ShieldRim": {
+				"centre": [
+					-0.4251,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.7206,
+					2.746,
+					2.746
+				],
+				"assembly": "OffhandShield",
+				"material": "Metal",
+				"color": [
+					175,
+					150,
+					220
+				]
+			},
+			"ShieldBoss": {
+				"centre": [
+					-0.6197,
+					2.4,
+					0.4
+				],
+				"size": [
+					0.6697,
+					0.68,
+					0.68
+				],
+				"assembly": "OffhandShield",
+				"material": "Glass",
+				"color": [
+					10,
+					8,
+					16
+				]
+			},
+			"ShieldRune": {
+				"centre": [
+					-0.5421,
+					2.4968,
+					0.3641
+				],
+				"size": [
+					0.5123,
+					2.2321,
+					2.1675
+				],
+				"assembly": "OffhandShield",
+				"material": "Neon",
+				"color": [
+					255,
+					130,
+					70
+				]
+			}
+		},
+		"tris": 8392
+	}
+}

@@ -23,6 +23,7 @@ Desktop.ini
 # Artifacts & snapshots
 /artifacts/
 !assets/artifacts/
+assets/models/enemies/
 
 # Wally packages
 Packages/

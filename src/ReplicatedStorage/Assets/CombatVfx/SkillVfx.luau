@@ -456,6 +456,7 @@ local function playPlunge(ctx: Context)
 	VfxPrimitives.Ring(pool, { Center = ground, From = 0.3, To = radius * 0.7, Color = palette.Primary, StartAt = ctx.ArriveAt + 0.05, EndAt = ctx.ArriveAt + 0.4, Width = 0.35 })
 	VfxPrimitives.Motes(pool, ground + Vector3.new(0, 0.8, 0), palette.Secondary, ctx.ArriveAt, 6, 0.7)
 	VfxPrimitives.Burst(pool, at, palette.Core, recipe.Impact or 2, ctx.ArriveAt + 0.03, 0.2)
+	shake(ctx, ctx.ArriveAt)
 end
 
 -- TREMOR: a ground shockwave from the target with a few spikes of rock and crystal.
@@ -1338,50 +1339,220 @@ local function playHallOfMirrors(ctx: Context)
 	shake(ctx, finale)
 end
 
--- WAKE: a dash streak from the attacker through the target, then a smoky circle over the skill
--- radius that keeps cutting: one wave of crescents inside it per server damage tick.
+-- WAKE (Han's Abyssal Wake): he flashes from point to point round the skill circle, one flash per
+-- server damage tick, alternating low leaps and cuts high in the air. The points walk an
+-- eight-pointed star (135 degrees apart), so every streak cuts back through the middle; the
+-- first leaves from where he stands and crosses the target. Each flash draws a streak of light
+-- from the last point, a crescent where it crosses the circle, a burst where he lands, and a
+-- crescent rain inside the circle; he is drawn at each point (PlayArgs.Blink) with glowing
+-- trails on his body and blades and a fading afterimage left behind, then flashes home.
+-- Cosmetic: the server never moves him.
+local WAKE_AIR = { 0.8, 4.5, 1.2, 5.8, 0.6, 3.6, 1.4, 6.2 } -- each flash's height off the ground
+local WAKE_RING = 0.72 -- flash points, as a fraction of the radius
+local WAKE_AFTERIMAGES = 3 -- glass copies cycled through the flash points
+local WAKE_AFTERIMAGE_FADE = 0.24
+local WAKE_TRAIL_LIFE = 0.35
+
+-- Glowing trails on the rendered rig (body and both hands) between `from` and `to`. A rig that
+-- is redrawn somewhere else draws its trail straight across the gap, so each flash leaves a streak.
+local function rigTrails(pool: VfxPool.VfxPool, rig: Model?, palette: Palette, from: number, to: number)
+	if not rig or not rig.Parent then
+		return
+	end
+	local made: { Instance } = {}
+	local trails: { Trail } = {}
+	local function add(partName: string, half: number, width: number, color: Color3)
+		local part = rig:FindFirstChild(partName)
+		if not part or not part:IsA("BasePart") then
+			return
+		end
+		local a0 = Instance.new("Attachment")
+		a0.Name = "WakeTrailTop"
+		a0.Position = Vector3.new(0, half, 0)
+		a0.Parent = part
+		local a1 = Instance.new("Attachment")
+		a1.Name = "WakeTrailBottom"
+		a1.Position = Vector3.new(0, -half, 0)
+		a1.Parent = part
+		local trail = Instance.new("Trail")
+		trail.Name = "WakeTrail"
+		trail.Attachment0 = a0
+		trail.Attachment1 = a1
+		trail.FaceCamera = true
+		trail.LightEmission = 1
+		trail.LightInfluence = 0
+		trail.Lifetime = WAKE_TRAIL_LIFE
+		trail.MinLength = 0.02
+		trail.Color = ColorSequence.new(palette.Core, color)
+		trail.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(0.5, 0.45), NumberSequenceKeypoint.new(1, 1) })
+		trail.WidthScale = NumberSequence.new(width, 0.15)
+		trail.Enabled = false
+		trail.Parent = part
+		table.insert(made, a0)
+		table.insert(made, a1)
+		table.insert(made, trail)
+		table.insert(trails, trail)
+	end
+	add("UpperTorso", 0.9, 1, palette.Primary)
+	add("RightHand", 0.35, 0.8, palette.Primary)
+	add("LeftHand", 0.35, 0.8, palette.Primary)
+	pool:Run({
+		Update = function(now: number): boolean
+			local on = now >= from and now < to
+			for _, trail in trails do
+				if trail.Enabled ~= on then
+					trail.Enabled = on
+				end
+			end
+			return now >= to + WAKE_TRAIL_LIFE
+		end,
+		Cleanup = function()
+			for _, inst in made do
+				inst:Destroy()
+			end
+		end,
+	})
+end
+
 local function playWake(ctx: Context)
 	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
-	local center: Vector3 = args.Cue.Aim
+	local cue = args.Cue
+	local center: Vector3 = cue.Aim
 	local radius = recipe.Radius or 12
 	local archetype = args.WeaponType and SkillVfxCatalog.WeaponArchetype[args.WeaponType]
 	local profile = ArchetypeCombatSkills.GetSkillProfile(args.HeroId, archetype)
 	local ticks, gap = HeroActionTiming.Ticks(profile.Skill)
+	gap = if gap > 0 then gap else 0.1
 	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, gap)
 	local first, last = waves[1], waves[#waves]
+	local back = last + gap
 	local linger = recipe.Linger or 0.35
 	local up = Vector3.new(0, 1.6, 0)
+	local lift = pivotHeight(args) -- the rig's pivot above its feet, for the afterimages
 
-	-- The dash: twin streaks along his path and one long cut across the target as he passes.
-	local from = if args.Self then args.Self() else args.Origin
-	local dir = heading(ctx)
-	local exit = center + dir * math.min(radius * 0.6, 7)
-	VfxPrimitives.Beam(pool, from + up, exit + up, palette.Primary, first - 0.1, 0.3, args.Cue.NetId % 13)
-	VfxPrimitives.Beam(pool, from + up * 0.6, exit + up * 0.6, palette.Secondary, first - 0.1, 0.45, args.Cue.NetId % 7 + 3)
-	VfxPrimitives.SlashArc(pool, CFrame.lookAt(center + up, center + up - dir) * CFrame.Angles(0, 0, math.rad(8)), radius * 0.42 * SLASH_SIZE, palette.Core, first - 0.04, 0.36)
+	-- The flash points: an eight-pointed star round the circle, the first across the target
+	-- from where he stands, alternating low leaps and high cuts.
+	local home = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	local away = Vector3.new(home.X - center.X, 0, home.Z - center.Z)
+	local start = if away.Magnitude > 1e-3 then math.atan2(away.Z, away.X) + math.pi else 0
+	local points: { Vector3 } = {}
+	local yaws: { number } = {}
+	for k = 1, #waves do
+		local angle = start + (k - 1) * math.rad(135)
+		local spot = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * (radius * WAKE_RING)
+		points[k] = spot + Vector3.new(0, WAKE_AIR[(k - 1) % #WAKE_AIR + 1], 0)
+		local face = Vector3.new(center.X - spot.X, 0, center.Z - spot.Z)
+		yaws[k] = if face.Magnitude > 1e-3 then math.atan2(-face.X, -face.Z) else 0
+	end
 
-	-- The wake: a dark disc with a blue rim, held until the last wave has landed.
+	-- The wake: a dark disc with a blue rim, held until he flashes home.
 	local ground = CFrame.new(center + Vector3.new(0, 0.15, 0)) * VfxPrimitives.FLAT
-	VfxPrimitives.Disc(pool, { CFrame = ground, Radius = radius, Color = palette.Secondary, StartAt = first - 0.05, EndAt = last + linger, Grow = 0.25, Transparency = 0.3 })
+	VfxPrimitives.Disc(pool, { CFrame = ground, Radius = radius, Color = palette.Secondary, StartAt = first - 0.05, EndAt = back + linger, Grow = 0.25, Transparency = 0.3 })
 	VfxPrimitives.Ring(pool, { Center = center, From = 1, To = radius, Color = palette.Primary, StartAt = first, EndAt = first + 0.3, Width = 0.5 })
-	VfxPrimitives.Ring(pool, { Center = center, From = radius * 0.96, To = radius, Color = palette.Primary, StartAt = first + 0.28, EndAt = last + linger, Width = 0.35 })
+	VfxPrimitives.Ring(pool, { Center = center, From = radius * 0.96, To = radius, Color = palette.Primary, StartAt = first + 0.28, EndAt = back + linger, Width = 0.35 })
 
-	local perWave = recipe.Slashes or 5
-	local seedBase = (args.Cue.NetId % 89) * 0.41
+	-- He vanishes from where he stands.
+	VfxPrimitives.Burst(pool, home + up, palette.Primary, 3, first - 0.02, 0.3)
+	VfxPrimitives.Flare(pool, fixed(home + up), 4.2, palette.Core, first - 0.02, 0.25)
+	VfxPrimitives.Motes(pool, home + up, palette.Primary, first, 8, 0.5)
+
+	-- His afterimages (copied before the trails go on him), and trails on him while he flashes.
+	local rig = args.Rig
+	local skillClip = HeroClips.Get(args.HeroId, args.WeaponType, "AttackSkill")
+	local images: { MirrorClones.Clone } = {}
+	if rig and rig.Parent and skillClip then
+		for i = 1, WAKE_AFTERIMAGES do
+			local clone = MirrorClones.Make(rig, pool.Folder, palette.Primary, palette.Core)
+			if clone then
+				clone.Fade(1)
+				table.insert(images, clone)
+			end
+		end
+	end
+	rigTrails(pool, rig, palette, first - 0.03, back + 0.05)
+
+	local perWave = recipe.Slashes or 3
+	local seedBase = (cue.NetId % 89) * 0.41
+	local previous = home + Vector3.new(0, 0.6, 0)
 	for k, waveAt in waves do
-		for i, point in VfxMath.RainPoints(center, radius * 0.92, perWave, seedBase + k * 2.1) do
+		local point = points[k]
+		local leaveAt = waves[k + 1] or back
+		-- The streak from the last point, and the crescent where it crosses the circle.
+		VfxPrimitives.Ribbon(pool, { From = previous + up, To = point + up, StartAt = waveAt - 0.04, EndAt = waveAt, Width = 0.9,
+			Inner = palette.Core, Outer = palette.Primary, Linger = 0.4, Seed = cue.NetId + k })
+		VfxPrimitives.Beam(pool, previous + up, point + up, palette.Primary, waveAt - 0.04, 0.16, (cue.NetId + k) % 13)
+		local path = (point - previous)
+		local mid = (previous + point) / 2 + up
+		if path.Magnitude > 1e-3 then
+			local frame = CFrame.lookAt(mid, mid + path.Unit) * CFrame.Angles(0, 0, math.rad(if k % 2 == 0 then 50 else -50))
+			VfxPrimitives.SlashArc(pool, frame, radius * 0.34 * SLASH_SIZE, if k % 3 == 0 then palette.Core else palette.Primary, waveAt - 0.02, 0.3)
+			VfxPrimitives.SlashArc(pool, frame * CFrame.new(0, -0.1, 0.25), radius * 0.38 * SLASH_SIZE, palette.Secondary, waveAt, 0.4)
+		end
+		-- Where he lands: a flash and a ring of light around him.
+		VfxPrimitives.Burst(pool, point + up, palette.Primary, 2.2, waveAt, 0.22)
+		VfxPrimitives.Flare(pool, fixed(point + up), 3.4, palette.Core, waveAt, 0.18)
+		VfxPrimitives.FlightRing(pool, point + up, path, 1.8, palette.Primary, waveAt)
+		if args.Blink then
+			args.Blink(point, yaws[k], waveAt, leaveAt)
+		end
+		if args.Sfx then
+			args.Sfx("BlinkVanish", point + up, math.max(0, waveAt - args.Now), 0.9 + 0.06 * (k % 4), 0.45)
+		end
+		-- The afterimage he leaves at this point as he flashes on.
+		local image = images[(k - 1) % math.max(1, #images) + 1]
+		if image and skillClip then
+			local fraction = math.clamp((waveAt + 0.25 * gap - cue.StartServerTime) / math.max(0.05, cue.CastSeconds), 0, 1)
+			local frame = CFrame.new(point + Vector3.new(0, lift, 0)) * CFrame.Angles(0, yaws[k], 0)
+			local pose = HeroAnimator.Sample(skillClip, fraction)
+			local shown = false
+			pool:Run({
+				Update = function(now: number): boolean
+					if now < leaveAt then
+						return false
+					end
+					if not shown then
+						shown = true
+						image.Pose(frame, pose)
+					end
+					local t = VfxMath.Progress(leaveAt, leaveAt + WAKE_AFTERIMAGE_FADE, now)
+					image.Fade(0.35 + 0.65 * t)
+					return t >= 1
+				end,
+			})
+		end
+		-- The cuts he leaves inside the circle.
+		for i, spot in VfxMath.RainPoints(center, radius * 0.92, perWave, seedBase + k * 2.1) do
 			local yaw = seedBase + k * 1.3 + i * 2.4
 			local roll = math.rad(if (i + k) % 2 == 0 then 38 else -38)
-			local frame = CFrame.new(point + up) * CFrame.Angles(0, yaw, roll)
-			local size = radius * (0.2 + 0.05 * ((i + k) % 3)) * SLASH_SIZE
-			VfxPrimitives.SlashArc(pool, frame, size, if (i + k) % 3 == 0 then palette.Core else palette.Primary, waveAt - 0.04 + i * 0.012, 0.3)
-			VfxPrimitives.SlashArc(pool, frame * CFrame.new(0, -0.1, 0.2), size * 1.12, palette.Secondary, waveAt + i * 0.012, 0.4)
+			local frame = CFrame.new(spot + up) * CFrame.Angles(0, yaw, roll)
+			local size = radius * (0.18 + 0.05 * ((i + k) % 3)) * SLASH_SIZE
+			VfxPrimitives.SlashArc(pool, frame, size, if (i + k) % 3 == 0 then palette.Core else palette.Primary, waveAt + 0.02 + i * 0.012, 0.3)
 		end
-		VfxPrimitives.Motes(pool, center + Vector3.new(0, 0.6, 0), palette.Secondary, waveAt, 4, 0.6)
+		previous = point
 	end
-	VfxPrimitives.Burst(pool, center + up, palette.Core, recipe.Impact or 3, first, 0.25)
-	VfxPrimitives.Ring(pool, { Center = center, From = radius * 0.4, To = radius * 1.05, Color = palette.Core, StartAt = last, EndAt = last + linger, Width = 0.6 })
+	if #images > 0 then
+		pool:Run({
+			Update = function(now: number): boolean
+				return now >= back + WAKE_AFTERIMAGE_FADE + 0.1
+			end,
+			Cleanup = function()
+				for _, image in images do
+					image.Destroy()
+				end
+			end,
+		})
+	end
+
+	-- He flashes home: a streak back, a burst where he lands, and the circle's last shockwave.
+	VfxPrimitives.Ribbon(pool, { From = previous + up, To = home + up, StartAt = back - 0.03, EndAt = back + 0.02, Width = 1.0,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.45, Seed = cue.NetId + 31 })
+	VfxPrimitives.Burst(pool, home + up, palette.Secondary, 3.2, back + 0.02, 0.35)
+	VfxPrimitives.Motes(pool, home + up, palette.Core, back + 0.02, 12, 0.6)
+	VfxPrimitives.Burst(pool, center + up, palette.Core, recipe.Impact or 3, last, 0.3)
+	shockwave(pool, palette, center, radius, last + 0.05, 3)
+	VfxPrimitives.Ring(pool, { Center = center, From = radius * 0.4, To = radius * 1.05, Color = palette.Core, StartAt = back, EndAt = back + linger, Width = 0.6 })
 	shake(ctx, first)
+	shake(ctx, last)
 end
 
 -- CRYSTALS: a cluster of crystal spikes at the centre, then one under each enemy the server hit.
@@ -2114,6 +2285,8 @@ end
 local LEAP = {
 	LAST_STAND = { TakeOff = 0.18, Apex = 0.65, Height = 6.5, Forward = 1.8 },
 	GILDED_FRENZY = { TakeOff = 0.2, Apex = 0.73, Height = 8, Forward = 0.4 },
+	-- Han's Nightfall Fangs: a short, high front flip that dives onto the target.
+	PLUNGE = { TakeOff = 0.2, Apex = 0.6, Height = 4.5, Forward = 1.0 },
 }
 local function chargeLeap(ctx: ChargeContext): boolean
 	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
@@ -2135,7 +2308,7 @@ local function chargeLeap(ctx: ChargeContext): boolean
 	VfxPrimitives.Ribbon(pool, { From = feet + Vector3.new(0, 1, 0), To = apex, StartAt = takeOff, EndAt = apexAt, Width = 0.8,
 		Inner = palette.Core, Outer = palette.Primary, Linger = 0.5, Seed = args.Cue.NetId })
 	VfxPrimitives.Flare(pool, fixed(apex), 4, palette.Secondary, apexAt, 0.3)
-	if recipe.Style == "LAST_STAND" then
+	if recipe.Style == "LAST_STAND" or recipe.Style == "PLUNGE" then
 		local landing = args.Cue.Aim + Vector3.new(0, 1, 0)
 		VfxPrimitives.Ribbon(pool, { From = apex, To = landing, StartAt = apexAt, EndAt = to, Width = 1.0,
 			Inner = palette.Core, Outer = palette.Primary, Linger = 0.4, Seed = args.Cue.NetId + 3 })
@@ -2147,7 +2320,7 @@ end
 -- marker: light is drawn into the weapon's head (the bow's nock), a glow swells there and glints
 -- just before release. Area attacks also mark the ground they will hit, closing in on it, and
 -- self-centred Skills (BULWARK, SANCTUARY) gather at the hero's feet.
-local AREA_CHARGE: { [string]: boolean } = { STORM = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, TREMOR = true }
+local AREA_CHARGE: { [string]: boolean } = { STORM = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, TREMOR = true, WAKE = true }
 local SELF_CHARGE: { [string]: boolean } = { BULWARK = true, SANCTUARY = true }
 
 local function chargeGather(ctx: ChargeContext): boolean
@@ -2185,6 +2358,7 @@ local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
 	EXECUTE = chargeExecute,
 	LAST_STAND = chargeLeap,
 	GILDED_FRENZY = chargeLeap,
+	PLUNGE = chargeLeap, -- Han's flip onto the target
 	BOLT = chargeGlyph,
 	PIERCER = chargeBolt,
 	CONSTELLATION = chargeStars,
@@ -2204,6 +2378,7 @@ local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
 	CRYSTALS = chargeGather,
 	PILLAR = chargeGather,
 	SANCTUARY = chargeGather,
+	WAKE = chargeGather, -- Han's crossed blades; the wake's circle closes in
 }
 SkillVfx.Chargers = table.freeze(table.clone(CHARGERS))
 
@@ -2412,6 +2587,186 @@ function SkillVfx.PlayCharge(pool: VfxPool.VfxPool, args: PlayArgs): boolean
 		emitChargeSfx(args, recipe, cue.Tier)
 	end
 	return ok
+end
+
+export type WindupArgs = {
+	HeroId: string?,
+	WeaponType: string?,
+	Feet: Vector3, -- the ground under the hero
+	Chest: () -> Vector3, -- followed live
+	Tip: (() -> Vector3?)?, -- the weapon's head (VfxTip), followed live; nil or nil result: no weapon glow
+	Height: number, -- the hero's height, studs (sizes scale with it)
+	StartAt: number, -- server time the wind-up starts
+	EndAt: number, -- server time the Skill strikes (its Release); the charge runs until then
+	Lite: boolean?, -- fewer motes, rings and glints (other Masters' heroes), for frame rate
+	Sfx: ((soundKey: string, pos: Vector3, delaySeconds: number?, pitch: number?, volumeScale: number?) -> ())?,
+	Shake: ((magnitude: number) -> ())?,
+}
+
+local WINDUP_FALLBACK: SkillVfxCatalog.Palette = {
+	Primary = Color3.fromRGB(255, 214, 120),
+	Secondary = Color3.fromRGB(240, 186, 82),
+	Core = Color3.fromRGB(255, 250, 230),
+}
+
+local function windupPalette(heroId: string?, weaponType: string?): SkillVfxCatalog.Palette
+	local _, found = SkillVfxCatalog.Get(heroId, weaponType, "SKILL")
+	return found or WINDUP_FALLBACK
+end
+
+local function windupScale(height: number): number
+	return math.clamp(height / 5, 0.8, 1.6)
+end
+
+-- The Skill wind-up's charge (HeroClips.Windup, the opening of every Skill), in the hero's Skill
+-- palette. It runs from the wind-up through the Skill's own clip up to the moment it strikes, where
+-- PlayWindupRelease bursts it out: a shockwave and a flash as it starts, a sigil and a glow under
+-- the hero's feet, an aura shell and a spinning ring around it that flash on every pulse, light
+-- streaming into its chest and its weapon's head, and motes rising off the ground.
+function SkillVfx.PlayWindup(pool: VfxPool.VfxPool, args: WindupArgs): boolean
+	if not pool:Visible(args.Feet) then
+		return false
+	end
+	local palette = windupPalette(args.HeroId, args.WeaponType)
+	local accent = palette.Accent or palette.Secondary
+	local s, e = args.StartAt, math.max(args.StartAt + 0.4, args.EndAt)
+	local k = windupScale(args.Height)
+	local feet = args.Feet
+	local chest = args.Chest
+	local flat = VfxPrimitives.FLAT
+
+	-- Ignition: a flash in the chest, a lens glint and a shockwave along the ground.
+	VfxPrimitives.Burst(pool, chest(), palette.Core, 3.4 * k, s, 0.24)
+	VfxPrimitives.Flare(pool, chest, 6 * k, palette.Core, s, 0.3)
+	VfxPrimitives.Ring(pool, { Center = feet, From = 0.6, To = 8 * k, Color = palette.Primary, StartAt = s, EndAt = s + 0.45, Width = 1.0 })
+	VfxPrimitives.Ring(pool, { Center = feet, From = 0.3, To = 5.5 * k, Color = palette.Core, StartAt = s + 0.05, EndAt = s + 0.4, Width = 0.45 })
+
+	-- The ground: a turning sigil and a soft glow that spreads under it.
+	VfxPrimitives.Sigil(pool, feet, 4.2 * k, palette, s, e + 0.15)
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(feet + Vector3.new(0, 0.1, 0)) * flat, Radius = 6 * k, Color = accent, StartAt = s, EndAt = e + 0.2, Grow = 0.3, Transparency = 0.6 })
+
+	-- The aura: a shell round the hero and a spinning ring at the waist that flash on each pulse,
+	-- the pulses quickening as the charge builds.
+	local pulses: { number } = {}
+	local beat = s + 0.2
+	while beat < e do
+		table.insert(pulses, beat)
+		beat += math.max(0.12, 0.24 - 0.06 * (beat - s))
+	end
+	VfxPrimitives.Shell(pool, chest, 2.4 * k, palette.Primary, s + 0.05, e + 0.1)
+	VfxPrimitives.Accretion(pool, { Center = feet + Vector3.new(0, 1.6 * k, 0), Radius = 3 * k, Tilt = math.rad(14), Inner = palette.Primary, Outer = palette.Core,
+		StartAt = s, EndAt = e + 0.12, Spin = 1.8, Pulses = pulses })
+	local lite = args.Lite == true
+	for i, at in pulses do
+		if i % 2 == 0 and not lite then
+			VfxPrimitives.Ring(pool, { Center = feet, From = 1.2 * k, To = 4.8 * k, Color = palette.Secondary, StartAt = at, EndAt = at + 0.35, Width = 0.5 })
+		end
+	end
+
+	-- Light streaming in: waves of motes into the chest, and a core there that swells and throbs.
+	local wave, seed = s, 0
+	while wave < e - 0.3 do
+		local closeAt = math.min(e, wave + 1.1)
+		VfxPrimitives.Converge(pool, chest, palette.Primary, 7.5 * k, if lite then 6 else 12, wave, closeAt, seed)
+		if not lite then
+			VfxPrimitives.Converge(pool, chest, palette.Core, 5 * k, 6, wave + 0.15, closeAt, seed + 1.3)
+		end
+		wave += 0.8
+		seed += 0.7
+	end
+	VfxPrimitives.Orb(pool, {
+		Center = chest,
+		Diameter = function(now: number): number
+			local t = VfxMath.Progress(s, e, now)
+			return k * (0.5 + 1.8 * t) * (1 + 0.15 * math.sin((now - s) * 28))
+		end,
+		Color = palette.Core,
+		Neon = true,
+		Transparency = 0.25,
+		StartAt = s,
+		EndAt = e,
+	})
+
+	-- The weapon's head charges too.
+	local tip = args.Tip
+	if tip and tip() and not lite then
+		local function tipAt(): Vector3
+			return tip() or chest()
+		end
+		VfxPrimitives.Orb(pool, {
+			Center = tipAt,
+			Diameter = function(now: number): number
+				return k * (0.35 + 0.8 * VfxMath.Progress(s, e, now)) * (1 + 0.2 * math.sin((now - s) * 34))
+			end,
+			Color = palette.Primary,
+			Neon = true,
+			Transparency = 0.2,
+			StartAt = s + 0.1,
+			EndAt = e,
+		})
+		VfxPrimitives.Converge(pool, tipAt, palette.Secondary, 3 * k, 8, s + 0.1, e, 2.6)
+		for _, at in pulses do
+			VfxPrimitives.Flare(pool, tipAt, 2.2 * k, palette.Core, at, 0.16)
+		end
+	end
+
+	-- Motes rising off the ground all the way through.
+	local rise = s
+	while rise < e - 0.1 do
+		VfxPrimitives.Motes(pool, feet + Vector3.new(0, 0.6, 0), palette.Primary, rise, if lite then 4 else 6, 0.7)
+		rise += if lite then 0.45 else 0.3
+	end
+
+	local sfx = args.Sfx
+	if sfx then
+		sfx("AuraPowerUp", chest(), 0, nil, 0.9)
+	end
+	if args.Shake then
+		args.Shake(0.22)
+	end
+	return true
+end
+
+export type WindupReleaseArgs = {
+	HeroId: string?,
+	WeaponType: string?,
+	Feet: Vector3,
+	Chest: () -> Vector3,
+	Height: number,
+	At: number, -- server time the Skill strikes (its cue's StartServerTime + ReleaseSeconds)
+	Sfx: ((soundKey: string, pos: Vector3, delaySeconds: number?, pitch: number?, volumeScale: number?) -> ())?,
+	Shake: ((magnitude: number) -> ())?,
+}
+
+-- The end of the wind-up's charge, on the Skill's strike: the gathered light collapses into the
+-- chest and bursts out with a flash, a glint and a wide double shockwave.
+function SkillVfx.PlayWindupRelease(pool: VfxPool.VfxPool, args: WindupReleaseArgs, now: number): boolean
+	if not pool:Visible(args.Feet) then
+		return false
+	end
+	local palette = windupPalette(args.HeroId, args.WeaponType)
+	local accent = palette.Accent or palette.Secondary
+	local k = windupScale(args.Height)
+	local at = math.max(now, args.At)
+	local feet, chest = args.Feet, args.Chest
+	VfxPrimitives.Implode(pool, chest(), palette.Core, 4.5 * k, math.max(now, at - 0.12), 0.12)
+	VfxPrimitives.At(pool, at, function()
+		VfxPrimitives.Burst(pool, chest(), palette.Core, 5.5 * k, at, 0.32)
+	end)
+	VfxPrimitives.Flare(pool, chest, 9 * k, palette.Core, at, 0.35)
+	VfxPrimitives.Ring(pool, { Center = feet, From = 1, To = 11 * k, Color = palette.Primary, StartAt = at, EndAt = at + 0.5, Width = 1.2 })
+	VfxPrimitives.Ring(pool, { Center = feet, From = 0.5, To = 7.5 * k, Color = accent, StartAt = at + 0.05, EndAt = at + 0.5, Width = 0.6 })
+	local sfx = args.Sfx
+	if sfx then
+		sfx("AbilityActivation", chest(), math.max(0, at - now - 0.05), nil, 0.85)
+	end
+	local shake = args.Shake
+	if shake then
+		VfxPrimitives.At(pool, at, function()
+			shake(0.34)
+		end)
+	end
+	return true
 end
 
 -- A reflected hit (Caspian's Looking-Glass Bulwark, the server's REFLECT message): a mirror glint

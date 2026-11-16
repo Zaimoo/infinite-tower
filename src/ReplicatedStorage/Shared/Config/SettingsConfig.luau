@@ -30,6 +30,7 @@ export type SettingsState = {
 	ShowNews: boolean, -- server-wide headlines (NewsFeedController)
 	DamageNumbers: boolean,
 	ReduceMotion: boolean,
+	AlwaysSkillCutscenes: boolean, -- every Skill gets its cutscene, not just a hero's first each session (Rendering/SkillCutscene)
 	HighContrast: boolean,
 	LivePreview: boolean,
 	Scale: number,
@@ -61,6 +62,7 @@ SettingsConfig.DEFAULTS = table.freeze({
 	ShowNews = true,
 	DamageNumbers = true,
 	ReduceMotion = false,
+	AlwaysSkillCutscenes = false,
 	HighContrast = false,
 	LivePreview = true,
 	Scale = 1.0,
@@ -154,6 +156,7 @@ function SettingsConfig.Sanitize(raw: any): SettingsState
 	if type(raw.ShowNews) == "boolean" then out.ShowNews = raw.ShowNews end
 	if type(raw.DamageNumbers) == "boolean" then out.DamageNumbers = raw.DamageNumbers end
 	if type(raw.ReduceMotion) == "boolean" then out.ReduceMotion = raw.ReduceMotion end
+	if type(raw.AlwaysSkillCutscenes) == "boolean" then out.AlwaysSkillCutscenes = raw.AlwaysSkillCutscenes end
 	if type(raw.HighContrast) == "boolean" then out.HighContrast = raw.HighContrast end
 	if type(raw.LivePreview) == "boolean" then out.LivePreview = raw.LivePreview end
 

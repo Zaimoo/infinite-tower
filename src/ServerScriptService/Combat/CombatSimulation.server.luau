@@ -2261,11 +2261,15 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 
 		local timing = HeroActionTiming.For(simHero.TemplateId, simHero.EquippedArtifactType, attackType, tierDef, effectiveInterval, distToTarget)
 		if attackType == "SKILL" then
+			-- Every Skill opens with the hero's wind-up, so its cast, release and impact come later.
+			timing = HeroActionTiming.WithSkillWindup(timing)
 			-- Ultimates hold the hero for their whole cast so the animation reads.
 			simHero.AttackCooldown = math.max(effectiveInterval, timing.CastSeconds)
 		end
 		-- Combat movement waits for the blow to leave the hero (stepCombatManeuver).
 		;(simHero :: any).CastLockUntil = now + (if attackType == "SKILL" then timing.CastSeconds else timing.ReleaseSeconds)
+		-- The Skill commits the hero for its whole cast (stepHeroSimulation).
+		;(simHero :: any).SkillLockUntil = if attackType == "SKILL" then now + timing.CastSeconds else nil
 		local ticks, tickSeconds = HeroActionTiming.Ticks(tierDef)
 		local target: any = targetMob or targetEnemyHero
 
@@ -2577,6 +2581,13 @@ end
 
 local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local movementHero: any = simHero
+	-- A hero casting its Skill does nothing else until the cast ends (GDD §4.7): it doesn't move,
+	-- retarget, follow its Master or attack, even if its target dies. Only its attack timer runs on,
+	-- so the attack after the Skill isn't late.
+	if simHero.State ~= "COMA" and simHero.CurrentHP > 0 and now < ((simHero :: any).SkillLockUntil or 0) then
+		simHero.AttackCooldown = math.max(0, simHero.AttackCooldown - dt)
+		return
+	end
 	if simHero.DuelId then
 		stepDuelHero(simHero, dt, now)
 		return

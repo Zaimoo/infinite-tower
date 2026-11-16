@@ -69,6 +69,7 @@ local function readInitialSettings(): SettingsConfig.SettingsState
 		base.DamageNumbers = if LocalPlayer:GetAttribute("Settings_DamageNumbers") ~= nil then LocalPlayer:GetAttribute("Settings_DamageNumbers") == true else base.DamageNumbers
 		base.ShowNews = if LocalPlayer:GetAttribute("Settings_ShowNews") ~= nil then LocalPlayer:GetAttribute("Settings_ShowNews") == true else base.ShowNews
 		base.ReduceMotion = (LocalPlayer:GetAttribute("Settings_ReduceMotion") :: boolean?) or false
+		base.AlwaysSkillCutscenes = LocalPlayer:GetAttribute("Settings_AlwaysSkillCutscenes") == true
 		base.HighContrast = (LocalPlayer:GetAttribute("Settings_HighContrast") :: boolean?) or false
 		base.LivePreview = if LocalPlayer:GetAttribute("Settings_LivePreview") ~= nil then LocalPlayer:GetAttribute("Settings_LivePreview") == true else base.LivePreview
 		base.Scale = (LocalPlayer:GetAttribute("Settings_Scale") :: number?) or base.Scale
@@ -233,6 +234,7 @@ local function SettingsApp()
 		LocalPlayer:SetAttribute("Settings_ShowNews", settings.ShowNews)
 		LocalPlayer:SetAttribute("Settings_CompactMode", settings.CompactMode)
 		LocalPlayer:SetAttribute("Settings_ReduceMotion", settings.ReduceMotion)
+		LocalPlayer:SetAttribute("Settings_AlwaysSkillCutscenes", settings.AlwaysSkillCutscenes)
 		LocalPlayer:SetAttribute("Settings_Theme", settings.Theme)
 		LocalPlayer:SetAttribute("Settings_Font", settings.Font)
 
@@ -259,6 +261,7 @@ local function SettingsApp()
 		settings.DamageNumbers,
 		settings.CompactMode,
 		settings.ReduceMotion,
+		settings.AlwaysSkillCutscenes,
 		settings.Theme,
 		settings.Font,
 	})
@@ -726,6 +729,14 @@ local function SettingsApp()
 						AccentColor = accent,
 						LayoutOrder = 5,
 						OnToggle = function() updateSetting("ShowNews", not settings.ShowNews) end,
+					}),
+					CutsceneToggle = e(Toggle, {
+						Label = "Always Show Skill Cutscenes",
+						Description = "Off: only a hero's first Skill each session",
+						Value = settings.AlwaysSkillCutscenes,
+						AccentColor = accent,
+						LayoutOrder = 6,
+						OnToggle = function() updateSetting("AlwaysSkillCutscenes", not settings.AlwaysSkillCutscenes) end,
 					}),
 				},
 			}),
