@@ -767,8 +767,9 @@ Duel heroes do not manoeuvre. Enemy telegraph data comes from `TowerEncounterRun
 
 The player interface is built from modular, gothic-styled components:
 1. **Side-Rail Toolbar & Squad Status Card (Phase 5, `docs/rework-plan/PHASE_5_REACT_UI_AND_MENUS.md` §2):** The single bottom toolbar is split into two vertical rails.
-   - **Left Rail (menus):** `[SQUAD]` | `[STORE]` | `[UPGRADES]` (Fortress Tree) | `[INDEX]` (Hero Index) | `[BACKPACK]`. `[SQUAD]` opens the Squad window directly and shows "!" while a slot is open and a hero is free to fill it. The Squad drawer leads there too: its expanded card has a **MANAGE ›** button, every portrait opens the window on one click or tap, and the portrait tooltip says so. Buttons appear as their systems unlock and carry badges (a buildable tree node, an empty open squad slot, an affordable promotion, a new hero).
-   - **Right Rail (combat):** `[OVERDRIVE]` (Whistle 1 / `Q`) | `[RECALL]` (Whistle 2 / `E`) | `[TOWER]`, with radial cooldown sweeps. The rail's top is anchored below the Next Goal card so they never overlap.
+   - **Travel row (top centre):** `[ISLAND]` | `[HUB]` | `[TOWER]` teleports, side by side. It moves under the floor boss banner while that shows, the View Squad bar sits below it, and it is hidden during a duel.
+   - **Left Rail (the Master's own things):** `[SQUAD]` | `[BACKPACK]` | `[INDEX]` (Hero Index) | `[UPGRADES]` (Fortress Tree). `[SQUAD]` opens the Squad window directly and shows "!" while a slot is open and a hero is free to fill it. The Squad drawer leads there too: its expanded card has a **MANAGE ›** button, every portrait opens the window on one click or tap, and the portrait tooltip says so. Buttons appear as their systems unlock and carry badges (a buildable tree node, an empty open squad slot, an affordable promotion, a new hero).
+   - **Right Rail (offers and combat):** `[STORE]` | `[PASS]` (Battle Pass, §4.9) | `[REWARDS]` | `[OVERDRIVE]` (Whistle 1 / `Q`) | `[RECALL]` (Whistle 2 / `E`), the whistles with radial cooldown sweeps. In a raid the damage leaderboard takes the rail's place. The rail's top is anchored below the Next Goal card so they never overlap.
    - **Squad Status Card (bottom-left):** one live row per open squad slot, showing portrait, archetype (icon and label), rarity and star, level, an HP bar (stamina off-floor), the skill gauge and a state chip (Fighting / Idle / Recalled / Down / Dueling). Locked slots collapse into a single `🔒` line that opens the Fortress Tree. It sits in a pull-up drawer: collapsed by default to a slim portrait strip (HP line, state dot, hover tooltip) that turns into the full card (only one shows at a time), toggled with the chevron, `C` or gamepad `Y`, and auto-expanded while a hero is Down or a squad alert shows (§2.2a).
    - **Raid arena (§5.6, `Hud/RaidHud.luau`):** inside the raid, a live **damage leaderboard** replaces the Right Rail (rank, name, damage, share bar; your row highlighted, or pinned under a divider when outside the top 8), and a **Leave Raid** button sits bottom centre, just above the Squad Status card (it tracks the drawer's slide; a second tap confirms). Q/E whistles keep working from the keyboard. The top-centre boss bar shows the boss name over its HP bar, with `ENRAGED · m:ss` under it. A results card shows rank, damage, share, Gems and Gold when the fight ends. In the hub, a **Raid Open** chip with a countdown stacks above the event badge while the portal is open.
    - **Squad Power badge (bottom-right):** **Squad Power** is one number for the whole active squad: $$\text{HeroPower} = \text{round}\big(10 \times \text{DPS} + \text{Health}\big) \qquad \text{SquadPower} = \sum_{\text{deployed heroes}} \text{HeroPower}$$ DPS and Health come from `StatFormulas.GetCombatSnapshot`, which already includes stars, level, rarity, the equipped weapon and the Training Grounds multiplier. Downed heroes still count; only deployed squad slots count. The weights (10 × DPS + Health) are first-pass tuning. It is computed on the server, sent as `profile.SquadPower`, and shown with change floaters.
@@ -872,7 +873,7 @@ New players are walked through every feature once, in a fixed order, and held to
 
 ### 4.8 Free Rewards: Daily, Weekly, Playtime, Codes & Friend Boost
 
-Opened from the **Rewards** button on the Left Rail, which shows a badge with the number of rewards ready to claim. Tunables live in `RewardsConfig`; the rules are pure (`RewardRules`) and the server (`RewardsService`) checks every claim against its own clock. **All resets are UTC:** days roll over at 00:00 UTC and weeks on Monday 00:00 UTC.
+Opened from the **Rewards** button on the Right Rail, which shows a badge with the number of rewards ready to claim. Tunables live in `RewardsConfig`; the rules are pure (`RewardRules`) and the server (`RewardsService`) checks every claim against its own clock. **All resets are UTC:** days roll over at 00:00 UTC and weeks on Monday 00:00 UTC.
 
 | Reward | Rule | Payout |
 | --- | --- | --- |
@@ -887,6 +888,52 @@ Opened from the **Rewards** button on the Left Rail, which shows a badge with th
 - **Friend Boost:** each Roblox friend in the same server gives **+10% Gold, up to +30%** (3 friends). It multiplies the same Gold the Market does (tower kills, floor bosses and banked relics) and stacks with the Market, affixes, events and climb streaks. Gems, Promotion Stones and drop chances are unaffected. Friendships are checked on the server when a player joins (`Player:IsFriendsWithAsync`); the count is on the `FriendBoost` player attribute and in the Rewards window, and a toast announces changes. In Studio, the Workspace attribute `DebugFriendBoost` (a friend count) stands in for real friends.
 - **Remotes:** `Remotes.RewardsRemotes.RewardsRequest` (`GET`, `CLAIM_DAILY`, `CLAIM_WEEKLY`, `CLAIM_PLAYTIME` + tier, `REDEEM_CODE` + text; 4 requests per second) returns `{ Ok, Message, State }`; `RewardsSync` pushes the same State on join, at the daily reset and when the boost changes.
 - **Save data:** `profile.Rewards = { Daily = { Streak, LastClaimDay }, Weekly = { LastClaimWeek }, Playtime = { Day, Seconds, Claimed }, Codes }` (schema v8, §8.3).
+- **Potions and Battle Pass XP:** a reward may also pay potions (`Reward.Potions`, §4.9), so codes and future calendar entries can hand them out. Claiming a daily, weekly or playtime reward earns Battle Pass XP; codes do not.
+
+### 4.9 Battle Pass & Potions
+
+Opened from the **Pass** button on the Right Rail, which shows a badge with the number of pass rewards ready to claim. Tunables live in `BattlePassConfig` and `PotionConfig`; the rules are pure (`BattlePassRules`, `PotionRules`) and the server (`BattlePassService`, `PotionService`) decides every claim, purchase and potion.
+
+**Battle Pass**
+
+- **Seasons:** 28 days each, back to back on the UTC clock from Monday 16 November 2026 00:00 UTC (`BattlePassConfig.Epoch`). Season names cycle through `SeasonNames`. A new season resets XP, claims and Premium.
+- **Levels:** 30 levels, 1,000 XP each. XP stops at level 30.
+- **Two rows, one reward per level each:**
+  - **Free:** every player. Gold, Gems, Promotion Stones and one potion every few levels (880 Gems, 16 Promotion Stones and 9 potions across the season).
+  - **Premium:** unlocked for the current season by a Robux Developer Product (`ShopConfig.Pass`, `pass_premium`, 399 Robux fallback label; the live price is read from the product). 3,520 Gems, 41 Promotion Stones and 26 potions across the season. Buying it late still pays every premium level already reached. The rewards are fixed and shown before purchase, so it is not a paid random item.
+- **Claims:** each reward is claimed once, from its card or with **CLAIM ALL**. When a season ends, rewards that were unlocked but not claimed are delivered automatically (premium ones only if Premium was owned), then the track resets.
+- **XP sources** (`BattlePassConfig.Xp`):
+
+  | Action | XP |
+  | --- | --- |
+  | Regular / Elite / Alpha kill | 5 / 20 / 60 |
+  | Floor boss / Biome Boss | 60 / 150 |
+  | First clear of a floor | +100 |
+  | Relic banked | 25 |
+  | Raid (qualified) | 200 |
+  | Daily / weekly / playtime reward claimed | 150 / 500 / 30 |
+
+- **Purchase flow:** the window opens Roblox's checkout; `ShopService.ProcessReceipt` grants it through the same idempotent receipt claim as every Store product, then saves the profile. A second Premium receipt in one season (a retry that slipped past, or a gift) is paid as 10 levels of XP rather than nothing. While `ProductId` is 0 the button shows COMING SOON; in Studio it unlocks the row directly (`DEV_UNLOCK`, refused outside Studio) for play-testing.
+- **Remote:** `Remotes.BattlePassRemotes.BattlePassRequest` (`CLAIM` + track + level, `CLAIM_ALL`; 4 requests per second) returns `{ Ok, Message }`. The state reaches the client in the profile sync.
+- **Save data:** `profile.BattlePass = { Season, Xp, Premium, Free, Paid }` (schema v11, §8.3). `Free` and `Paid` are bitmasks of claimed levels, so the state stays small: XP changes on every kill and profile sync resends a changed key whole.
+
+**Potions**
+
+Potions are consumables kept in the Backpack's **Potions** tab. Drinking one starts a timed boost or adds its time to a running one, up to 4 hours. **Boost time only counts down while the player is in the game.** There is one potion per effect, so a boost never has two strengths.
+
+| Potion | Effect | Duration |
+| --- | --- | --- |
+| **Gold Potion** | +50% tower Gold (kills, floor bosses, banked relics). Multiplies with the Market, the friend boost, affixes, events and climb streaks. | 30 min |
+| **Gem Potion** | +50% Gems from kills and banked relics. First-clear bonuses and raid payouts are not affected. | 30 min |
+| **Luck Potion** | +25% summon luck on Call of the Rift, A Star's Arrival and the Blacksmith Forge. It adds to God's Blessing and goes on top of its +50% cap. Pity is unchanged, and the Robux banners (Gilded Mirror, Gilded Anvil) still have no luck. | 15 min |
+| **Hero XP Potion** | +100% combat XP for squad heroes (the Pit's per-grant cap still applies). | 30 min |
+| **Pass XP Potion** | +50% Battle Pass XP from every source. | 30 min |
+
+- **Sources:** both Battle Pass rows, and any reward that lists `Potions` (promo codes, for example). A profile holds at most 999 of each.
+- **Odds disclosure:** every odds display (`SummonLuck.ForProfile`: the summon screen, the odds modal, the Index and the Forge) includes a running Luck Potion, so the shown odds always match the roll.
+- **HUD:** each running boost shows a chip with its flask and time left beside the currency bar; tapping it opens the Backpack. The server sets each boost's end time on a player attribute (`Boost<Effect>Until`, server clock), so the client counts down without messages.
+- **Remote:** `Remotes.PotionRemotes.PotionRequest` (`USE` + potion id; 4 requests per second) returns `{ Ok, Message }`.
+- **Save data:** `profile.Potions = { [potionId] = count }` and `profile.Boosts = { [effect] = seconds left }` (schema v11). Loading a save repairs both: unknown ids are dropped and numbers are clamped.
 
 ---
 
@@ -1113,6 +1160,7 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
   4. Instantiate weapon at 1★.
 - **Legacy Purge:** Crafting materials (`IronGear`, etc.) and milestone boss equipment drops are completely removed; all weapon acquisition occurs through the Forge banner and star ascension.
 - **Artifact Index Compendium:** All 84 weapons are cataloged in `HeroIndex.luau` under the Index's **ARTIFACTS** tab, with live collection tracking (`Collected X / 84 artifacts`), category filtering, 3D previews, and each weapon's acquisition line (price, exact per-pull chance, 1★ sell price).
+- **The Backpack is the inventory:** Roblox's own backpack (tool hotbar and the `` ` `` inventory) is disabled (`CoreGuiType.Backpack`; the game has no Tools), and `` ` `` or **I** opens and closes the Backpack instead, as does the Left Rail button. It is a slot grid with four tabs (Artifacts, Heroes, Materials, Potions): each slot shows the item's art on a rarity-coloured tile, its name and a badge (stars, level or stack count), with a cyan mark on items in use (an equipped artifact, a squad hero, a running boost). Empty slots pad the grid to whole rows. **Sort** cycles Rarity, Stars and Name. Selecting a slot shows its details beside the grid (on narrow screens, in place of it), with **DRINK** for potions.
 - **Inventory caps in the Backpack:** the Backpack tabs read `Artifacts X/cap` and `Heroes X/cap` (50 plus the Storage branch, facility workers not counted), turning amber 5 below the cap and red at it, with a note on where to make room.
 
 ### 7.4a Premium Artifact Banner: "The Gilded Anvil" (Robux)
@@ -1177,9 +1225,9 @@ To isolate simulation state and prevent entity overflow or vertical AoE bleed ac
 
 ### 8.3 Profile Persistence & Session Locking
 - **Store:** One DataStore key per player, `PlayerProfiles_v4` / `User_{UserId}`, linked to the UserId for right-to-be-forgotten. The record is `{ Data, Lock = { JobId, Time }, SavedAt }`. Every write goes through `UpdateAsync` (`ProfilePersistence`, with the pure lock rules in `ProfileCodec`).
-- **Join:** The server claims the lock, then runs the saved profile (or a fresh default for a new player) through `PitService.EnsureDefaults`, `EnsureFacilities`, `ProfileMigrations.Run`, `OnboardingService.EnsureState`, `FortressTreeService.ApplyLevels` and `RewardsService.EnsureState`. `SyncProfile` lazy migrations still run on every sync. A lock held by another live server is retried 6 times, 5 seconds apart, before the player is kicked with "rejoin". A lock not refreshed for 10 minutes belongs to a crashed server and is taken over.
+- **Join:** The server claims the lock, then runs the saved profile (or a fresh default for a new player) through `PitService.EnsureDefaults`, `EnsureFacilities`, `ProfileMigrations.Run`, `OnboardingService.EnsureState`, `FortressTreeService.ApplyLevels`, `RewardsService.EnsureState`, `PotionService.EnsureState` and `BattlePassService.EnsureState`. `SyncProfile` lazy migrations still run on every sync. A lock held by another live server is retried 6 times, 5 seconds apart, before the player is kicked with "rejoin". A lock not refreshed for 10 minutes belongs to a crashed server and is taken over.
 - **Saves:** Autosave every 120–135 seconds per player (which refreshes the lock), on `PlayerRemoving` (saves and releases), and in `BindToClose` (up to 25 seconds). `DataManager.SaveProfile(player)` is the checkpoint save for purchases. A save is cancelled if this server no longer owns the lock, so a stale server can never overwrite newer progress. Failures retry with exponential backoff.
-- **Schema:** `ProfileMigrations.CurrentSchema` is 10. v10 adds `profile.Notoriety` (§6.1) with zeros (lifetime `Thefts`, `BountiesClaimed`, `Escapes`; the per-victim daily counts; this week's totals); `NotorietyRules.Ensure` repairs a broken one. v9 removes Soul Essence and turns any held essence into Promotion Stones at the old crafting rate (8 per stone, rounded up, no Gold or Gems charged). v8 adds `profile.Rewards` (§4.8) with nothing claimed. v3–v5 cover onboarding, 1★ summons and per-star levels (§4.1), v6 adds the onboarding guide, and v7 deletes the retired social systems (`profile.Social`: pacts, mercenaries, mimic chests, plot rune espionage) and their facility fields (`UncollectedOutput`, `BlessedUntil`, `LeechedUntil`, `LeechVisitorUserId`, `LastRuneTimestamp`, `LastRuneWasLeech`). It also removes Pit imprints (`InheritedImprints`, `ImprintCapacity`, `SynthesisHistory.ImprintsPerformed`), refunds each held Imprint Catalyst as 150 Gold, 15 Gems and 4 Soul Essence, and drops each hero's display-only `PassiveTrait` name.
+- **Schema:** `ProfileMigrations.CurrentSchema` is 11. v11 adds `profile.BattlePass`, `profile.Potions` and `profile.Boosts` (§4.9): older saves start the current season at level 0 with no potions and no running boosts. v10 adds `profile.Notoriety` (§6.1) with zeros (lifetime `Thefts`, `BountiesClaimed`, `Escapes`; the per-victim daily counts; this week's totals); `NotorietyRules.Ensure` repairs a broken one. v9 removes Soul Essence and turns any held essence into Promotion Stones at the old crafting rate (8 per stone, rounded up, no Gold or Gems charged). v8 adds `profile.Rewards` (§4.8) with nothing claimed. v3–v5 cover onboarding, 1★ summons and per-star levels (§4.1), v6 adds the onboarding guide, and v7 deletes the retired social systems (`profile.Social`: pacts, mercenaries, mimic chests, plot rune espionage) and their facility fields (`UncollectedOutput`, `BlessedUntil`, `LeechedUntil`, `LeechVisitorUserId`, `LastRuneTimestamp`, `LastRuneWasLeech`). It also removes Pit imprints (`InheritedImprints`, `ImprintCapacity`, `SynthesisHistory.ImprintsPerformed`), refunds each held Imprint Catalyst as 150 Gold, 15 Gems and 4 Soul Essence, and drops each hero's display-only `PassiveTrait` name.
 - **What is saved:** A sanitised deep copy. Derived fields (`SquadPower`, `SquadPowerByHero`) are stripped, functions and Instances are dropped, and NaN/inf numbers become 0.
 - **Studio:** Without "Enable Studio Access to API Services" the server warns and runs unsaved sessions instead of kicking. Studio play sessions use `studio-` JobIds and may take over a lock left by an earlier Studio session (Stop often kills the server before the release lands); they never take over a live server's lock, and live servers never take over a fresh Studio lock.
 - **Shutdown:** `BindToClose` waits (up to 25 s) for every in-flight release, including the ones `PlayerRemoving` started.
