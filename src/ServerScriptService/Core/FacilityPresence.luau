@@ -5,10 +5,10 @@
 -- unlock plays a construction reveal, and later levels play an upgrade burst. Levels are mirrored
 -- on the plot as attributes so a rebuilt PlotBuildings folder can be re-hidden without the profile.
 --
--- A plot nobody owns stands empty: every Building_* model in PlotBuildings (the Guard Post included),
--- the plaza fountain, the fortress walls and gatehouses, and the courtyard lanterns and benches are taken
--- out of the DataModel until a Master is assigned the plot. The island itself, the courtyard floor, the
--- invisible edge barriers and the outskirts scenery (trees, rocks, trail) remain.
+-- A plot nobody owns stands empty: every Building_* model in PlotBuildings (the Guard Post included) and
+-- the plaza fountain are taken out of the DataModel until a Master is assigned the plot. The fortress walls
+-- and gatehouses, the courtyard (floor, lanterns, benches) and the outskirts scenery (trees, rocks, trail)
+-- remain; KEEP_WALLS_WHEN_VACANT = false would also clear the walls and courtyard accents.
 
 local RunService = game:GetService("RunService")
 local AngelStatue = require(script.Parent:WaitForChild("AngelStatue"))
@@ -37,8 +37,8 @@ local ACCENTS_NAME = "CourtyardAccents"
 local EDGE_BARRIERS_NAME = "InvisibleEdgeBarriers"
 -- Set to true to leave the plaza fountain standing on unoccupied plots.
 local KEEP_FOUNTAIN_WHEN_VACANT = false
--- Set to true to leave the fortress walls, gatehouses and courtyard lanterns standing on unoccupied plots.
-local KEEP_WALLS_WHEN_VACANT = false
+-- Leaves the fortress walls, gatehouses and courtyard lanterns standing on unoccupied plots.
+local KEEP_WALLS_WHEN_VACANT = true
 
 -- Removed pieces, keyed by "<home path>/<name>". Each remembers the container it came from, so a piece
 -- whose container was rebuilt in the meantime is dropped instead of being put back into the new one.
