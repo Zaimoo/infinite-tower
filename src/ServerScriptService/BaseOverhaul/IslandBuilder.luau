@@ -3,7 +3,6 @@
 -- ModuleScript: Builds a single reusable floating fortress island (flat cobblestone top + jagged tapered rock underside + cloud wisps).
 -- All decorative underside parts have CanCollide, CanTouch, and CanQuery disabled for mobile performance.
 
-local GothicLanternSpawner = require(script.Parent:WaitForChild("GothicLanternSpawner"))
 local SceneryBake = require(script.Parent:WaitForChild("SceneryBake"))
 
 local IslandBuilder = {}
@@ -507,17 +506,13 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	-- Swap the ~246 thin tile slabs for the Blender-merged meshes when they are imported (SceneryBake)
 	SceneryBake.Apply(courtyardTiles, CFrame.identity, "CourtyardGroundTiles")
 
-	-- 1C. Courtyard Gothic Lampposts & Carved Stone Benches (Phase 2.3 Accent Lighting & Props)
+	-- 1C. Courtyard Carved Stone Benches (Phase 2.3 Accent Props)
 	local accentsFolder = Instance.new("Folder")
 	accentsFolder.Name = "CourtyardAccents"
 	accentsFolder.Parent = islandModel
 
-	local ironColor = Color3.fromRGB(28, 30, 36)
 	local stoneBenchColor = Color3.fromRGB(92, 96, 106)
 	local goldAccentColor = Color3.fromRGB(196, 152, 58)
-
-	-- 4 Blender-authored Gothic Medieval Lantern Posts at the corners of the radiating paths
-	IslandBuilder.SpawnCourtyardLanterns(accentsFolder, CFrame.identity)
 
 	-- 2 Carved Gothic Stone Benches flanking the outer ring promenade (facing the fountain)
 	for idx, benchAngDeg in ipairs({ -108, 18 }) do
@@ -692,22 +687,12 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	return islandModel
 end
 
--- Spawns the 4 courtyard Gothic Medieval Lantern Posts (overhanging lantern -Z points inward toward the fountain)
-function IslandBuilder.SpawnCourtyardLanterns(accentsFolder: Instance, courtyardTopCF: CFrame?)
-	GothicLanternSpawner.CleanupLegacyLamps(accentsFolder)
-	local origin = courtyardTopCF or CFrame.identity
-	local lampAnglesDeg = { -152, -72, 68, 152 }
-	local lampRadius = 19.6
-	for idx, angDeg in ipairs(lampAnglesDeg) do
-		local name = string.format("GothicLantern_%d", idx)
-		if accentsFolder:FindFirstChild(name) then
-			continue
+-- Removes any courtyard Gothic lantern models around the island fountain while preserving benches.
+function IslandBuilder.CleanupCourtyardLanterns(accentsFolder: Instance)
+	for _, child in accentsFolder:GetChildren() do
+		if child.Name:find("^GothicLantern_") then
+			child:Destroy()
 		end
-		local a = math.rad(angDeg)
-		local lx = math.sin(a) * lampRadius
-		local lz = math.cos(a) * lampRadius
-		local baseCF = origin * CFrame.new(lx, 0, lz) * CFrame.Angles(0, a, 0)
-		GothicLanternSpawner.Spawn(accentsFolder, baseCF, name)
 	end
 end
 
