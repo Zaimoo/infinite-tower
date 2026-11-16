@@ -507,10 +507,27 @@ local function initializePlotModel(plotModel: Model)
 
 	setupPlotGateBarrier(plotModel)
 
-	-- The fountain is placed by the island builder, possibly after the plot's facilities were applied.
+	-- The fountain, walls and courtyard accents are placed by the island builder, possibly after the
+	-- plot's facilities were applied: re-run presence so an unoccupied plot hides them again.
 	plotModel.ChildAdded:Connect(function(child)
-		if child.Name == "PlazaFountain" then
+		if child.Name == "PlazaFountain" or child.Name == "FloatingFortressIsland" then
 			task.defer(FacilityPresence.Reapply, plotModel)
+		end
+	end)
+	local function watchIsland(island: Instance)
+		island.ChildAdded:Connect(function(child)
+			if child.Name == "FortressWalls" or child.Name == "CourtyardAccents" then
+				task.defer(FacilityPresence.Reapply, plotModel)
+			end
+		end)
+	end
+	local currentIsland = plotModel:FindFirstChild("FloatingFortressIsland")
+	if currentIsland then
+		watchIsland(currentIsland)
+	end
+	plotModel.ChildAdded:Connect(function(child)
+		if child.Name == "FloatingFortressIsland" then
+			watchIsland(child)
 		end
 	end)
 	FacilityPresence.Reapply(plotModel)
@@ -567,7 +584,7 @@ local function assignPlotToPlayer(player: Player)
 			player.RespawnLocation = spawnLoc
 		end
 		setPlotReplicationFocus(plotModel, player, true)
-		-- An unoccupied plot stands empty: bring its buildings and fountain back for the new owner
+		-- An unoccupied plot stands empty: bring its buildings, fountain and walls back for the new owner
 		FacilityPresence.Reapply(plotModel)
 	end
 

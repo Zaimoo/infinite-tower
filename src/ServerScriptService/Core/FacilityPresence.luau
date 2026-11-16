@@ -5,9 +5,10 @@
 -- unlock plays a construction reveal, and later levels play an upgrade burst. Levels are mirrored
 -- on the plot as attributes so a rebuilt PlotBuildings folder can be re-hidden without the profile.
 --
--- A plot nobody owns stands empty: every Building_* model in PlotBuildings (the Guard Post included)
--- and the plaza fountain are taken out of the DataModel until a Master is assigned the plot. The walls,
--- the courtyard and the outskirts scenery (trees, rocks, trail) remain.
+-- A plot nobody owns stands empty: every Building_* model in PlotBuildings (the Guard Post included),
+-- the plaza fountain, the fortress walls and gatehouses, and the courtyard lanterns and benches are taken
+-- out of the DataModel until a Master is assigned the plot. The island itself, the courtyard floor, the
+-- invisible edge barriers and the outskirts scenery (trees, rocks, trail) remain.
 
 local RunService = game:GetService("RunService")
 local AngelStatue = require(script.Parent:WaitForChild("AngelStatue"))
@@ -26,63 +27,117 @@ local DUST_TEXTURE = "rbxassetid://243660364"
 
 local hidden: { [Instance]: { [string]: Model } } = {}
 
--- What an unoccupied plot has had removed: building models by name, and the fountain.
+-- What an unoccupied plot has removed: the buildings, the fountain, the walls and the courtyard accents.
 local BUILDING_PREFIX = "Building_"
 local FOUNTAIN_NAME = "PlazaFountain"
+local ISLAND_NAME = "FloatingFortressIsland"
+local WALLS_NAME = "FortressWalls"
+local ACCENTS_NAME = "CourtyardAccents"
+-- Stays inside the walls model: it stops players walking off the island's edge.
+local EDGE_BARRIERS_NAME = "InvisibleEdgeBarriers"
 -- Set to true to leave the plaza fountain standing on unoccupied plots.
 local KEEP_FOUNTAIN_WHEN_VACANT = false
-local vacated: { [Instance]: { [string]: Instance } } = {}
+-- Set to true to leave the fortress walls, gatehouses and courtyard lanterns standing on unoccupied plots.
+local KEEP_WALLS_WHEN_VACANT = false
+
+-- Removed pieces, keyed by "<home path>/<name>". Each remembers the container it came from, so a piece
+-- whose container was rebuilt in the meantime is dropped instead of being put back into the new one.
+type Stashed = { Home: Instance, Insts: { Instance } }
+local vacated: { [Instance]: { [string]: Stashed } } = {}
 
 function FacilityPresence.IsOccupied(plot: Instance): boolean
 	local owner = plot:GetAttribute("OwnerUserId")
 	return type(owner) == "number" and owner > 0
 end
 
--- Takes `inst` out of the DataModel and remembers it under `key`. A newer copy replaces an older one.
-local function stashVacant(plot: Instance, key: string, inst: Instance)
-	local stash = vacated[plot] or {}
-	vacated[plot] = stash
-	local older = stash[key]
-	if older and older ~= inst then
-		older:Destroy()
-	end
-	inst.Parent = nil
-	stash[key] = inst
+local function stashKey(homePath: string, name: string): string
+	return homePath .. "/" .. name
 end
 
--- Removes every building (and the fountain) from a plot with no owner.
+-- Removes every building, the fountain, the walls and the courtyard accents from a plot with no owner.
+-- A piece rebuilt while the plot stood empty replaces the stashed copy of the same name.
 local function vacate(plot: Instance)
+	local taken: { [string]: Stashed } = {}
+	local function take(home: Instance, homePath: string, inst: Instance)
+		local key = stashKey(homePath, inst.Name)
+		local entry = taken[key]
+		if not entry then
+			entry = { Home = home, Insts = {} }
+			taken[key] = entry
+		end
+		table.insert(entry.Insts, inst)
+		inst.Parent = nil
+	end
+
 	local folder = plot:FindFirstChild("PlotBuildings")
 	if folder then
 		for _, building in folder:GetChildren() do
 			-- Everything else in the folder is outskirts scenery, which stays
 			if building:IsA("Model") and string.sub(building.Name, 1, #BUILDING_PREFIX) == BUILDING_PREFIX then
-				stashVacant(plot, building.Name, building)
+				take(folder, "PlotBuildings", building)
 			end
 		end
 	end
 	if not KEEP_FOUNTAIN_WHEN_VACANT then
 		local fountain = plot:FindFirstChild(FOUNTAIN_NAME)
 		if fountain then
-			stashVacant(plot, FOUNTAIN_NAME, fountain)
+			take(plot, "", fountain)
 		end
+	end
+	local island = plot:FindFirstChild(ISLAND_NAME)
+	if island and not KEEP_WALLS_WHEN_VACANT then
+		local accents = island:FindFirstChild(ACCENTS_NAME)
+		if accents then
+			take(island, ISLAND_NAME, accents)
+		end
+		local walls = island:FindFirstChild(WALLS_NAME)
+		if walls then
+			for _, piece in walls:GetChildren() do
+				if piece.Name ~= EDGE_BARRIERS_NAME then
+					take(walls, ISLAND_NAME .. "/" .. WALLS_NAME, piece)
+				end
+			end
+		end
+	end
+
+	if next(taken) == nil then
+		return
+	end
+	local stash = vacated[plot] or {}
+	vacated[plot] = stash
+	for key, entry in taken do
+		local older = stash[key]
+		if older then
+			for _, inst in older.Insts do
+				if not table.find(entry.Insts, inst) then
+					inst:Destroy()
+				end
+			end
+		end
+		stash[key] = entry
 	end
 end
 
--- Puts back what vacate removed. A copy rebuilt in the meantime wins over the stashed one.
+-- Puts back what vacate removed. A copy rebuilt in the meantime wins over the stashed one, and pieces
+-- whose container is gone are dropped.
 local function occupy(plot: Instance)
 	local stash = vacated[plot]
 	if not stash then
 		return
 	end
 	vacated[plot] = nil
-	local folder = plot:FindFirstChild("PlotBuildings")
-	for key, inst in stash do
-		local home: Instance? = if key == FOUNTAIN_NAME then plot else folder
-		if home and not home:FindFirstChild(key) then
-			inst.Parent = home
-		else
-			inst:Destroy()
+	for _, entry in stash do
+		local home = entry.Home
+		local homeAlive = home == plot or home:IsDescendantOf(plot)
+		local name = entry.Insts[1] and entry.Insts[1].Name
+		-- Checked once per key, before any copy goes back, so same-named wall pieces all return
+		local rebuilt = homeAlive and name ~= nil and home:FindFirstChild(name) ~= nil
+		for _, inst in entry.Insts do
+			if homeAlive and not rebuilt then
+				inst.Parent = home
+			else
+				inst:Destroy()
+			end
 		end
 	end
 end
@@ -297,7 +352,8 @@ function FacilityPresence.GetBuilding(plot: Instance, facility: string): Model?
 	end
 	-- Removed because the plot is unoccupied
 	local vacant = vacated[plot]
-	local removed = if vacant then vacant[name] else nil
+	local entry = if vacant then vacant[stashKey("PlotBuildings", name)] else nil
+	local removed = if entry then entry.Insts[1] else nil
 	return if removed and removed:IsA("Model") then removed else nil
 end
 

@@ -127,6 +127,30 @@ function HubLayout.PlotCorners(index: number): { { number } }
 	return out
 end
 
+-- Points the join loading screen streams in (Player:RequestStreamAroundAsync) so walking the hub never waits
+-- on streaming: every plot's centre and corners, a spread over the Commons, the causeway and the tower plaza.
+-- The place keeps what streamed in (Workspace.StreamOutBehavior = LowMemory).
+function HubLayout.StreamPreloadPoints(): { Vector3 }
+	local y = HubLayout.IslandSurfaceY
+	local points: { Vector3 } = {}
+	for i = 1, HubLayout.PlotCount do
+		table.insert(points, HubLayout.PlotCentre(i))
+		for _, corner in HubLayout.PlotCorners(i) do
+			table.insert(points, Vector3.new(corner[1], y, corner[2]))
+		end
+	end
+	local hx, hz = HubLayout.HubHalfX * 0.5, HubLayout.HubHalfZ * 0.5
+	for _, xz in { { 0, 0 }, { -hx, -hz }, { hx, -hz }, { -hx, hz }, { hx, hz } } do
+		table.insert(points, HubLayout.HubPoint(xz[1], xz[2]))
+	end
+	table.insert(points, Vector3.new(0, HubLayout.TowerWalkwayY, (HubLayout.CausewayParkZ() + HubLayout.CausewayTowerZ) * 0.5))
+	local r = HubLayout.TowerWalkwayRadius
+	for _, xz in { { 0, 0 }, { 0, -r }, { r, 0 }, { -r, 0 }, { 0, r } } do
+		table.insert(points, Vector3.new(xz[1], HubLayout.TowerWalkwayY, xz[2]))
+	end
+	return points
+end
+
 -- Hub-local points around a rounded rectangle (corner arcs sampled), grown outward by `pad`.
 function HubLayout.RoundedRectPoints(hx: number, hz: number, r: number, pad: number, perArc: number): { { number } }
 	local out = {}

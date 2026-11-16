@@ -18,6 +18,14 @@ local EnemyAnimator = require(script.Parent.EnemyAnimator)
 
 local Factory = {}
 
+-- Light: a cheaper rig for ambient enemies (the hub's outskirts patrol). Every joint and clip is kept, but
+-- no piece casts a shadow or lights the scene, only the head's glow meshes are kept, and supports keep just
+-- their halo core.
+export type BuildOptions = { Light: boolean? }
+
+-- Glow meshes a light rig keeps: the eyes, which carry the enemy's colour at a distance.
+local LIGHT_GLOW_PREFIX = "Head_"
+
 local ALPHA_SCALE = 1.4 -- Alphas spawn 1.4x their Elite (MobCatalog bounds)
 -- Remodelled enemies render 1.25x their Blender size (2026-11-09 review). Scaling is about the ground point
 -- under the enemy, so feet stay planted; hitboxes and server stats are unchanged.
@@ -53,7 +61,7 @@ local function prep(p: BasePart, netId: any)
 	p:SetAttribute("NetId", netId)
 end
 
-local function buildModel(model: Model, root: BasePart, enemyId: string): any
+local function buildModel(model: Model, root: BasePart, enemyId: string, light: boolean): any
 	local spec = assert(Config.Get(enemyId), "Missing tower enemy spec: " .. enemyId)
 	local entry = Index[enemyId]
 	local source = assert(template(enemyId))
@@ -74,7 +82,8 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 		for _, g in seg.Glow do glowColours[g.Mesh] = g.Colour end
 	end
 	for _, d in source:GetDescendants() do
-		if d:IsA("BasePart") then
+		local skipped = light and glowColours[d.Name] ~= nil and string.sub(d.Name, 1, #LIGHT_GLOW_PREFIX) ~= LIGHT_GLOW_PREFIX
+		if d:IsA("BasePart") and not skipped then
 			local p = d:Clone()
 			local local_ = d.CFrame -- the template sits at the origin
 			local placed = CFrame.new(local_.Position * s) * local_.Rotation
@@ -143,7 +152,7 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 		-- Supports keep their floating halo of glowing beads (TowerEnemyRigs), readable from a distance.
 		local haloY = math.max(spec.Height or 6, entry.Height * s) - (spec.RootHeight or 3) + 1.1
 		local glow = Color3.fromRGB(150, 255, 160)
-		for i = 0, 8 do
+		for i = 0, if light then 0 else 8 do
 			local bead = Instance.new("Part")
 			bead.Name = if i == 0 then "SupportHaloCore" else "SupportHaloBead"
 			bead.Shape = Enum.PartType.Ball
@@ -176,17 +185,38 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 	return rig
 end
 
--- Build an enemy's rig on `model`/`root`: the remodelled template when available, else the part rig.
-function Factory.Build(model: Model, root: BasePart, enemyId: string): any
-	if Factory.HasModel(enemyId) then
-		local ok, rig = pcall(buildModel, model, root, enemyId)
-		if ok then return rig end
-		warn("[EnemyRigFactory] " .. enemyId .. " template failed, using the part rig: " .. tostring(rig))
-		local art = model:FindFirstChild("TowerEnemyArt")
-		if art then art:Destroy() end
+-- A light rig casts no shadows and carries no lights (the part rig gives supports and bosses a PointLight).
+local function lighten(model: Model)
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CastShadow = false
+		elseif d:IsA("Light") then
+			d.Enabled = false
+		end
 	end
-	local rig = Rigs.Build(model, root, enemyId)
-	rig.Metrics = EnemyAnimator.Metrics(enemyId, rig.Spec, nil, 1)
+end
+
+-- Build an enemy's rig on `model`/`root`: the remodelled template when available, else the part rig.
+function Factory.Build(model: Model, root: BasePart, enemyId: string, options: BuildOptions?): any
+	local light = options ~= nil and options.Light == true
+	local rig: any = nil
+	if Factory.HasModel(enemyId) then
+		local ok, built = pcall(buildModel, model, root, enemyId, light)
+		if ok then
+			rig = built
+		else
+			warn("[EnemyRigFactory] " .. enemyId .. " template failed, using the part rig: " .. tostring(built))
+			local art = model:FindFirstChild("TowerEnemyArt")
+			if art then art:Destroy() end
+		end
+	end
+	if not rig then
+		rig = Rigs.Build(model, root, enemyId)
+		rig.Metrics = EnemyAnimator.Metrics(enemyId, rig.Spec, nil, 1)
+	end
+	if light then
+		lighten(model)
+	end
 	return rig
 end
 

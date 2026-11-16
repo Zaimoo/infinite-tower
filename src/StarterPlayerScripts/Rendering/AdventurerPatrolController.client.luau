@@ -567,7 +567,8 @@ local function realizeMobModel(director: PlotDirector, origin: CFrame, mob: MobV
 	root.Parent = model
 	model.PrimaryPart = root
 
-	local rig = EnemyRigFactory.Build(model, root, mob.EnemyId)
+	-- Ambient wave mobs use the light rig: no shadows, fewer glow pieces (EnemyRigFactory)
+	local rig = EnemyRigFactory.Build(model, root, mob.EnemyId, { Light = true })
 	for _, p in ipairs(rig.Parts) do
 		if p:IsA("BasePart") then
 			p.CanQuery = false

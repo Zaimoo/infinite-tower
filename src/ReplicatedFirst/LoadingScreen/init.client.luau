@@ -8,6 +8,8 @@
 -- by HARD_CAP. Background assets keep preloading after the reveal.
 -- While it is up, PreviewWarmup renders every hero and weapon template behind it, so their meshes
 -- and textures are decoded before a hero card or artifact card first shows them.
+-- It also streams the whole hub in (HubLayout.StreamPreloadPoints), so walking past plots and the tower
+-- later does not hitch on streaming bursts; the place keeps it loaded (StreamOutBehavior = LowMemory).
 
 local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
@@ -24,6 +26,8 @@ local CHUNK = 20 -- assets per PreloadAsync call
 local WIPE_TIME = 0.60
 local WARMUP_DISPLAY_ORDER = -1000 -- under the HUD as well as under this screen
 local WARMUP_LINGER = 2 -- seconds the warm-up keeps rendering after the critical pass
+local HUB_STREAM_CAP = 8 -- longest the screen waits for the hub to stream in
+local HUB_STREAM_PARALLEL = 6 -- stream requests in flight at once
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -91,6 +95,42 @@ local function startWarmup()
 	end
 end
 
+-- Streams the hub in behind the screen, a few points at a time. Gives up after HUB_STREAM_CAP; whatever is
+-- left streams in normally as the player walks.
+local function streamHub(configFolder: Instance?)
+	local module = configFolder and configFolder:WaitForChild("HubLayout", 10)
+	if not (module and module:IsA("ModuleScript")) then
+		return
+	end
+	local ok, result = pcall(function()
+		return (require :: any)(module).StreamPreloadPoints()
+	end)
+	if not ok then
+		warn(`[LoadingScreen] hub stream points failed: {result}`)
+		return
+	end
+	local points = result :: { Vector3 }
+	local startedStreaming = os.clock()
+	local nextIndex = 1
+	local inFlight = 0
+	local function worker()
+		while nextIndex <= #points and not finished and os.clock() - startedStreaming < HUB_STREAM_CAP do
+			local point = points[nextIndex]
+			nextIndex += 1
+			local remaining = math.max(0.1, HUB_STREAM_CAP - (os.clock() - startedStreaming))
+			pcall(player.RequestStreamAroundAsync, player, point, remaining)
+		end
+		inFlight -= 1
+	end
+	for _ = 1, math.min(HUB_STREAM_PARALLEL, #points) do
+		inFlight += 1
+		task.spawn(worker)
+	end
+	while inFlight > 0 and not finished and os.clock() - startedStreaming < HUB_STREAM_CAP do
+		task.wait(0.05)
+	end
+end
+
 task.spawn(function()
 	-- Wait for the DataModel to finish its first replication.
 	if not game:IsLoaded() then
@@ -117,6 +157,9 @@ task.spawn(function()
 		end
 	end
 	criticalDone = true
+
+	-- Stream every plot, the Commons and the tower in now rather than in bursts while walking.
+	streamHub(Shared and Shared:FindFirstChild("Config"))
 
 	-- Give the player character / Waiting Room camera a brief moment to spawn behind the curtain.
 	local charWaitStart = os.clock()
