@@ -1466,6 +1466,25 @@ WindowManager.Register("Backpack", {
 	IsOpen = function() return g("IsBackpackOpen") ~= nil and g("IsBackpackOpen")() end,
 	Close = function() if g("CloseBackpack") then g("CloseBackpack")() end end,
 })
+-- The Backpack is the game's inventory (GDD §4.6): Roblox's own backpack (the tool hotbar and the
+-- ` inventory) is turned off, and its key opens ours instead. The game has no Tools to lose.
+task.spawn(function()
+	local StarterGui = game:GetService("StarterGui")
+	for _ = 1, 10 do
+		local ok = pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+		end)
+		if ok then break end
+		task.wait(0.5)
+	end
+end)
+local function toggleBackpack()
+	if WindowManager.IsOpen("Backpack") then
+		WindowManager.Close("Backpack")
+	elseif g("OpenBackpack") and not WindowManager.IsAnyOpen() and not (g("IsDuelActive") and g("IsDuelActive")()) then
+		g("OpenBackpack")()
+	end
+end
 WindowManager.Register("Index", { -- Hero/Artifact Index and the Store share one panel slot
 	IsOpen = function() return g("IsHeroIndexOpen") ~= nil and g("IsHeroIndexOpen")() end,
 	Close = function() if g("CloseHeroIndex") then g("CloseHeroIndex")() end end,
@@ -1951,12 +1970,15 @@ end
 
 -- Panels refresh only when a sync touched something they show. Each list names the profile keys a
 -- panel does NOT depend on; any key not listed (including fields added later) refreshes the panel.
+-- Battle Pass XP changes on every kill and potion counts never show in these panels; a running boost
+-- (Boosts) only matters where summon odds are drawn.
 local PANEL_IGNORES: { [string]: { [string]: boolean } } = {
-	Facility = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, MaxFloorReached = true, HighestClearedFloor = true },
-	FortressTree = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, Artifacts = true },
-	Forge = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, MaxFloorReached = true, HighestClearedFloor = true, HighestClearedBiomeBoss = true },
-	Squad = { LastActiveTimestamp = true, Currencies = true, PitMaterials = true, MaxFloorReached = true, HighestClearedFloor = true },
-	Blacksmith = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true },
+	Facility = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, MaxFloorReached = true, HighestClearedFloor = true, BattlePass = true, Potions = true },
+	FortressTree = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, Artifacts = true, BattlePass = true, Potions = true, Boosts = true },
+	Forge = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, MaxFloorReached = true, HighestClearedFloor = true, HighestClearedBiomeBoss = true, BattlePass = true, Potions = true },
+	Squad = { LastActiveTimestamp = true, Currencies = true, PitMaterials = true, MaxFloorReached = true, HighestClearedFloor = true,
+		BattlePass = true, Potions = true, Boosts = true },
+	Blacksmith = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, BattlePass = true, Potions = true },
 }
 
 -- `touched` is the set of top-level keys that changed, or nil after a whole profile.
@@ -2500,6 +2522,10 @@ do
 			if _G.ToggleShop then
 				_G.ToggleShop()
 			end
+		end
+		-- ` (Roblox's inventory key) and I open and close the Backpack.
+		if input.KeyCode == Enum.KeyCode.Backquote or input.KeyCode == Enum.KeyCode.I then
+			toggleBackpack()
 		end
 		if RunService:IsStudio() and input.KeyCode == Enum.KeyCode.F8 then
 			for _, b in devButtons do
