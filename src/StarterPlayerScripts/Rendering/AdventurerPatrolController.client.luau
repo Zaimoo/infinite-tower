@@ -904,7 +904,7 @@ local function stepDirector(director: PlotDirector, origin: CFrame, dt: number, 
 	end
 
 	-- Step Heroes
-	local campfireLook = Vector3.new(10.5, 0, 160.5)
+	local campfireLook = Vector3.new(-1.9, 0, 89.5)
 	for _, hero in pairs(director.Heroes) do
 		local movedDist = 0
 		local speedScale = 1.0

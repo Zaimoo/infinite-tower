@@ -16,7 +16,7 @@ local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 42 -- 42: Raise TrainingGrounds meshes +0.50 so Arena_Floor sits flush above island surface (41: Enlarged Market Bazaar at (50,0,36) facing Fountain)
+local VERSION = 44 -- 44: Polish GuardPost campfire core & rotation-safe roof BillboardStudsOffset (43: Blender Outskirts Guardpost at (12,0,96))
 
 local function attachPrompt(
 	parent: Instance,
@@ -111,6 +111,7 @@ function Buildings.Build(plot: Instance)
 	local existingMarket = FacilityPresence.GetBuilding(plot, "Market")
 	local existingTG = FacilityPresence.GetBuilding(plot, "TrainingGrounds")
 	local existingTGFloor = existingTG and existingTG:FindFirstChild("Arena_Floor", true)
+	local existingGP = FacilityPresence.GetBuilding(plot, "GuardPost")
 	if existing and existing:GetAttribute("Version") == VERSION
 		and sameOrigin(existing:GetAttribute("Origin"), origin)
 		and existingMarket ~= nil
@@ -118,7 +119,9 @@ function Buildings.Build(plot: Instance)
 		and existingTG ~= nil
 		and existingTG:FindFirstChildWhichIsA("MeshPart", true) ~= nil
 		and existingTGFloor ~= nil and existingTGFloor:IsA("BasePart")
-		and existingTGFloor.Position.Y >= origin.Position.Y - 0.05 then
+		and existingTGFloor.Position.Y >= origin.Position.Y - 0.05
+		and existingGP ~= nil
+		and existingGP:FindFirstChildWhichIsA("MeshPart", true) ~= nil then
 		return existing
 	end
 
@@ -254,7 +257,7 @@ function Buildings.Build(plot: Instance)
 		"Outskirts Guard Post",
 		gpCfg.PromptText or "Guardpost",
 		gpCfg.Keybind or Enum.KeyCode.F,
-		16
+		18
 	)
 	syncPlotFacilityAnchor(plot, "GuardPost", gpInteract.CFrame)
 

@@ -1600,119 +1600,177 @@ function Arch.BuildTrainingGrounds(folder: Instance, centerCF: CFrame): Part
 end
 
 --============================================================================
--- 2.7 GUARDPOST OUTSKIRTS (`GuardpostOutskirts` — Palisade Watch & Campfire)
+-- 2.7 GUARDPOST OUTSKIRTS (`GuardpostOutskirts` — Watch Tower, Campfire & Fence)
 --============================================================================
-function Arch.BuildGuardPost(folder: Instance, centerCF: CFrame): Part
-	local model = Instance.new("Model")
-	model.Name = "Building_GuardPost"
-	model.Parent = folder
+local GP_GROUND_CM = "rbxassetid://122503591905770"
+local GP_GROUND_NM = "rbxassetid://108838993593949"
+local GP_GROUND_RM = "rbxassetid://125432943427509"
+local GP_PROPS_CM = "rbxassetid://76221190618895"
+local GP_PROPS_NM = "rbxassetid://126518725174381"
+local GP_PROPS_RM = "rbxassetid://114591375821153"
 
+local GUARDPOST_OUTSKIRTS_MESHES: { BundledMeshSpec } = {
+	{ Name = "GuardTower_CobblePad", MeshId = "rbxassetid://86707800925659", Size = V(14.1276, 1.2697, 14.1181), Pos = V(16.5370, 0.6349, -14.3860), PivotOffset = V(16.5371, -0.6349, -14.3860), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
+	{ Name = "GuardTower_Structure", MeshId = "rbxassetid://94962682973717", Size = V(12.3770, 17.4903, 13.2736), Pos = V(16.5001, 8.7503, -14.0517), PivotOffset = V(16.5001, -8.7503, -14.0517), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "GuardTower_Roof", MeshId = "rbxassetid://77457018868714", Size = V(10.5261, 4.0905, 10.2756), Pos = V(16.5001, 16.0248, -14.5000), PivotOffset = V(16.5001, -16.0248, -14.5000), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "GuardTower_Props", MeshId = "rbxassetid://117458340250669", Size = V(8.0746, 11.3226, 13.2277), Pos = V(14.3303, 5.6387, -14.8373), PivotOffset = V(14.3303, -5.6387, -14.8373), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "Campfire_StoneHearth", MeshId = "rbxassetid://72437157501604", Size = V(12.8316, 0.8345, 12.4075), Pos = V(-13.9477, 0.4172, -6.4900), PivotOffset = V(-13.9477, -0.4172, -6.4900), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
+	{ Name = "Campfire_Area", MeshId = "rbxassetid://140525333251753", Size = V(13.3646, 2.7893, 12.0661), Pos = V(-13.8377, 1.1553, -6.6107), PivotOffset = V(-13.8377, -1.1553, -6.6107), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "Outskirts_Fence", MeshId = "rbxassetid://118569747134414", Size = V(23.8548, 4.6559, 21.5963), Pos = V(-17.5906, 2.3121, -3.6969), PivotOffset = V(-17.5906, -2.3121, -3.6969), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+}
+
+local function buildGuardPostProceduralFallback(model: Model, centerCF: CFrame, fireCenter: CFrame)
 	local timberLog = Color3.fromRGB(94, 62, 36)
 	local darkTimber = Color3.fromRGB(68, 44, 26)
 	local stoneRing = Color3.fromRGB(82, 86, 94)
-	local fireWarm = Color3.fromRGB(255, 145, 50)
 
-	-- Timber Palisade Watch-Post with Slatted Wooden Roof
-	local towerCF = centerCF * CFrame.new(8.5, 0, -3.5)
-	part(model, "WatchBaseDeck", V(11.0, 1.2, 11.0), towerCF * CFrame.new(0, 0.6, 0), stoneRing, Enum.Material.Cobblestone, true)
-
-	-- 4 Corner Log Pillars & Elevated Watch Deck
-	for _, sx in ipairs({ -4.4, 4.4 }) do
-		for _, sz in ipairs({ -4.4, 4.4 }) do
+	local towerCF = centerCF * CFrame.new(16.5, 0, -14.5) * CFrame.Angles(0, math.rad(-82), 0)
+	part(model, "WatchBaseDeck", V(12.0, 1.0, 12.0), towerCF * CFrame.new(0, 0.5, 0), stoneRing, Enum.Material.Cobblestone, true)
+	for _, sx in ipairs({ -4.2, 4.2 }) do
+		for _, sz in ipairs({ -4.2, 4.2 }) do
 			cylinder(model, "WatchLogPillar", 0.65, 13.5, towerCF * CFrame.new(sx, 6.75, sz), darkTimber, Enum.Material.Wood, true)
 		end
 	end
-	part(model, "WatchUpperPlatform", V(10.6, 0.7, 10.6), towerCF * CFrame.new(0, 7.6, 0), timberLog, Enum.Material.WoodPlanks, true)
+	part(model, "WatchUpperPlatform", V(10.2, 0.7, 10.2), towerCF * CFrame.new(0, 7.6, 0), timberLog, Enum.Material.WoodPlanks, true)
+	part(model, "WatchGableHut", V(8.2, 5.2, 7.6), towerCF * CFrame.new(0, 10.6, 0), darkTimber, Enum.Material.WoodPlanks, true)
 
-	-- Palisade Log Parapet Rails
-	for _, side in ipairs({
-		{ Size = V(10.6, 2.6, 0.6), Offset = V(0, 9.2, -4.8) },
-		{ Size = V(10.6, 2.6, 0.6), Offset = V(0, 9.2, 4.8) },
-		{ Size = V(0.6, 2.6, 10.6), Offset = V(-4.8, 9.2, 0) },
-		{ Size = V(0.6, 2.6, 10.6), Offset = V(4.8, 9.2, 0) },
-	}) do
-		part(model, "PalisadeRail", side.Size, towerCF * CFrame.new(side.Offset), timberLog, Enum.Material.WoodPlanks, false)
-	end
-
-	-- Slatted Wooden Gable Roof
-	for s = -3, 3 do
-		part(
-			model,
-			"SlattedRoofPlank_" .. (s + 4),
-			V(12.2, 0.4, 1.55),
-			towerCF * CFrame.new(0, 14.2 - math.abs(s) * 0.35, s * 1.65) * CFrame.Angles(math.rad(s * 5), 0, 0),
-			(s % 2 == 0) and timberLog or darkTimber,
-			Enum.Material.WoodPlanks,
-			false
-		)
-	end
-
-	-- Palisade Stakeholder Fence flanking the Watch-Post
-	for p = 1, 7 do
-		local px = -14.5 + (p - 1) * 2.1
-		cylinder(model, "PalisadeStake_" .. p, 0.55, 6.2 + (p % 2) * 0.6, centerCF * CFrame.new(px, 3.1, -8.5), timberLog, Enum.Material.Wood, true)
-	end
-
-	-- Stone-Ringed Campfire & Log Seating
-	local fireCenter = centerCF * CFrame.new(-4.5, 0, 2.5)
 	for r = 1, 10 do
 		local a = ((r - 1) / 10) * math.pi * 2
 		part(
 			model,
 			"CampfireStone_" .. r,
-			V(1.4, 0.9, 1.1),
-			fireCenter * CFrame.new(math.cos(a) * 2.6, 0.45, math.sin(a) * 2.6) * CFrame.Angles(0, -a, 0),
+			V(1.3, 0.85, 1.0),
+			fireCenter * CFrame.new(math.cos(a) * 2.1, 0.42, math.sin(a) * 2.1) * CFrame.Angles(0, -a, 0),
 			stoneRing,
 			Enum.Material.Slate,
 			false
 		)
 	end
-	for l = 1, 3 do
-		local a = math.rad(l * 60)
-		cylinder(
-			model,
-			"CampfireLog_" .. l,
-			0.38,
-			3.8,
-			fireCenter * CFrame.new(0, 0.5, 0) * CFrame.Angles(math.rad(78), a, 0),
-			darkTimber,
-			Enum.Material.Wood,
-			false
+end
+
+function Arch.BuildGuardPost(folder: Instance, centerCF: CFrame): Part
+	local model = Instance.new("Model")
+	model.Name = "Building_GuardPost"
+	model.Parent = folder
+
+	local fireWarm = Color3.fromRGB(255, 152, 56)
+	local fireCenter = centerCF * CFrame.new(-14.0, 0, -6.5)
+
+	if not instantiateBundledMeshes("GuardpostOutskirts", GUARDPOST_OUTSKIRTS_MESHES, model, centerCF) then
+		warn("[PlotFacilityArchitecture] Failed to load GuardpostOutskirts MeshParts; using procedural fallback")
+		buildGuardPostProceduralFallback(model, centerCF, fireCenter)
+	end
+
+	-- Invisible solid collision hulls (tower structure/props, campfire pit, 3 felled log benches, 4 fence spans)
+	local colColor = Color3.fromRGB(92, 86, 78)
+	local function addCollider(cName: string, sz: Vector3, relCF: CFrame)
+		local cp = part(model, cName, sz, centerCF * relCF, colColor, Enum.Material.Wood, true)
+		cp.Transparency = 1
+		cp.CastShadow = false
+		return cp
+	end
+
+	addCollider(
+		"TowerBaseCollider",
+		V(10.6, 16.5, 10.6),
+		CFrame.new(16.5, 8.25, -14.5) * CFrame.Angles(0, math.rad(-82), 0)
+	)
+	addCollider("CampfireCollider", V(4.2, 2.2, 4.2), CFrame.new(-14.0, 1.1, -6.5))
+
+	for idx, logSpec in ipairs({
+		{ dx = -2.6, dz = -3.7, len = 6.0, rad = 0.86 },
+		{ dx = -3.2, dz = 3.2, len = 5.8, rad = 0.85 },
+		{ dx = 3.4, dz = 3.0, len = 5.6, rad = 0.84 },
+	}) do
+		local yaw = math.atan2(-logSpec.dz, logSpec.dx)
+		addCollider(
+			"LogBenchCollider_" .. idx,
+			V(logSpec.rad * 2.0, logSpec.rad * 1.85, logSpec.len),
+			CFrame.new(-14.0 + logSpec.dx, logSpec.rad * 0.9, -6.5 + logSpec.dz) * CFrame.Angles(0, yaw, 0)
 		)
 	end
 
-	local fireCore = sphere(model, "CampfireFlameCore", 1.8, fireCenter * CFrame.new(0, 1.1, 0), fireWarm, Enum.Material.Neon)
-	pointLight(fireCore, fireWarm, 2.5, 24, true)
+	local fenceSegments = {
+		{ a = V(-29.0, 2.2, -14.0), b = V(-23.0, 2.2, -3.0), h = 4.4, w = 1.0 },
+		{ a = V(-23.0, 2.2, -3.0), b = V(-17.0, 2.2, 5.5), h = 4.4, w = 1.0 },
+		{ a = V(-17.0, 1.7, 5.5), b = V(-11.5, 1.7, 6.5), h = 3.4, w = 0.9 },
+		{ a = V(-11.5, 1.7, 6.5), b = V(-6.2, 1.7, 0.5), h = 3.4, w = 0.9 },
+	}
+	for idx, seg in ipairs(fenceSegments) do
+		local mid = (seg.a + seg.b) * 0.5
+		local segLen = (seg.b - seg.a).Magnitude + 0.6
+		addCollider("FenceCollider_" .. idx, V(seg.w, seg.h, segLen), CFrame.lookAt(mid, seg.b))
+	end
+
+	-- Hanging Watchtower Lantern Flame & Warm Evening PointLight
+	local lanternHost = part(
+		model,
+		"TowerLanternLightHost",
+		V(0.54, 0.78, 0.54),
+		centerCF * CFrame.new(12.80, 12.15, -9.59),
+		Color3.fromRGB(255, 200, 92),
+		Enum.Material.Neon,
+		false
+	)
+	lanternHost.Transparency = 0.15
+	lanternHost.CanTouch = false
+	lanternHost.CanQuery = false
+	lanternHost.CastShadow = false
+	pointLight(lanternHost, Color3.fromRGB(255, 180, 78), 2.4, 24, true)
+
+	-- Crackling Campfire Core, Flames & Rising Embers
+	local fireCore = sphere(model, "CampfireFlameCore", 0.85, fireCenter * CFrame.new(0, 0.72, 0), Color3.fromRGB(255, 118, 28), Enum.Material.Neon)
+	fireCore.Transparency = 0.35
+	fireCore.CanTouch = false
+	fireCore.CanQuery = false
+	fireCore.CastShadow = false
+	pointLight(fireCore, fireWarm, 2.8, 28, true)
 
 	local campFireEmit = Instance.new("ParticleEmitter")
 	campFireEmit.Name = "CampfireFlames"
 	campFireEmit.Texture = "rbxassetid://243660364"
-	campFireEmit.Color = ColorSequence.new(Color3.fromRGB(255, 225, 110), fireWarm)
+	campFireEmit.Color = ColorSequence.new(Color3.fromRGB(255, 228, 118), fireWarm)
 	campFireEmit.LightEmission = 0.95
 	campFireEmit.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1.6),
-		NumberSequenceKeypoint.new(1, 0.2),
+		NumberSequenceKeypoint.new(0, 1.55),
+		NumberSequenceKeypoint.new(0.6, 0.95),
+		NumberSequenceKeypoint.new(1, 0.18),
 	})
 	campFireEmit.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(0, 0.08),
 		NumberSequenceKeypoint.new(1, 1.0),
 	})
-	campFireEmit.Lifetime = NumberRange.new(0.6, 1.1)
-	campFireEmit.Rate = 18
-	campFireEmit.Speed = NumberRange.new(2.5, 5.0)
-	campFireEmit.Acceleration = V(0, 6, 0)
+	campFireEmit.Lifetime = NumberRange.new(0.55, 1.05)
+	campFireEmit.Rate = 22
+	campFireEmit.Speed = NumberRange.new(2.6, 5.2)
+	campFireEmit.SpreadAngle = Vector2.new(18, 18)
+	campFireEmit.Acceleration = V(0, 6.5, 0)
 	campFireEmit.Parent = fireCore
 
-	-- Log Seating Benches around the Campfire
-	for _, bench in ipairs({
-		{ Offset = V(-5.2, 0.65, 0), Yaw = 90 },
-		{ Offset = V(0, 0.65, 5.2), Yaw = 0 },
-	}) do
-		local benchCF = fireCenter * CFrame.new(bench.Offset) * CFrame.Angles(0, math.rad(bench.Yaw), 0)
-		part(model, "LogBenchSeat", V(5.2, 1.1, 1.3), benchCF, timberLog, Enum.Material.Wood, false)
-	end
+	local sparksEmit = Instance.new("ParticleEmitter")
+	sparksEmit.Name = "CampfireSparks"
+	sparksEmit.Texture = "rbxassetid://243660364"
+	sparksEmit.Color = ColorSequence.new(Color3.fromRGB(255, 240, 160), Color3.fromRGB(255, 130, 35))
+	sparksEmit.LightEmission = 1
+	sparksEmit.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.20),
+		NumberSequenceKeypoint.new(1, 0.03),
+	})
+	sparksEmit.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.8, 0.35),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	sparksEmit.Lifetime = NumberRange.new(1.0, 1.9)
+	sparksEmit.Rate = 10
+	sparksEmit.Speed = NumberRange.new(3.5, 6.5)
+	sparksEmit.SpreadAngle = Vector2.new(32, 32)
+	sparksEmit.Acceleration = V(0, 3.0, 0)
+	sparksEmit.Parent = fireCore
 
-	local interactionPart = finalizeFacilityModel(model, centerCF, V(10, 2.0, 10), V(0, 3.8, 3.5))
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(4, 1.0, 4), V(3.5, 3.8, -12.0))
+	local roofLabelPos = (centerCF * CFrame.new(16.5, 20.3, -14.5)).Position
+	interactionPart:SetAttribute("BillboardStudsOffset", roofLabelPos - interactionPart.Position)
 	return interactionPart
 end
 
@@ -1790,7 +1848,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 15 then
+	if existing and existing:GetAttribute("PrefabVersion") == 17 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1799,7 +1857,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 15)
+	prefabs:SetAttribute("PrefabVersion", 17)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")

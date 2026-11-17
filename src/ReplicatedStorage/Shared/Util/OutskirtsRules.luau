@@ -58,51 +58,51 @@ OutskirtsRules.Timing = table.freeze({
 	MobAttackInterval = 1.65,
 })
 
-OutskirtsRules.GuardPostCenter = Vector3.new(12, 0, 115)
+OutskirtsRules.GuardPostCenter = Vector3.new(12, 0, 96)
 
 OutskirtsRules.GatehouseRunIn = table.freeze({
 	Vector3.new(14, 0, 68),
-	Vector3.new(13, 0, 88),
-	Vector3.new(12, 0, 110),
+	Vector3.new(14, 0, 82),
+	Vector3.new(14, 0, 96),
 })
 
 OutskirtsRules.BuildingAttackTargets = table.freeze({
-	Vector3.new(6, 0, 110),
-	Vector3.new(12.5, 0, 120.5),
-	Vector3.new(18.5, 0, 117.5),
+	Vector3.new(-3.5, 0, 102.5),
+	Vector3.new(12.0, 0, 98.0),
+	Vector3.new(24.0, 0, 89.5),
 })
 
 OutskirtsRules.CampfireRestSlots = table.freeze({
-	Vector3.new(4.5, 0, 116.5),
-	Vector3.new(8.5, 0, 120.8),
-	Vector3.new(5.8, 0, 119.5),
-	Vector3.new(10.8, 0, 119.0),
-	Vector3.new(5.0, 0, 114.2),
+	Vector3.new(-4.8, 0, 90.0),
+	Vector3.new(-2.0, 0, 92.7),
+	Vector3.new(0.8, 0, 90.2),
+	Vector3.new(-0.8, 0, 86.5),
+	Vector3.new(-2.8, 0, 86.9),
 })
 
 OutskirtsRules.DefenderSlots = table.freeze({
-	table.freeze({ Rally = Vector3.new(12, 0, 124), PatrolMinX = -5, PatrolMaxX = 25 }),
-	table.freeze({ Rally = Vector3.new(3, 0, 123), PatrolMinX = -30, PatrolMaxX = -5 }),
-	table.freeze({ Rally = Vector3.new(22, 0, 123), PatrolMinX = 22, PatrolMaxX = 50 }),
-	table.freeze({ Rally = Vector3.new(-6, 0, 121), PatrolMinX = -55, PatrolMaxX = -28 }),
-	table.freeze({ Rally = Vector3.new(30, 0, 121), PatrolMinX = 45, PatrolMaxX = 68 }),
+	table.freeze({ Rally = Vector3.new(12, 0, 108), PatrolMinX = -5, PatrolMaxX = 25 }),
+	table.freeze({ Rally = Vector3.new(-2, 0, 108), PatrolMinX = -30, PatrolMaxX = -5 }),
+	table.freeze({ Rally = Vector3.new(24, 0, 105), PatrolMinX = 22, PatrolMaxX = 50 }),
+	table.freeze({ Rally = Vector3.new(-14, 0, 107), PatrolMinX = -55, PatrolMaxX = -28 }),
+	table.freeze({ Rally = Vector3.new(34, 0, 106), PatrolMinX = 45, PatrolMaxX = 68 }),
 } :: { DefenderSlot })
 
 OutskirtsRules.SpawnLanes = table.freeze({
 	table.freeze({
 		Spawn = Vector3.new(-30, 0, 150),
 		Mid = Vector3.new(-12, 0, 134),
-		BuildingTarget = Vector3.new(6, 0, 110),
+		BuildingTarget = Vector3.new(-3.5, 0, 102.5),
 	}),
 	table.freeze({
 		Spawn = Vector3.new(12, 0, 152),
 		Mid = Vector3.new(12, 0, 135),
-		BuildingTarget = Vector3.new(12.5, 0, 120.5),
+		BuildingTarget = Vector3.new(12.0, 0, 98.0),
 	}),
 	table.freeze({
 		Spawn = Vector3.new(42, 0, 150),
 		Mid = Vector3.new(30, 0, 134),
-		BuildingTarget = Vector3.new(18.5, 0, 117.5),
+		BuildingTarget = Vector3.new(24.0, 0, 89.5),
 	}),
 } :: { SpawnLane })
 
