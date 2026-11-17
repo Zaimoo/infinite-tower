@@ -418,6 +418,15 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	if alreadyBaked and not forceRebuild then
 		-- Geometry was already baked in Edit mode; re-seat spawns, beacons and the shared leaderboards
 		local baked = existingContainer :: Instance
+		-- A tower change (its layout, or the remodel's meshes being imported) rebuilds only the tower. A full
+		-- hub rebuild at runtime is not an option: some scenery steps need Studio's Plugin capability.
+		local bakedTower = baked:FindFirstChild("CentralCrimsonTower")
+		if bakedTower and bakedTower:GetAttribute("BuildSignature") ~= TowerBuilder.Signature() then
+			-- Build first, then swap, so nothing looking up the tower or its portal finds it missing
+			local freshTower = TowerBuilder.Build(nil)
+			bakedTower:Destroy()
+			freshTower.Parent = baked
+		end
 		GothicLanternSpawner.CleanupLegacyLamps(baked)
 		GothicLanternSpawner.CleanupLegacyLamps(plotsFolder)
 		local bakedCommons = baked:FindFirstChild("MastersCommons")

@@ -730,9 +730,13 @@ function EnvironmentSpawner.SpawnCastleCourtyardGround(parent: Instance, courtya
 				local texSet = if desc.Name:find("Walkway", 1, true)
 					then EnvironmentSpawner.DefaultGroundTextures.CastleWalkwaySlate
 					else EnvironmentSpawner.DefaultGroundTextures.CastleCourtyardStone
-				sa.ColorMap = texSet.ColorMap
-				sa.NormalMap = texSet.NormalMap
-				sa.RoughnessMap = texSet.RoughnessMap
+				-- Writing SurfaceAppearance maps needs Plugin capability: it works when the hub is baked in
+				-- Studio, but must not abort a runtime build (the imported template keeps its own maps then)
+				pcall(function()
+					sa.ColorMap = texSet.ColorMap
+					sa.NormalMap = texSet.NormalMap
+					sa.RoughnessMap = texSet.RoughnessMap
+				end)
 			end
 		end
 	end

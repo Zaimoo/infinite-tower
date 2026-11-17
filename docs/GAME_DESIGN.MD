@@ -158,7 +158,7 @@ A **run** starts when a Master first stands on a tower floor and ends when they 
 ### 3.1 Dual-Mode Spatial Architecture
 
 The world exists in two coordinated spatial contexts:
-1. **The Central Hub & Cloister Commons (World Coordinates):** Landmark Central Crimson Tower, the Cloister Commons (a solid rounded-rectangle garden hub) in front of the tower gate, and the 8 player fortress plots around its outer edge. All hub geometry comes from `HubLayout.luau`.
+1. **The Central Hub & Cloister Commons (World Coordinates):** Landmark Central Crimson Tower (`TowerBuilder`: a 650-stud-wide dark-slate gothic drum of 16 window tiers in four gentle setbacks, each tier with crimson tracery windows and a balcony, under a lantern crown, eight pinnacle turrets and a great spire about 2,150 studs above its base; the Blender remodel's meshes replace the part-built look once imported, see `GothicTowerShell`), the Cloister Commons (a solid rounded-rectangle garden hub) in front of the tower gate, and the 8 player fortress plots around its outer edge. All hub geometry comes from `HubLayout.luau`.
 2. **The 50 Dynamic Isolated Tower Floors (Off-Map Isolated Grid):** Server-managed dynamic encounter rooms for vertical climbing and Biome Boss arenas.
 
 ```

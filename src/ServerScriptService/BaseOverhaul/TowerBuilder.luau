@@ -10,6 +10,11 @@
 --     and flying buttresses at the setbacks
 --   * `Tower_Crown`: lantern drum, pinnacle turrets, great spire and a sky beacon
 --
+-- When the Blender remodel is imported (ReplicatedStorage.Assets.TowerMeshes.GothicTower), `GothicTowerShell`
+-- replaces the look with meshes: the same dark slate, crimson tracery windows, a balcony on every tier. The
+-- per-bay window and buttress parts of the mid segments are then not built at all; `TowerRings` stays as
+-- the collision.
+--
 -- Material Zones (the `MaterialZone` attribute; `TowerAtmosphereController` re-applies them on clients)
 -- and VFX Attachment Sockets:
 --   - Zone 1 (Masonry):         Weathered Dark Slate (#18151D)
@@ -18,7 +23,12 @@
 --   - Zone 4 (Cloud Bank):      `Zone4_CloudBank`, smoky charcoal-grey cumulus that keeps its own shading
 --   - Sockets: `Bridge_Snap_Point`, `VFX_Fog_Base`, `VFX_Storm_Peak`, `VFX_Window_Glow`
 
+local GothicTowerShell = require(script.Parent:WaitForChild("GothicTowerShell"))
+
 local TowerBuilder = {}
+
+-- Bump when the tower's build output changes; a baked hub then rebuilds just the tower (HubOverhaul)
+TowerBuilder.ArchitectureVersion = 4
 
 --============================================================================
 -- CONFIGURATION TABLE
@@ -30,11 +40,12 @@ TowerBuilder.Config = {
 	TopDiameter = 186, -- Legacy config reference
 	TowerDiameter = 650, -- World footprint diameter in studs (radius = 325, snaps to TowerHubArrival at Z = -325..-358)
 	TowerHeight = 900, -- Legacy config reference; the real height follows from the segments, crown and spire
-	MidSegmentCount = 8, -- Number of stacked `Tower_Mid_Segment` modules (each has 2 stories of pointed gothic windows)
-	-- Stepped silhouette: how many mid segments each stage holds, and that stage's diameter.
-	-- Stage 1 must stay at TowerDiameter so the gate and Hub Bridge still line up.
-	StageSegmentCounts = { 3, 3, 2 },
-	StageDiameters = { 650, 584, 516 },
+	MidSegmentCount = 16, -- Number of stacked `Tower_Mid_Segment` modules (each has 2 stories of pointed gothic windows)
+	-- Stepped silhouette: how many mid segments each stage holds, and that stage's diameter. Four gentle
+	-- setbacks keep the tall drum slender. Stage 1 must stay at TowerDiameter so the gate and Hub Bridge
+	-- still line up. GothicTowerShell.Layout must match these (the meshes were modelled for them).
+	StageSegmentCounts = { 4, 4, 4, 4 },
+	StageDiameters = { 650, 602, 554, 506 },
 
 	-- Crown above the last stage
 	CrownInset = 36, -- How far the lantern drum steps in from the top stage's wall
@@ -591,6 +602,14 @@ end
 --============================================================================
 -- BUILDER
 --============================================================================
+-- Identifies what Build makes from `cfg`: the architecture version, the stack height and whether the
+-- remodel's meshes are used. Stored on the tower as `BuildSignature`.
+function TowerBuilder.Signature(customConfig: { [string]: any }?): string
+	local cfg = customConfig or TowerBuilder.Config
+	local look = if GothicTowerShell.CanApply(cfg) then GothicTowerShell.VersionTag() else "parts"
+	return string.format("%d/%d/%s", TowerBuilder.ArchitectureVersion, cfg.MidSegmentCount, look)
+end
+
 function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?): Model
 	local cfg = table.clone(TowerBuilder.Config)
 	if customConfig then
@@ -605,6 +624,8 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 	local origin = cfg.CenterPosition
 	local radius = cfg.TowerDiameter * 0.5 -- 325 studs
 	local bayCount = cfg.BaysPerRing
+	-- With the remodel's meshes imported, the mid segments' window and buttress parts are never seen
+	local meshed = GothicTowerShell.CanApply(cfg)
 
 	--========================================================================
 	-- 1. Cracked, Dark, Smoky Base Ground with Faint Red Glow from Below
@@ -1127,7 +1148,7 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 
 			-- Lower story: a lancet window in every bay. Upper story: balconied lancets alternate
 			-- with round rose windows so the wall has a rhythm instead of one repeated column.
-			for bayIdx = 1, bayCount do
+			for bayIdx = 1, if meshed then 0 else bayCount do
 				local bayAngle = ((bayIdx - 1) / bayCount) * math.pi * 2
 				local windowName = string.format("Window_%02d_%02d", ringIdx, bayIdx)
 				if localTier == 2 and bayIdx % 2 == 0 then
@@ -1153,7 +1174,7 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 
 		-- Vertical Gothic Buttresses, Iron Pinnacles & Gargoyle Spurs along the Segment
 		local pierRise = if upperRadius then 34 else 0 -- buttress piers rise above a setback gallery
-		for bayIdx = 1, bayCount do
+		for bayIdx = 1, if meshed then 0 else bayCount do
 			local ribAngle = ((bayIdx - 0.5) / bayCount) * math.pi * 2
 			local rSa, rCa = math.sin(ribAngle), -math.cos(ribAngle)
 			local ribHeight = cfg.MidSegmentHeight + pierRise
@@ -1222,7 +1243,7 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 			end
 		end
 
-		if isStageTop then
+		if isStageTop and not meshed then
 			buildBattlements(segModel, string.format("GalleryMerlon_%02d", segIdx), segRadius + 12.5, segTopY + 1.2)
 			makeNeonBand(segModel, cfg, string.format("GalleryCrimsonCourse_%02d", segIdx), origin, segTopY - 6.2, segDiameter + 20)
 		end
@@ -1398,6 +1419,11 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 
 	task.wait()
 
+	-- Swap the remaining part-built look for the remodel's meshes (keeps colliders, trigger, beacon and sockets)
+	if meshed then
+		GothicTowerShell.Apply(towerModel, origin, cfg)
+	end
+
 	--========================================================================
 	-- 5. `Cloud_Ring_Bottom`: cumulus cloud bank below the tower, with `VFX_Fog_Base` sockets
 	--========================================================================
@@ -1476,7 +1502,11 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 		end
 	end
 
-	towerModel:SetAttribute("TowerArchitectureVersion", 3)
+	towerModel:SetAttribute("TowerArchitectureVersion", TowerBuilder.ArchitectureVersion)
+	towerModel:SetAttribute("BuildSignature", string.format(
+		"%d/%d/%s", TowerBuilder.ArchitectureVersion, cfg.MidSegmentCount,
+		if towerModel:GetAttribute("ShellMeshed") then GothicTowerShell.VersionTag() else "parts"
+	))
 	towerModel:SetAttribute("MidSegmentCount", cfg.MidSegmentCount)
 	towerModel:SetAttribute("BridgeSnapPoint", Vector3.new(origin.X, origin.Y, cfg.BridgeSnapPointZ))
 

@@ -23,9 +23,11 @@ local function apply(model: Instance)
 		if old then old.Parent = recovery end
 
 		local rings = model:WaitForChild("TowerRings")
+		-- Under the Blender remodel (GothicTowerShell) the rings are collision only, hidden inside the mesh
+		local meshed = model:GetAttribute("ShellMeshed") == true
 		for _, p in rings:GetChildren() do
 			if p:IsA("BasePart") then
-				p.Transparency = 0
+				p.Transparency = if meshed then 1 else 0
 				p.CanCollide = true
 				p.CanQuery = true
 			end

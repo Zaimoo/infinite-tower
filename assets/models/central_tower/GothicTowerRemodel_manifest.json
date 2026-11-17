@@ -1,0 +1,114 @@
+{
+  "Fbx": "assets/models/central_tower/GothicTowerRemodel.fbx",
+  "Meshes": {
+    "GT_Base_Stone": {
+      "Material": "Stone",
+      "Triangles": 4492
+    },
+    "GT_Base_Trim": {
+      "Material": "Trim",
+      "Triangles": 6198
+    },
+    "GT_Base_Glass": {
+      "Material": "Glass",
+      "Triangles": 618
+    },
+    "GT_Porch_Stone": {
+      "Material": "Stone",
+      "Triangles": 199
+    },
+    "GT_Tier1_Stone": {
+      "Material": "Stone",
+      "Triangles": 4624
+    },
+    "GT_Tier1_Trim": {
+      "Material": "Trim",
+      "Triangles": 10196
+    },
+    "GT_Tier1_Glass": {
+      "Material": "Glass",
+      "Triangles": 600
+    },
+    "GT_Tier2_Stone": {
+      "Material": "Stone",
+      "Triangles": 4624
+    },
+    "GT_Tier2_Trim": {
+      "Material": "Trim",
+      "Triangles": 10028
+    },
+    "GT_Tier2_Glass": {
+      "Material": "Glass",
+      "Triangles": 600
+    },
+    "GT_Tier3_Stone": {
+      "Material": "Stone",
+      "Triangles": 4624
+    },
+    "GT_Tier3_Trim": {
+      "Material": "Trim",
+      "Triangles": 9872
+    },
+    "GT_Tier3_Glass": {
+      "Material": "Glass",
+      "Triangles": 600
+    },
+    "GT_Tier4_Stone": {
+      "Material": "Stone",
+      "Triangles": 4624
+    },
+    "GT_Tier4_Trim": {
+      "Material": "Trim",
+      "Triangles": 9704
+    },
+    "GT_Tier4_Glass": {
+      "Material": "Glass",
+      "Triangles": 600
+    },
+    "GT_Crown_Stone": {
+      "Material": "Stone",
+      "Triangles": 5332
+    },
+    "GT_Crown_Trim": {
+      "Material": "Trim",
+      "Triangles": 10888
+    },
+    "GT_Crown_Glass": {
+      "Material": "Glass",
+      "Triangles": 784
+    }
+  },
+  "Tiers": [
+    {
+      "Stage": 1,
+      "Radius": 325.0,
+      "FirstTierY": 84.0,
+      "Count": 4,
+      "Step": 96.0
+    },
+    {
+      "Stage": 2,
+      "Radius": 301.0,
+      "FirstTierY": 468.0,
+      "Count": 4,
+      "Step": 96.0
+    },
+    {
+      "Stage": 3,
+      "Radius": 277.0,
+      "FirstTierY": 852.0,
+      "Count": 4,
+      "Step": 96.0
+    },
+    {
+      "Stage": 4,
+      "Radius": 253.0,
+      "FirstTierY": 1236.0,
+      "Count": 4,
+      "Step": 96.0
+    }
+  ],
+  "UniqueTriangles": 89207,
+  "RenderedTriangles": 271295,
+  "Height": 2198.0
+}
