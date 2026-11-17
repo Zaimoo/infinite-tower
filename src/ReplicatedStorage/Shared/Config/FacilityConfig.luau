@@ -277,9 +277,9 @@ FacilityConfig.FacilityLayout = {
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	Guardpost = {
-		Offset = Vector3.new(12, 0, 115),
+		Offset = Vector3.new(12, 0, 96),
 		RotationY = math.rad(0),
-		Radius = 20,
+		Radius = 22,
 		PromptText = "Guardpost",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
