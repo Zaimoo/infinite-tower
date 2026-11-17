@@ -338,61 +338,6 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		SceneryBake.Apply(courtyardTiles, CFrame.identity, "CourtyardGroundTiles")
 	end
 
-	-- 1C. Courtyard Carved Stone Benches (Phase 2.3 Accent Props)
-	local accentsFolder = Instance.new("Folder")
-	accentsFolder.Name = "CourtyardAccents"
-	accentsFolder.Parent = islandModel
-
-	local stoneBenchColor = Color3.fromRGB(92, 96, 106)
-	local goldAccentColor = Color3.fromRGB(196, 152, 58)
-
-	-- 2 Carved Gothic Stone Benches flanking the outer ring promenade (facing the fountain)
-	for idx, benchAngDeg in ipairs({ -108, 18 }) do
-		local a = math.rad(benchAngDeg)
-		local bx = math.sin(a) * 19.8
-		local bz = math.cos(a) * 19.8
-		local benchCF = CFrame.lookAt(Vector3.new(bx, 0, bz), Vector3.new(0, 0, 0))
-
-		makePart({
-			Name = string.format("GothicBench_Seat_%d", idx),
-			Size = Vector3.new(4.6, 0.35, 1.55),
-			CFrame = benchCF * CFrame.new(0, 1.35, 0),
-			Material = Enum.Material.Slate,
-			Color = stoneBenchColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		makePart({
-			Name = string.format("GothicBench_Backrest_%d", idx),
-			Size = Vector3.new(4.4, 1.35, 0.32),
-			CFrame = benchCF * CFrame.new(0, 2.15, 0.62),
-			Material = Enum.Material.Slate,
-			Color = stoneBenchColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		makePart({
-			Name = string.format("GothicBench_GoldRelief_%d", idx),
-			Size = Vector3.new(3.6, 0.65, 0.08),
-			CFrame = benchCF * CFrame.new(0, 2.20, 0.44),
-			Material = Enum.Material.Metal,
-			Color = goldAccentColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		for _, side in ipairs({ -1, 1 }) do
-			makePart({
-				Name = string.format("GothicBench_Armrest_%d_%s", idx, if side < 0 then "L" else "R"),
-				Size = Vector3.new(0.42, 1.85, 1.65),
-				CFrame = benchCF * CFrame.new(side * 2.15, 0.92, 0),
-				Material = Enum.Material.Slate,
-				Color = stoneBenchColor,
-				Decorative = true,
-				Parent = accentsFolder,
-			})
-		end
-	end
-
 	-- 2. Decorative Tapered Rocky Underside (Non-collidable, low part count for mobile)
 	local undersideFolder = Instance.new("Folder")
 	undersideFolder.Name = "RockyUnderside"
@@ -517,15 +462,6 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	end
 
 	return islandModel
-end
-
--- Removes any courtyard Gothic lantern models around the island fountain while preserving benches.
-function IslandBuilder.CleanupCourtyardLanterns(accentsFolder: Instance)
-	for _, child in accentsFolder:GetChildren() do
-		if child.Name:find("^GothicLantern_") then
-			child:Destroy()
-		end
-	end
 end
 
 return IslandBuilder

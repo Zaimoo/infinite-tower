@@ -30,7 +30,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 39 -- Bump to force a rebuild of baked geometry (39: tuck SynthesisChamber toward NW corner)
+HubOverhaul.Version = 40 -- Bump to force a rebuild of baked geometry (40: remove courtyard benches facing island fountain)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
@@ -448,7 +448,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 				local island = pModel:FindFirstChild("FloatingFortressIsland")
 				local accents = island and island:FindFirstChild("CourtyardAccents")
 				if accents then
-					IslandBuilder.CleanupCourtyardLanterns(accents)
+					accents:Destroy()
 				end
 			end
 		end
