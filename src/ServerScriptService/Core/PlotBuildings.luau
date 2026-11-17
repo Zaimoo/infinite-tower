@@ -16,7 +16,7 @@ local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 44 -- 44: Polish GuardPost campfire core & rotation-safe roof BillboardStudsOffset (43: Blender Outskirts Guardpost at (12,0,96))
+local VERSION = 55 -- 55: Snap Outskirts_Fence onto dirt trail edge (54: Remove green moss patches/shingles from GuardTower_Roof)
 
 local function attachPrompt(
 	parent: Instance,

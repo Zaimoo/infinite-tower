@@ -56,6 +56,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 ASSET_DIR = REPO_ROOT / "assets" / "models" / "facilities"
 TEX_DIR = ASSET_DIR / "textures" / "outskirts_guardhouse"
 FBX_GUARDPOST_PATH = ASSET_DIR / "OutskirtsGuardhouse.fbx"
+FBX_GROUND_PATH = ASSET_DIR / "OutskirtsGround.fbx"
 FBX_ENVKIT_PATH = ASSET_DIR / "OutskirtsEnvironmentKit.fbx"
 MANIFEST_PATH = ASSET_DIR / "outskirts_guardhouse_manifest.json"
 DEFAULT_PREVIEW_PATH = (
@@ -66,6 +67,17 @@ DEFAULT_PREVIEW_PATH = (
 TEX_SIZE = 1024
 CELL_PX = 256
 CELL_PAD_PX = 14
+
+# 6 seamless regional dirt-splat chunks covering the entire trail, campfire yard, and tower plaza
+# (21-38 px/stud effective sharpness with 4px world-continuous extrapolated gutter per tile)
+PATH_CHUNKS: list[tuple[str, float, float, float, float]] = [
+    ("Ground_Path_NW", -28.0, -3.0, -36.5, 1.5),
+    ("Ground_Path_NE", -3.0, 25.0, -36.5, 1.5),
+    ("Ground_Path_SW", -28.0, -3.0, 1.5, 29.5),
+    ("Ground_Path_SE", -3.0, 25.0, 1.5, 29.5),
+    ("Ground_Path_WestWing", -74.0, -28.0, -6.0, 28.0),
+    ("Ground_Path_EastWing", 25.0, 62.0, -6.0, 28.0),
+]
 
 # Guardpost-local origin corresponds to Plot-local (12, 0, 96)
 GP_PLOT_ORIGIN = (12.0, 0.0, 96.0)
@@ -78,15 +90,21 @@ TOWER_YAW_DEG = -82.0  # +Z_tower faces Front-Left (pathway/campfire), +X_tower 
 CAMPFIRE_POS_RBX = (-14.0, 0.0, -6.5)
 
 # Fence polyline in Guardpost-local coordinates
-PALISADE_POINTS = [
-    (-29.0, -14.0),  # Plot (-17.0, 82.0) near left pine
-    (-23.0, -3.0),   # Plot (-11.0, 93.0)
-    (-17.0, 5.5),    # Plot (-5.0, 101.5) corner post connecting palisade -> split-rail
-]
+PALISADE_POINTS: list[tuple[float, float]] = []
 SPLIT_RAIL_POINTS = [
-    (-17.0, 5.5),    # Shared corner post
-    (-11.5, 6.5),    # Plot (0.5, 102.5) front corner
-    (-6.2, 0.5),     # Plot (5.8, 96.5) path-side terminal post
+    (-34.2, 1.5),   # Western shoulder snapped to north dirt edge of E-W trail
+    (-31.2, 2.1),   # Hugging north dirt edge of E-W trail
+    (-28.0, 3.2),   # Hugging north dirt edge of E-W trail
+    (-24.0, 5.0),   # Hugging north dirt edge of E-W trail
+    (-18.5, 8.1),   # Hugging north dirt edge below campfire
+    (-15.8, 9.7),   # Hugging dirt bulge south of campfire
+    (-13.2, 10.4),  # Hugging dirt bend toward fork
+    (-9.8, 12.6),   # Approaching fork corner along dirt border
+    (-7.0, 13.2),   # Sharp fork corner tip snapped to dirt edge
+    (-6.5, 10.3),   # West dirt edge of connector trail
+    (-6.2, 7.0),    # West dirt edge of connector trail
+    (-5.7, 3.5),    # West dirt edge of connector trail
+    (-4.9, -0.6),   # Connector path terminal post leaving campfire entryway open
 ]
 
 
@@ -271,39 +289,45 @@ def generate_guardpost_ground_textures() -> tuple[Path, Path, Path]:
     col, height, rough = _make_atlas_buffers()
     uu, vv = _cell_coords()
 
-    # (0,0) Mossy Cobblestone Pad (warm grey-taupe rounded cobbles + dark moss mortar)
-    edge_c, cid_c = worley_cobble(CELL_PX, cells=5, jitter=0.78, seed=101)
-    grain_c = fbm_grid(CELL_PX, CELL_PX, 102, (32, 16, 8))
-    stone_rgb = (
-        np.array([112.0, 108.0, 102.0]) * (0.78 + 0.30 * cid_c[..., None] + 0.14 * grain_c[..., None])
-    )
-    mortar_moss = np.array([58.0, 78.0, 44.0]) + grain_c[..., None] * np.array([16.0, 22.0, 12.0])
-    rgb_00 = mortar_moss + (stone_rgb - mortar_moss) * edge_c[..., None]
-    _put_cell(col, height, rough, (0, 0), rgb_00, 0.25 + 0.58 * edge_c + 0.14 * grain_c, 0.80 + 0.12 * (1.0 - edge_c))
-
-    # (1,0) Chiseled Grey Stepping Stone (cool layered slate #6B7480 with soft bevel rim)
-    n_st = fbm_grid(CELL_PX, CELL_PX, 111, (48, 24, 12, 6))
-    flk = fbm_grid(CELL_PX, CELL_PX, 112, (16, 8))
+    # (0,0) Sculpted Single Cool Mossy River Cobble (for individual 3D stones on GuardTower_CobblePad — crisp, no sub-grid noise)
+    n_cb = fbm_grid(CELL_PX, CELL_PX, 102, (32, 16))
     edge_dist = np.maximum(np.abs(uu - 0.5), np.abs(vv - 0.5)) * 2.0
-    bevel = np.clip(1.0 - (edge_dist ** 3.2) * 0.38, 0.62, 1.0)
-    rgb_10 = (np.array([96.0, 104.0, 114.0]) + n_st[..., None] * np.array([34.0, 36.0, 38.0])) * bevel[..., None]
-    _put_cell(col, height, rough, (1, 0), rgb_10, 0.45 + 0.35 * n_st * bevel + 0.1 * flk, 0.76 - 0.08 * n_st)
+    rim_cb = np.exp(-((edge_dist - 0.84) * 10.0) ** 2) * 18.0
+    bev_cb = np.clip(1.0 - (edge_dist ** 3.2) * 0.46, 0.54, 1.0)
+    moss_cb = np.clip((n_cb - 0.62) * 2.2, 0.0, 0.35)[..., None]
+    stone_base_00 = (np.array([76.0, 82.0, 88.0]) + n_cb[..., None] * np.array([22.0, 22.0, 24.0]) + rim_cb[..., None]) * bev_cb[..., None]
+    rgb_00 = stone_base_00 * (1.0 - moss_cb) + np.array([42.0, 64.0, 36.0]) * moss_cb
+    _put_cell(col, height, rough, (0, 0), rgb_00, 0.44 + 0.34 * bev_cb + 0.14 * n_cb, 0.84 - 0.04 * n_cb)
 
-    # (2,0) Gatehouse Threshold Stone Slab (slightly warmer ashlar stone #74706B)
-    n_gt = fbm_grid(CELL_PX, CELL_PX, 121, (48, 24, 12))
-    rgb_20 = (np.array([104.0, 101.0, 96.0]) + n_gt[..., None] * np.array([30.0, 28.0, 26.0])) * bevel[..., None]
-    _put_cell(col, height, rough, (2, 0), rgb_20, 0.45 + 0.32 * n_gt * bevel, 0.80)
+    # (1,0) Stylized Smooth Cool Slate Stepping Stone (borderless matte blue-slate; 3D bevels handle edge rim lighting)
+    n_st = fbm_grid(CELL_PX, CELL_PX, 111, (64, 32, 16))
+    n_st2 = fbm_grid(CELL_PX, CELL_PX, 113, (12, 6))
+    grad_st = (uu * 0.25 + vv * 0.65) * 0.14 + n_st * 0.16
+    crack_line = np.exp(-(((uu - 0.42) * 1.4 + (vv - 0.55) * 0.9 - (n_st - 0.5) * 0.22) * 26.0) ** 2) * 0.12
+    rgb_10 = (np.array([72.0, 83.0, 96.0]) + grad_st[..., None] * np.array([22.0, 24.0, 28.0]) + n_st2[..., None] * 6.0) * (1.0 - crack_line[..., None])
+    _put_cell(col, height, rough, (1, 0), rgb_10, 0.52 + 0.26 * n_st + 0.12 * n_st2 - crack_line * 0.35, 0.80 - 0.04 * n_st)
 
-    # (3,0) Trodden Dirt Pathway (rich damp brown earth #5B4332 -> #473426 with fine grit)
+    # (2,0) Gatehouse Flagstone A — Borderless Warm-Cool Weathered Limestone-Slate (no repeating square frame)
+    n_gt = fbm_grid(CELL_PX, CELL_PX, 121, (64, 32, 16))
+    n_gt2 = fbm_grid(CELL_PX, CELL_PX, 125, (14, 7))
+    pit_gt = np.clip((0.36 - n_gt2) * 2.5, 0.0, 1.0)
+    rgb_20 = (
+        np.array([76.0, 74.0, 74.0])
+        + n_gt[..., None] * np.array([18.0, 17.0, 16.0])
+        + n_gt2[..., None] * np.array([8.0, 8.0, 7.0])
+    ) * (1.0 - pit_gt[..., None] * 0.14)
+    _put_cell(col, height, rough, (2, 0), rgb_20, 0.48 + 0.28 * n_gt + 0.14 * n_gt2 - pit_gt * 0.18, 0.86 - 0.04 * n_gt)
+
+    # (3,0) Trodden Dirt Pathway & Tower Pad Bed (cool smoky charcoal-umber matching Outskirts_Path)
     n_dt1 = fbm_grid(CELL_PX, CELL_PX, 131, (48, 24, 12, 6))
     n_dt2 = fbm_grid(CELL_PX, CELL_PX, 132, (8, 4))
-    rgb_30 = np.array([66.0, 49.0, 36.0]) + n_dt1[..., None] * np.array([34.0, 26.0, 18.0]) + n_dt2[..., None] * 10.0
-    _put_cell(col, height, rough, (3, 0), rgb_30, 0.38 + 0.36 * n_dt1 + 0.15 * n_dt2, 0.90 + 0.06 * (1.0 - n_dt1))
+    rgb_30 = np.array([42.0, 40.0, 39.0]) + n_dt1[..., None] * np.array([22.0, 21.0, 20.0]) + n_dt2[..., None] * 7.0
+    _put_cell(col, height, rough, (3, 0), rgb_30, 0.36 + 0.36 * n_dt1 + 0.16 * n_dt2, 0.94 + 0.04 * (1.0 - n_dt1))
 
-    # (0,1) Campfire Scorched Ash & Earth Ring (dark ash core -> warm earth rim)
+    # (0,1) Campfire Scorched Ash & Earth Ring (dark charcoal core -> cool smoky taupe rim)
     rad = np.sqrt((uu - 0.5) ** 2 + (vv - 0.5) ** 2) * 2.0
     ash_t = np.clip((rad - 0.25) / 0.55, 0.0, 1.0)
-    ash_c = np.array([34.0, 30.0, 28.0]) + n_dt2[..., None] * 14.0
+    ash_c = np.array([34.0, 32.0, 31.0]) + n_dt2[..., None] * 11.0
     rgb_01 = ash_c * (1.0 - ash_t[..., None]) + rgb_30 * ash_t[..., None]
     _put_cell(col, height, rough, (0, 1), rgb_01, 0.35 + 0.25 * n_dt2, 0.94)
 
@@ -312,51 +336,54 @@ def generate_guardpost_ground_textures() -> tuple[Path, Path, Path]:
     rgb_11 = np.array([102.0, 96.0, 88.0]) + n_rs[..., None] * np.array([38.0, 34.0, 28.0])
     _put_cell(col, height, rough, (1, 1), rgb_11, 0.45 + 0.35 * n_rs, 0.82)
 
-    # (2,1) Lush Forest Moss & Deep Grass (emerald-moss green #437032 -> #639644)
+    # (2,1) Lush Forest Moss & Shaded Shrub Green (rich cool pine-forest emerald matching reference bushes)
     n_ms = fbm_grid(CELL_PX, CELL_PX, 151, (32, 16, 8, 4))
     streak = _hash_noise_2d(CELL_PX, CELL_PX, 6, 152)
     grad_v = np.clip(vv * 0.78 + 0.22 * streak, 0.0, 1.0)
     rgb_21 = (
-        np.array([52.0, 88.0, 38.0]) * (1.0 - grad_v[..., None])
-        + np.array([92.0, 142.0, 62.0]) * grad_v[..., None]
+        np.array([32.0, 58.0, 30.0]) * (1.0 - grad_v[..., None])
+        + np.array([56.0, 94.0, 42.0]) * grad_v[..., None]
     ) * (0.88 + 0.22 * n_ms[..., None])
-    _put_cell(col, height, rough, (2, 1), rgb_21, 0.42 + 0.32 * n_ms + 0.15 * streak, 0.84)
+    _put_cell(col, height, rough, (2, 1), rgb_21, 0.42 + 0.32 * n_ms + 0.15 * streak, 0.88)
 
-    # (3,1) Woodland Fern & Shrub Leaf (layered stylized leaf green with central midrib)
+    # (3,1) Woodland Fern & Shrub Leaf (layered shaded emerald leaf with midrib)
     n_lf = fbm_grid(CELL_PX, CELL_PX, 161, (24, 12, 6))
     midrib = np.exp(-((uu - 0.5) * 14.0) ** 2) * 0.18
     vein = (np.sin((vv * 10.0 - np.abs(uu - 0.5) * 8.0) * math.pi) * 0.5 + 0.5) * 0.12
-    leaf_base = np.array([62.0, 104.0, 44.0]) * (1.0 - vv[..., None]) + np.array([108.0, 156.0, 68.0]) * vv[..., None]
+    leaf_base = np.array([36.0, 66.0, 32.0]) * (1.0 - vv[..., None]) + np.array([66.0, 106.0, 46.0]) * vv[..., None]
     rgb_31 = leaf_base * (0.90 + 0.18 * n_lf[..., None] + midrib[..., None] + vein[..., None] * 0.5)
-    _put_cell(col, height, rough, (3, 1), rgb_31, 0.45 + 0.28 * midrib + 0.16 * vein + 0.12 * n_lf, 0.72)
+    _put_cell(col, height, rough, (3, 1), rgb_31, 0.45 + 0.28 * midrib + 0.16 * vein + 0.12 * n_lf, 0.78)
 
-    # (0,2) Faceted Boulder Slate Rock (#5E6670 with cool crevices & subtle moss tint)
-    n_rk = fbm_grid(CELL_PX, CELL_PX, 171, (48, 24, 12, 6))
+    # (0,2) Faceted Boulder Slate Rock (cool grey stone + deep moss crevices)
+    n_rk = fbm_grid(CELL_PX, CELL_PX, 171, (48, 24, 12))
     moss_flt = np.clip((fbm_grid(CELL_PX, CELL_PX, 172, (32, 16)) - 0.55) * 2.5, 0.0, 0.55)
-    rk_c = np.array([86.0, 92.0, 100.0]) + n_rk[..., None] * np.array([34.0, 36.0, 38.0])
-    rgb_02 = rk_c * (1.0 - moss_flt[..., None]) + np.array([72.0, 106.0, 52.0]) * moss_flt[..., None]
-    _put_cell(col, height, rough, (0, 2), rgb_02, 0.42 + 0.40 * n_rk, 0.84)
+    rk_c = np.array([72.0, 78.0, 86.0]) + n_rk[..., None] * np.array([28.0, 30.0, 32.0])
+    rgb_02 = rk_c * (1.0 - moss_flt[..., None]) + np.array([38.0, 64.0, 34.0]) * moss_flt[..., None]
+    _put_cell(col, height, rough, (0, 2), rgb_02, 0.42 + 0.36 * n_rk, 0.84)
 
-    # (1,2) Dark Wet Soil / Trail Fringe Blend (deep warm soil-moss blend)
-    rgb_12 = np.array([56.0, 58.0, 40.0]) + n_dt1[..., None] * np.array([26.0, 28.0, 18.0])
-    _put_cell(col, height, rough, (1, 2), rgb_12, 0.40 + 0.30 * n_dt1, 0.90)
+    # (1,2) Dark Recessed Mortar & Earth Shadow Grout (for thin dark crevices between flagstones — NEVER bright tan!)
+    rgb_12 = np.array([26.0, 25.0, 25.0]) + n_dt1[..., None] * np.array([12.0, 11.0, 10.0])
+    _put_cell(col, height, rough, (1, 2), rgb_12, 0.22 + 0.20 * n_dt1, 0.96)
 
-    # (2,2) Lighter Bush Sunlit Crown Foliage
+    # (2,2) Bush Sunlit Crown Foliage (cool mossy emerald, NOT neon cabbage lime)
     rgb_22 = (
-        np.array([72.0, 118.0, 48.0]) * (1.0 - grad_v[..., None])
-        + np.array([124.0, 172.0, 78.0]) * grad_v[..., None]
+        np.array([42.0, 74.0, 34.0]) * (1.0 - grad_v[..., None])
+        + np.array([72.0, 112.0, 48.0]) * grad_v[..., None]
     ) * (0.90 + 0.16 * n_lf[..., None])
-    _put_cell(col, height, rough, (2, 2), rgb_22, 0.45 + 0.25 * n_lf, 0.76)
+    _put_cell(col, height, rough, (2, 2), rgb_22, 0.45 + 0.25 * n_lf, 0.82)
 
     # (3,2) Deep Meadow Shadow Grass
-    rgb_32 = np.array([44.0, 74.0, 36.0]) + n_ms[..., None] * np.array([24.0, 38.0, 20.0])
-    _put_cell(col, height, rough, (3, 2), rgb_32, 0.40 + 0.25 * n_ms, 0.88)
+    rgb_32 = np.array([26.0, 48.0, 26.0]) + n_ms[..., None] * np.array([18.0, 28.0, 16.0])
+    _put_cell(col, height, rough, (3, 2), rgb_32, 0.40 + 0.25 * n_ms, 0.92)
 
-    # Row 3 fallbacks
-    for cx, src_rgb in enumerate((rgb_00, rgb_10, rgb_30, rgb_21)):
-        _put_cell(col, height, rough, (cx, 3), src_rgb, 0.45 + 0.2 * n_st, 0.84)
+    # Row 3: (0,3) Cool Dusk Slate Patio Variant, (2,3) Moss-Dusted Weathered Patio Variant, (1,3) Mid-grey Stone, (3,3) Foliage
+    rgb_03 = np.array([66.0, 70.0, 77.0]) + n_gt[..., None] * np.array([16.0, 17.0, 19.0]) + n_gt2[..., None] * 7.0
+    moss_patina = np.clip((fbm_grid(CELL_PX, CELL_PX, 189, (32, 16)) - 0.58) * 2.8, 0.0, 0.40)[..., None]
+    rgb_23 = (np.array([72.0, 73.0, 70.0]) + n_gt[..., None] * np.array([16.0, 16.0, 14.0])) * (1.0 - moss_patina) + np.array([42.0, 62.0, 35.0]) * moss_patina
+    for cx, (src_rgb, s_rgh) in enumerate(((rgb_03, 0.85), (rgb_10, 0.82), (rgb_23, 0.87), (rgb_21, 0.86))):
+        _put_cell(col, height, rough, (cx, 3), src_rgb, 0.48 + 0.24 * n_gt + 0.12 * n_gt2, s_rgh)
 
-    norm_rgb = height_to_normal_rgb(height, strength=2.4)
+    norm_rgb = height_to_normal_rgb(height, strength=3.0)
     norm_rgba = np.dstack([norm_rgb, np.full((TEX_SIZE, TEX_SIZE), 255, dtype=np.uint8)])
     rough_rgba = np.dstack([rough, rough, rough, np.full((TEX_SIZE, TEX_SIZE), 255, dtype=np.uint8)])
 
@@ -501,24 +528,53 @@ def generate_guardpost_props_textures() -> tuple[Path, Path, Path]:
     return p_col, p_nrm, p_rgh
 
 
-def generate_outskirts_meadow_textures() -> tuple[Path, Path, Path]:
-    """Generate 512x512 seamless deep forest grass textures for OutskirtsGrounds MaterialVariant."""
-    R = 512
-    n_big = _tileable_noise(R, 8, 501) * 0.6 + _tileable_noise(R, 18, 502) * 0.4
-    n_fine = _tileable_noise(R, 42, 503) * 0.6 + _tileable_noise(R, 96, 504) * 0.4
-    blade_mix = n_big * 0.58 + n_fine * 0.42
+def _tileable_noise_aniso(res: int, cells_y: int, cells_x: int, seed: int) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    grid = rng.random((cells_y, cells_x), dtype=np.float32)
+    cy = np.linspace(0.0, cells_y, res, endpoint=False, dtype=np.float32)
+    cx = np.linspace(0.0, cells_x, res, endpoint=False, dtype=np.float32)
+    iy0 = np.floor(cy).astype(np.int32) % cells_y
+    iy1 = (iy0 + 1) % cells_y
+    ix0 = np.floor(cx).astype(np.int32) % cells_x
+    ix1 = (ix0 + 1) % cells_x
+    fy = cy - np.floor(cy)
+    fx = cx - np.floor(cx)
+    uy = fy * fy * (3.0 - 2.0 * fy)
+    ux = fx * fx * (3.0 - 2.0 * fx)
+    g00 = grid[np.ix_(iy0, ix0)]
+    g10 = grid[np.ix_(iy0, ix1)]
+    g01 = grid[np.ix_(iy1, ix0)]
+    g11 = grid[np.ix_(iy1, ix1)]
+    nx0 = g00 * (1.0 - ux[None, :]) + g10 * ux[None, :]
+    nx1 = g01 * (1.0 - ux[None, :]) + g11 * ux[None, :]
+    return nx0 * (1.0 - uy[:, None]) + nx1 * uy[:, None]
 
-    # Cool deep forest green matching the reference image (dark emerald shadow -> rich moss green)
-    c_dark = np.array([34.0, 62.0, 32.0], dtype=np.float32)
-    c_mid = np.array([48.0, 84.0, 42.0], dtype=np.float32)
-    c_hi = np.array([68.0, 108.0, 50.0], dtype=np.float32)
-    t1 = np.clip(blade_mix * 1.8, 0.0, 1.0)[..., None]
-    t2 = np.clip((blade_mix - 0.52) * 2.1, 0.0, 1.0)[..., None]
+
+def generate_outskirts_meadow_textures() -> tuple[Path, Path, Path]:
+    """Generate 1024x1024 seamless stylized woodland moss & grass textures."""
+    R = 1024
+    n_macro = _tileable_noise(R, 4, 501) * 0.55 + _tileable_noise(R, 8, 502) * 0.45
+    n_clump = _tileable_noise(R, 16, 503) * 0.55 + _tileable_noise(R, 32, 504) * 0.45
+    n_blades = _tileable_noise_aniso(R, 56, 128, 505) * 0.55 + _tileable_noise_aniso(R, 112, 240, 506) * 0.45
+    blade_mix = n_macro * 0.42 + n_clump * 0.30 + n_blades * 0.28
+
+    # Deep cool pine-forest emerald meadow matching reference grass & pine needles
+    c_dark = np.array([24.0, 45.0, 24.0], dtype=np.float32)
+    c_mid = np.array([36.0, 67.0, 33.0], dtype=np.float32)
+    c_hi = np.array([53.0, 90.0, 42.0], dtype=np.float32)
+    t1 = np.clip((blade_mix - 0.18) * 2.6, 0.0, 1.0)[..., None]
+    t2 = np.clip((blade_mix - 0.52) * 2.4, 0.0, 1.0)[..., None]
     rgb = np.where(blade_mix[..., None] < 0.52, c_dark * (1.0 - t1) + c_mid * t1, c_mid * (1.0 - t2) + c_hi * t2)
 
-    h_map = 0.35 + 0.45 * blade_mix
-    r_u8 = np.clip((0.88 - 0.12 * n_fine) * 255.0, 120, 245).astype(np.uint8)
-    norm_rgb = height_to_normal_rgb(h_map, strength=2.6)
+    # Organic dark emerald moss hollows & subtle grass blade highlights
+    moss_hollow = np.clip((0.44 - n_macro) * 3.0, 0.0, 1.0)[..., None]
+    rgb = rgb * (1.0 - 0.34 * moss_hollow) + np.array([20.0, 38.0, 22.0]) * (0.34 * moss_hollow)
+    blade_fleck = np.clip((n_blades - 0.68) * 3.2, 0.0, 1.0)[..., None]
+    rgb = rgb + blade_fleck * np.array([15.0, 24.0, 9.0])
+
+    h_map = 0.26 + 0.46 * n_blades + 0.28 * n_clump
+    r_u8 = np.clip((0.95 - 0.10 * n_blades) * 255.0, 175, 250).astype(np.uint8)
+    norm_rgb = height_to_normal_rgb(h_map, strength=3.1)
 
     col_rgba = np.dstack([np.clip(rgb, 0, 255).astype(np.uint8), np.full((R, R), 255, dtype=np.uint8)])
     norm_rgba = np.dstack([norm_rgb, np.full((R, R), 255, dtype=np.uint8)])
@@ -533,7 +589,312 @@ def generate_outskirts_meadow_textures() -> tuple[Path, Path, Path]:
     return p_col, p_nrm, p_rgh
 
 
-def create_pbr_material(name: str, p_col: Path, p_nrm: Path, p_rgh: Path) -> bpy.types.Material:
+def _hash2_int(ix: np.ndarray, iz: np.ndarray, seed: int) -> np.ndarray:
+    n = (ix * 374761393 + iz * 668265263 + seed * 1442695041) & 0xFFFFFFFF
+    n = ((n ^ (n >> 13)) * 1274126177) & 0xFFFFFFFF
+    n = (n ^ (n >> 16)) & 0xFFFFFFFF
+    return (n & 0xFFFFFF).astype(np.float32) / 16777216.0
+
+
+def _world_value_noise(gx: np.ndarray, gz: np.ndarray, freq: float, seed: int) -> np.ndarray:
+    sx = gx * freq
+    sz = gz * freq
+    ix0 = np.floor(sx).astype(np.int64)
+    iz0 = np.floor(sz).astype(np.int64)
+    fx = (sx - ix0).astype(np.float32)
+    fz = (sz - iz0).astype(np.float32)
+    ux = fx * fx * (3.0 - 2.0 * fx)
+    uz = fz * fz * (3.0 - 2.0 * fz)
+    v00 = _hash2_int(ix0, iz0, seed)
+    v10 = _hash2_int(ix0 + 1, iz0, seed)
+    v01 = _hash2_int(ix0, iz0 + 1, seed)
+    v11 = _hash2_int(ix0 + 1, iz0 + 1, seed)
+    return (v00 * (1.0 - ux) + v10 * ux) * (1.0 - uz) + (v01 * (1.0 - ux) + v11 * ux) * uz
+
+
+def _world_fbm(gx: np.ndarray, gz: np.ndarray, freqs: tuple[float, ...], seed: int) -> np.ndarray:
+    acc = np.zeros(gx.shape, dtype=np.float32)
+    amp = 1.0
+    norm = 0.0
+    for idx, f in enumerate(freqs):
+        acc += amp * _world_value_noise(gx, gz, f, seed + idx * 97)
+        norm += amp
+        amp *= 0.5
+    return acc / max(norm, 1e-6)
+
+
+def _world_trail_stones(gx: np.ndarray, gz: np.ndarray, freq: float, seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return (stone_height [0..1], stone_shade [0..1], rim_ao [0..1]) for organic irregular trail grit/pebbles."""
+    w1 = _world_fbm(gx, gz, (freq * 1.4, freq * 2.8), seed + 17)
+    w2 = _world_fbm(gx, gz, (freq * 1.5, freq * 2.9), seed + 31)
+    sx = gx * freq + (w1 - 0.5) * 0.48
+    sz = gz * freq + (w2 - 0.5) * 0.48
+    ix = np.floor(sx).astype(np.int64)
+    iz = np.floor(sz).astype(np.int64)
+    best_h = np.zeros(gx.shape, dtype=np.float32)
+    best_c = np.full(gx.shape, 0.5, dtype=np.float32)
+    best_ao = np.zeros(gx.shape, dtype=np.float32)
+    for dz in (-1, 0, 1):
+        cz = iz + dz
+        for dx in (-1, 0, 1):
+            cx = ix + dx
+            present = _hash2_int(cx, cz, seed) > 0.52
+            px = cx + 0.18 + 0.64 * _hash2_int(cx, cz, seed + 1)
+            pz = cz + 0.18 + 0.64 * _hash2_int(cx, cz, seed + 2)
+            ang = _hash2_int(cx, cz, seed + 5) * math.pi
+            ca, sa = np.cos(ang), np.sin(ang)
+            aspect = 0.55 + 0.35 * _hash2_int(cx, cz, seed + 6)
+            rad = 0.14 + 0.18 * _hash2_int(cx, cz, seed + 3)
+            shade = _hash2_int(cx, cz, seed + 4)
+            rx = sx - px
+            rz = sz - pz
+            ux = rx * ca + rz * sa
+            uz = (-rx * sa + rz * ca) / aspect
+            dist = np.sqrt(ux * ux + uz * uz) / np.maximum(rad, 1e-4)
+            # Soft painterly embedded stone nodule (smooth gradient fade, zero cartoon outline ring)
+            stone = np.clip((1.12 - dist) / 0.48, 0.0, 1.0)
+            stone = stone * stone * (3.0 - 2.0 * stone)
+            ao = np.clip(1.0 - dist / 1.35, 0.0, 1.0)
+            stone = np.where(present, stone, 0.0)
+            ao = np.where(present, ao, 0.0)
+            best_ao = np.maximum(best_ao, ao)
+            take = stone > best_h
+            best_h = np.where(take, stone, best_h)
+            best_c = np.where(take, shade, best_c)
+    return best_h, best_c, best_ao
+
+
+def _path_splat_curves():
+    connector = [
+        (2.0, -31.5, 5.4),
+        (2.4, -22.5, 5.0),
+        (2.2, -16.0, 5.1),
+        (0.9, -9.8, 5.0),
+        (0.1, -3.5, 5.1),
+        (-0.4, 2.5, 5.4),
+        (-1.1, 9.0, 5.8),
+        (-1.4, 15.2, 6.2),
+    ]
+    ew_trail = []
+    for k in range(25):
+        px = -72.0 + k * (144.0 / 24.0)
+        pz = 110.0 + math.sin(px * 0.055) * 6.0 + math.cos(px * 0.11) * 2.5
+        gx, _, gz = plot_to_gp(px, 0.0, pz)
+        hw = 5.0 + math.sin(k * 0.8) * 0.7
+        ew_trail.append((gx, gz, hw))
+    fire_spur = [
+        (-14.2, -6.2, 4.4),
+        (-9.6, -5.2, 3.3),
+        (-4.5, -3.5, 3.2),
+        (-0.2, -2.0, 4.4),
+    ]
+    # Bridge linking Guard Tower cobble yard cleanly into the main connector path
+    tower_spur = [
+        (16.5, -14.5, 6.4),
+        (10.5, -13.8, 5.2),
+        (2.2, -14.5, 4.8),
+    ]
+    return connector, ew_trail, fire_spur, tower_spur
+
+
+def _sd_polygon_approx(gx: np.ndarray, gz: np.ndarray, poly: list[tuple[float, float]]) -> np.ndarray:
+    """Exact signed distance to a convex/simple 2D polygon (negative inside, positive outside)."""
+    n = len(poly)
+    d_sq = np.full(gx.shape, 1e12, dtype=np.float32)
+    inside = np.ones(gx.shape, dtype=bool)
+    # Use ray casting parity for inside test + segment distance for magnitude
+    inside.fill(False)
+    j = n - 1
+    for i in range(n):
+        xi, zi = poly[i]
+        xj, zj = poly[j]
+        # Segment distance
+        dx, dz = xj - xi, zj - zi
+        l2 = max(1e-6, dx * dx + dz * dz)
+        t = np.clip(((gx - xi) * dx + (gz - zi) * dz) / l2, 0.0, 1.0)
+        ex = gx - (xi + t * dx)
+        ez = gz - (zi + t * dz)
+        d_sq = np.minimum(d_sq, ex * ex + ez * ez)
+        # Ray-cast toggle
+        cond = ((zi > gz) != (zj > gz)) & (gx < (xj - xi) * (gz - zi) / ((zj - zi) if abs(zj - zi) > 1e-6 else 1e-6) + xi)
+        inside = inside ^ cond
+        j = i
+    dist = np.sqrt(d_sq)
+    return np.where(inside, -dist, dist)
+
+
+def eval_path_splat_sdf(gx: np.ndarray, gz: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return signed trail distance (negative inside dirt), fire distance, and tower distance."""
+    connector, ew_trail, fire_spur, tower_spur = _path_splat_curves()
+    best_sd = np.full(gx.shape, 1e6, dtype=np.float32)
+
+    def apply_polyline(pts):
+        nonlocal best_sd
+        for i in range(len(pts) - 1):
+            ax, az, wa = pts[i]
+            bx, bz, wb = pts[i + 1]
+            dx, dz = bx - ax, bz - az
+            len2 = max(1e-6, dx * dx + dz * dz)
+            t = np.clip(((gx - ax) * dx + (gz - az) * dz) / len2, 0.0, 1.0)
+            cx = ax + t * dx
+            cz = az + t * dz
+            w = wa + t * (wb - wa)
+            d = np.sqrt((gx - cx) ** 2 + (gz - cz) ** 2) - w
+            best_sd = np.minimum(best_sd, d)
+
+    apply_polyline(connector)
+    apply_polyline(ew_trail)
+    apply_polyline(fire_spur)
+    apply_polyline(tower_spur)
+
+    # Gatehouse stone apron soil collar wrapping evenly around left & right corners of flagstones before grass
+    dx_a = np.maximum(np.maximum(-6.0 - gx, gx - 8.6), 0.0)
+    dz_a = np.maximum(np.maximum(-35.6 - gz, gz - (-27.8)), 0.0)
+    sd_apron = np.sqrt(dx_a ** 2 + dz_a ** 2) - 1.35
+    best_sd = np.minimum(best_sd, sd_apron)
+
+    # Snug rounded Campfire dirt clearing around hearth, inner log ring & crate (leaving moss strip inside fence corners like reference)
+    d_fire = np.sqrt((gx - CAMPFIRE_POS_RBX[0]) ** 2 + (gz - CAMPFIRE_POS_RBX[2]) ** 2)
+    sd_fire_ring = d_fire - 5.1
+    sd_crate_pad = np.sqrt((gx - (-9.6)) ** 2 + (gz - (-6.6)) ** 2) - 2.6
+    best_sd = np.minimum(best_sd, np.minimum(sd_fire_ring, sd_crate_pad))
+
+    d_tower = np.sqrt((gx - TOWER_POS_RBX[0]) ** 2 + (gz - TOWER_POS_RBX[2]) ** 2)
+    return best_sd, d_fire, d_tower
+
+
+def meadow_ground_height(gx: float, gz: float) -> float:
+    """
+    Shared deterministic ground relief sampled by BOTH Ground_GrassMeadow and all 6
+    conformed Ground_Path_* overlays so path chunks never sink under meadow hills
+    or create sharp mesh-intersection cuts across soft alpha feather skirts.
+    """
+    base_y = 0.020
+    # Flatten across the entire navigable wing trail band (z = -6..30) and central clearing
+    edge_x = max(0.0, (abs(gx + 4.0) - 42.0) / 34.0)
+    edge_z = max(0.0, (gz - 27.0) / 26.0)
+    if -4.0 <= gz <= 26.0:
+        # Wing trails extend out to gx=-74 and gx=+62; suppress hills along the trail corridor
+        trail_corridor = min(1.0, max(0.0, (abs(gz - 14.0) - 8.5) / 5.5))
+        edge_x *= trail_corridor
+    wall_fade = min(1.0, max(0.0, (gz - (-32.0)) / 6.0))
+    mask = min(1.0, math.hypot(edge_x, edge_z)) * wall_fade
+    if mask <= 0.01:
+        return base_y
+    undul = 0.5 + 0.5 * math.sin(gx * 0.14 + 0.5) * math.cos(gz * 0.16 - 0.3)
+    return base_y + (mask * mask) * (0.14 + 0.52 * undul)
+
+
+def generate_path_chunk_textures() -> dict[str, tuple[Path, Path, Path]]:
+    """
+    Generate 6 seamless 1024x1024 RGBA textured dirt chunks with 4px extrapolated border gutter
+    using world-continuous smoky cool-taupe soil, mossy airbrush fringes, and charred campfire earth.
+    """
+    R = 1024
+    gutter = 4.0
+    t_vals = (np.arange(R, dtype=np.float32) + 0.5 - gutter) / (R - 2.0 * gutter)
+    us = t_vals[None, :]
+    vs = t_vals[:, None]
+
+    # Dark cool charcoal-taupe earth palette matching reference dirt trail
+    soil_shadow = np.array([35.0, 34.0, 33.0], dtype=np.float32)
+    soil_mid = np.array([51.0, 49.0, 46.0], dtype=np.float32)
+    soil_worn = np.array([68.0, 64.0, 60.0], dtype=np.float32)
+    fringe_moss = np.array([26.0, 44.0, 24.0], dtype=np.float32)
+    ash_col = np.array([26.0, 25.0, 25.0], dtype=np.float32)
+
+    results: dict[str, tuple[Path, Path, Path]] = {}
+    for name, x0, x1, z0, z1 in PATH_CHUNKS:
+        gx, gz = np.meshgrid(
+            (x0 + t_vals * (x1 - x0)).astype(np.float32),
+            (z0 + t_vals * (z1 - z0)).astype(np.float32),
+        )
+
+        sd_base, d_fire, d_tower = eval_path_splat_sdf(gx, gz)
+
+        n_macro = _world_fbm(gx, gz, (0.11, 0.24), 701)
+        n_med = _world_fbm(gx, gz, (0.42, 0.85), 702)
+        n_fine = _world_fbm(gx, gz, (1.6, 3.2, 6.4), 703)
+        # Domain-warped painterly soil clods + crisp directional footpath ruts
+        warp_x = gx + (n_med - 0.5) * 2.2 + (n_fine - 0.5) * 0.65
+        warp_z = gz + (n_fine - 0.5) * 1.8
+        n_soil = _world_fbm(warp_x, warp_z, (0.32, 0.78, 1.85), 740)
+
+        # Tactile irregular embedded pebbles & fine gravel grit (NO bright round dots)
+        st_med, st_med_c, st_med_ao = _world_trail_stones(gx, gz, 1.55, 761)
+        st_fin, st_fin_c, st_fin_ao = _world_trail_stones(gx, gz, 3.85, 779)
+
+        # Gentle organic border undulation so alpha feathers softly into deep green grass
+        wobble = (n_macro - 0.5) * 2.3 + (n_med - 0.5) * 1.05
+        sd = sd_base - wobble
+
+        wall_fade = np.clip((gz - (-36.3)) / 0.8, 0.0, 1.0)
+        t_edge = np.clip((1.25 - sd) / 2.55, 0.0, 1.0)
+        alpha_raw = (t_edge * t_edge * (3.0 - 2.0 * t_edge)) ** 1.15
+        alpha_final = np.clip(alpha_raw * wall_fade, 0.0, 1.0)
+
+        core_t = np.clip((-sd) / 2.6, 0.0, 1.0)[..., None]
+        loam_var = np.clip(0.38 * n_macro + 0.42 * n_soil + 0.20 * n_fine, 0.0, 1.0)[..., None]
+        base_soil = soil_shadow * (1.0 - loam_var) + soil_mid * loam_var
+        worn_patch = np.clip(core_t * (0.28 + 0.72 * n_soil[..., None]), 0.0, 1.0)
+        soil_rgb = base_soil * (1.0 - worn_patch * 0.80) + soil_worn * (worn_patch * 0.80)
+
+        # Softly darken recessed soil & blend subtle natural gravel nodules without harsh contour lines
+        peb_mask = np.clip(core_t[..., 0] * 1.10, 0.0, 1.0)
+        ao_dim = np.clip(st_med_ao * 0.14 * peb_mask, 0.0, 0.22)[..., None]
+        soil_rgb = soil_rgb * (1.0 - ao_dim)
+
+        med_col = np.array([50.0, 48.0, 47.0], dtype=np.float32) + st_med_c[..., None] * np.array([22.0, 20.0, 18.0], dtype=np.float32)
+        fin_col = np.array([48.0, 46.0, 44.0], dtype=np.float32) + st_fin_c[..., None] * np.array([16.0, 15.0, 14.0], dtype=np.float32)
+        soil_rgb = soil_rgb * (1.0 - st_fin[..., None] * peb_mask[..., None] * 0.30) + fin_col * (st_fin[..., None] * peb_mask[..., None] * 0.30)
+        soil_rgb = soil_rgb * (1.0 - st_med[..., None] * peb_mask[..., None] * 0.38) + med_col * (st_med[..., None] * peb_mask[..., None] * 0.38)
+
+        # Cool deep forest moss blend along outer edge
+        rim_mix = np.clip((0.68 - alpha_final) / 0.62, 0.0, 1.0)[..., None]
+        rgb = soil_rgb * (1.0 - rim_mix * 0.68) + fringe_moss * (rim_mix * 0.68)
+
+        # Charred charcoal earth cleanly localized inside fire pit (radius ~ 2.2..4.2)
+        ash_t = np.clip((4.0 - d_fire) / 2.2, 0.0, 1.0)[..., None]
+        rgb = rgb * (1.0 - ash_t * 0.78) + (ash_col + n_fine[..., None] * 10.0) * (ash_t * 0.78)
+
+        h_map = (
+            0.28
+            + 0.28 * n_soil
+            + 0.16 * n_fine
+            + 0.10 * n_macro
+            + 0.18 * st_med * peb_mask
+            + 0.10 * st_fin * peb_mask
+            - 0.12 * st_med_ao * peb_mask
+        )
+        # World-metric normal gradients with stronger sculpted pebble/soil relief
+        px_stud_x = (x1 - x0) / (R - 2.0 * gutter)
+        px_stud_z = (z1 - z0) / (R - 2.0 * gutter)
+        grad_x = (np.roll(h_map, -1, axis=1) - np.roll(h_map, 1, axis=1)) / (2.0 * px_stud_x)
+        grad_z = (np.roll(h_map, -1, axis=0) - np.roll(h_map, 1, axis=0)) / (2.0 * px_stud_z)
+        nrm_str = 0.48
+        nx_a = -grad_x * nrm_str
+        ny_a = grad_z * nrm_str
+        nz_a = np.ones_like(h_map)
+        inv_a = 1.0 / np.sqrt(nx_a * nx_a + ny_a * ny_a + nz_a * nz_a + 1e-8)
+        norm_rgb = np.stack([
+            np.clip((nx_a * inv_a * 0.5 + 0.5) * 255.0, 0, 255),
+            np.clip((ny_a * inv_a * 0.5 + 0.5) * 255.0, 0, 255),
+            np.clip((nz_a * inv_a * 0.5 + 0.5) * 255.0, 0, 255),
+        ], axis=-1).astype(np.uint8)
+        rough_val = np.clip((0.92 - 0.14 * core_t[..., 0] * n_soil) * 255.0, 155, 246).astype(np.uint8)
+
+        tag = name.replace("Ground_Path_", "")
+        p_col = TEX_DIR / f"Tex_OutskirtsPath_{tag}_Color.png"
+        p_nrm = TEX_DIR / f"Tex_OutskirtsPath_{tag}_Normal.png"
+        p_rgh = TEX_DIR / f"Tex_OutskirtsPath_{tag}_Roughness.png"
+        write_png_rgba(p_col, np.dstack([np.clip(rgb, 0, 255).astype(np.uint8), np.clip(alpha_final * 255.0, 0, 255).astype(np.uint8)]))
+        write_png_rgba(p_nrm, np.dstack([norm_rgb, np.full((R, R), 255, dtype=np.uint8)]))
+        write_png_rgba(p_rgh, np.dstack([rough_val, rough_val, rough_val, np.full((R, R), 255, dtype=np.uint8)]))
+        results[name] = (p_col, p_nrm, p_rgh)
+    return results
+
+
+def create_pbr_material(name: str, p_col: Path, p_nrm: Path, p_rgh: Path, blend_alpha: bool = False) -> bpy.types.Material:
     mat = bpy.data.materials.new(name=name)
     if mat.node_tree is None:
         mat.use_nodes = True
@@ -542,7 +903,7 @@ def create_pbr_material(name: str, p_col: Path, p_nrm: Path, p_rgh: Path) -> bpy
 
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    bsdf.inputs["Specular IOR Level"].default_value = 0.32
+    bsdf.inputs["Specular IOR Level"].default_value = 0.26
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
 
     def load_img(path: Path, colorspace: str):
@@ -553,6 +914,13 @@ def create_pbr_material(name: str, p_col: Path, p_nrm: Path, p_rgh: Path) -> bpy
     tex_col = nt.nodes.new("ShaderNodeTexImage")
     tex_col.image = load_img(p_col, "sRGB")
     nt.links.new(tex_col.outputs["Color"], bsdf.inputs["Base Color"])
+    if blend_alpha:
+        nt.links.new(tex_col.outputs["Alpha"], bsdf.inputs["Alpha"])
+        if hasattr(mat, "blend_method"):
+            try:
+                mat.blend_method = "BLEND"
+            except Exception:
+                pass
 
     tex_rgh = nt.nodes.new("ShaderNodeTexImage")
     tex_rgh.image = load_img(p_rgh, "Non-Color")
@@ -906,43 +1274,41 @@ def build_guardtower_cobblepad(mat_ground: bpy.types.Material, col: bpy.types.Co
     rng = random.Random(2001)
     cell_cobble = (0, 0)
     cell_moss = (2, 1)
-    cell_soil = (1, 2)
     cell_slate = (1, 0)
+    cell_flag = (2, 0)
 
-    # Rounded-square dark earth mortar base pad (ry=0.0..0.04)
-    n_base = 16
-    pts = []
-    for k in range(n_base):
-        a = 2.0 * math.pi * k / n_base
-        ca, sa = math.cos(a), math.sin(a)
-        # Superellipse for rounded square cobble yard (~13.4 x 13.4 studs)
-        r = 6.7 / ((abs(ca) ** 3.2 + abs(sa) ** 3.2) ** (1.0 / 3.2))
-        pts.append(tower_local_to_gp(ca * r, 0.0, sa * r))
-    pts_xz = [(p[0], p[2]) for p in pts]
-    add_poly_slab_rbx(bm, uv, pts_xz, 0.0, 0.04, cell_soil, bevel_inset=0.05)
-
-    # Individual bevelled cobblestones across the pad in concentric organic rings
-    rings = [(0.0, 1), (1.75, 6), (3.45, 11), (5.05, 15)]
-    for r_dist, count in rings:
+    # Dense organic rings of individual bevelled cobblestones directly over the dirt/meadow
+    # (no flat polygonal base slab so edges feather naturally into the grass)
+    rings = [
+        (0.0, 1, 1.0),
+        (1.65, 6, 1.0),
+        (3.15, 11, 0.96),
+        (4.55, 15, 0.88),
+        (5.75, 19, 0.72),
+    ]
+    for r_idx, (r_dist, count, scale_f) in enumerate(rings):
         for i in range(count):
-            ang = (2.0 * math.pi * i / count) + rng.uniform(-0.18, 0.18)
-            dist = r_dist + rng.uniform(-0.32, 0.32) if r_dist > 0.1 else 0.0
+            ang = (2.0 * math.pi * i / count) + r_idx * 0.25 + rng.uniform(-0.18, 0.18)
+            dist = r_dist + rng.uniform(-0.34, 0.34) if r_dist > 0.1 else 0.0
             lx = math.cos(ang) * dist
             lz = math.sin(ang) * dist
-            # Keep stones inside rounded square
-            if abs(lx) > 5.75 or abs(lz) > 5.75:
+            # Keep perimeter feathered like a rounded organic cluster
+            if abs(lx) > 6.2 or abs(lz) > 6.2:
                 continue
-            rad_stone = rng.uniform(0.72, 1.00)
+            if r_idx == len(rings) - 1 and rng.random() < 0.15:
+                continue
+            rad_stone = rng.uniform(0.68, 1.02) * scale_f
             sides = 5
             stone_pts = []
             for s in range(sides):
-                sa_a = 2.0 * math.pi * s / sides + rng.uniform(-0.15, 0.15)
-                sr = rad_stone * rng.uniform(0.84, 1.12)
+                sa_a = 2.0 * math.pi * s / sides + rng.uniform(-0.22, 0.22)
+                sr = rad_stone * rng.uniform(0.80, 1.18)
                 px, _, pz = tower_local_to_gp(lx + math.cos(sa_a) * sr, 0.0, lz + math.sin(sa_a) * sr)
                 stone_pts.append((px, pz))
+            c_pick = cell_cobble if (i % 3 == 0) else (cell_slate if (i % 3 == 1) else cell_flag)
             add_poly_slab_rbx(
-                bm, uv, stone_pts, 0.02, rng.uniform(0.08, 0.13),
-                cell_cobble if (i % 3 != 0) else cell_slate, bevel_inset=0.18
+                bm, uv, stone_pts, 0.01, rng.uniform(0.08, 0.15),
+                c_pick, bevel_inset=0.18
             )
 
     # 4 corner stone pier footings under the 4 timber stilts
@@ -954,13 +1320,12 @@ def build_guardtower_cobblepad(mat_ground: bpy.types.Material, col: bpy.types.Co
                 (0.0, math.radians(TOWER_YAW_DEG), 0.0)
             )
 
-    # Outer moss/grass tufts hugging cobble edge
-    for k in range(10):
-        a = (k / 10.0) * 2.0 * math.pi + 0.2
-        ca, sa = math.cos(a), math.sin(a)
-        r = 6.5 / ((abs(ca) ** 3.2 + abs(sa) ** 3.2) ** (1.0 / 3.2))
-        gx, gy, gz = tower_local_to_gp(ca * r, 0.03, sa * r)
-        add_grass_tuft_rbx(bm, uv, (gx, gy, gz), rng.uniform(0.75, 1.05), cell_moss, seed=2100 + k, blades=5)
+    # Outer moss & grass tufts hugging the cobblestone perimeter
+    for k in range(12):
+        a = (k / 12.0) * 2.0 * math.pi + rng.uniform(-0.15, 0.15)
+        r = rng.uniform(5.2, 6.4)
+        gx, gy, gz = tower_local_to_gp(math.cos(a) * r, 0.02, math.sin(a) * r)
+        add_grass_tuft_rbx(bm, uv, (gx, gy, gz), rng.uniform(0.75, 1.08), cell_moss, seed=2100 + k, blades=5)
 
     return finalize_mesh_obj("GuardTower_CobblePad", bm, mat_ground, col)
 
@@ -1107,11 +1472,9 @@ def build_guardtower_structure(mat_props: bpy.types.Material, col: bpy.types.Col
 def build_guardtower_roof(mat_props: bpy.types.Material, col: bpy.types.Collection) -> tuple[bpy.types.Object, int]:
     bm = bmesh.new()
     uv = bm.loops.layers.uv.new("UVMap")
-    rng = random.Random(2044)
 
     c_timber = (0, 0)
     c_shingle = (2, 0)
-    c_moss = (3, 0)
 
     yaw_rad = math.radians(TOWER_YAW_DEG)
     pitch = math.radians(38.0)
@@ -1149,25 +1512,16 @@ def build_guardtower_roof(mat_props: bpy.types.Material, col: bpy.types.Collecti
                 tz = -roof_len_z * 0.44 + (c_i + 0.5) * col_step + stag * 0.4
                 tz = max(-roof_len_z * 0.43, min(roof_len_z * 0.43, tz))
                 gx_s, gy_s, gz_s = tower_local_to_gp(sx, sy, tz)
-                is_moss = (s > 0 and r >= n_rows - 2 and c_i in (1, 2, 4, 5))
-                sh_cell = c_moss if (is_moss and rng.random() < 0.55) else c_shingle
                 add_box_rbx(
                     bm, uv, (gx_s, gy_s, gz_s),
                     (row_step * 1.24, 0.15, col_step * 1.04),
-                    sh_cell,
+                    c_shingle,
                     (0.0, yaw_rad, -s * (pitch - 0.07)),
                 )
 
     # Heavy ridge cap beam sealing the apex cleanly
     rx, ry, rz = tower_local_to_gp(0.0, ridge_y + 0.18, 0.0)
     add_box_rbx(bm, uv, (rx, ry, rz), (0.68, 0.48, roof_len_z + 0.36), c_timber, (0.0, yaw_rad, 0.0))
-
-    # Sculpted green moss patches sitting flush on the lower shingles of the right roof slope
-    for idx, (dist_d, tz, sc) in enumerate([(4.0, 2.2, 0.85), (4.3, 0.3, 0.95), (4.1, -1.9, 0.80), (3.0, 2.8, 0.70)]):
-        mx = math.cos(pitch) * dist_d + math.sin(pitch) * 0.30
-        my = ridge_y - math.sin(pitch) * dist_d + math.cos(pitch) * 0.30
-        gx, gy, gz = tower_local_to_gp(mx, my, tz)
-        add_box_rbx(bm, uv, (gx, gy, gz), (1.05 * sc, 0.16 * sc, 1.30 * sc), c_moss, (0.0, yaw_rad + 0.12 * idx, -pitch))
 
     return finalize_mesh_obj("GuardTower_Roof", bm, mat_props, col)
 
@@ -1341,26 +1695,37 @@ def build_campfire_stone_hearth(mat_ground: bpy.types.Material, col: bpy.types.C
 
     fcx, _, fcz = CAMPFIRE_POS_RBX
 
-    # Compacted circular ash & warm dirt hearth pad (ry = 0.0..0.06, radius ~ 6.6)
-    n_pad = 16
-    pad_pts = [
-        (fcx + math.cos(2.0 * math.pi * k / n_pad) * rng.uniform(6.0, 6.8),
-         fcz + math.sin(2.0 * math.pi * k / n_pad) * rng.uniform(6.0, 6.8))
-        for k in range(n_pad)
+    # Compact scorched ember/ash disc strictly inside the fire ring (radius ~ 2.25)
+    # so there is no large hard-edged polygon under the log benches
+    n_ash = 12
+    ash_pts = [
+        (fcx + math.cos(2.0 * math.pi * k / n_ash) * rng.uniform(2.05, 2.30),
+         fcz + math.sin(2.0 * math.pi * k / n_ash) * rng.uniform(2.05, 2.30))
+        for k in range(n_ash)
     ]
-    add_poly_slab_rbx(bm, uv, pad_pts, 0.0, 0.05, c_ash, bevel_inset=0.06)
+    add_poly_slab_rbx(bm, uv, ash_pts, 0.01, 0.07, c_ash, bevel_inset=0.10)
 
-    # 11 Chunky River Stones around fire ring (radius ~ 2.40 studs)
-    n_stones = 11
+    # 12 Chunky River Stones around fire ring (radius ~ 2.36 studs) + 5 smaller wedge stones
+    n_stones = 12
     for i in range(n_stones):
         ang = (2.0 * math.pi * i / n_stones) + rng.uniform(-0.08, 0.08)
-        r = 2.40 + rng.uniform(-0.14, 0.14)
+        r = 2.36 + rng.uniform(-0.14, 0.14)
         sx = fcx + math.cos(ang) * r
         sz = fcz + math.sin(ang) * r
         add_faceted_rock_rbx(
-            bm, uv, (sx, 0.36, sz),
-            (rng.uniform(0.58, 0.78), rng.uniform(0.38, 0.52), rng.uniform(0.52, 0.68)),
+            bm, uv, (sx, 0.34, sz),
+            (rng.uniform(0.62, 0.88), rng.uniform(0.38, 0.56), rng.uniform(0.54, 0.76)),
             c_stone, seed=3200 + i, subdiv=1, yaw_deg=math.degrees(ang)
+        )
+    for j in range(5):
+        ang = (2.0 * math.pi * (j + 0.5) / 5.0) + rng.uniform(-0.18, 0.18)
+        r = 2.68 + rng.uniform(-0.15, 0.22)
+        sx = fcx + math.cos(ang) * r
+        sz = fcz + math.sin(ang) * r
+        add_faceted_rock_rbx(
+            bm, uv, (sx, 0.22, sz),
+            (rng.uniform(0.34, 0.48), rng.uniform(0.24, 0.34), rng.uniform(0.32, 0.46)),
+            c_stone, seed=3300 + j, subdiv=1, yaw_deg=rng.uniform(0, 360)
         )
 
     return finalize_mesh_obj("Campfire_StoneHearth", bm, mat_ground, col)
@@ -1381,36 +1746,21 @@ def build_outskirts_fence(mat_props: bpy.types.Material, col: bpy.types.Collecti
         add_prism_y_rbx(bm, uv, (gx, shaft_h * 0.5, gz), rad, rad * 0.96, shaft_h, 6, c_bark, c_tip, (0.0, yaw, rng.uniform(-0.03, 0.03)), cap_top=False)
         add_prism_y_rbx(bm, uv, (gx, shaft_h + tip_h * 0.5, gz), rad * 0.96, 0.04, tip_h, 6, c_tip, c_tip, (0.0, yaw, rng.uniform(-0.03, 0.03)), cap_top=True)
 
-    # Section A: Tightly spaced sharpened timber palisade stakes
-    for seg_idx in range(len(PALISADE_POINTS) - 1):
-        ax, az = PALISADE_POINTS[seg_idx]
-        bx, bz = PALISADE_POINTS[seg_idx + 1]
-        seg_len = math.hypot(bx - ax, bz - az)
-        n_stakes = max(6, int(round(seg_len / 1.02)))
-        yaw = math.atan2(bx - ax, bz - az)
-        nx, nz = -(bz - az) / seg_len, (bx - ax) / seg_len
-        for k in range(n_stakes):
-            t = k / n_stakes
-            sx = ax + (bx - ax) * t
-            sz = az + (bz - az) * t
-            add_sharpened_stake(sx, sz, rng.uniform(0.50, 0.58), rng.uniform(4.0, 4.65), yaw + rng.uniform(-0.25, 0.25))
-        for ry in (1.25, 2.75):
-            add_beam_between_rbx(bm, uv, (ax + nx * 0.46, ry, az + nz * 0.46), (bx + nx * 0.46, ry, bz + nz * 0.46), 0.30, 0.26, c_timber)
-
-    # Section B: Heavy Pointed-Post Split-Rail Corner Fence
+    # Open Heavy Pointed-Post Split-Rail Fence lining the left trail curve (no compact palisade stakes)
     for seg_idx in range(len(SPLIT_RAIL_POINTS) - 1):
         ax, az = SPLIT_RAIL_POINTS[seg_idx]
         bx, bz = SPLIT_RAIL_POINTS[seg_idx + 1]
         seg_len = math.hypot(bx - ax, bz - az)
         yaw = math.atan2(bx - ax, bz - az)
-        n_bays = 2
+        n_bays = max(1, int(round(seg_len / 3.5)))
         for k in range(n_bays + 1):
             if seg_idx > 0 and k == 0:
                 continue
             t = k / n_bays
             px = ax + (bx - ax) * t
             pz = az + (bz - az) * t
-            add_sharpened_stake(px, pz, 0.56, 4.45 if (k % n_bays == 0) else 4.15, yaw)
+            is_corner = (k == 0 or k == n_bays)
+            add_sharpened_stake(px, pz, 0.56, 4.45 if is_corner else 4.15, yaw)
         for ry in (1.35, 2.75):
             add_beam_between_rbx(bm, uv, (ax, ry, az), (bx, ry, bz), 0.34, 0.44, c_timber)
 
@@ -1418,138 +1768,317 @@ def build_outskirts_fence(mat_props: bpy.types.Material, col: bpy.types.Collecti
 
 
 # ---------------------------------------------------------------------------
-# 4. Outskirts Environment Kit (`OutskirtsEnvironmentKit.fbx`)
+# 4. Unified Outskirts Ground (`OutskirtsGround.fbx` — Grass + 6 Splat Chunks + Stonework)
 # ---------------------------------------------------------------------------
-def build_outskirts_pathway(mat_ground: bpy.types.Material, col: bpy.types.Collection) -> tuple[bpy.types.Object, int]:
+def build_ground_grass_meadow(mat_meadow: bpy.types.Material, col: bpy.types.Collection) -> tuple[bpy.types.Object, int]:
     """
-    Build the Gatehouse Flagstone Apron + Organic Trodden Dirt Trail + Chiseled Grey Stepping Stones
-    in Guardpost-local coordinates (centered at Plot (12, 0, 96)).
+    Build the continuous 160x100 forest meadow floor (`Ground_GrassMeadow`) in Guardpost-local
+    coordinates (`Plot X=-80..+80, Z=60..160` -> `GP X=-92..+68, Z=-36..+64`) with tiled
+    world-space UVs (`18` studs per tile) and gentle woodland perimeter undulations.
+    """
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new("UVMap")
+
+    gx0, gx1 = -92.0, 68.0
+    gz0, gz1 = -36.0, 64.0
+    nx, nz = 80, 50
+    tile_studs = 18.0
+
+    grid: list[list[bmesh.types.BMVert]] = []
+    for iz in range(nz + 1):
+        gz = gz0 + (gz1 - gz0) * (iz / nz)
+        row = []
+        for ix in range(nx + 1):
+            gx = gx0 + (gx1 - gx0) * (ix / nx)
+            gy = meadow_ground_height(gx, gz)
+            row.append(bm.verts.new(rbx_to_blender(gx, gy, gz)))
+        grid.append(row)
+
+    for iz in range(nz):
+        for ix in range(nx):
+            v00 = grid[iz][ix]
+            v10 = grid[iz][ix + 1]
+            v11 = grid[iz + 1][ix + 1]
+            v01 = grid[iz + 1][ix]
+            f = bm.faces.new([v00, v01, v11, v10])
+            f.smooth = True
+            for vert, loop in zip((v00, v01, v11, v10), f.loops):
+                # In Blender coords: x = gx, y = -gz
+                vx, vy = vert.co.x, vert.co.y
+                loop[uv].uv = ((vx - gx0) / tile_studs, (vy + gz1) / tile_studs)
+
+    return finalize_mesh_obj("Ground_GrassMeadow", bm, mat_meadow, col)
+
+
+def build_ground_path_chunks(chunk_mats: dict[str, bpy.types.Material], col: bpy.types.Collection) -> list[tuple[bpy.types.Object, int]]:
+    """Build 6 height-conformed rectangular dirt-splat grids (`+0.025` over meadow) with 4px world-continuous UV gutters."""
+    gutter_uv = 4.0 / 1024.0
+    u0, u1 = gutter_uv, 1.0 - gutter_uv
+    v0, v1 = gutter_uv, 1.0 - gutter_uv
+    y_offset = 0.025
+    built = []
+    for name, x0, x1, z0, z1 in PATH_CHUNKS:
+        bm = bmesh.new()
+        uv = bm.loops.layers.uv.new("UVMap")
+        nx_q, nz_q = 16, 16
+        dx = (x1 - x0) / nx_q
+        dz = (z1 - z0) / nz_q
+        verts = []
+        for iz in range(nz_q + 1):
+            gz = z0 + iz * dz
+            row = []
+            for ix in range(nx_q + 1):
+                gx = x0 + ix * dx
+                row.append(bm.verts.new(rbx_to_blender(gx, meadow_ground_height(gx, gz) + y_offset, gz)))
+            verts.append(row)
+        for iz in range(nz_q):
+            tv_top = v1 - (iz / nz_q) * (v1 - v0)
+            tv_bot = v1 - ((iz + 1) / nz_q) * (v1 - v0)
+            for ix in range(nx_q):
+                tu_l = u0 + (ix / nx_q) * (u1 - u0)
+                tu_r = u0 + ((ix + 1) / nx_q) * (u1 - u0)
+                f = bm.faces.new([verts[iz][ix], verts[iz + 1][ix], verts[iz + 1][ix + 1], verts[iz][ix + 1]])
+                f.smooth = True
+                f.loops[0][uv].uv = (tu_l, tv_top)
+                f.loops[1][uv].uv = (tu_l, tv_bot)
+                f.loops[2][uv].uv = (tu_r, tv_bot)
+                f.loops[3][uv].uv = (tu_r, tv_top)
+        obj, tris = finalize_mesh_obj(name, bm, chunk_mats[name], col)
+        built.append((obj, tris))
+    return built
+
+
+def build_ground_stonework(mat_ground: bpy.types.Material, col: bpy.types.Collection) -> tuple[bpy.types.Object, int]:
+    """
+    Build snugly fitted stylized Gatehouse Flagstone Patio (with dark mortar bed),
+    15 clean beveled slate Stepping Stones + companion chips, and Guard Tower cobble bridge.
     """
     bm = bmesh.new()
     uv = bm.loops.layers.uv.new("UVMap")
     rng = random.Random(5011)
 
-    c_apron = (2, 0)
+    c_apron_warm = (2, 0)
+    c_apron_cool = (0, 3)
+    c_apron_moss = (2, 3)
     c_step = (1, 0)
-    c_dirt = (3, 0)
-    c_fringe = (1, 2)
+    c_cobble = (0, 0)
+    c_mortar = (3, 0)  # Natural smoky trail earth matching surrounding soil (no black Sharpie lines)
 
-    # 1. Gatehouse Flagstone Apron (Plot X=3.5..24.5, Z=60.3..68.7 -> GP X=-8.5..+12.5, Z=-35.7..-27.3)
-    apron_x0, apron_x1 = -8.2, 12.2
-    apron_z0, apron_z1 = -35.6, -27.2
-    # Dark mortar bed + beveled outer curb rim
-    add_box_rbx(bm, uv, (2.0, 0.04, -31.4), (20.8, 0.08, 8.6), c_fringe)
-    # 5 x 2 grid of irregular bevelled gatehouse flagstones
-    nx_a, nz_a = 5, 2
-    dx_a = (apron_x1 - apron_x0) / nx_a
-    dz_a = (apron_z1 - apron_z0) / nz_a
-    for ix in range(nx_a):
-        for iz in range(nz_a):
-            cx = apron_x0 + (ix + 0.5) * dx_a
-            cz = apron_z0 + (iz + 0.5) * dz_a
-            w = dx_a * 0.45
-            d = dz_a * 0.44
-            pts = [
-                (cx - w + rng.uniform(-0.18, 0.18), cz - d + rng.uniform(-0.18, 0.18)),
-                (cx + w + rng.uniform(-0.18, 0.18), cz - d + rng.uniform(-0.18, 0.18)),
-                (cx + w + rng.uniform(-0.18, 0.18), cz + d + rng.uniform(-0.18, 0.18)),
-                (cx - w + rng.uniform(-0.18, 0.18), cz + d + rng.uniform(-0.18, 0.18)),
-            ]
-            add_poly_slab_rbx(bm, uv, pts, 0.02, rng.uniform(0.11, 0.14), c_apron, bevel_inset=0.10)
+    # 1. Organic Broken-Course Gatehouse Flagstone Patio (extending through gate archway to cover Hub grass seam)
+    # Recessed trail-earth bed kept strictly INSIDE the outer stones so zero box edge sticks out
+    add_box_rbx(bm, uv, (2.0, 0.036, -37.4), (11.6, 0.032, 4.6), c_mortar)
+    add_box_rbx(bm, uv, (1.2, 0.044, -32.2), (10.6, 0.048, 5.2), c_mortar)
 
-    # 2. Organic Trodden Dirt Trail Mesh (Connector + Main E-W Frontier Trail)
-    # Build smooth organic ribbon polygons so there are zero jagged rectangular box edges!
-    def build_trail_ribbon(centerline: list[tuple[float, float, float]], y_top: float, cell: tuple[int, int]):
-        left_verts, right_verts, ctr_verts = [], [], []
-        u0, u1, v0, v1 = cell_uv_bounds(cell[0], cell[1])
-        for idx, (cx, cz, half_w) in enumerate(centerline):
-            if idx == 0:
-                tx, tz = centerline[1][0] - cx, centerline[1][1] - cz
-            elif idx == len(centerline) - 1:
-                tx, tz = cx - centerline[-2][0], cz - centerline[-2][1]
-            else:
-                tx, tz = centerline[idx + 1][0] - centerline[idx - 1][0], centerline[idx + 1][1] - centerline[idx - 1][1]
-            tlen = max(1e-4, math.hypot(tx, tz))
-            nx, nz = -tz / tlen, tx / tlen
-            vl = bm.verts.new(rbx_to_blender(cx - nx * half_w, 0.0, cz - nz * half_w))
-            vc = bm.verts.new(rbx_to_blender(cx, y_top, cz))
-            vr = bm.verts.new(rbx_to_blender(cx + nx * half_w, 0.0, cz + nz * half_w))
-            left_verts.append(vl)
-            ctr_verts.append(vc)
-            right_verts.append(vr)
-        for idx in range(len(centerline) - 1):
-            t_v0 = (idx % 2) * 0.5
-            t_v1 = t_v0 + 0.5
-            for a0, b0, b1, a1 in (
-                (left_verts[idx], ctr_verts[idx], ctr_verts[idx + 1], left_verts[idx + 1]),
-                (ctr_verts[idx], right_verts[idx], right_verts[idx + 1], ctr_verts[idx + 1]),
-            ):
-                f = bm.faces.new([a0, b0, b1, a1])
-                f.loops[0][uv].uv = (u0, v0 + (v1 - v0) * t_v0)
-                f.loops[1][uv].uv = (u1, v0 + (v1 - v0) * t_v0)
-                f.loops[2][uv].uv = (u1, v0 + (v1 - v0) * t_v1)
-                f.loops[3][uv].uv = (u0, v0 + (v1 - v0) * t_v1)
+    def clip_poly_halfplane(poly: list[tuple[float, float]], px: float, pz: float, nx: float, nz: float) -> list[tuple[float, float]]:
+        """Clip 2D convex polygon against half-plane (q - p) . n <= 0."""
+        if not poly:
+            return []
+        res: list[tuple[float, float]] = []
+        n_pts = len(poly)
+        for idx_p in range(n_pts):
+            ax, az = poly[idx_p]
+            bx, bz = poly[(idx_p + 1) % n_pts]
+            da = (ax - px) * nx + (az - pz) * nz
+            db = (bx - px) * nx + (bz - pz) * nz
+            if da <= 0.0:
+                res.append((ax, az))
+                if db > 0.0:
+                    t = da / (da - db)
+                    res.append((ax + t * (bx - ax), az + t * (bz - az)))
+            elif db <= 0.0:
+                t = da / (da - db)
+                res.append((ax + t * (bx - ax), az + t * (bz - az)))
+        return res
 
-    connector_pts = [
-        (2.0, -27.2, 5.2),
-        (2.4, -22.0, 4.9),
-        (2.2, -16.5, 4.6),
-        (1.0, -10.5, 4.8),
-        (0.2, -4.5, 5.1),
-        (-0.4, 2.0, 5.4),
-        (-1.2, 8.5, 5.6),
-        (-1.5, 14.5, 6.2),
+    def clip_convex_hull(poly: list[tuple[float, float]], hull_ccw: list[tuple[float, float]]) -> list[tuple[float, float]]:
+        """Clip convex polygon inside a closed CCW boundary polygon."""
+        nh = len(hull_ccw)
+        out = poly
+        for ih in range(nh):
+            ax, az = hull_ccw[ih]
+            bx, bz = hull_ccw[(ih + 1) % nh]
+            ex, ez = bx - ax, bz - az
+            elen = max(1e-6, math.hypot(ex, ez))
+            # Outward normal for CCW polygon in (x, z) is (ez, -ex) / elen; check interior centroid
+            nx, nz = ez / elen, -ex / elen
+            out = clip_poly_halfplane(out, ax, az, nx, nz)
+            if len(out) < 3:
+                return []
+        return out
+
+    def voronoi_stones_in_hull(seeds_list: list[tuple[float, float]], hull_pts: list[tuple[float, float]], half_gap: float) -> list[list[tuple[float, float]]]:
+        # Ensure hull orientation matches inward half-planes around centroid
+        hcx = sum(p[0] for p in hull_pts) / len(hull_pts)
+        hcz = sum(p[1] for p in hull_pts) / len(hull_pts)
+        fixed_planes: list[tuple[float, float, float, float]] = []
+        for ih in range(len(hull_pts)):
+            ax, az = hull_pts[ih]
+            bx, bz = hull_pts[(ih + 1) % len(hull_pts)]
+            ex, ez = bx - ax, bz - az
+            elen = max(1e-6, math.hypot(ex, ez))
+            nx, nz = ez / elen, -ex / elen
+            if (hcx - ax) * nx + (hcz - az) * nz > 0.0:
+                nx, nz = -nx, -nz
+            fixed_planes.append((ax, az, nx, nz))
+
+        cells_out: list[list[tuple[float, float]]] = []
+        for idx_s, (sx, sz) in enumerate(seeds_list):
+            poly = [(-18.0, -45.0), (22.0, -45.0), (22.0, -20.0), (-18.0, -20.0)]
+            for ax, az, nx, nz in fixed_planes:
+                poly = clip_poly_halfplane(poly, ax, az, nx, nz)
+                if len(poly) < 3:
+                    break
+            for idx_n, (nx_p, nz_p) in enumerate(seeds_list):
+                if idx_n == idx_s or len(poly) < 3:
+                    continue
+                vx = nx_p - sx
+                vz = nz_p - sz
+                dist_n = math.hypot(vx, vz)
+                if dist_n < 1e-4 or dist_n > 7.5:
+                    continue
+                ux, uz = vx / dist_n, vz / dist_n
+                mx = (sx + nx_p) * 0.5 - ux * half_gap
+                mz = (sz + nz_p) * 0.5 - uz * half_gap
+                poly = clip_poly_halfplane(poly, mx, mz, ux, uz)
+            if len(poly) >= 3:
+                cells_out.append(poly)
+        return cells_out
+
+    def chamfer_outer_poly(poly: list[tuple[float, float]], rand_gen: random.Random) -> list[tuple[float, float]]:
+        """Break straight perimeter chords gently & round sharp corners on outer stones."""
+        cx_p = sum(p[0] for p in poly) / len(poly)
+        cz_p = sum(p[1] for p in poly) / len(poly)
+        out: list[tuple[float, float]] = []
+        np_len = len(poly)
+        for k_p in range(np_len):
+            ax, az = poly[k_p]
+            bx, bz = poly[(k_p + 1) % np_len]
+            # Slight organic tuck-in if vertex reaches patio outer perimeter (prevents ruler-straight edges)
+            is_outer_a = (az > -34.7) and (ax < -4.4 or ax > 7.2 or az > -29.2)
+            if is_outer_a:
+                pull = rand_gen.uniform(0.84, 1.03)
+                ax = cx_p + (ax - cx_p) * pull
+                az = cz_p + (az - cz_p) * pull
+            out.append((ax, az))
+            seg_len = math.hypot(bx - ax, bz - az)
+            if seg_len > 1.55 and is_outer_a:
+                mx = (ax + bx) * 0.5 + rand_gen.uniform(-0.18, 0.22)
+                mz = (az + bz) * 0.5 + rand_gen.uniform(-0.18, 0.22)
+                # Keep polygon convex-friendly by bulging outward subtly toward stone normal
+                dx_c, dz_c = mx - cx_p, mz - cz_p
+                d_c = max(1e-4, math.hypot(dx_c, dz_c))
+                out.append((mx + dx_c / d_c * rand_gen.uniform(0.06, 0.22), mz + dz_c / d_c * rand_gen.uniform(0.06, 0.22)))
+        return out
+
+    # Archway threshold slabs bridging smoothly through open wooden gate doors onto indoor bridge path
+    arch_hull = [(-4.35, -39.9), (8.35, -39.9), (8.35, -35.05), (-4.35, -35.05)]
+    arch_seeds = [
+        (-2.6, -38.6), (0.6, -38.8), (3.8, -38.5), (6.9, -38.7),
+        (-2.1, -36.3), (1.3, -36.1), (4.6, -36.4), (7.2, -36.1),
     ]
-    ew_trail_pts = []
-    for k in range(25):
-        px = -68.0 + k * (136.0 / 24.0)  # Plot X
-        pz = 110.0 + math.sin(px * 0.055) * 6.0 + math.cos(px * 0.11) * 2.5
-        gp_x, _, gp_z = plot_to_gp(px, 0.0, pz)
-        hw = 5.4 + math.sin(k * 0.8) * 0.85
-        ew_trail_pts.append((gp_x, gp_z, hw))
+    arch_seeds = [(x + rng.uniform(-0.45, 0.45), z + rng.uniform(-0.32, 0.32)) for x, z in arch_seeds]
+    for i_a, apoly in enumerate(voronoi_stones_in_hull(arch_seeds, arch_hull, 0.065)):
+        c_pick = (c_apron_warm, c_apron_cool, c_apron_moss)[i_a % 3]
+        add_poly_slab_rbx(bm, uv, apoly, 0.020, rng.uniform(0.082, 0.104), c_pick, bevel_inset=rng.uniform(0.12, 0.18))
 
-    build_trail_ribbon(connector_pts, 0.035, c_dirt)
-    build_trail_ribbon(ew_trail_pts, 0.035, c_dirt)
-
-    # Soft dirt-clearing extension around campfire
-    add_poly_slab_rbx(
-        bm, uv,
-        [(-21.0, -10.5), (-8.5, -13.5), (-1.5, -6.5), (-5.5, 3.0), (-17.5, 3.5), (-23.0, -3.5)],
-        0.0, 0.03, c_fringe, bevel_inset=0.14
-    )
-
-    # 3. 16 Chiseled Grey Polygonal Stepping Stones along Connector & Main Trail
-    stepping_stones = [
-        (2.2, -23.5, 2.0, 1.4, 12),
-        (3.4, -18.5, 2.2, 1.5, -18),
-        (1.0, -13.2, 1.9, 1.4, 24),
-        (-0.2, -7.8, 2.1, 1.5, -8),
-        (-0.8, -1.8, 2.2, 1.6, 15),
-        (1.6, 4.5, 2.1, 1.5, -22),
-        (-2.2, 10.2, 2.3, 1.6, 8),
-        (-4.5, 15.8, 2.4, 1.7, -14),
-        (-11.2, 14.2, 2.2, 1.5, 20),
-        (-17.8, 13.8, 2.1, 1.4, -12),
-        (-25.0, 13.2, 2.3, 1.5, 10),
-        (5.8, 12.8, 2.2, 1.5, -18),
-        (13.0, 14.5, 2.1, 1.4, 14),
-        (21.5, 16.0, 2.3, 1.5, -10),
-        (32.0, 18.2, 2.1, 1.4, 22),
-        (-36.0, 10.5, 2.2, 1.5, -15),
+    # Main Gatehouse Patio broken-course slabs inside organic non-rectangular 10-point perimeter
+    patio_hull = [
+        (-6.2, -34.9),
+        (9.0, -34.9),
+        (9.5, -32.4),
+        (8.4, -29.6),
+        (5.6, -27.8),
+        (2.0, -27.3),
+        (-2.0, -27.6),
+        (-5.2, -29.0),
+        (-6.8, -31.8),
     ]
-    for idx, (sx, sz, rx_s, rz_s, yaw_deg) in enumerate(stepping_stones):
-        n_sides = 6
+    patio_seeds: list[tuple[float, float]] = []
+    # Course 1 (wall plinth apron): uneven wide slabs
+    for cx_s in (-4.8, -2.0, 0.8, 3.8, 6.9):
+        patio_seeds.append((cx_s + rng.uniform(-0.45, 0.45), -34.0 + rng.uniform(-0.35, 0.35)))
+    # Course 2 (mid apron): offset staggered slabs + smaller wedge
+    for cx_s in (-5.5, -2.9, -0.3, 2.3, 5.1, 7.9):
+        patio_seeds.append((cx_s + rng.uniform(-0.40, 0.40), -31.6 + rng.uniform(-0.45, 0.45)))
+    # Course 3 (front organic apron curving onto trail)
+    for cx_s in (-4.1, -1.3, 1.5, 4.3, 7.1):
+        patio_seeds.append((cx_s + rng.uniform(-0.45, 0.45), -29.1 + rng.uniform(-0.42, 0.38)))
+
+    for i_p, ppoly in enumerate(voronoi_stones_in_hull(patio_seeds, patio_hull, 0.070)):
+        cpoly = chamfer_outer_poly(ppoly, rng)
+        c_pick = (c_apron_warm, c_apron_cool, c_apron_warm, c_apron_moss)[(i_p * 7 + 3) % 4]
+        add_poly_slab_rbx(bm, uv, cpoly, 0.025, rng.uniform(0.118, 0.165), c_pick, bevel_inset=rng.uniform(0.16, 0.22))
+
+    # 10 irregular transition curb stones & pebble chips stepping organically around patio edges
+    for idx, (bx, bz, brx, brz) in enumerate([
+        (-7.1, -33.0, 0.72, 0.55), (-6.3, -30.2, 0.68, 0.52), (-3.8, -27.9, 0.88, 0.56),
+        (-1.0, -26.8, 0.96, 0.62), (1.9, -26.5, 1.02, 0.64), (4.8, -27.1, 0.90, 0.56),
+        (7.4, -28.4, 0.78, 0.52), (9.2, -30.6, 0.66, 0.50), (0.6, -28.1, 0.48, 0.38),
+        (3.8, -26.4, 0.52, 0.40),
+    ]):
+        pts = [
+            (bx + math.cos(2.0 * math.pi * k / 5 + idx * 0.4) * brx * rng.uniform(0.80, 1.15),
+             bz + math.sin(2.0 * math.pi * k / 5 + idx * 0.4) * brz * rng.uniform(0.80, 1.15))
+            for k in range(5)
+        ]
+        c_edge = c_step if (idx % 3 == 0) else (c_apron_cool if idx % 2 == 0 else c_apron_warm)
+        add_poly_slab_rbx(bm, uv, pts, 0.025, rng.uniform(0.098, 0.138), c_edge, bevel_inset=0.19)
+
+    # 2. Chunky Sculpted Slate Stepping Stones + Foreground/Pair Clusters Matching Reference
+    def add_irregular_slab(sx: float, sz: float, rx_s: float, rz_s: float, yaw_deg: float, sides: int, y_t: float, seed_off: int, cell=c_step):
+        r_loc = random.Random(5500 + seed_off)
         yaw = math.radians(yaw_deg)
         ca, sa = math.cos(yaw), math.sin(yaw)
         pts = []
-        for s in range(n_sides):
-            a = 2.0 * math.pi * s / n_sides + rng.uniform(-0.18, 0.18)
-            lx = math.cos(a) * rx_s * rng.uniform(0.82, 1.12)
-            lz = math.sin(a) * rz_s * rng.uniform(0.82, 1.12)
+        for s in range(sides):
+            a = 2.0 * math.pi * s / sides + r_loc.uniform(-0.28, 0.28)
+            rad_mul = r_loc.uniform(0.75, 1.18)
+            lx = math.cos(a) * rx_s * rad_mul
+            lz = math.sin(a) * rz_s * rad_mul
             pts.append((sx + lx * ca - lz * sa, sz + lx * sa + lz * ca))
-        add_poly_slab_rbx(bm, uv, pts, 0.02, rng.uniform(0.09, 0.12), c_step, bevel_inset=0.14)
+        add_poly_slab_rbx(bm, uv, pts, 0.025, y_t, cell, bevel_inset=0.22)
 
-    return finalize_mesh_obj("Outskirts_Pathway", bm, mat_ground, col)
+    stepping_clusters = [
+        (2.4, -23.6, 1.95, 1.28, 18, 5, [(-1.8, 0.9, 0.58), (1.7, -0.7, 0.46)]),
+        (3.4, -18.4, 2.30, 1.45, -24, 6, [(2.0, 0.8, 0.60)]),
+        (0.9, -13.0, 1.95, 1.40, 32, 5, [(-1.5, -0.8, 0.52), (1.4, 1.0, 0.44)]),
+        (-0.3, -7.8, 2.30, 1.52, -14, 6, [(2.1, -0.5, 0.64), (-1.9, 0.7, 0.48)]),
+        (-1.1, -1.8, 2.35, 1.55, 20, 5, [(-2.0, -0.9, 0.54)]),
+        (1.6, 4.4, 2.20, 1.44, -28, 6, [(-1.6, 1.1, 0.52), (1.8, -0.8, 0.46)]),
+        (-2.4, 10.4, 2.48, 1.66, 12, 5, [(2.2, 0.9, 0.66), (-2.1, -0.4, 0.50)]),
+        (-5.2, 16.0, 2.55, 1.72, -16, 6, [(2.3, -0.7, 0.60), (0.6, 1.9, 0.52)]),
+        (-11.8, 14.4, 2.35, 1.50, 26, 5, [(-2.1, 0.8, 0.56), (1.9, 1.2, 0.46)]),
+        (-18.6, 14.0, 2.18, 1.44, -20, 6, [(1.9, -1.0, 0.54)]),
+        (-26.2, 13.4, 2.45, 1.55, 14, 5, [(-1.8, 1.1, 0.58), (2.2, 0.5, 0.44)]),
+        (6.0, 12.6, 2.28, 1.50, -22, 6, [(-1.7, -0.9, 0.56), (1.9, 1.0, 0.48)]),
+        (13.2, 16.0, 2.18, 1.40, 18, 5, [(-1.8, 0.8, 0.52)]),
+        (23.0, 19.0, 2.32, 1.50, -14, 6, [(2.1, 0.5, 0.58)]),
+        (32.5, 18.4, 2.20, 1.44, 24, 5, [(-1.7, 1.0, 0.50)]),
+    ]
+    for idx, (sx, sz, rx_s, rz_s, yaw_deg, sides, chips) in enumerate(stepping_clusters):
+        add_irregular_slab(sx, sz, rx_s, rz_s, yaw_deg, sides, rng.uniform(0.135, 0.178), idx * 10)
+        for c_i, (cdx, cdz, cr) in enumerate(chips):
+            add_irregular_slab(
+                sx + cdx, sz + cdz, cr * 1.15, cr * 0.88, yaw_deg + c_i * 47.0,
+                5, rng.uniform(0.105, 0.138), idx * 10 + c_i + 1
+            )
+
+    # 3. Low Embedded Cobble Cluster Bridging Guard Tower Yard onto Main Connector Path
+    bridge_cobbles = [
+        (7.5, -15.5, 0.52), (8.8, -14.2, 0.62), (9.6, -15.8, 0.48), (10.4, -13.0, 0.58),
+        (8.2, -12.4, 0.46), (11.2, -14.8, 0.55), (9.8, -11.6, 0.44), (6.4, -13.8, 0.42),
+        (11.6, -12.0, 0.48), (7.2, -17.2, 0.45), (10.6, -16.8, 0.52), (5.8, -16.2, 0.38),
+        # Subtle path-fork cobble pebbles matching reference image
+        (2.8, 8.4, 0.48), (3.8, 9.5, 0.40), (1.4, 7.6, 0.44), (-4.2, 6.2, 0.46),
+        (-3.2, 5.0, 0.38), (5.2, -20.5, 0.45), (6.1, -19.2, 0.36), (1.0, -21.0, 0.42),
+    ]
+    for idx, (bx, bz, brad) in enumerate(bridge_cobbles):
+        add_irregular_slab(
+            bx, bz, brad, brad * rng.uniform(0.8, 1.15), idx * 37.0,
+            5, rng.uniform(0.068, 0.090), 8000 + idx, cell=c_cobble if idx % 2 == 0 else c_apron_cool
+        )
+
+    return finalize_mesh_obj("Ground_Stonework", bm, mat_ground, col)
 
 
 def build_outskirts_lush_bush(mat_ground: bpy.types.Material, col: bpy.types.Collection) -> tuple[bpy.types.Object, int]:
@@ -1668,8 +2197,7 @@ def build_preview_context(ctx_col: bpy.types.Collection, mat_ground: bpy.types.M
     bm = bmesh.new()
     uv = bm.loops.layers.uv.new("UVMap")
 
-    # Meadow grass plane covering outskirts (GP X=-72..+72, Z=-36..+64)
-    add_box_rbx(bm, uv, (0.0, -0.15, 14.0), (144.0, 0.30, 100.0), (3, 2))
+    # Remove duplicate backdrop meadow plane since Ground_GrassMeadow is built by OutskirtsGround
     # Rear dividing castle wall + gatehouse proxy at GP Z = -36 (Plot Z = 60)
     add_box_rbx(bm, uv, (-28.0, 10.0, -39.0), (54.0, 20.0, 6.0), (0, 2))
     add_box_rbx(bm, uv, (28.0, 10.0, -39.0), (36.0, 20.0, 6.0), (0, 2))
@@ -1806,17 +2334,25 @@ def main() -> None:
     scene.unit_settings.scale_length = 1.0
 
     col_gp = bpy.data.collections.new("OutskirtsGuardhouse_Prefab")
+    col_ground = bpy.data.collections.new("OutskirtsGround_Prefab")
     col_env = bpy.data.collections.new("OutskirtsEnvironment_Prefab")
     scene.collection.children.link(col_gp)
+    scene.collection.children.link(col_ground)
     scene.collection.children.link(col_env)
 
     print("[OutskirtsGuardhouse] Generating PBR textures...")
     g_col, g_nrm, g_rgh = generate_guardpost_ground_textures()
     p_col, p_nrm, p_rgh = generate_guardpost_props_textures()
     m_col, m_nrm, m_rgh = generate_outskirts_meadow_textures()
+    chunk_texs = generate_path_chunk_textures()
 
     mat_ground = create_pbr_material("Mat_GuardpostGround", g_col, g_nrm, g_rgh)
     mat_props = create_pbr_material("Mat_GuardpostProps", p_col, p_nrm, p_rgh)
+    mat_meadow = create_pbr_material("Mat_OutskirtsMeadow", m_col, m_nrm, m_rgh)
+    chunk_mats = {
+        cname: create_pbr_material(f"Mat_{cname}", sc, sn, sr, blend_alpha=True)
+        for cname, (sc, sn, sr) in chunk_texs.items()
+    }
 
     print("[OutskirtsGuardhouse] Building Guardhouse facility meshes...")
     tri_gp: dict[str, int] = {}
@@ -1838,19 +2374,35 @@ def main() -> None:
     print(f"[OutskirtsGuardhouse] Guardhouse Facility Tris: {total_gp_tris}")
     for k, v in tri_gp.items():
         print(f"  - {k}: {v} tris")
-    assert total_gp_tris < 6500, f"Guardhouse triangle budget exceeded: {total_gp_tris} >= 6500"
+    assert total_gp_tris < 7500, f"Guardhouse triangle budget exceeded: {total_gp_tris} >= 7500"
 
-    print("[OutskirtsGuardhouse] Building Outskirts Environment Kit meshes...")
+    print("[OutskirtsGuardhouse] Building unified Outskirts Ground (`OutskirtsGround.fbx`)...")
+    tri_ground: dict[str, int] = {}
+    ground_objs: list[bpy.types.Object] = []
+    meadow_obj, meadow_tris = build_ground_grass_meadow(mat_meadow, col_ground)
+    tri_ground[meadow_obj.name] = meadow_tris
+    ground_objs.append(meadow_obj)
+    for c_obj, c_tris in build_ground_path_chunks(chunk_mats, col_ground):
+        tri_ground[c_obj.name] = c_tris
+        ground_objs.append(c_obj)
+    stone_obj, stone_tris = build_ground_stonework(mat_ground, col_ground)
+    tri_ground[stone_obj.name] = stone_tris
+    ground_objs.append(stone_obj)
+    total_ground_tris = sum(tri_ground.values())
+    print(f"[OutskirtsGuardhouse] Unified Ground Tris: {total_ground_tris}")
+    for k, v in tri_ground.items():
+        print(f"  - {k}: {v} tris")
+
+    print("[OutskirtsGuardhouse] Building Outskirts Reusable Foliage/Rock Kit meshes...")
     tri_env: dict[str, int] = {}
     env_objs: list[bpy.types.Object] = []
-    for builder in (
-        build_outskirts_pathway,
-        build_outskirts_lush_bush,
-        build_outskirts_woodland_fern,
-        build_outskirts_mossy_boulder,
-        build_outskirts_grass_tuft,
+    for builder, mat in (
+        (build_outskirts_lush_bush, mat_ground),
+        (build_outskirts_woodland_fern, mat_ground),
+        (build_outskirts_mossy_boulder, mat_ground),
+        (build_outskirts_grass_tuft, mat_ground),
     ):
-        obj, tris = builder(mat_ground, col_env)
+        obj, tris = builder(mat, col_env)
         tri_env[obj.name] = tris
         env_objs.append(obj)
 
@@ -1882,6 +2434,7 @@ def main() -> None:
         print(f"[OutskirtsGuardhouse] Exported {out_path} ({out_path.stat().st_size} bytes)")
 
     export_fbx(gp_objs, FBX_GUARDPOST_PATH)
+    export_fbx(ground_objs, FBX_GROUND_PATH)
     export_fbx(env_objs, FBX_ENVKIT_PATH)
 
     # Compute exact bounding box sizes & centers in Guardpost-local Roblox space for manifest verification
@@ -1898,6 +2451,8 @@ def main() -> None:
         "gp_plot_origin": list(GP_PLOT_ORIGIN),
         "guardpost_tris": total_gp_tris,
         "guardpost_tri_breakdown": tri_gp,
+        "ground_tris": total_ground_tris,
+        "ground_tri_breakdown": tri_ground,
         "env_kit_tris": total_env_tris,
         "env_kit_tri_breakdown": tri_env,
         "tower_pos_local": list(TOWER_POS_RBX),
@@ -1907,6 +2462,7 @@ def main() -> None:
         "palisade_points_local": [list(p) for p in PALISADE_POINTS],
         "split_rail_points_local": [list(p) for p in SPLIT_RAIL_POINTS],
         "guardpost_meshes": {o.name: bbox_rbx(o) for o in gp_objs},
+        "ground_meshes": {o.name: bbox_rbx(o) for o in ground_objs},
         "env_kit_meshes": {o.name: bbox_rbx(o) for o in env_objs},
         "textures": {
             "ground": {
@@ -1923,6 +2479,14 @@ def main() -> None:
                 "color": str(m_col.relative_to(REPO_ROOT).as_posix()),
                 "normal": str(m_nrm.relative_to(REPO_ROOT).as_posix()),
                 "roughness": str(m_rgh.relative_to(REPO_ROOT).as_posix()),
+            },
+            "path_chunks": {
+                cname: {
+                    "color": str(sc.relative_to(REPO_ROOT).as_posix()),
+                    "normal": str(sn.relative_to(REPO_ROOT).as_posix()),
+                    "roughness": str(sr.relative_to(REPO_ROOT).as_posix()),
+                }
+                for cname, (sc, sn, sr) in chunk_texs.items()
             },
         },
     }

@@ -4,19 +4,29 @@
     0.0,
     96.0
   ],
-  "guardpost_tris": 6056,
+  "guardpost_tris": 6092,
   "guardpost_tri_breakdown": {
-    "GuardTower_CobblePad": 854,
+    "GuardTower_CobblePad": 1110,
     "GuardTower_Structure": 1552,
-    "GuardTower_Roof": 972,
+    "GuardTower_Roof": 924,
     "GuardTower_Props": 628,
     "Campfire_Area": 700,
-    "Campfire_StoneHearth": 282,
-    "Outskirts_Fence": 1068
+    "Campfire_StoneHearth": 386,
+    "Outskirts_Fence": 792
   },
-  "env_kit_tris": 981,
+  "ground_tris": 12874,
+  "ground_tri_breakdown": {
+    "Ground_GrassMeadow": 8000,
+    "Ground_Path_NW": 512,
+    "Ground_Path_NE": 512,
+    "Ground_Path_SW": 512,
+    "Ground_Path_SE": 512,
+    "Ground_Path_WestWing": 512,
+    "Ground_Path_EastWing": 512,
+    "Ground_Stonework": 1802
+  },
+  "env_kit_tris": 331,
   "env_kit_tri_breakdown": {
-    "Outskirts_Pathway": 650,
     "Outskirts_LushBush": 160,
     "Outskirts_WoodlandFern": 90,
     "Outskirts_MossyBoulder": 60,
@@ -38,50 +48,77 @@
     0.0,
     -6.5
   ],
-  "palisade_points_local": [
-    [
-      -29.0,
-      -14.0
-    ],
-    [
-      -23.0,
-      -3.0
-    ],
-    [
-      -17.0,
-      5.5
-    ]
-  ],
+  "palisade_points_local": [],
   "split_rail_points_local": [
     [
-      -17.0,
-      5.5
+      -34.2,
+      1.5
     ],
     [
-      -11.5,
-      6.5
+      -31.2,
+      2.1
+    ],
+    [
+      -28.0,
+      3.2
+    ],
+    [
+      -24.0,
+      5.0
+    ],
+    [
+      -18.5,
+      8.1
+    ],
+    [
+      -15.8,
+      9.7
+    ],
+    [
+      -13.2,
+      10.4
+    ],
+    [
+      -9.8,
+      12.6
+    ],
+    [
+      -7.0,
+      13.2
+    ],
+    [
+      -6.5,
+      10.3
     ],
     [
       -6.2,
-      0.5
+      7.0
+    ],
+    [
+      -5.7,
+      3.5
+    ],
+    [
+      -4.9,
+      -0.6
     ]
   ],
   "guardpost_meshes": {
     "GuardTower_CobblePad": {
       "pos": [
-        16.537,
-        0.6349,
-        -14.3859
+        16.6867,
+        0.673,
+        -14.2553
       ],
       "size": [
-        14.1276,
-        1.2697,
-        14.1181
+        12.6563,
+        1.346,
+        12.6121
       ],
       "pivot_offset": [
-        -16.537,
-        -0.6349,
-        14.3859
+        -16.6867,
+        -0.673,
+        14.2553
       ]
     },
     "GuardTower_Structure": {
@@ -154,57 +191,178 @@
     },
     "Campfire_StoneHearth": {
       "pos": [
-        -13.9477,
-        0.4172,
-        -6.49
+        -14.1897,
+        0.4196,
+        -6.4306
       ],
       "size": [
-        12.8316,
-        0.8345,
-        12.4075
+        6.2031,
+        0.8191,
+        6.2499
       ],
       "pivot_offset": [
-        13.9477,
-        -0.4172,
-        6.49
+        14.1897,
+        -0.4196,
+        6.4306
       ]
     },
     "Outskirts_Fence": {
       "pos": [
-        -17.5906,
-        2.3121,
-        -3.6969
+        -19.5393,
+        2.2182,
+        6.3059
       ],
       "size": [
-        23.8548,
-        4.6559,
-        21.5963
+        30.4008,
+        4.4655,
+        14.8666
       ],
       "pivot_offset": [
-        17.5906,
-        -2.3121,
-        3.6969
+        19.5393,
+        -2.2182,
+        -6.3059
+      ]
+    }
+  },
+  "ground_meshes": {
+    "Ground_GrassMeadow": {
+      "pos": [
+        -12.0,
+        0.349,
+        14.0
+      ],
+      "size": [
+        160.0,
+        0.658,
+        100.0
+      ],
+      "pivot_offset": [
+        12.0,
+        -0.349,
+        -14.0
+      ]
+    },
+    "Ground_Path_NW": {
+      "pos": [
+        -15.5,
+        0.045,
+        -17.5
+      ],
+      "size": [
+        25.0,
+        0.0,
+        38.0
+      ],
+      "pivot_offset": [
+        15.5,
+        -0.045,
+        17.5
+      ]
+    },
+    "Ground_Path_NE": {
+      "pos": [
+        11.0,
+        0.045,
+        -17.5
+      ],
+      "size": [
+        28.0,
+        0.0,
+        38.0
+      ],
+      "pivot_offset": [
+        -11.0,
+        -0.045,
+        17.5
+      ]
+    },
+    "Ground_Path_SW": {
+      "pos": [
+        -15.5,
+        0.0472,
+        15.5
+      ],
+      "size": [
+        25.0,
+        0.0044,
+        28.0
+      ],
+      "pivot_offset": [
+        15.5,
+        -0.0472,
+        -15.5
+      ]
+    },
+    "Ground_Path_SE": {
+      "pos": [
+        11.0,
+        0.0471,
+        15.5
+      ],
+      "size": [
+        28.0,
+        0.0042,
+        28.0
+      ],
+      "pivot_offset": [
+        -11.0,
+        -0.0471,
+        -15.5
+      ]
+    },
+    "Ground_Path_WestWing": {
+      "pos": [
+        -51.0,
+        0.2117,
+        11.0
+      ],
+      "size": [
+        46.0,
+        0.3335,
+        34.0
+      ],
+      "pivot_offset": [
+        51.0,
+        -0.2117,
+        -11.0
+      ]
+    },
+    "Ground_Path_EastWing": {
+      "pos": [
+        43.5,
+        0.1578,
+        11.0
+      ],
+      "size": [
+        37.0,
+        0.2256,
+        34.0
+      ],
+      "pivot_offset": [
+        -43.5,
+        -0.1578,
+        -11.0
+      ]
+    },
+    "Ground_Stonework": {
+      "pos": [
+        2.8907,
+        0.0957,
+        -9.7098
+      ],
+      "size": [
+        62.8729,
+        0.1515,
+        60.3805
+      ],
+      "pivot_offset": [
+        -2.8907,
+        -0.0957,
+        9.7098
       ]
     }
   },
   "env_kit_meshes": {
-    "Outskirts_Pathway": {
-      "pos": [
-        -10.9498,
-        0.0683,
-        -5.9095
-      ],
-      "size": [
-        139.0426,
-        0.1365,
-        59.5811
-      ],
-      "pivot_offset": [
-        10.9498,
-        -0.0683,
-        5.9095
-      ]
-    },
     "Outskirts_LushBush": {
       "pos": [
         0.0556,
@@ -289,6 +447,38 @@
       "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsMeadow_Color.png",
       "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsMeadow_Normal.png",
       "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsMeadow_Roughness.png"
+    },
+    "path_chunks": {
+      "Ground_Path_NW": {
+        "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_NW_Color.png",
+        "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_NW_Normal.png",
+        "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_NW_Roughness.png"
+      },
+      "Ground_Path_NE": {
+        "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_NE_Color.png",
+        "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_NE_Normal.png",
+        "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_NE_Roughness.png"
+      },
+      "Ground_Path_SW": {
+        "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_SW_Color.png",
+        "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_SW_Normal.png",
+        "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_SW_Roughness.png"
+      },
+      "Ground_Path_SE": {
+        "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_SE_Color.png",
+        "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_SE_Normal.png",
+        "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_SE_Roughness.png"
+      },
+      "Ground_Path_WestWing": {
+        "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_WestWing_Color.png",
+        "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_WestWing_Normal.png",
+        "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_WestWing_Roughness.png"
+      },
+      "Ground_Path_EastWing": {
+        "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_EastWing_Color.png",
+        "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_EastWing_Normal.png",
+        "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsPath_EastWing_Roughness.png"
+      }
     }
   }
 }
