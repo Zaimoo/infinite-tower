@@ -6,8 +6,8 @@
 local AudioManager = require(script.Parent:WaitForChild("AudioManager"))
 local MusicController = require(script.Parent:WaitForChild("MusicController"))
 
--- Preload hot-path audio cues (swords, hits, whistles, clicks)
-AudioManager.PreloadCritical()
+-- Warm every combat and UI sound in the background (clicks and hits first) so first plays are on time.
+AudioManager.PreloadAll()
 
 -- Initialize music controller (silent at startup / Hub; plays Tower and Boss tracks in the Tower)
 MusicController.Init()

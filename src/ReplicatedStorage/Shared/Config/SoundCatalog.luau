@@ -23,6 +23,7 @@ export type SoundDefinition = {
 	TimeOffset: number?,
 	MaxDuration: number?,
 	FadeOutSeconds: number?,
+	MaxVoices: number?, -- overlapping copies allowed at once (AudioManager default 4)
 }
 
 local SoundCatalog = {}
@@ -62,7 +63,8 @@ SoundCatalog.Entries = freezeCatalog({
 		PitchVariance = 0.08,
 		RollOffMin = 8,
 		RollOffMax = 65,
-		Cooldown = 0.04,
+		Cooldown = 0.06,
+		MaxVoices = 3,
 		MaxDuration = 0.45,
 		FadeOutSeconds = 0.1,
 	},
@@ -101,7 +103,8 @@ SoundCatalog.Entries = freezeCatalog({
 		PitchVariance = 0.05,
 		RollOffMin = 6,
 		RollOffMax = 50,
-		Cooldown = 0.05,
+		Cooldown = 0.06,
+		MaxVoices = 2,
 		MaxDuration = 0.35,
 		FadeOutSeconds = 0.08,
 	},
@@ -179,6 +182,7 @@ SoundCatalog.Entries = freezeCatalog({
 		RollOffMin = 8,
 		RollOffMax = 65,
 		Cooldown = 0.05,
+		MaxVoices = 3,
 		MaxDuration = 0.85,
 		FadeOutSeconds = 0.15,
 	},
@@ -193,6 +197,7 @@ SoundCatalog.Entries = freezeCatalog({
 		RollOffMin = 6,
 		RollOffMax = 55,
 		Cooldown = 0.04,
+		MaxVoices = 3,
 		MaxDuration = 0.65,
 		FadeOutSeconds = 0.12,
 	},
@@ -772,6 +777,7 @@ SoundCatalog.Entries = freezeCatalog({
 		RollOffMin = 10,
 		RollOffMax = 75,
 		Cooldown = 0.06,
+		MaxVoices = 3,
 		MaxDuration = 0.9,
 		FadeOutSeconds = 0.15,
 	},
@@ -1293,6 +1299,7 @@ SoundCatalog.Entries = freezeCatalog({
 		Pitch = 1.25,
 		PitchVariance = 0.12,
 		Cooldown = 0.05,
+		MaxVoices = 3,
 		MaxDuration = 0.8,
 		FadeOutSeconds = 0.1,
 	},
@@ -1518,14 +1525,13 @@ SoundCatalog.Entries = freezeCatalog({
 	},
 	Hover = {
 		Id = "rbxassetid://88442833509532",
-		SourceFile = "menu_sounds/clarification_sound",
 		Category = "SFX",
-		Volume = 0.24,
-		Pitch = 1.45,
-		PitchVariance = 0.06,
-		Cooldown = 0.06,
-		MaxDuration = 0.25,
-		FadeOutSeconds = 0.06,
+		Volume = 0.2,
+		Pitch = 1.0,
+		PitchVariance = 0.05,
+		Cooldown = 0.1,
+		MaxDuration = 0.15,
+		FadeOutSeconds = 0.04,
 	},
 	Error = {
 		Id = "rbxassetid://139892036682632",
@@ -1730,7 +1736,11 @@ function SoundCatalog.Get(name: string): SoundDefinition?
 	return (SoundCatalog.Entries :: any)[name]
 end
 
-function SoundCatalog.ResolveId(nameOrDef: string | SoundDefinition, useStudioLocal: boolean?): string?
+-- Picks the file to play for an entry and where to start it. Returns the content ID (nil when
+-- nothing is playable) and the start time in seconds: the entry's TimeOffset when it sets one,
+-- otherwise the chosen pack file's measured LeadIn, so padded silence never delays a cue.
+-- Uploaded fallback IDs (`Id`) are not measured and start at TimeOffset or 0.
+function SoundCatalog.Resolve(nameOrDef: string | SoundDefinition, useStudioLocal: boolean?): (string?, number)
 	local def: SoundDefinition?
 	if type(nameOrDef) == "string" then
 		def = SoundCatalog.Get(nameOrDef)
@@ -1738,7 +1748,16 @@ function SoundCatalog.ResolveId(nameOrDef: string | SoundDefinition, useStudioLo
 		def = nameOrDef
 	end
 	if not def then
-		return nil
+		return nil, 0
+	end
+	local timeOffset = if type(def.TimeOffset) == "number" and def.TimeOffset > 0 then def.TimeOffset else nil
+
+	local function fromPack(key: string): (string?, number)
+		local resolved = AnimeSfxManifest.GetPlayableId(key, useStudioLocal)
+		if resolved and resolved ~= "" then
+			return resolved, timeOffset or AnimeSfxManifest.GetLeadIn(key)
+		end
+		return nil, 0
 	end
 
 	-- Prefer randomized variants if available (works both in Studio and once uploaded to AssetId).
@@ -1747,30 +1766,83 @@ function SoundCatalog.ResolveId(nameOrDef: string | SoundDefinition, useStudioLo
 		local startIdx = math.random(1, count)
 		for offset = 0, count - 1 do
 			local idx = ((startIdx - 1 + offset) % count) + 1
-			local resolved = AnimeSfxManifest.GetPlayableId(def.Variants[idx], useStudioLocal)
-			if resolved and resolved ~= "" then
-				return resolved
+			local resolved, startAt = fromPack(def.Variants[idx])
+			if resolved then
+				return resolved, startAt
 			end
 		end
 	end
 
 	-- Primary Anime SFX Pack file (AssetId if uploaded, else StudioId when in Studio).
 	if def.SourceFile and def.SourceFile ~= "" then
-		local resolved = AnimeSfxManifest.GetPlayableId(def.SourceFile, useStudioLocal)
-		if resolved and resolved ~= "" then
-			return resolved
+		local resolved, startAt = fromPack(def.SourceFile)
+		if resolved then
+			return resolved, startAt
 		end
 	end
 
 	if useStudioLocal and def.StudioId and def.StudioId ~= "" then
-		return def.StudioId
+		return def.StudioId, timeOffset or 0
 	end
 
 	if def.Id ~= "" then
-		return def.Id
+		return def.Id, timeOffset or 0
 	end
 
-	return nil
+	return nil, 0
+end
+
+function SoundCatalog.ResolveId(nameOrDef: string | SoundDefinition, useStudioLocal: boolean?): string?
+	local id = SoundCatalog.Resolve(nameOrDef, useStudioLocal)
+	return id
+end
+
+-- Every content ID the entries in `categories` can play (each variant and the primary file, or the
+-- fallback ID), without duplicates. `firstKeys` come first so a preloader can warm them early.
+function SoundCatalog.PlayableIds(
+	categories: { [string]: boolean },
+	useStudioLocal: boolean?,
+	firstKeys: { string }?
+): { string }
+	local out: { string } = {}
+	local seen: { [string]: boolean } = {}
+	local function add(id: string?)
+		if id and id ~= "" and not seen[id] then
+			seen[id] = true
+			table.insert(out, id)
+		end
+	end
+	local function addEntry(def: SoundDefinition?)
+		if not def or not categories[def.Category] then
+			return
+		end
+		local packed = false
+		for _, key in def.Variants or {} do
+			local id = AnimeSfxManifest.GetPlayableId(key, useStudioLocal)
+			packed = packed or (id ~= nil and id ~= "")
+			add(id)
+		end
+		if def.SourceFile and def.SourceFile ~= "" then
+			local id = AnimeSfxManifest.GetPlayableId(def.SourceFile, useStudioLocal)
+			packed = packed or (id ~= nil and id ~= "")
+			add(id)
+		end
+		if not packed then
+			add(SoundCatalog.ResolveId(def, useStudioLocal))
+		end
+	end
+	for _, name in firstKeys or {} do
+		addEntry(SoundCatalog.Get(name))
+	end
+	local names: { string } = {}
+	for name in SoundCatalog.Entries :: any do
+		table.insert(names, name)
+	end
+	table.sort(names)
+	for _, name in names do
+		addEntry(SoundCatalog.Get(name))
+	end
+	return out
 end
 
 return SoundCatalog

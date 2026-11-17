@@ -1101,9 +1101,20 @@ local function openSelector(mode: string?)
 	if isViewingSquad then
 		setViewSquad(false)
 	end
-	lastSelectorOpenTime = os.clock()
-	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
-	selectorMode = if mode == "ASSIGN" then "ASSIGN" else "TRAVEL"
+	-- Several triggers can land together (the floor prompt opens it here and through the server's
+	-- OpenSelector, and the pad fires on every touch). When it is already open, refresh it in place:
+	-- closing other windows would close this one too and replay its open pop and sound.
+	local nextMode = if mode == "ASSIGN" then "ASSIGN" else "TRAVEL"
+	local alreadyOpen = panel.Visible
+	if alreadyOpen and nextMode == selectorMode then
+		render() -- keep the player's selection and scroll
+		return
+	end
+	if not alreadyOpen then
+		lastSelectorOpenTime = os.clock()
+		if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
+	end
+	selectorMode = nextMode
 
 	if selectorMode == "ASSIGN" then
 		titleLabel.Text = "ASSIGN SQUAD · 50 FLOORS"

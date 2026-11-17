@@ -9,8 +9,9 @@
 --     haptic; full-screen tap catchers get nothing. FeelSound = "<UIAssets.Sounds key>" swaps the click.
 --   * Motion respects GuiService.ReducedMotionEnabled and the in-game Reduce Motion setting:
 --     springs, shakes and bursts are dropped, sounds and haptics stay.
--- Sounds come from UIAssets.Sounds and play through SoundService.SFX, the group the Settings
--- volume slider drives. An empty asset slot is silent.
+-- SoundCatalog sounds play through AudioManager (pooled, preloaded, trimmed to their onset); names
+-- only in UIAssets.Sounds play through SoundService.SFX. Both groups follow the Settings SFX slider.
+-- An empty asset slot is silent.
 
 local GuiService = game:GetService("GuiService")
 local HapticService = game:GetService("HapticService")
@@ -42,7 +43,7 @@ local UIFeel = {}
 
 local HOVER_SCALE = 1.04
 local PRESS_SCALE = 0.93
-local HOVER_SFX_GAP = 0.06 -- seconds; sweeping the mouse over a grid must not machine-gun
+local HOVER_SFX_GAP = 0.12 -- seconds; sweeping the mouse over a grid must not machine-gun
 
 local SPRING_OUT = TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local SPRING_IN = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -82,10 +83,35 @@ end
 
 local uiSfxCooldowns: { [string]: number } = {}
 
--- Plays a SoundCatalog / UIAssets.Sounds entry. `pitch` (default 1) lets a sequence climb, e.g. star ticks.
+-- AudioManager (StarterPlayerScripts/Audio) plays catalog sounds from its warm pool, trimmed to
+-- their onset and dropped rather than played late. Required lazily so UIFeel loads without it.
+local audioManager: any = nil
+local function getAudioManager(): any
+	if audioManager then return audioManager end
+	local audioFolder = script.Parent.Parent:FindFirstChild("Audio")
+	local mod = if audioFolder then audioFolder:FindFirstChild("AudioManager") else nil
+	if mod and mod:IsA("ModuleScript") then
+		local ok, result = pcall(require, mod)
+		if ok then audioManager = result end
+	end
+	return audioManager
+end
+
+-- Plays a SoundCatalog / UIAssets.Sounds entry. `pitch` (default 1) lets a sequence climb, e.g. star
+-- ticks. `volume` is the absolute volume and replaces the entry's own.
 function UIFeel.Sfx(name: string, pitch: number?, volume: number?)
 	local cat = getSoundCatalog()
 	local def = if cat then cat.Get(name) else nil
+	local manager = if def then getAudioManager() else nil
+	if def and manager then
+		local scale = if volume and def.Volume and def.Volume > 0 then volume / def.Volume else nil
+		manager.Play2D(name, pitch, scale)
+		return
+	end
+	-- Nothing sounds behind the join loading screen (AudioManager applies the same rule).
+	local audio = getAudioManager()
+	if audio and audio.IsClientReady and not audio.IsClientReady() then return end
+
 	if def and def.Cooldown then
 		local now = os.clock()
 		if (now - (uiSfxCooldowns[name] or 0)) < def.Cooldown then
@@ -95,11 +121,13 @@ function UIFeel.Sfx(name: string, pitch: number?, volume: number?)
 	end
 
 	local id: string? = nil
-	if cat and def and cat.ResolveId then
-		id = cat.ResolveId(def, IS_STUDIO)
+	local startAt = 0
+	if cat and def and cat.Resolve then
+		id, startAt = cat.Resolve(def, IS_STUDIO)
 	end
 	if type(id) ~= "string" or id == "" then
 		id = (UIAssets.Sounds :: any)[name]
+		startAt = 0
 	end
 	if type(id) ~= "string" or id == "" then return end
 
@@ -110,7 +138,11 @@ function UIFeel.Sfx(name: string, pitch: number?, volume: number?)
 	s.Name = "UISfx_" .. name
 	s.SoundId = id
 	s.PlaybackSpeed = math.clamp(targetPitch, 0.2, 3.0)
-	s.TimePosition = (def and def.TimeOffset) or 0
+	if startAt > 0 then
+		s.PlaybackRegionsEnabled = true
+		s.PlaybackRegion = NumberRange.new(startAt, 1e4)
+	end
+	s:SetAttribute("AudioCategory", "SFX")
 	s.SoundGroup = group()
 	s:SetAttribute("OrigVolume", targetVol)
 	s.Volume = targetVol
@@ -411,6 +443,34 @@ end
 local lastHoverSfx = 0
 local attached: { [GuiButton]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 
+-- MouseEnter and SelectionGained also fire when a screen opens or rebuilds under a still cursor, or
+-- when code moves the gamepad selection. The hover tick plays only when the player just moved the
+-- mouse or pushed a gamepad direction; a tap (touch) gets the click sound alone.
+local HOVER_INTENT_WINDOW = 0.25 -- seconds after real pointer or stick movement
+local lastMouseMove, lastGamepadNav = -math.huge, -math.huge
+local GAMEPAD_NAV_KEYS = {
+	[Enum.KeyCode.DPadUp] = true, [Enum.KeyCode.DPadDown] = true,
+	[Enum.KeyCode.DPadLeft] = true, [Enum.KeyCode.DPadRight] = true,
+	[Enum.KeyCode.Thumbstick1] = true,
+}
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		lastMouseMove = os.clock()
+	elseif input.KeyCode == Enum.KeyCode.Thumbstick1 and input.Position.Magnitude > 0.5 then
+		lastGamepadNav = os.clock()
+	end
+end)
+UserInputService.InputBegan:Connect(function(input)
+	if GAMEPAD_NAV_KEYS[input.KeyCode] then
+		lastGamepadNav = os.clock()
+	end
+end)
+
+local function hoverIsIntentional(now: number): boolean
+	if UserInputService:GetLastInputType() == Enum.UserInputType.Touch then return false end
+	return now - lastMouseMove < HOVER_INTENT_WINDOW or now - lastGamepadNav < HOVER_INTENT_WINDOW
+end
+
 -- Full-screen tap catchers (scrims) and huge hit areas get no spring.
 local function isCatcher(b: GuiButton): boolean
 	local gui = b:FindFirstAncestorOfClass("ScreenGui")
@@ -454,9 +514,10 @@ function UIFeel.Attach(button: GuiButton)
 		hovered = true
 		settle(HOVER_IN)
 		local now = os.clock()
+		if not hoverIsIntentional(now) then return end
 		if now - lastHoverSfx > HOVER_SFX_GAP then
 			lastHoverSfx = now
-			UIFeel.Sfx("Hover", 1 + (math.random() - 0.5) * 0.08, 0.35)
+			UIFeel.Sfx("Hover")
 		end
 		UIFeel.Haptic("Hover")
 	end

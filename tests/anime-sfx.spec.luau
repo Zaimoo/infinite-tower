@@ -129,4 +129,81 @@ test("PreloadManifest skips rbxasset:// Studio paths and preserves rbxassetid://
 	end
 end)
 
+test("Every pack file has a measured LeadIn inside its duration", function()
+	for key, entry in pairs(AnimeSfxManifest.Entries) do
+		assert(type(entry.LeadIn) == "number" and entry.LeadIn == entry.LeadIn, "missing LeadIn for " .. key)
+		assert(entry.LeadIn >= 0 and entry.LeadIn < entry.DurationSeconds, "LeadIn out of bounds for " .. key)
+		assert(AnimeSfxManifest.GetLeadIn(key) == entry.LeadIn, "GetLeadIn mismatch for " .. key)
+	end
+	assert(AnimeSfxManifest.GetLeadIn("no/such_key") == 0, "unknown keys must start at 0")
+end)
+
+test("SoundCatalog.Resolve starts each pack file at its LeadIn unless the entry sets TimeOffset", function()
+	local keyById: { [string]: string } = {}
+	for key, entry in pairs(AnimeSfxManifest.Entries) do
+		if entry.AssetId ~= "" then
+			keyById[entry.AssetId] = key
+		end
+	end
+	for name, def in pairs(SoundCatalog.Entries) do
+		for _ = 1, 8 do -- variants are picked at random
+			local id, startAt = SoundCatalog.Resolve(name, false)
+			assert(SoundCatalog.ResolveId(name, false) ~= nil or id == nil, "ResolveId and Resolve disagree for " .. name)
+			if id then
+				assert(type(startAt) == "number" and startAt >= 0, "bad start for " .. name)
+				local key = keyById[id]
+				if def.TimeOffset and def.TimeOffset > 0 then
+					assert(startAt == def.TimeOffset, "TimeOffset ignored for " .. name)
+				elseif key then
+					assert(startAt == AnimeSfxManifest.GetLeadIn(key), "LeadIn not applied for " .. name .. " (" .. key .. ")")
+				else
+					assert(startAt == 0, "uploaded fallback " .. id .. " for " .. name .. " should start at 0")
+				end
+			end
+		end
+	end
+end)
+
+test("SoundCatalog.PlayableIds lists every SFX take once, requested keys first", function()
+	local ids = SoundCatalog.PlayableIds({ SFX = true }, false, { "Click", "HitLight" })
+	local seen: { [string]: boolean } = {}
+	for _, id in ipairs(ids) do
+		assert(not seen[id], "duplicate preload ID " .. id)
+		seen[id] = true
+	end
+	assert(ids[1] == SoundCatalog.ResolveId("Click", false), "requested keys must come first")
+	for name, def in pairs(SoundCatalog.Entries) do
+		if def.Category == "SFX" then
+			for _, key in ipairs(def.Variants or {}) do
+				local id = AnimeSfxManifest.GetPlayableId(key, false)
+				assert(id == nil or seen[id], "variant " .. key .. " of " .. name .. " is not preloaded")
+			end
+			local id = SoundCatalog.ResolveId(name, false)
+			if not def.Variants then
+				assert(id == nil or seen[id], name .. " is not preloaded")
+			end
+		elseif def.Category == "Music" and not def.Variants then
+			local id = SoundCatalog.ResolveId(name, false)
+			if id and def.SourceFile then
+				local sharedWithSfx = false
+				for _, other in pairs(SoundCatalog.Entries) do
+					if other.Category == "SFX" and other.SourceFile == def.SourceFile then
+						sharedWithSfx = true
+					end
+				end
+				assert(sharedWithSfx or not seen[id], "music track " .. name .. " should stream, not preload")
+			end
+		end
+	end
+end)
+
+test("Hover is its own quiet tick, not the click sample", function()
+	local hover = SoundCatalog.Get("Hover")
+	local click = SoundCatalog.Get("Click")
+	assert(hover and click, "Hover and Click must exist")
+	assert(SoundCatalog.ResolveId("Hover", false) ~= SoundCatalog.ResolveId("Click", false), "Hover must not reuse the Click sample")
+	assert(hover.Volume < click.Volume * 0.5, "Hover must sit well under Click")
+	assert((hover.Cooldown or 0) >= 0.1, "Hover needs a cooldown so sweeping a grid does not machine-gun")
+end)
+
 print(string.format("anime-sfx: %d passed", passed))

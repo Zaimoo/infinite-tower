@@ -7,6 +7,13 @@ Service.Init()
 
 local geometry = workspace:WaitForChild("BaseOverhaulGeometry")
 
+-- Every body part touching the portal pad fires Touched; open the floor selector once per visit.
+local PAD_OPEN_COOLDOWN = 3
+local lastPadOpen: { [Player]: number } = {}
+Players.PlayerRemoving:Connect(function(player)
+	lastPadOpen[player] = nil
+end)
+
 local function apply(model: Instance)
 	if model.Name == "CentralCrimsonTower" and model:IsA("Model") then
 		local recovery = game.ServerStorage:FindFirstChild("TowerLegacyTraversal") or Instance.new("Folder")
@@ -61,7 +68,9 @@ local function apply(model: Instance)
 				StaticGeometry.MarkNeedsTouch(p)
 				p.Touched:Connect(function(hit)
 					local player = Players:GetPlayerFromCharacter(hit.Parent)
-					if player then
+					local now = os.clock()
+					if player and now - (lastPadOpen[player] or 0) >= PAD_OPEN_COOLDOWN then
+						lastPadOpen[player] = now
 						local rem = ReplicatedStorage:FindFirstChild("Remotes")
 						local tr = rem and rem:FindFirstChild("TowerRemotes")
 						local sel = tr and tr:FindFirstChild("OpenSelector") :: RemoteEvent?

@@ -2418,6 +2418,7 @@ local STYLE_CHARGE_SFX: { [string]: string } = {
 	TWIN = "BowDraw",
 }
 
+-- Wind-up sound per artifact weapon type (CLAUDE.md: SWORD_SHIELD, DAGGERS, BOW, AXE, STAFF, TOME).
 local WEAPON_CHARGE_SFX: { [string]: string } = {
 	BOW = "BowDraw",
 	CROSSBOW = "BowDraw",
@@ -2425,19 +2426,39 @@ local WEAPON_CHARGE_SFX: { [string]: string } = {
 	GREATSWORD = "SwordUnsheath",
 	SWORD = "SwordUnsheath",
 	SWORD_SHIELD = "SwordUnsheath",
+	DAGGERS = "KatanaUnsheath", -- a short, sharp blade draw
+	AXE = "AirWhoosh", -- the greataxe hauled back
 	STAFF = "MagicSpark",
 	TOME = "MagicSpark",
 	ORB = "MagicSpark",
 }
 
+-- Styles whose cast sound already carries the attack: no separate wind-up sound, so a mage's
+-- Basic is one clean bolt instead of a spark then a bolt every second.
+local SILENT_CHARGE: { [string]: boolean } = {
+	BOLT = true,
+}
+
+-- Hero weapon attacks (Basic and Special) play at 80%: they repeat constantly and sat above the
+-- rest of the mix. Skills (tier 3) keep their full weight.
+local WEAPON_ATTACK_VOLUME = 0.8
+
 local STYLE_SFX: { [string]: StyleSfxSpec } = {
 	BOLT = { Cast = "ArcaneBoltPew", CastVolume = 0.85 },
-	VOLLEY = { Cast = "BarrageVolley", CastVolume = 0.9 },
+	-- Bow-only styles: arrows, not gunfire.
+	VOLLEY = {
+		Cast = "BowRelease",
+		CastVolume = 0.9,
+		Extra = {
+			{ Key = "BowRelease", DelayFromStart = 0.06, Pitch = 1.08, VolumeScale = 0.75 },
+			{ Key = "BowRelease", DelayFromStart = 0.12, Pitch = 0.94, VolumeScale = 0.7 },
+		},
+	},
 	PIERCER = { Cast = "RailBeamPierce", CastVolume = 0.95, Impact = "VoidBeamDetonation", ImpactVolume = 0.85 },
 	WHIRL = { Cast = "WhirlwindSpin", CastVolume = 0.9 },
 	CLEAVE = { Cast = "SlashSword", CastPitch = 0.84, CastVolume = 0.9 },
-	CROSS = {
-		Cast = "SlashSword",
+	CROSS = { -- daggers only
+		Cast = "SlashDagger",
 		CastVolume = 0.88,
 		Extra = { { Key = "SlashDagger", DelayFromStart = 0.14, Pitch = 1.15, VolumeScale = 0.8 } },
 	},
@@ -2454,7 +2475,14 @@ local STYLE_SFX: { [string]: StyleSfxSpec } = {
 		ImpactVolume = 0.82,
 	},
 	MEND = { Cast = "LightChimeSparkle", CastVolume = 0.88 },
-	STORM = { Cast = "BarrageVolley", CastVolume = 0.92, Impact = "ExplosiveWaveShock", ImpactVolume = 0.88 },
+	STORM = {
+		Cast = "BowRelease",
+		CastPitch = 0.9,
+		CastVolume = 0.95,
+		Extra = { { Key = "AirWhoosh", DelayFromStart = 0.35, Pitch = 1.1, VolumeScale = 0.8 } }, -- the volley whistling down
+		Impact = "ExplosiveWaveShock",
+		ImpactVolume = 0.88,
+	},
 	CONSTELLATION = { Cast = "HeroAscensionTransform", CastVolume = 0.88, Impact = "MarkDetonation", ImpactVolume = 0.95 },
 	EXECUTE = { Cast = "KatanaUnsheath", CastVolume = 0.95, Impact = "MarkDetonation", ImpactVolume = 0.95 },
 	BULWARK = { Cast = "FortressAegis", CastVolume = 0.95 },
@@ -2500,9 +2528,15 @@ local function emitChargeSfx(args: PlayArgs, recipe: Recipe, tierNum: number?)
 	if not sfx then
 		return
 	end
+	if SILENT_CHARGE[recipe.Style] then
+		return
+	end
 	local weapon = string.upper(tostring(args.WeaponType or ""))
 	local soundKey = STYLE_CHARGE_SFX[recipe.Style] or WEAPON_CHARGE_SFX[weapon] or "AbilityActivation"
 	local scale = if (tierNum or 1) >= 2 then 0.78 else 0.55
+	if (tierNum or 1) < 3 then
+		scale *= WEAPON_ATTACK_VOLUME
+	end
 	sfx(soundKey, args.Origin, 0, nil, scale)
 end
 
@@ -2516,14 +2550,23 @@ local function resolveWeaponStyleSfx(style: string, weaponType: string?): StyleS
 		end
 		return { Cast = "KunaiThrow", CastVolume = 0.82 }
 	elseif style == "SLASH" then
-		if weapon == "DAGGER" or weapon == "DUAL_DAGGER" or weapon == "CLAW" then
+		if weapon == "DAGGERS" or weapon == "DAGGER" or weapon == "DUAL_DAGGER" or weapon == "CLAW" then
 			return { Cast = "SlashDagger", CastVolume = 0.85 }
+		elseif weapon == "AXE" then
+			-- A two-handed greataxe: a heavy swing and a chop that lands, not a blade's slice.
+			return { Cast = "AirWhoosh", CastPitch = 0.8, CastVolume = 0.85, Impact = "HammerImpact", ImpactPitch = 1.1, ImpactVolume = 0.7 }
 		elseif weapon == "GREATSWORD" then
 			return { Cast = "SlashSword", CastPitch = 0.85, CastVolume = 0.9 }
 		elseif weapon == "HAMMER" or weapon == "MACE" then
 			return { Cast = "AirWhoosh", CastPitch = 0.85, CastVolume = 0.85, Impact = "HammerImpact", ImpactVolume = 0.85 }
 		end
 		return { Cast = "SlashSword", CastVolume = 0.85 }
+	elseif style == "BOLT" then
+		if weapon == "STAFF" then
+			return { Cast = "MagicSpark", CastPitch = 0.95, CastVolume = 0.85 } -- an arcane bolt off the staff
+		elseif weapon == "TOME" then
+			return { Cast = "LightChimeSparkle", CastPitch = 1.1, CastVolume = 0.8 } -- the tome's holy orb
+		end
 	end
 	return STYLE_SFX[style]
 end
@@ -2537,7 +2580,7 @@ local function emitStyleSfx(args: PlayArgs, recipe: Recipe, startAt: number, arr
 	if not spec then
 		return
 	end
-	local tierMult = if (tierNum or 1) >= 3 then 1.0 elseif tierNum == 2 then 0.88 else 0.76
+	local tierMult = if (tierNum or 1) >= 3 then 1.0 elseif tierNum == 2 then 0.88 * WEAPON_ATTACK_VOLUME else 0.76 * WEAPON_ATTACK_VOLUME
 	local castDelay = math.max(0, startAt - now)
 	local impactDelay = math.max(0, arriveAt - now)
 

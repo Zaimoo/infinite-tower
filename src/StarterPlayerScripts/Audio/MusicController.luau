@@ -37,18 +37,31 @@ local function getDef(name: string)
 	return if cat then cat.Get(name) else nil
 end
 
-local function resolveDefId(def: any): string?
+-- Content ID to play and the second to start at (the track's silent intro is skipped).
+local function resolveDef(def: any): (string?, number)
 	if not def then
-		return nil
+		return nil, 0
 	end
 	local cat = getCatalog()
-	if cat and cat.ResolveId then
-		return cat.ResolveId(def, IS_STUDIO)
+	if cat and cat.Resolve then
+		return cat.Resolve(def, IS_STUDIO)
 	end
 	if type(def.Id) == "string" and def.Id ~= "" then
-		return def.Id
+		return def.Id, def.TimeOffset or 0
 	end
-	return nil
+	return nil, 0
+end
+
+-- Starts (and, for looped players, loops) from `startAt`. PlaybackRegion holds before the asset has
+-- loaded, unlike TimePosition, and its Min is also where a loop restarts.
+local function setStart(sound: Sound, startAt: number)
+	sound.TimePosition = 0
+	if startAt > 0 then
+		sound.PlaybackRegionsEnabled = true
+		sound.PlaybackRegion = NumberRange.new(startAt, 1e5)
+	else
+		sound.PlaybackRegionsEnabled = false
+	end
 end
 
 local function getBiomeMusicKey(biomeIndex: number): string
@@ -66,6 +79,7 @@ end
 
 type ChannelState = {
 	namePrefix: string,
+	category: "Music" | "Ambience",
 	getGroup: () -> SoundGroup,
 	activeIndex: number,
 	activeKey: string,
@@ -101,9 +115,10 @@ local function getAmbienceGroup(): SoundGroup
 	return getOrCreateSoundGroup("SG_Ambience", "Ambience", 0.50)
 end
 
-local function createChannel(namePrefix: string, getGroup: () -> SoundGroup): ChannelState
+local function createChannel(namePrefix: string, category: "Music" | "Ambience", getGroup: () -> SoundGroup): ChannelState
 	return {
 		namePrefix = namePrefix,
+		category = category,
 		getGroup = getGroup,
 		activeIndex = 1,
 		activeKey = "",
@@ -113,8 +128,8 @@ local function createChannel(namePrefix: string, getGroup: () -> SoundGroup): Ch
 	}
 end
 
-local musicChannel = createChannel("MusicPlayer_", getMusicGroup)
-local ambienceChannel = createChannel("AmbiencePlayer_", getAmbienceGroup)
+local musicChannel = createChannel("MusicPlayer_", "Music", getMusicGroup)
+local ambienceChannel = createChannel("AmbiencePlayer_", "Ambience", getAmbienceGroup)
 
 local function cancelChannelTween(channel: ChannelState, index: number)
 	local tw = channel.tweens[index]
@@ -138,6 +153,7 @@ local function initChannelPlayers(channel: ChannelState)
 		s.Name = channel.namePrefix .. tostring(i)
 		s.Looped = true
 		s.Volume = 0
+		s:SetAttribute("AudioCategory", channel.category)
 		s.SoundGroup = sg
 		s.Parent = SoundService
 		channel.players[i] = s
@@ -186,7 +202,7 @@ local function crossfadeChannel(channel: ChannelState, trackKey: string, duratio
 	end
 
 	local def = getDef(trackKey)
-	local soundId = resolveDefId(def)
+	local soundId, startAt = resolveDef(def)
 	if not def or not soundId or soundId == "" then
 		stopChannel(channel, duration)
 		return
@@ -205,7 +221,7 @@ local function crossfadeChannel(channel: ChannelState, trackKey: string, duratio
 	local targetVol = def.Volume or 0.5
 	nextPlayer.SoundId = soundId
 	nextPlayer.PlaybackSpeed = def.Pitch or 1.0
-	nextPlayer.TimePosition = def.TimeOffset or 0
+	setStart(nextPlayer, startAt)
 	nextPlayer:SetAttribute("OrigVolume", targetVol)
 	nextPlayer.Volume = 0
 	nextPlayer:Play()
@@ -302,7 +318,7 @@ end
 -- then smoothly restores the BGM volume.
 function MusicController.PlayStinger(stingerKey: string, duckDuration: number?)
 	local def = getDef(stingerKey)
-	local soundId = resolveDefId(def)
+	local soundId, startAt = resolveDef(def)
 	if not def or not soundId or soundId == "" then return end
 
 	local stingerPlayerIndex = musicChannel.activeIndex
@@ -336,7 +352,8 @@ function MusicController.PlayStinger(stingerKey: string, duckDuration: number?)
 	stinger.Name = "Stinger_" .. stingerKey
 	stinger.SoundId = soundId
 	stinger.PlaybackSpeed = def.Pitch or 1.0
-	stinger.TimePosition = def.TimeOffset or 0
+	setStart(stinger, startAt)
+	stinger:SetAttribute("AudioCategory", "Music")
 	stinger.SoundGroup = getMusicGroup()
 	local stingerVol = def.Volume or 0.8
 	stinger:SetAttribute("OrigVolume", stingerVol)
