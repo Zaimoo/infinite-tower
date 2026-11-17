@@ -1,10 +1,12 @@
 --!strict
 -- StarterPlayerScripts/UI/Settings/SettingsAudioEngine.luau
 -- Universal audio management engine for Infinite Towers.
--- Implements dual-layer enforcement:
--- 1. Master SoundGroups in SoundService (SG_SFX, SG_Music, SG_Ambience)
--- 2. Direct 3D sound volume scaling across Workspace (including center plaza fountain)
---    with OrigVolume caching and deferred-safe property change listeners.
+-- Every Sound in Workspace, SoundService and PlayerGui is filed into one channel SoundGroup in
+-- SoundService (SG_SFX, SG_Music, SG_Ambience); the group's volume is the slider times a fixed
+-- channel trim (0 when muted).
+-- A sound inside a channel group keeps its own OrigVolume, so the slider applies once. A sound in
+-- some other group is scaled directly instead. AudioCategory ("SFX" / "Music" / "Ambience"), set by
+-- AudioManager and MusicController, wins over the name-keyword guess.
 
 local SoundService = game:GetService("SoundService")
 local Players = game:GetService("Players")
@@ -40,6 +42,17 @@ local CHARACTER_SOUNDS = {
 	freefalling = true, died = true, gettingup = true,
 }
 
+-- Fixed per-channel trim, equal to the SettingsConfig.DEFAULTS sliders. The mix was tuned while
+-- the slider was applied twice (default SFX heard at 0.80 x 0.80), so at default settings each
+-- channel sounds as tuned, and moving a slider now scales it linearly instead of squared.
+local CHANNEL_TRIM = { SFX = 0.80, Music = 0.55, Ambience = 0.60 }
+
+-- Channel groups (and their legacy names) whose volume is the slider times its trim.
+local CHANNEL_GROUPS = {
+	SG_SFX = true, SG_Music = true, SG_Ambience = true,
+	SFX = true, Music = true, Ambience = true,
+}
+
 local function getSoundGroup(name: string): SoundGroup
 	local found = SoundService:FindFirstChild(name)
 	if found and found:IsA("SoundGroup") then
@@ -52,6 +65,11 @@ local function getSoundGroup(name: string): SoundGroup
 end
 
 local function getSoundCategory(sound: Sound): string
+	local tagged = sound:GetAttribute("AudioCategory")
+	if tagged == "SFX" or tagged == "Music" or tagged == "Ambience" then
+		return tagged
+	end
+
 	local lowerName = string.lower(sound.Name)
 
 	-- Humanoid character movement sounds are SFX
@@ -103,6 +121,7 @@ local function applyVolumeToSound(sound: Sound)
 	end
 
 	local category = getSoundCategory(sound)
+	local trim = CHANNEL_TRIM[category] or CHANNEL_TRIM.SFX
 	local channelVol = currentSoundVolume
 	local isMuted = currentMuteSFX
 
@@ -114,14 +133,32 @@ local function applyVolumeToSound(sound: Sound)
 		isMuted = currentMuteAmbience
 	end
 
-	local targetVol = origVol * channelVol * (if isMuted then 0 else 1)
+	-- Inside a channel group the group already carries the slider and mute; scaling here too would
+	-- square the slider (50% heard as 25%) and fight volume fades.
+	local soundGroup = sound.SoundGroup
+	local inChannel = soundGroup ~= nil and soundGroup.Parent == SoundService and CHANNEL_GROUPS[soundGroup.Name] == true
+	local targetVol = if inChannel then origVol else origVol * channelVol * trim * (if isMuted then 0 else 1)
 	sound:SetAttribute("LastEngineVolume", targetVol)
 	sound.Volume = targetVol
+end
+
+local function assignChannelGroup(sound: Sound, category: string)
+	if category == "Ambience" then
+		sound.SoundGroup = getSoundGroup("SG_Ambience")
+	elseif category == "Music" then
+		sound.SoundGroup = getSoundGroup("SG_Music")
+	else
+		sound.SoundGroup = getSoundGroup("SG_SFX")
+	end
 end
 
 function SettingsAudioEngine.registerAndSyncSound(sound: Sound)
 	if not sound:IsA("Sound") then return end
 	if trackedSounds[sound] then
+		-- Pooled sounds come back with a new cue (and maybe a new category) on every play.
+		local category = getSoundCategory(sound)
+		trackedSounds[sound].category = category
+		assignChannelGroup(sound, category)
 		applyVolumeToSound(sound)
 		return
 	end
@@ -135,14 +172,7 @@ function SettingsAudioEngine.registerAndSyncSound(sound: Sound)
 
 	local category = getSoundCategory(sound)
 
-	-- Assign SoundGroup
-	if category == "Ambience" then
-		sound.SoundGroup = getSoundGroup("SG_Ambience")
-	elseif category == "Music" then
-		sound.SoundGroup = getSoundGroup("SG_Music")
-	else
-		sound.SoundGroup = getSoundGroup("SG_SFX")
-	end
+	assignChannelGroup(sound, category)
 
 	local conn: RBXScriptConnection? = nil
 	conn = sound:GetPropertyChangedSignal("Volume"):Connect(function()
@@ -193,22 +223,22 @@ function SettingsAudioEngine.updateVolumes(
 	local sgMusic = getSoundGroup("SG_Music")
 	local sgAmbience = getSoundGroup("SG_Ambience")
 
-	sgSFX.Volume = if currentMuteSFX then 0 else currentSoundVolume
-	sgMusic.Volume = if currentMuteMusic then 0 else currentMusicVolume
-	sgAmbience.Volume = if currentMuteAmbience then 0 else currentAmbienceVolume
+	sgSFX.Volume = if currentMuteSFX then 0 else currentSoundVolume * CHANNEL_TRIM.SFX
+	sgMusic.Volume = if currentMuteMusic then 0 else currentMusicVolume * CHANNEL_TRIM.Music
+	sgAmbience.Volume = if currentMuteAmbience then 0 else currentAmbienceVolume * CHANNEL_TRIM.Ambience
 
 	-- Also update legacy SoundGroups if present
 	local oldSFX = SoundService:FindFirstChild("SFX")
 	if oldSFX and oldSFX:IsA("SoundGroup") and oldSFX ~= sgSFX then
-		oldSFX.Volume = if currentMuteSFX then 0 else currentSoundVolume
+		oldSFX.Volume = if currentMuteSFX then 0 else currentSoundVolume * CHANNEL_TRIM.SFX
 	end
 	local oldMusic = SoundService:FindFirstChild("Music")
 	if oldMusic and oldMusic:IsA("SoundGroup") and oldMusic ~= sgMusic then
-		oldMusic.Volume = if currentMuteMusic then 0 else currentMusicVolume
+		oldMusic.Volume = if currentMuteMusic then 0 else currentMusicVolume * CHANNEL_TRIM.Music
 	end
 	local oldAmb = SoundService:FindFirstChild("Ambience")
 	if oldAmb and oldAmb:IsA("SoundGroup") and oldAmb ~= sgAmbience then
-		oldAmb.Volume = if currentMuteAmbience then 0 else currentAmbienceVolume
+		oldAmb.Volume = if currentMuteAmbience then 0 else currentAmbienceVolume * CHANNEL_TRIM.Ambience
 	end
 
 	-- Dual enforcement: directly re-apply to all tracked sounds
@@ -271,9 +301,9 @@ function SettingsAudioEngine.init()
 	local sgMusic = getSoundGroup("SG_Music")
 	local sgAmbience = getSoundGroup("SG_Ambience")
 
-	sgSFX.Volume = if currentMuteSFX then 0 else currentSoundVolume
-	sgMusic.Volume = if currentMuteMusic then 0 else currentMusicVolume
-	sgAmbience.Volume = if currentMuteAmbience then 0 else currentAmbienceVolume
+	sgSFX.Volume = if currentMuteSFX then 0 else currentSoundVolume * CHANNEL_TRIM.SFX
+	sgMusic.Volume = if currentMuteMusic then 0 else currentMusicVolume * CHANNEL_TRIM.Music
+	sgAmbience.Volume = if currentMuteAmbience then 0 else currentAmbienceVolume * CHANNEL_TRIM.Ambience
 
 	-- Scan existing sounds in Workspace, SoundService, and LocalPlayer PlayerGui
 	local function scan(container: Instance)

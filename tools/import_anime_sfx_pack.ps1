@@ -28,6 +28,39 @@ function ConvertTo-SnakeSlug {
 	return $slug
 }
 
+# LeadIn: seconds of near-silence before a 16-bit PCM sound starts. The onset is the first sample
+# within 30 dB of the file's peak; 10 ms of pre-roll is kept so the attack is not clipped.
+Add-Type -TypeDefinition @'
+public static class WavLeadIn {
+	public static double Compute(string path, long dataOffset, long dataSize, int channels, int sampleRate) {
+		var bytes = new byte[dataSize];
+		using (var fs = System.IO.File.OpenRead(path)) {
+			fs.Seek(dataOffset, System.IO.SeekOrigin.Begin);
+			int read = 0;
+			while (read < bytes.Length) {
+				int n = fs.Read(bytes, read, bytes.Length - read);
+				if (n <= 0) break;
+				read += n;
+			}
+		}
+		int samples = bytes.Length / 2;
+		int peak = 1;
+		for (int i = 0; i < samples; i++) {
+			int v = System.Math.Abs((int)System.BitConverter.ToInt16(bytes, i * 2));
+			if (v > peak) peak = v;
+		}
+		double threshold = peak * System.Math.Pow(10.0, -30.0 / 20.0);
+		for (int i = 0; i < samples; i++) {
+			if (System.Math.Abs((int)System.BitConverter.ToInt16(bytes, i * 2)) >= threshold) {
+				double onset = (double)(i / channels) / sampleRate;
+				return System.Math.Round(System.Math.Max(0.0, onset - 0.01), 3);
+			}
+		}
+		return 0.0;
+	}
+}
+'@
+
 function Get-WavMetadata {
 	param([Parameter(Mandatory)][string]$FilePath)
 
@@ -49,6 +82,7 @@ function Get-WavMetadata {
 		$byteRate = 0
 		$bitsPerSample = 0
 		$dataSize = 0
+		$dataOffset = 0
 
 		while ($fs.Position + 8 -le $fs.Length) {
 			$chunkId = [System.Text.Encoding]::ASCII.GetString($br.ReadBytes(4))
@@ -67,6 +101,7 @@ function Get-WavMetadata {
 				}
 			} elseif ($chunkId -eq 'data') {
 				$dataSize = $chunkSize
+				$dataOffset = $fs.Position
 				[void]$fs.Seek($chunkSize, [System.IO.SeekOrigin]::Current)
 			} else {
 				[void]$fs.Seek($chunkSize, [System.IO.SeekOrigin]::Current)
@@ -84,12 +119,19 @@ function Get-WavMetadata {
 			0.0
 		}
 
+		$leadIn = if ($bitsPerSample -eq 16 -and $channels -gt 0 -and $sampleRate -gt 0 -and $dataSize -gt 0) {
+			[WavLeadIn]::Compute($FilePath, $dataOffset, $dataSize, $channels, $sampleRate)
+		} else {
+			0.0
+		}
+
 		return [PSCustomObject]@{
 			Channels        = $channels
 			SampleRate      = $sampleRate
 			ByteRate        = $byteRate
 			BitsPerSample   = $bitsPerSample
 			DurationSeconds = $duration
+			LeadIn          = $leadIn
 		}
 	} finally {
 		$br.Dispose()
@@ -154,6 +196,7 @@ foreach ($file in $sourceFiles) {
 		RepoPath        = "assets/sfx/$catSlug/$destFileName"
 		StudioId        = "rbxasset://sfx/$catSlug/$destFileName"
 		Bytes           = $file.Length
+		LeadIn          = $wav.LeadIn
 		DurationSeconds = $wav.DurationSeconds
 		SampleRate      = $wav.SampleRate
 		Channels        = $wav.Channels
@@ -182,6 +225,7 @@ if (-not $SkipManifestWrite) {
 	[void]$sb.AppendLine('-- Complete manifest of all 126 Free Anime SFX Pack assets stored in assets/sfx/.')
 	[void]$sb.AppendLine('-- StudioId uses rbxasset://sfx/<category>/<slug>.wav (backed by tools/link_sfx_to_studio.ps1).')
 	[void]$sb.AppendLine('-- Once uploaded to Roblox Creator Store / Open Cloud, populate AssetId with "rbxassetid://<id>".')
+	[void]$sb.AppendLine("-- LeadIn is measured from the WAV; playback starts there so the pack's padded silence never delays a cue.")
 	[void]$sb.AppendLine('')
 	[void]$sb.AppendLine('export type AnimeSfxEntry = {')
 	[void]$sb.AppendLine("`tKey: string,")
@@ -191,6 +235,7 @@ if (-not $SkipManifestWrite) {
 	[void]$sb.AppendLine("`tStudioId: string,")
 	[void]$sb.AppendLine("`tAssetId: string,")
 	[void]$sb.AppendLine("`tBytes: number,")
+	[void]$sb.AppendLine("`tLeadIn: number, -- seconds of near-silence before the sound starts (onset at -30 dB of peak, minus 10 ms)")
 	[void]$sb.AppendLine("`tDurationSeconds: number,")
 	[void]$sb.AppendLine("`tSampleRate: number,")
 	[void]$sb.AppendLine("`tChannels: number,")
@@ -205,6 +250,7 @@ if (-not $SkipManifestWrite) {
 	foreach ($rec in $records) {
 		$origEscaped = $rec.OriginalName.Replace('\', '\\').Replace('"', '\"')
 		$durFormatted = $rec.DurationSeconds.ToString('0.###', [System.Globalization.CultureInfo]::InvariantCulture)
+		$leadFormatted = ([double]$rec.LeadIn).ToString('0.###', [System.Globalization.CultureInfo]::InvariantCulture)
 		[void]$sb.AppendLine("`t[`"$($rec.Key)`"] = table.freeze({")
 		[void]$sb.AppendLine("`t`tKey = `"$($rec.Key)`",")
 		[void]$sb.AppendLine("`t`tCategory = `"$($rec.Category)`",")
@@ -214,6 +260,7 @@ if (-not $SkipManifestWrite) {
 		$assetId = if ($existingAssetIds.ContainsKey($rec.Key)) { $existingAssetIds[$rec.Key] } else { '' }
 		[void]$sb.AppendLine("`t`tAssetId = `"$assetId`",")
 		[void]$sb.AppendLine("`t`tBytes = $($rec.Bytes),")
+		[void]$sb.AppendLine("`t`tLeadIn = $leadFormatted,")
 		[void]$sb.AppendLine("`t`tDurationSeconds = $durFormatted,")
 		[void]$sb.AppendLine("`t`tSampleRate = $($rec.SampleRate),")
 		[void]$sb.AppendLine("`t`tChannels = $($rec.Channels),")
@@ -250,6 +297,11 @@ if (-not $SkipManifestWrite) {
 	[void]$sb.AppendLine("`t`treturn entry.StudioId")
 	[void]$sb.AppendLine("`tend")
 	[void]$sb.AppendLine("`treturn nil")
+	[void]$sb.AppendLine('end')
+	[void]$sb.AppendLine('')
+	[void]$sb.AppendLine('function AnimeSfxManifest.GetLeadIn(key: string): number')
+	[void]$sb.AppendLine("`tlocal entry = AnimeSfxManifest.Entries[key]")
+	[void]$sb.AppendLine("`treturn if entry then entry.LeadIn else 0")
 	[void]$sb.AppendLine('end')
 	[void]$sb.AppendLine('')
 	[void]$sb.AppendLine('function AnimeSfxManifest.AllKeys(): { string }')

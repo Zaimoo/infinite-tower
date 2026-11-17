@@ -420,11 +420,12 @@ local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
 	if not played and args.Origin then
 		local weapon = string.upper(tostring(animator.WeaponType or ""))
 		local fallbackKey = if weapon == "BOW" then "BowRelease"
-			elseif weapon == "DAGGER" or weapon == "DUAL_DAGGER" then "SlashDagger"
-			elseif weapon == "STAFF" or weapon == "TOME" or weapon == "ORB" then "MagicSpark"
-			elseif weapon == "HAMMER" then "AirWhoosh"
+			elseif weapon == "DAGGERS" or weapon == "DAGGER" or weapon == "DUAL_DAGGER" then "SlashDagger"
+			elseif weapon == "TOME" then "LightChimeSparkle"
+			elseif weapon == "STAFF" or weapon == "ORB" then "MagicSpark"
+			elseif weapon == "AXE" or weapon == "HAMMER" then "AirWhoosh"
 			else "SlashSword"
-		AudioManager.Play3D(fallbackKey, args.Origin, nil, 0.72)
+		AudioManager.Play3D(fallbackKey, args.Origin, nil, 0.72 * 0.8) -- weapon attacks sit 20% lower (SkillVfx)
 	end
 	if _G.GildedAnvilCombatFx and _G.GildedAnvilCombatFx.OnRelease then
 		_G.GildedAnvilCombatFx.OnRelease(rig, meta, args)

@@ -5,6 +5,8 @@
 --   * Reflection thread: when a mirror hero appears, and every so often after, a thin gold beam links it to the
 --     hero it copies (same owner, HeroUUID == MirrorSourceUUID) and fades out. A light effect: kept under Reduce Motion.
 --   * Glint: every few seconds a small burst of gold sparkles off the hero. Skipped under Reduce Motion.
+--   * Sound: one soft chime when one of your own mirror heroes first links to its source. The repeating
+--     threads and glints are silent, so idle mirror heroes (yours or anyone's) never chime at random.
 --   * Shatter: when the hero is knocked out (EntityRenderer sets HeroDown), its glass bursts into shards.
 -- Client-only decoration; nothing here touches gameplay.
 
@@ -59,11 +61,13 @@ local function attachmentOn(part: BasePart, name: string, offset: Vector3): Atta
 	return att
 end
 
-local function playThread(model: Model)
+local function playThread(model: Model, withChime: boolean)
 	local source = sourceModel(model)
 	local fromRoot, toRoot = rootOf(model), source and rootOf(source)
 	if not fromRoot or not toRoot then return end
-	AudioManager.Play3D("LightChimeSparkle", fromRoot.Position, nil, 0.45)
+	if withChime and model:GetAttribute("OwnerUserId") == LocalPlayer.UserId then
+		AudioManager.Play3D("LightChimeSparkle", fromRoot.Position, nil, 0.45)
+	end
 	local beam = Instance.new("Beam")
 	beam.Name = "MirrorThread"
 	beam.Attachment0 = attachmentOn(fromRoot, "MirrorThreadA", Vector3.new(0, 1.5, 0))
@@ -91,7 +95,6 @@ end
 local function glint(model: Model)
 	local root = rootOf(model)
 	if not root or reducedMotion() then return end
-	AudioManager.Play3D("LightChimeSparkle", root.Position, 1.25, 0.35)
 	local att = attachmentOn(root, "MirrorGlint", Vector3.new(0, 2, 0))
 	local emitter = att:FindFirstChild("Sparkle") :: ParticleEmitter?
 	if not emitter then
@@ -351,10 +354,12 @@ local function watch(model: Instance)
 		attachHaloFx(typed)
 		if conn and typed:GetAttribute("HaloFxAttached") then conn:Disconnect() end
 		local nextThread, nextGlint = 0, os.clock() + math.random(GLINT_EVERY[1], GLINT_EVERY[2])
+		local firstThread = true
 		while model.Parent and CollectionService:HasTag(model, TAG) do
 			local now = os.clock()
 			if now >= nextThread then
-				playThread(model)
+				playThread(model, firstThread)
+				firstThread = false
 				nextThread = now + THREAD_EVERY
 			end
 			if now >= nextGlint then
