@@ -86,11 +86,11 @@ local function graphFor(floorId: number): any?
 	if not floorId or floorId <= 0 then
 		return nil
 	end
-	local idx = ((floorId - 1) % 5) + 1
-	if not graphs[idx] then
-		graphs[idx] = Graph.new(Layout.Get(idx))
+	-- Each floor has its own layout (TowerLayout per-floor variation), so graphs are kept per floor.
+	if not graphs[floorId] then
+		graphs[floorId] = Graph.new(Layout.Get(((floorId - 1) % 5) + 1, floorId))
 	end
-	return graphs[idx]
+	return graphs[floorId]
 end
 
 local function locatePoint(floorId: number, worldPos: Vector3, origin: Vector3?): (any?, any?)

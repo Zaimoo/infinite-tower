@@ -27,10 +27,11 @@ end
 
 -- Layout placements plus scaled-in members. Keys of the result are slot ids: layout slots keep their index and
 -- extras use Config.ExtraSlotBase + campIndex * 100 + n so they never collide with layout slots or summoned entities.
-function CampWaves.EffectivePlacements(indexInBiome: number, placements: { any }, masters: number, enemyRole: (string) -> string?): { [number]: any }
+-- floorId: the floor whose own layout (TowerLayout per-floor variation) the placements come from.
+function CampWaves.EffectivePlacements(indexInBiome: number, placements: { any }, masters: number, enemyRole: (string) -> string?, floorId: number?): { [number]: any }
 	local merged: { [number]: any } = table.clone(placements) :: any
 	if masters <= 1 then return merged end
-	local layout = TowerLayout.Get(indexInBiome)
+	local layout = TowerLayout.Get(indexInBiome, floorId)
 	local camps: { [string]: any } = {}
 	local order: { string } = {}
 	local baseCount = 0

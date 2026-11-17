@@ -63,9 +63,9 @@ test("Phase 6 M1: extra Masters scale camps up inside the live-mob budget", func
 		end
 	end
 	-- Floor 1 (16 mobs) with 3 Masters grows; floor 4 (35 mobs) with 6 Masters is clamped at the budget.
-	local f1 = CampWaves.EffectivePlacements(1, Combat.Floors[1], 3, role)
+	local f1 = CampWaves.EffectivePlacements(1, Combat.Floors[1], 3, role, 1)
 	assert(count(f1) > #Combat.Floors[1])
-	local f4 = CampWaves.EffectivePlacements(4, Combat.Floors[4], 6, role)
+	local f4 = CampWaves.EffectivePlacements(4, Combat.Floors[4], 6, role, 4)
 	local live4 = 0
 	for _, p in f4 do
 		if role(p.EnemyId) ~= "BOSS" and p.CampId ~= "CAMP_APEX_SANCTUM" then live4 += 1 end

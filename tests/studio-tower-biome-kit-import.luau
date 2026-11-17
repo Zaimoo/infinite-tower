@@ -1,0 +1,169 @@
+-- Files an imported Tower Biome Kit into ServerStorage.TowerBiomeKit (Shared/Config/TowerBiomeKit.luau).
+--
+-- 1. In Studio: File > Import 3D > assets-source/tower/biome_kit/TowerBiomeKit.fbx, into the Workspace, with
+--    the parts kept separate (default settings). Every MeshPart is named "<Template>__<ROLE>".
+-- 2. Run this in Edit mode (Studio MCP execute_luau, or the command bar):
+--      return require(path.to.this)()
+--    or paste the body and call it. It reports per template what it filed, then removes the imported model.
+-- 3. Save the place. TowerBiomeAssets uses the kit once every template is present (TowerKitProps.Ready).
+--
+-- All templates were modelled on one shared Blender origin, so the importer's offset, unit scale and axes
+-- are measured once from that origin and undone for every part. Each template is stored with its origin
+-- (footprint centre on the ground) at the world origin and its front facing +Z; parts stay axis-aligned
+-- (at most quarter-turned), which TowerKitProps relies on to scale them per axis. Studio's FBX importer
+-- (2026-11) brings the kit in at 1:1 scale but turned 180 degrees; the script measures and undoes that.
+return function(keepImported: boolean?): string
+	local ServerStorage = game:GetService("ServerStorage")
+	local Kit = require(game.ReplicatedStorage.Shared.Config.TowerBiomeKit)
+
+	-- 1. Collect the imported parts by template and role.
+	local byTemplate: { [string]: { [string]: MeshPart } } = {}
+	local roots: { [Instance]: boolean } = {}
+	for _, d in workspace:GetDescendants() do
+		if d:IsA("MeshPart") then
+			local template, role = string.match(d.Name, "^(.-)__(%u+)$")
+			if template and role and Kit.Templates[template] then
+				byTemplate[template] = byTemplate[template] or {}
+				byTemplate[template][role] = d
+				local root: Instance = d
+				while root.Parent and root.Parent ~= workspace do
+					root = root.Parent
+				end
+				roots[root] = true
+			end
+		end
+	end
+
+	local function bounds(parts: { BasePart }): (Vector3, Vector3)
+		local lo = Vector3.new(math.huge, math.huge, math.huge)
+		local hi = -lo
+		for _, p in parts do
+			local half = p.Size / 2
+			for _, sx in { -1, 1 } do
+				for _, sy in { -1, 1 } do
+					for _, sz in { -1, 1 } do
+						local w = p.CFrame:PointToWorldSpace(half * Vector3.new(sx, sy, sz))
+						lo = lo:Min(w)
+						hi = hi:Max(w)
+					end
+				end
+			end
+		end
+		return lo, hi
+	end
+	local function listOf(t: { [string]: MeshPart }): { BasePart }
+		local out = {}
+		for _, p in t do
+			table.insert(out, p)
+		end
+		return out
+	end
+
+	-- 2. Unit scale: the importer scales every template alike; take the median ratio of authored to imported height.
+	local ratios = {}
+	for name, parts in byTemplate do
+		local lo, hi = bounds(listOf(parts))
+		if hi.Y - lo.Y > 1e-3 then
+			table.insert(ratios, Kit.Templates[name].Size.Y / (hi.Y - lo.Y))
+		end
+	end
+	if #ratios == 0 then
+		return "No imported Tower Biome Kit parts found in the Workspace (expected MeshParts named <Template>__<ROLE>)."
+	end
+	table.sort(ratios)
+	local scale = ratios[math.ceil(#ratios / 2)]
+
+	-- 3. Yaw: the turn about Y that maps imported bounds onto authored bounds (Min and Size, from the shared
+	-- origin). The origin itself is found from ArchPierBase, which is centred on it and stands on it.
+	local pierParts = byTemplate.ArchPierBase
+	assert(pierParts, "ArchPierBase is missing from the import")
+	local pLo, pHi = bounds(listOf(pierParts))
+	local origin = Vector3.new((pLo.X + pHi.X) / 2, pLo.Y, (pLo.Z + pHi.Z) / 2)
+	local bestYaw, bestErr = 0, math.huge
+	for _, yaw in { 0, 90, 180, 270 } do
+		local turn = CFrame.Angles(0, math.rad(yaw), 0)
+		local err = 0
+		for name, parts in byTemplate do
+			local lo, hi = bounds(listOf(parts))
+			local a = turn:VectorToWorldSpace((lo - origin) * scale)
+			local b = turn:VectorToWorldSpace((hi - origin) * scale)
+			local tMin = a:Min(b)
+			local want = Kit.Templates[name]
+			err += (tMin - want.Min).Magnitude
+		end
+		if err < bestErr then
+			bestYaw, bestErr = yaw, err
+		end
+	end
+	local turn = CFrame.Angles(0, math.rad(bestYaw), 0)
+
+	-- 4. File each template.
+	local folder = ServerStorage:FindFirstChild(Kit.FolderName) or Instance.new("Folder")
+	folder.Name = Kit.FolderName
+	folder.Parent = ServerStorage
+	local report = { string.format("scale %.4f, yaw %d, bounds error %.2f studs", scale, bestYaw, bestErr) }
+	local missing = {}
+	for name, spec in Kit.Templates do
+		local parts = byTemplate[name]
+		if not parts then
+			table.insert(missing, name)
+			continue
+		end
+		local old = folder:FindFirstChild(name)
+		if old then
+			old:Destroy()
+		end
+		local model = Instance.new("Model")
+		model.Name = name
+		model:SetAttribute("Size", spec.Size)
+		local rotated = 0
+		for role, src in parts do
+			local p = src:Clone()
+			p.Name = role
+			p:SetAttribute("Role", role)
+			local rel = turn * CFrame.new((src.Position - origin) * scale) * src.CFrame.Rotation
+			p.Size = src.Size * scale
+			p.CFrame = rel
+			-- Quarter turns keep the part axis-aligned (Studio's importer brings this kit in turned 180 degrees);
+			-- anything else would break TowerKitProps' per-axis scaling.
+			local r = p.CFrame
+			for _, v in { r.RightVector, r.UpVector, r.LookVector } do
+				if math.max(math.abs(v.X), math.abs(v.Y), math.abs(v.Z)) < 0.999 then
+					rotated += 1
+					break
+				end
+			end
+			p.Anchored = true
+			p.CanCollide = false
+			p.CanQuery = false
+			p.CanTouch = false
+			p.CollisionFidelity = Enum.CollisionFidelity.Box
+			p.RenderFidelity = Enum.RenderFidelity.Automatic
+			p.DoubleSided = false
+			for _, child in p:GetChildren() do
+				-- Colour and material come from the role palette at runtime; drop importer materials.
+				if child:IsA("SurfaceAppearance") then
+					child:Destroy()
+				end
+			end
+			p.TextureID = ""
+			p.Parent = model
+		end
+		model.WorldPivot = CFrame.identity
+		model.Parent = folder
+		local lo, hi = bounds(model:GetChildren() :: any)
+		local drift = (lo - spec.Min).Magnitude + ((hi - lo) - spec.Size).Magnitude
+		table.insert(report, string.format("%s: %d roles, size %.1f x %.1f x %.1f, drift %.2f%s", name, #model:GetChildren(), hi.X - lo.X, hi.Y - lo.Y, hi.Z - lo.Z, drift, if rotated > 0 then string.format(", %d SKEWED parts (re-export)", rotated) else ""))
+	end
+	table.sort(report)
+	if #missing > 0 then
+		table.insert(report, "MISSING: " .. table.concat(missing, ", "))
+	end
+	if not keepImported then
+		for root in roots do
+			root:Destroy()
+		end
+	end
+	game:GetService("ChangeHistoryService"):SetWaypoint("Import Tower Biome Kit")
+	return table.concat(report, "\n")
+end

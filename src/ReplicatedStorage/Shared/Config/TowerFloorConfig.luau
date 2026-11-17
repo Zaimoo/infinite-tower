@@ -67,7 +67,7 @@ for biomeIndex, biome in ipairs(MobCatalog.Biomes) do
 		local environmentId = string.format("tower_environment_%02d", id)
 		local variantKind = variantKinds[indexInBiome]
 		local counts = {}
-		for _, placement in Layout.Placements(biome, indexInBiome) do
+		for _, placement in Layout.Placements(biome, indexInBiome, id) do
 			counts[placement.EnemyId] = (counts[placement.EnemyId] or 0) + 1
 		end
 		local encounters: { Encounter } = {}

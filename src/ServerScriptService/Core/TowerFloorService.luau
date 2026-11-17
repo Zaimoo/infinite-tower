@@ -591,7 +591,7 @@ function Service.Init()
 			for _,s in pairs(states) do if s.FloorId==id or (s.SquadSize>0 and s.SquadFloorId==id) then pinned=true end end
 			for _,a in pairs(adapters) do if a.Pins and a.Pins(id,r.RoomGeneration) then pinned=true end end
 			if pinned then r.EmptySince=os.clock() elseif os.clock()-r.EmptySince>=60 then
-				r.Status="RETIRING";r.Model:Destroy();rooms[id]=nil
+				r.Status="RETIRING";r.Model:Destroy();pcall(Builder.ClearTerrain,id);rooms[id]=nil
 			end
 		end end
 	end)

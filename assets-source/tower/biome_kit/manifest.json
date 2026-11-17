@@ -1,0 +1,535 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "ArchCrown": {
+      "Min": [
+        -16.0,
+        0.0,
+        -4.225
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "MOSS": 400,
+        "TRIM": 282
+      },
+      "Size": [
+        32.0,
+        18.185,
+        8.45
+      ],
+      "Triangles": 694
+    },
+    "ArchPierBase": {
+      "Min": [
+        -4.3,
+        0.0,
+        -4.3
+      ],
+      "Roles": {
+        "TRIM": 138
+      },
+      "Size": [
+        8.6,
+        3.5,
+        8.6
+      ],
+      "Triangles": 138
+    },
+    "ArchPierSegment": {
+      "Min": [
+        -3.287,
+        -0.011,
+        -3.335
+      ],
+      "Roles": {
+        "MOSS": 80,
+        "TRIM": 342
+      },
+      "Size": [
+        6.523,
+        4.421,
+        6.851
+      ],
+      "Triangles": 422
+    },
+    "BanyanTree": {
+      "Min": [
+        -42.614,
+        -1.4,
+        -38.335
+      ],
+      "Roles": {
+        "FOLIAGE": 660,
+        "WOOD": 886
+      },
+      "Size": [
+        80.859,
+        68.753,
+        71.91
+      ],
+      "Triangles": 1546
+    },
+    "BlightPod": {
+      "Min": [
+        -3.02,
+        -0.3,
+        -5.136
+      ],
+      "Roles": {
+        "CAP": 80,
+        "GLOW": 80,
+        "STONE": 80,
+        "WOOD": 150
+      },
+      "Size": [
+        9.075,
+        5.173,
+        10.611
+      ],
+      "Triangles": 390
+    },
+    "BlightTree": {
+      "Min": [
+        -29.309,
+        -2.414,
+        -21.373
+      ],
+      "Roles": {
+        "FOLIAGE": 80,
+        "GLOW": 184,
+        "WOOD": 1128
+      },
+      "Size": [
+        56.146,
+        45.125,
+        47.08
+      ],
+      "Triangles": 1392
+    },
+    "BoulderCluster": {
+      "Min": [
+        -4.226,
+        0.0,
+        -3.676
+      ],
+      "Roles": {
+        "STONE": 960
+      },
+      "Size": [
+        10.059,
+        3.494,
+        7.165
+      ],
+      "Triangles": 960
+    },
+    "Cairn": {
+      "Min": [
+        -4.349,
+        -0.45,
+        -3.259
+      ],
+      "Roles": {
+        "FOLIAGE": 60,
+        "TRIM": 320
+      },
+      "Size": [
+        8.479,
+        4.503,
+        7.927
+      ],
+      "Triangles": 380
+    },
+    "ChasmIsland": {
+      "Min": [
+        -20.152,
+        -0.856,
+        -20.002
+      ],
+      "Roles": {
+        "MOSS": 188,
+        "STONE": 2792
+      },
+      "Size": [
+        40.821,
+        40.129,
+        40.914
+      ],
+      "Triangles": 2980
+    },
+    "CliffRockA": {
+      "Min": [
+        -23.442,
+        -0.919,
+        -19.32
+      ],
+      "Roles": {
+        "MOSS": 256,
+        "STONE": 2256
+      },
+      "Size": [
+        47.003,
+        73.149,
+        38.623
+      ],
+      "Triangles": 2512
+    },
+    "CliffRockB": {
+      "Min": [
+        -24.268,
+        -0.87,
+        -19.091
+      ],
+      "Roles": {
+        "MOSS": 340,
+        "STONE": 2780
+      },
+      "Size": [
+        45.858,
+        75.719,
+        36.945
+      ],
+      "Triangles": 3120
+    },
+    "CoralCluster": {
+      "Min": [
+        -4.846,
+        -0.5,
+        -3.886
+      ],
+      "Roles": {
+        "CORAL": 430,
+        "GLOW": 200,
+        "STONE": 80
+      },
+      "Size": [
+        10.394,
+        6.905,
+        7.994
+      ],
+      "Triangles": 710
+    },
+    "CrystalSpire": {
+      "Min": [
+        -12.114,
+        0.0,
+        -8.802
+      ],
+      "Roles": {
+        "CRYSTAL": 216,
+        "STONE": 320
+      },
+      "Size": [
+        22.31,
+        44.5,
+        17.66
+      ],
+      "Triangles": 536
+    },
+    "DeadTree": {
+      "Min": [
+        -9.578,
+        -1.06,
+        -13.055
+      ],
+      "Roles": {
+        "WOOD": 594
+      },
+      "Size": [
+        18.096,
+        36.91,
+        24.261
+      ],
+      "Triangles": 594
+    },
+    "FoliageBush": {
+      "Min": [
+        -4.072,
+        -0.209,
+        -4.072
+      ],
+      "Roles": {
+        "ALT": 140,
+        "FOLIAGE": 240,
+        "STONE": 80
+      },
+      "Size": [
+        9.111,
+        5.269,
+        8.202
+      ],
+      "Triangles": 460
+    },
+    "ForgeScrap": {
+      "Min": [
+        -6.598,
+        -1.694,
+        -3.408
+      ],
+      "Roles": {
+        "GOLD": 44,
+        "METAL": 332,
+        "STONE": 80
+      },
+      "Size": [
+        12.028,
+        6.187,
+        7.409
+      ],
+      "Triangles": 456
+    },
+    "FurnaceStack": {
+      "Min": [
+        -10.0,
+        0.0,
+        -10.0
+      ],
+      "Roles": {
+        "GLOW": 288,
+        "METAL": 508,
+        "STONE": 138
+      },
+      "Size": [
+        20.0,
+        54.7,
+        20.0
+      ],
+      "Triangles": 934
+    },
+    "GiantMushroom": {
+      "Min": [
+        -20.018,
+        -1.287,
+        -24.05
+      ],
+      "Roles": {
+        "CAP": 282,
+        "GLOW": 696,
+        "STEM": 78
+      },
+      "Size": [
+        48.356,
+        46.068,
+        48.212
+      ],
+      "Triangles": 1056
+    },
+    "IceCluster": {
+      "Min": [
+        -3.129,
+        -0.5,
+        -2.953
+      ],
+      "Roles": {
+        "CRYSTAL": 144,
+        "MOSS": 80
+      },
+      "Size": [
+        7.04,
+        8.193,
+        5.891
+      ],
+      "Triangles": 224
+    },
+    "LionGuardian": {
+      "Min": [
+        -11.0,
+        0.0,
+        -15.458
+      ],
+      "Roles": {
+        "ACCENT": 2500,
+        "GLOW": 40,
+        "TRIM": 4500
+      },
+      "Size": [
+        22.0,
+        32.735,
+        27.527
+      ],
+      "Triangles": 7040
+    },
+    "MushroomCluster": {
+      "Min": [
+        -3.756,
+        -0.4,
+        -4.383
+      ],
+      "Roles": {
+        "CAP": 858,
+        "GLOW": 800,
+        "MOSS": 80,
+        "STEM": 234
+      },
+      "Size": [
+        9.552,
+        8.019,
+        8.544
+      ],
+      "Triangles": 1972
+    },
+    "Obelisk": {
+      "Min": [
+        -8.0,
+        0.0,
+        -8.0
+      ],
+      "Roles": {
+        "GLOW": 384,
+        "GOLD": 12,
+        "TRIM": 342
+      },
+      "Size": [
+        16.0,
+        57.0,
+        16.0
+      ],
+      "Triangles": 738
+    },
+    "ObsidianSpire": {
+      "Min": [
+        -11.819,
+        0.0,
+        -9.079
+      ],
+      "Roles": {
+        "GLOW": 90,
+        "STONE": 900
+      },
+      "Size": [
+        23.344,
+        60.0,
+        18.942
+      ],
+      "Triangles": 990
+    },
+    "PineTree": {
+      "Min": [
+        -14.442,
+        -0.8,
+        -13.5
+      ],
+      "Roles": {
+        "FOLIAGE": 700,
+        "MOSS": 180,
+        "WOOD": 46
+      },
+      "Size": [
+        28.865,
+        45.179,
+        28.145
+      ],
+      "Triangles": 926
+    },
+    "RobedStatueStaff": {
+      "Min": [
+        -10.236,
+        0.0,
+        -10.0
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "GLOW": 120,
+        "GOLD": 454,
+        "TRIM": 5000
+      },
+      "Size": [
+        25.281,
+        62.988,
+        20.0
+      ],
+      "Triangles": 5618
+    },
+    "RobedStatueTrident": {
+      "Min": [
+        -10.236,
+        0.0,
+        -10.0
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "GLOW": 142,
+        "GOLD": 250,
+        "TRIM": 5000
+      },
+      "Size": [
+        24.912,
+        64.18,
+        20.0
+      ],
+      "Triangles": 5436
+    },
+    "RuinRubble": {
+      "Min": [
+        -4.531,
+        -0.412,
+        -3.848
+      ],
+      "Roles": {
+        "MOSS": 80,
+        "TRIM": 198
+      },
+      "Size": [
+        9.571,
+        4.812,
+        9.462
+      ],
+      "Triangles": 278
+    },
+    "StoneUrn": {
+      "Min": [
+        -2.7,
+        0.0,
+        -2.7
+      ],
+      "Roles": {
+        "ACCENT": 96,
+        "FOLIAGE": 140,
+        "TRIM": 252
+      },
+      "Size": [
+        5.4,
+        7.015,
+        5.4
+      ],
+      "Triangles": 488
+    },
+    "TomeStack": {
+      "Min": [
+        -1.919,
+        0.0,
+        -1.752
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "ALT": 138,
+        "GOLD": 44,
+        "TRIM": 44
+      },
+      "Size": [
+        6.986,
+        3.8,
+        3.545
+      ],
+      "Triangles": 270
+    },
+    "VoidShards": {
+      "Min": [
+        -2.3,
+        0.0,
+        -2.3
+      ],
+      "Roles": {
+        "GLOW": 80,
+        "STONE": 64,
+        "TRIM": 44
+      },
+      "Size": [
+        5.725,
+        8.16,
+        4.6
+      ],
+      "Triangles": 188
+    }
+  },
+  "Unit": "studs"
+}

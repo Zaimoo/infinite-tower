@@ -5,6 +5,8 @@
 local Config = require(game.ReplicatedStorage.Shared.Config.TowerFloorConfig)
 local Layout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local BiomeAssets = require(script.Parent.TowerBiomeAssets)
+local KitProps = require(script.Parent.TowerKitProps)
+local TowerTerrain = require(script.Parent.TowerTerrain)
 local StaticGeometry = require(script.Parent.StaticGeometry)
 local PropClearance = require(script.Parent.TowerPropClearance)
 local PortalKit = require(script.Parent.TowerPortalKit)
@@ -258,7 +260,7 @@ local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = t
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
 	local boxes = {}
-	for _, lane in Layout.Lanes(index) do
+	for _, lane in Layout.Lanes(index, model:GetAttribute("FloorId")) do
 		local a = origin + Vector3.new(lane.AX, lane.AY, lane.AZ)
 		local b = origin + Vector3.new(lane.BX, lane.BY, lane.BZ)
 		local frame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, (lane.Above - lane.Below) / 2, 0)
@@ -287,13 +289,21 @@ function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number)
 	end
 end
 
+-- Removes a floor's terrain (TowerFloorService calls this when the room retires).
+function Builder.ClearTerrain(id: number)
+	local floorSpec = Config.Get(id)
+	if floorSpec then
+		TowerTerrain.Clear(Builder.Origin(id), Layout.Get(floorSpec.IndexInBiome, id))
+	end
+end
+
 function Builder.Build(id: number, generation: number): any
 	assert(Config.IsFloorId(id))
 	local floorSpec = assert(Config.Get(id))
 	local theme = Themes[floorSpec.BiomeId] or Themes.verdant_ruins
 	local origin = Builder.Origin(id)
 	local idx = floorSpec.IndexInBiome
-	local layout = Layout.Get(idx)
+	local layout = Layout.Get(idx, id)
 	local safe = layout.Sanctuary
 
 	local model = Instance.new("Model")
@@ -313,9 +323,18 @@ function Builder.Build(id: number, generation: number): any
 	model:SetAttribute("Depth", depth)
 	model:SetAttribute("Height", height)
 	model:SetAttribute("CampCount", #layout.Camps)
+	-- Natural floors (GDD §3.3): with the Tower Biome Kit imported, every floor gets its own voxel terrain
+	-- (TowerTerrain) and an ecosystem of kit props; terraces and ramps lose their masonry trim, curbs and
+	-- viaduct piers, since the terrain's plateaus and land bridges carry them.
+	local natural = KitProps.Ready()
+	model:SetAttribute("Natural", natural)
 
 	-- Base sub-floor and sky/cavern enclosure
-	part(model, "Ground", Vector3.new(width, 4, depth), origin + Vector3.new(0, layout.Bottom - 6, 0), theme.SubFloorColor, theme.GroundMaterial)
+	local ground = part(model, "Ground", Vector3.new(width, 4, depth), origin + Vector3.new(0, layout.Bottom - 6, 0), theme.SubFloorColor, theme.GroundMaterial)
+	if natural then
+		-- The terrain is the visible chasm floor; the slab stays as the catch under it.
+		ground.Transparency = 1
+	end
 	for _, side in { -1, 1 } do
 		part(model, "WallX", Vector3.new(6, height + 16, depth + 12), origin + Vector3.new(side * (width / 2 + 3), height / 2 - 8, 0), theme.WallColor, theme.WallMaterial)
 		part(model, "WallZ", Vector3.new(width, height + 16, 6), origin + Vector3.new(0, height / 2 - 8, side * (depth / 2 + 3)), theme.WallColor, theme.WallMaterial)
@@ -383,6 +402,14 @@ function Builder.Build(id: number, generation: number): any
 		slab:SetAttribute("TerraceId", name)
 
 		local topCenter = origin + Vector3.new(terrace.X, terrace.Y, terrace.Z)
+		if natural and name ~= "Sanctuary" then
+			-- A natural plateau: the biome's own ground (grass, snow, sand...) on top; no mosaic, bands or
+			-- corner pieces.
+			local palette = TowerTerrain.Palettes[floorSpec.BiomeId]
+			slab.Color = theme.GroundColor
+			if palette then slab.Material = palette.Ground end
+			continue
+		end
 		if name ~= "Sanctuary" and name ~= "Basin" then
 			decor(model, "TerraceCenterMosaic", Vector3.new(terrace.Width * 0.62, 0.12, terrace.Depth * 0.62), topCenter + Vector3.new(0, 0.08, 0), theme.TrimColor, theme.TrimMaterial)
 			decor(model, "TerraceInnerField", Vector3.new(terrace.Width * 0.52, 0.14, terrace.Depth * 0.52), topCenter + Vector3.new(0, 0.16, 0), theme.GroundColor, theme.GroundMaterial)
@@ -470,6 +497,7 @@ function Builder.Build(id: number, generation: number): any
 				)
 				tread.CFrame = CFrame.lookAt(tread.Position, tread.Position + flat)
 				structure(tread,link.Id)
+				if natural then continue end
 				local runner = decor(model, "GrandStairRunner", Vector3.new(link.Width * 0.36, 0.12, flat.Magnitude / steps + 0.2), Vector3.new(center.X, top + 0.08, center.Z), theme.AccentColor, theme.TrimMaterial)
 				runner.CFrame = CFrame.lookAt(runner.Position, runner.Position + flat)
 			end
@@ -477,8 +505,23 @@ function Builder.Build(id: number, generation: number): any
 			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
 			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -0.96, 0)
 			structure(ramp,link.Id)
-			local inlay = decor(model, "RampPathInlay", Vector3.new(link.Width * 0.55, 0.12, delta.Magnitude), mid, theme.AccentColor, theme.GroundMaterial)
-			inlay.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.14, 0)
+			if natural then
+				ramp.Color = theme.GroundColor:Lerp(theme.TrimColor, 0.35)
+			else
+				local inlay = decor(model, "RampPathInlay", Vector3.new(link.Width * 0.55, 0.12, delta.Magnitude), mid, theme.AccentColor, theme.GroundMaterial)
+				inlay.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.14, 0)
+			end
+		end
+		-- Natural floors: a trodden path over a land bridge, with no lanterns or viaduct piers. The curbs stay,
+		-- invisible, so heroes keep the same railing they always had.
+		if natural then
+			for _, side in { -1, 1 } do
+				local curbOffset = right * (side * (link.Width / 2 - 1.1))
+				local curbGroup = propGroup(model, "BridgeCurb")
+				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, math.max(1,delta.Magnitude-4)), mid + curbOffset, theme.TrimColor, theme.TrimMaterial, 1)
+				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
+			end
+			continue
 		end
 
 		for _, side in { -1, 1 } do
@@ -523,7 +566,12 @@ function Builder.Build(id: number, generation: number): any
 			landing(link.LandingB,link.Id)
 	end
 
-	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme)
+	local field = if natural then TowerTerrain.Build(origin, layout, floorSpec.BiomeId, id) else nil
+	if not natural then
+		-- A floor built before the kit was imported may have left terrain behind.
+		TowerTerrain.Clear(origin, layout)
+	end
+	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme, field)
 
 	for x = -width / 2 + 50, width / 2 - 40, 100 do
 		for z = -depth / 2 + 50, depth / 2 - 40, 100 do
@@ -724,7 +772,7 @@ function Builder.Build(id: number, generation: number): any
    table.insert(clearancePoints,origin+a:Lerp(b,step/math.ceil((b-a).Magnitude/3))+Vector3.new(0,2.5,0))
   end
  end
- for _,placement in Layout.Placements(require(game.ReplicatedStorage.Shared.Config.MobCatalog).Biomes[math.ceil(id/5)],idx) do
+ for _,placement in Layout.Placements(require(game.ReplicatedStorage.Shared.Config.MobCatalog).Biomes[math.ceil(id/5)],idx,id) do
   table.insert(clearancePoints,origin+Vector3.new(placement.X,placement.Y+2.5,placement.Z))
  end
  -- A solid part in the way removes its whole prop (TowerPropClearance), so nothing is left floating.

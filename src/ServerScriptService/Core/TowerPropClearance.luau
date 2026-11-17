@@ -115,7 +115,9 @@ function PropClearance.Settle(root: Instance, airborne: { [string]: boolean }, t
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local lowered, removed = 0, 0
 	for _, prop in topProps(root) do
-		if not airborne[prop:GetAttribute("PropKind") :: string] then
+		-- OnTerrain props (a natural floor's ecosystem) were placed on the terrain's own surface; a probe that
+		-- starts inside voxel terrain passes through it, so they are not settled.
+		if not airborne[prop:GetAttribute("PropKind") :: string] and not prop:GetAttribute("OnTerrain") then
 			local parts: { { position: Vector3, bottom: number } } = {}
 			local minBottom = math.huge
 			for _, descendant in prop:GetDescendants() do

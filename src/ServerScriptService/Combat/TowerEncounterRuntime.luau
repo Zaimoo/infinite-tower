@@ -179,7 +179,7 @@ function Runtime.new(api: any): any
 		local cat = MobCatalog.Get(enemyId)
 		local rawSpec = Config.Get(enemyId)
 		local e = if rawSpec then table.clone(rawSpec) else nil
-		local layout = TowerLayout.Get(floorSpec.IndexInBiome)
+		local layout = TowerLayout.Get(floorSpec.IndexInBiome, floorId)
 
 		local maxHP, atk, gold = 12000, 55, 800
 		local floorStats = TowerFloorConfig.GetEnemyStats(floorId, enemyId)
@@ -465,7 +465,7 @@ function Runtime.new(api: any): any
 		return CampWaves.EffectivePlacements(floorSpec.IndexInBiome, placements, masters, function(enemyId)
 			local cat = Config.Get(enemyId)
 			return cat and cat.Role or nil
-		end)
+		end, floor)
 	end
 	-- Personal surge pack: one Elite and a few Regulars step out around the squad. They never respawn.
 	function self:SpawnSurge(floorId: number, player: any, anchor: Vector3)
@@ -474,7 +474,7 @@ function Runtime.new(api: any): any
 		local ledger = api.Tower.Encounters[floorId]
 		if not room or room.Status ~= "READY" or not floorSpec or not ledger or floorSpec.IndexInBiome == 5 then return 0 end
 		local biome = MobCatalog.Biomes[floorSpec.BiomeIndex]
-		local layout = TowerLayout.Get(floorSpec.IndexInBiome)
+		local layout = TowerLayout.Get(floorSpec.IndexInBiome, floorId)
 		ledger.Surge = ledger.Surge or {}
 		local roster = { biome.EliteEnemyId }
 		for i = 1, Config.SurgeRegulars do table.insert(roster, biome.RegularEnemyIds[(i - 1) % 2 + 1]) end
@@ -532,7 +532,7 @@ function Runtime.new(api: any): any
 	function self:Roster(floor, room, ledger)
 		if ledger.Roster then return ledger.Roster end
 		local floorSpec = TowerFloorConfig.Get(floor)
-		local layout = TowerLayout.Get(floorSpec.IndexInBiome)
+		local layout = TowerLayout.Get(floorSpec.IndexInBiome, floor)
 		local biome = MobCatalog.Biomes[floorSpec.BiomeIndex]
 		local campIds, upper, layoutCamps = {}, {}, {}
 		for _, camp in layout.Camps do
@@ -568,7 +568,7 @@ function Runtime.new(api: any): any
 		end
 		-- Patrols (Phase E): the Basin loop on every floor, plus one other route from the third floor of a
 		-- biome. Three mixed fighters walk it; from biome 4 a patrol may bring the floor's support.
-		local routes = TowerLayout.PatrolRoutes(floorSpec.IndexInBiome)
+		local routes = TowerLayout.PatrolRoutes(floorSpec.IndexInBiome, floor)
 		local routeIds = { "BASIN_LOOP" }
 		if floorSpec.IndexInBiome >= 3 then
 			local others = {}

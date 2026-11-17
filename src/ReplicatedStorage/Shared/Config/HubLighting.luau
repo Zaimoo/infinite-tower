@@ -176,4 +176,98 @@ function HubLighting.Classify(x: number, z: number): (string, number)
 	return "Hub", t * t * (3 - 2 * t) -- smoothstep
 end
 
+-- Tower floor grades (GDD §3.6): on a tower floor the Storm preset takes its biome's light and air, so
+-- each biome reads at a glance (golden jungle haze, bioluminescent blue, ash glare, cold clear blue...).
+-- Indexed by biome (1 = Verdant Ruins ... 10 = Abyssal Throne, TowerFloorConfig order); only the listed
+-- fields change, the rest stay Storm's. Rooms sit on the off-map grid of TowerRoomBuilder.Origin.
+local c = Color3.fromRGB
+local BiomeGrades: { { [string]: any } } = {
+	{ -- Verdant Ruins: warm sun through a jungle canopy
+		Ambient = c(58, 74, 58), OutdoorAmbient = c(90, 116, 92), ColorShift_Top = c(240, 245, 210), ColorShift_Bottom = c(56, 84, 62),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(150, 190, 160), AtmosphereDecay = c(84, 124, 98), AtmosphereHaze = 0.5,
+		TintColor = c(246, 255, 240), Saturation = 0.2, ExposureCompensation = 0,
+	},
+	{ -- Fungal Hollow: deep blue cavern, glowing caps
+		Ambient = c(40, 48, 82), OutdoorAmbient = c(56, 66, 110), ColorShift_Top = c(150, 190, 255), ColorShift_Bottom = c(40, 30, 80),
+		AtmosphereDensity = 0.3, AtmosphereColor = c(60, 70, 130), AtmosphereDecay = c(40, 40, 90), AtmosphereHaze = 0.8,
+		TintColor = c(225, 235, 255), Saturation = 0.15, ExposureCompensation = -0.05, BloomIntensity = 0.45,
+	},
+	{ -- Ashen Dunes: hot orange dust
+		Ambient = c(78, 54, 44), OutdoorAmbient = c(120, 82, 62), ColorShift_Top = c(255, 190, 130), ColorShift_Bottom = c(90, 50, 36),
+		AtmosphereDensity = 0.36, AtmosphereColor = c(190, 120, 80), AtmosphereDecay = c(130, 70, 40), AtmosphereHaze = 1.6,
+		TintColor = c(255, 236, 215), Saturation = 0.05,
+	},
+	{ -- Frozen Citadel: cold, clear blue
+		Ambient = c(70, 88, 112), OutdoorAmbient = c(110, 135, 165), ColorShift_Top = c(210, 235, 255), ColorShift_Bottom = c(80, 100, 130),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(190, 215, 240), AtmosphereDecay = c(120, 150, 190), AtmosphereHaze = 1.0,
+		TintColor = c(232, 244, 255), Saturation = -0.05, ExposureCompensation = 0.1,
+	},
+	{ -- Infernal Foundry: forge glow
+		Ambient = c(82, 44, 36), OutdoorAmbient = c(110, 58, 44), ColorShift_Top = c(255, 150, 90), ColorShift_Bottom = c(90, 30, 20),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(120, 52, 36), AtmosphereDecay = c(110, 40, 20), AtmosphereHaze = 1.4,
+		TintColor = c(255, 228, 210), Saturation = 0.1, BloomIntensity = 0.45,
+	},
+	{ -- Thunder Highlands: storm light
+		Ambient = c(54, 58, 86), OutdoorAmbient = c(86, 92, 130), ColorShift_Top = c(190, 195, 255), ColorShift_Bottom = c(52, 56, 90),
+		AtmosphereDensity = 0.32, AtmosphereColor = c(120, 125, 170), AtmosphereDecay = c(70, 72, 120), AtmosphereHaze = 1.1,
+		TintColor = c(232, 236, 255), Saturation = 0, Contrast = 0.12,
+	},
+	{ -- Corrupted Grove: magenta murk
+		Ambient = c(64, 38, 66), OutdoorAmbient = c(96, 58, 96), ColorShift_Top = c(240, 150, 220), ColorShift_Bottom = c(60, 30, 60),
+		AtmosphereDensity = 0.38, AtmosphereColor = c(110, 60, 105), AtmosphereDecay = c(80, 30, 80), AtmosphereHaze = 1.3,
+		TintColor = c(250, 232, 248), Saturation = 0.08,
+	},
+	{ -- Sunken Sanctuary: aqua caustics
+		Ambient = c(48, 84, 92), OutdoorAmbient = c(80, 130, 140), ColorShift_Top = c(170, 240, 255), ColorShift_Bottom = c(40, 90, 110),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(90, 170, 180), AtmosphereDecay = c(40, 120, 140), AtmosphereHaze = 1.0,
+		TintColor = c(228, 250, 255), Saturation = 0.1,
+	},
+	{ -- Astral Archives: indigo starlight
+		Ambient = c(50, 54, 96), OutdoorAmbient = c(80, 86, 140), ColorShift_Top = c(190, 200, 255), ColorShift_Bottom = c(50, 50, 110),
+		AtmosphereDensity = 0.26, AtmosphereColor = c(70, 80, 150), AtmosphereDecay = c(50, 50, 120), AtmosphereHaze = 0.7,
+		TintColor = c(236, 238, 255), Saturation = 0.1, BloomIntensity = 0.45,
+	},
+	{ -- Abyssal Throne: violet void
+		Ambient = c(44, 36, 62), OutdoorAmbient = c(64, 54, 92), ColorShift_Top = c(180, 140, 255), ColorShift_Bottom = c(30, 40, 60),
+		AtmosphereDensity = 0.40, AtmosphereColor = c(50, 40, 80), AtmosphereDecay = c(30, 60, 80), AtmosphereHaze = 1.4,
+		TintColor = c(240, 232, 255), Saturation = 0.05, ExposureCompensation = -0.05,
+	},
+}
+HubLighting.BiomeGrades = BiomeGrades
+
+-- Same grid as TowerRoomBuilder.Origin: floor id = row * 10 + col + 1, rooms 2,400 studs apart from (12000, 12000).
+HubLighting.FloorGridOrigin = 12000
+HubLighting.FloorGridSpacing = 2400
+
+-- The biome index (1..10) of the tower floor room at (x, z), or nil off the floor grid.
+function HubLighting.TowerBiomeAt(x: number, z: number): number?
+	local col = math.round((x - HubLighting.FloorGridOrigin) / HubLighting.FloorGridSpacing)
+	local row = math.round((z - HubLighting.FloorGridOrigin) / HubLighting.FloorGridSpacing)
+	if col < 0 or col > 9 or row < 0 or row > 4 then
+		return nil
+	end
+	local floorId = row * 10 + col + 1
+	return math.ceil(floorId / 5)
+end
+
+local gradeCache: { [number]: Preset } = {}
+
+-- Storm with the biome's grade applied (Storm itself for nil or an unknown biome).
+function HubLighting.TowerPreset(biomeIndex: number?): Preset
+	local grade = biomeIndex and BiomeGrades[biomeIndex]
+	if not biomeIndex or not grade then
+		return Presets.Storm
+	end
+	local cached = gradeCache[biomeIndex]
+	if cached then
+		return cached
+	end
+	local out = table.clone(Presets.Storm) :: any
+	for key, value in grade do
+		out[key] = value
+	end
+	gradeCache[biomeIndex] = out
+	return out
+end
+
 return HubLighting

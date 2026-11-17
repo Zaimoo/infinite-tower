@@ -94,7 +94,7 @@ test("All fifty floors have supported isolated camps and matching encounter mani
 	local totals,campCounts={20,26,29,39,40},{5,6,6,8,8}
 	for id=1,50 do
 		local floor=Floors.Get(id)
-		local room=Layout.Get(floor.IndexInBiome)
+		local room=Layout.Get(floor.IndexInBiome,id) -- each floor's own layout variation
 		local camps,counts={},{}
 		for _,camp in room.Camps do camps["CAMP_"..camp.Id]=camp end
 		local placements=Combat.Floors[id]

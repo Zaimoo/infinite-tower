@@ -195,9 +195,9 @@ local function requestPath(hero: any,s: any,goal: Vector3,now: number)
 	if not jobs:Push(hero,request)then s.Pending=false;s.PathGoal=nil;s.NextRequest=now+.2 end
 end
 local function graphFor(floor: number): (any,Vector3)
-	local index=(floor-1)%5+1
-	if not graphs[index]then graphs[index]=Graph.new(Layout.Get(index))end
-	return graphs[index],Vector3.new(12000+((floor-1)%10)*2400,1000,12000+math.floor((floor-1)/10)*2400)
+	-- Each floor has its own layout (TowerLayout per-floor variation), so graphs are kept per floor.
+	if not graphs[floor]then graphs[floor]=Graph.new(Layout.Get((floor-1)%5+1,floor))end
+	return graphs[floor],Vector3.new(12000+((floor-1)%10)*2400,1000,12000+math.floor((floor-1)/10)*2400)
 end
 local function localPoint(p: Vector3,origin: Vector3): any
 	local v=p-origin;return {X=v.X,Y=v.Y,Z=v.Z}
