@@ -66,8 +66,30 @@ local GRAB_SECONDS = 0.08
 -- pose): the string stays where it is.
 local MAX_HAND_OFFSET = 0.8
 
-local geometryCache: { [Instance]: Geometry | false } = setmetatable({}, { __mode = "k" }) :: any
-local states: { [Instance]: State } = setmetatable({}, { __mode = "k" }) :: any
+-- Per-weapon caches. Strong tables cleared when the weapon is destroyed: a weak-keyed table drops
+-- an Instance key whenever Roblox collects its Lua proxy, even while the weapon is still in use,
+-- and a dropped state rebinds the bow, leaving the previous string beams on screen.
+local geometryCache: { [Instance]: Geometry | false } = {}
+local states: { [Instance]: State } = {}
+local tracked: { [Instance]: RBXScriptConnection } = {}
+
+local function track(weapon: Instance)
+	if tracked[weapon] then
+		return
+	end
+	tracked[weapon] = weapon.Destroying:Connect(function()
+		geometryCache[weapon] = nil
+		states[weapon] = nil
+		local connection = tracked[weapon]
+		tracked[weapon] = nil
+		if connection then
+			connection:Disconnect()
+		end
+	end)
+end
+
+local ARROW_WELD = "BowArrowWeld"
+local LIVE_NAMES = { BowStringTopLive = true, BowStringBottomLive = true, BowStringNockLive = true, BowStringBeam = true }
 
 local function attachmentPos(handle: BasePart, root: Instance, names: { string }): Vector3?
 	for _, name in names do
@@ -92,6 +114,7 @@ function HeroBowString.Geometry(weapon: Instance?): Geometry?
 	if cached ~= nil then
 		return if cached then cached else nil
 	end
+	track(weapon)
 	local handle = weapon.PrimaryPart
 	local nockH = handle and attachmentPos(handle, weapon, { "Nock" })
 	if not handle or not nockH then
@@ -134,7 +157,16 @@ function HeroBowString.Geometry(weapon: Instance?): Geometry?
 	local arrowH: Vector3? = nil
 	local head = arrowModel and arrowModel:FindFirstChild("ArrowHead", true)
 	if head and head:IsA("BasePart") then
-		local d = handle.CFrame:PointToObjectSpace(head.Position) - nockH
+		-- Measured where the arrow rests: if it already hangs on its weld (drawn), undo the draw.
+		local headPos = head.Position
+		local hung = arrowModel and arrowModel:FindFirstChild(ARROW_WELD, true)
+		if hung and hung:IsA("Weld") and hung.Part1 then
+			local rest = hung:GetAttribute("RestC0")
+			if typeof(rest) == "CFrame" then
+				headPos = (handle.CFrame * rest) * hung.Part1.CFrame:PointToObjectSpace(headPos)
+			end
+		end
+		local d = handle.CFrame:PointToObjectSpace(headPos) - nockH
 		if d.Magnitude > 0.1 then
 			arrowH = d.Unit
 		end
@@ -181,6 +213,15 @@ local function hangArrow(state: State, weapon: Instance)
 	if not arrow then
 		return
 	end
+	-- Already hung (this weapon was bound before): reuse the weld and its resting offset.
+	local existing = arrow:FindFirstChild(ARROW_WELD, true)
+	if existing and existing:IsA("Weld") and existing.Part1 then
+		local rest = existing:GetAttribute("RestC0")
+		state.ArrowRoot, state.ArrowWeld = existing.Part1, existing
+		state.ArrowRest = if typeof(rest) == "CFrame" then rest else existing.C0
+		existing.C0 = state.ArrowRest
+		return
+	end
 	local parts: { BasePart } = {}
 	for _, d in arrow:GetDescendants() do
 		if d:IsA("BasePart") then
@@ -209,10 +250,11 @@ local function hangArrow(state: State, weapon: Instance)
 	end
 	local rest = g.Handle.CFrame:ToObjectSpace(root.CFrame)
 	local weld = Instance.new("Weld")
-	weld.Name = "BowArrowWeld"
+	weld.Name = ARROW_WELD
 	weld.Part0 = g.Handle
 	weld.Part1 = root
 	weld.C0 = rest
+	weld:SetAttribute("RestC0", rest)
 	weld.Parent = root
 	state.ArrowRoot, state.ArrowWeld, state.ArrowRest = root, weld, rest
 end
@@ -264,6 +306,15 @@ local function bind(weapon: Instance): State?
 		Shown = false,
 	}
 	hangArrow(state, weapon)
+	-- Never leave a second string behind: clear any live string from an earlier binding.
+	for _, child in g.Handle:GetChildren() do
+		if LIVE_NAMES[child.Name] then
+			child:Destroy()
+		end
+	end
+	for _, part in g.StringParts do
+		part.LocalTransparencyModifier = 0
+	end
 	local top = newAttachment(g.Handle, "BowStringTopLive", g.TipUpperH)
 	local bottom = newAttachment(g.Handle, "BowStringBottomLive", g.TipLowerH)
 	local nock = newAttachment(g.Handle, "BowStringNockLive", g.StringRestH)
