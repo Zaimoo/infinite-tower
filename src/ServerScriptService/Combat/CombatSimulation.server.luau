@@ -2254,7 +2254,7 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 					end
 				end
 			end
-			-- Focus (Weapon Reforge, GDD §7.6): the equipped weapon's trait charges the gauge faster.
+			-- Focus (Weapon Reforge, GDD §7.6): the equipped weapon's enchantment charges the gauge faster.
 			local heroRecord = profile and profile.Heroes[simHero.HeroUUID]
 			if heroRecord then gain *= ReforgeRules.GaugeMultiplier(StatFormulas.GetEquippedArtifact(profile, heroRecord)) end
 			simHero.Stamina = math.clamp((simHero.Stamina or 0) + gain, 0, 100)

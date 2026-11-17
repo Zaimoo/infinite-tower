@@ -1222,9 +1222,9 @@ A Robux-only banner (`ArtifactCatalog.AnvilBanner` / `AnvilBanner`) featuring si
 
 ### 7.6 Weapon Reforge (Runesmith's Anvil)
 A repeatable Gold sink that improves a weapon without raising its rarity or stars. The **Runesmith's Anvil** stands on the Cloister Commons west of the Reflecting Pool, mirroring the Raid Portal (`HubLayout.ReforgeStation`, built at runtime by `ReforgeService.BuildStation`, so it needs no hub rebake). Its prompt opens the Reforge window (`ReforgeController`); every action goes through `ReforgeRemotes.ReforgeRequest` and is validated on the server (`ReforgeService`, rules in `Util/ReforgeRules`, data in `Config/ReforgeConfig`).
-- **One trait per weapon.** A roll picks one of four traits evenly and a grade by weight. Values are percent by grade (Common / Uncommon / Rare / Epic / Legendary / Godly):
+- **One enchantment per weapon.** A roll picks one of four enchantments evenly and a grade by weight. Values are percent by grade (Common / Uncommon / Rare / Epic / Legendary / Godly):
 
-  | Trait | Effect | Values |
+  | Enchantment | Effect | Values |
   | --- | --- | --- |
   | Keen | damage | 2 / 4 / 6 / 9 / 13 / 20 |
   | Vigor | HP | 2 / 3 / 5 / 7 / 10 / 15 |
@@ -1232,11 +1232,11 @@ A repeatable Gold sink that improves a weapon without raising its rarity or star
   | Focus | Skill Gauge charge | 4 / 6 / 9 / 12 / 16 / 25 |
 
 - **Grade odds:** Common 50%, Uncommon 28%, Rare 14%, Epic 6%, Legendary 1.8%, Godly 0.2%, shown in the window before any roll. **Pity:** after 49 rolls in a row below Epic (counted per Master, across all weapons), the next roll is Epic or better.
-- **Keep or discard.** A roll charges its Gold at once and shows the result next to the current trait; the Master keeps the new trait or the old one. Rolling again on the same weapon discards the waiting result; another weapon cannot be rolled until it is resolved. The waiting result is saved, so a disconnect never loses a paid roll.
+- **Keep or discard.** A roll charges its Gold at once and shows the result next to the current enchantment; the Master keeps the new enchantment or the old one. Rolling again on the same weapon discards the waiting result; another weapon cannot be rolled until it is resolved. The waiting result is saved, so a disconnect never loses a paid roll.
 - **Cost per roll:** `5,000 × rarity Gold factor × (1 + 0.5 × (stars − 1))`, the same rarity factor as promotion (§4.2a): 5,000 for a Common 1★, 1.2M for a Mythical 7★.
-- **Power is capped on purpose.** The best trait is +20% damage or +15% HP, while one hero star is ×3.24, so a trait never replaces a promotion and the floor-50 gate (§2.5) still needs 7★ heroes. Traits apply before Rift Attunement (`StatFormulas.GetCombatSnapshot`), so the cap still holds.
-- **Promotion and selling.** A promoted weapon keeps its trait; donors and sold weapons lose theirs. The Forge's sell confirmation must be held for a weapon with an Epic or better trait, and the upgrade review says "reforged traits lost" when a donor has one.
-- **Save:** `artifact.Trait = { Id, Grade }` and `profile.Reforge = { Pity, Rolls, Pending }`, both optional; `ReforgeRules.EnsureState` adds the state to old saves and drops damaged values on load, so no schema migration is needed.
+- **Power is capped on purpose.** The best enchantment is +20% damage or +15% HP, while one hero star is ×3.24, so an enchantment never replaces a promotion and the floor-50 gate (§2.5) still needs 7★ heroes. Enchantments apply before Rift Attunement (`StatFormulas.GetCombatSnapshot`), so the cap still holds.
+- **Promotion and selling.** A promoted weapon keeps its enchantment; donors and sold weapons lose theirs. The Forge's sell confirmation must be held for a weapon with an Epic or better enchantment, and the upgrade review says "reforged enchantments lost" when a donor has one.
+- **Save:** `artifact.Enchantment = { Id, Grade }` and `profile.Reforge = { Pity, Rolls, Pending }`, both optional; `ReforgeRules.EnsureState` adds the state to old saves and drops damaged values on load, so no schema migration is needed.
 
 ## 8. NETWORK PROTOCOL & REPLICATION ARCHITECTURE
 

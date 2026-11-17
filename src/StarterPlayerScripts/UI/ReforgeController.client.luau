@@ -1,8 +1,8 @@
 --!strict
 -- StarterPlayerScripts/UI/ReforgeController.client.luau
 -- The Runesmith's Anvil window (Weapon Reforge, GDD §7.6). Opened by the station's prompt on the Cloister
--- Commons. Pick a weapon, pay Gold to roll a trait, then keep the new trait or the old one. Every action goes
--- through ReforgeRemotes.ReforgeRequest; the balance, traits and the pending roll come back in the profile sync.
+-- Commons. Pick a weapon, pay Gold to roll an enchantment, then keep the new enchantment or the old one. Every action goes
+-- through ReforgeRemotes.ReforgeRequest; the balance, enchantments and the pending roll come back in the profile sync.
 
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -78,7 +78,7 @@ local title = text(root, { Position = UDim2.fromOffset(24, 16), Size = UDim2.new
 	Text = "RUNESMITH'S ANVIL", TextColor3 = T.Gold })
 GildedGrimoire.GlassText(title, "Title")
 text(root, { Position = UDim2.fromOffset(24, 48), Size = UDim2.new(1, -96, 0, 20), TextSize = 13, TextColor3 = T.Muted,
-	Text = "Weapon Reforge · pay Gold to roll one trait onto a weapon, then keep the new trait or the old one" })
+	Text = "Weapon Reforge · pay Gold to roll one enchantment onto a weapon, then keep the new enchantment or the old one" })
 local close = button(root, "X", false, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.fromOffset(40, 40) })
 
 -- Left: the weapon list.
@@ -123,8 +123,8 @@ local selected: string? = nil
 local busy = false
 local lastMessage = ""
 
-local function gradeColor(trait: any): Color3
-	return if Rules.IsTrait(trait) then Config.Grades[trait.Grade].Color else T.Muted
+local function gradeColor(enchantment: any): Color3
+	return if Rules.IsEnchantment(enchantment) then Config.Grades[enchantment.Grade].Color else T.Muted
 end
 
 local function sortedWeapons(p: any): { any }
@@ -151,8 +151,8 @@ local function weaponRow(order: number, uuid: string, artifact: any)
 	if uuid == selected then row.BackgroundColor3 = G.Arcane; row.BackgroundTransparency = 0.55 end
 	text(row, { Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 20), TextSize = 14, TextColor3 = rarity.Color, TextTruncate = Enum.TextTruncate.AtEnd,
 		Text = string.format("%s %s%s", artifact.DisplayName or "Weapon", string.rep("★", artifact.Star or 1), if artifact.EquippedHeroUUID then "  <font color=\"#4ADE80\">E</font>" else "") })
-	text(row, { Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -24, 0, 18), TextSize = 12, TextColor3 = gradeColor(artifact.Trait),
-		TextTruncate = Enum.TextTruncate.AtEnd, Text = Rules.Describe(artifact.Trait) })
+	text(row, { Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -24, 0, 18), TextSize = 12, TextColor3 = gradeColor(artifact.Enchantment),
+		TextTruncate = Enum.TextTruncate.AtEnd, Text = Rules.Describe(artifact.Enchantment) })
 	row.Activated:Connect(function()
 		if busy then return end
 		selected = uuid
@@ -167,7 +167,7 @@ render = function()
 		if child:IsA("GuiButton") then child:Destroy() end
 	end
 	local state: any = if p and type(p.Reforge) == "table" then p.Reforge else {}
-	local pending = if type(state.Pending) == "table" and Rules.IsTrait(state.Pending.Trait) then state.Pending else nil
+	local pending = if type(state.Pending) == "table" and Rules.IsEnchantment(state.Pending.Enchantment) then state.Pending else nil
 	if pending and p.Artifacts and p.Artifacts[pending.UUID] then selected = pending.UUID end
 	local weapons = sortedWeapons(p)
 	if (not selected or not (p and p.Artifacts and p.Artifacts[selected])) and weapons[1] then selected = weapons[1].UUID end
@@ -183,18 +183,18 @@ render = function()
 	end
 	local rarity = ArtifactCatalog.GetRarityInfo(artifact.Rarity or 1)
 	weaponLabel.Text = string.format('<font color="#%s">%s</font> %s', rarity.Color:ToHex(), artifact.DisplayName or "Weapon", string.rep("★", artifact.Star or 1))
-	currentLabel.Text = "Current: " .. Rules.Describe(artifact.Trait)
-	currentLabel.TextColor3 = gradeColor(artifact.Trait)
+	currentLabel.Text = "Current: " .. Rules.Describe(artifact.Enchantment)
+	currentLabel.TextColor3 = gradeColor(artifact.Enchantment)
 
 	local mine = pending and pending.UUID == selected
 	if mine then
-		local grade = Config.Grades[pending.Trait.Grade]
+		local grade = Config.Grades[pending.Enchantment.Grade]
 		resultGrade.Text = string.upper(grade.Name)
 		resultGrade.TextColor3 = grade.Color
-		resultText.Text = Rules.Describe(pending.Trait)
+		resultText.Text = Rules.Describe(pending.Enchantment)
 	else
 		resultGrade.Text = ""
-		resultText.Text = if pending then "Keep or discard your roll on your other weapon first." else "Roll to see a new trait."
+		resultText.Text = if pending then "Keep or discard your roll on your other weapon first." else "Roll to see a new enchantment."
 	end
 	local cost = Rules.Cost(artifact)
 	local gold = p and p.Currencies and p.Currencies.Gold or 0
@@ -230,17 +230,17 @@ local function act(action: string, choice: string?)
 	local result = request(action, uuid, choice)
 	busy = false
 	lastMessage = tostring(result.Message or "")
-	if result.Ok and action == "ROLL" and type(result.Trait) == "table" and Rules.IsTrait(result.Trait) then
+	if result.Ok and action == "ROLL" and type(result.Enchantment) == "table" and Rules.IsEnchantment(result.Enchantment) then
 		-- Show the roll at once; the profile sync that follows confirms it.
 		local p = profile()
 		if p then
 			p.Reforge = p.Reforge or {}
-			p.Reforge.Pending = { UUID = uuid, Trait = result.Trait }
+			p.Reforge.Pending = { UUID = uuid, Enchantment = result.Enchantment }
 		end
-		UIFeel.Pop(resultCard, if result.Trait.Grade >= Config.PityGrade then 0.25 else 0.12)
-		UIFeel.Sfx(if result.Trait.Grade >= Config.PityGrade then "UpgradeSuccess" else "StarTick")
-		if result.Trait.Grade >= Config.PityGrade then
-			UIFeel.Burst(resultCard, UDim2.fromScale(0.5, 0.5), Config.Grades[result.Trait.Grade].Color, 14, resultCard.ZIndex + 2, 140)
+		UIFeel.Pop(resultCard, if result.Enchantment.Grade >= Config.PityGrade then 0.25 else 0.12)
+		UIFeel.Sfx(if result.Enchantment.Grade >= Config.PityGrade then "UpgradeSuccess" else "StarTick")
+		if result.Enchantment.Grade >= Config.PityGrade then
+			UIFeel.Burst(resultCard, UDim2.fromScale(0.5, 0.5), Config.Grades[result.Enchantment.Grade].Color, 14, resultCard.ZIndex + 2, 140)
 		end
 	elseif result.Ok and action == "CHOOSE" then
 		local p = profile()
