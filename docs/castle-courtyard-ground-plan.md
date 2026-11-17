@@ -1,7 +1,10 @@
 # Castle Courtyard Single-Asset Ground Replacement — Implementation Plan
 
 **Target Pipeline:** Blender 5.x (`tools/blender/generate_castle_courtyard_ground.py`) ➔ Single-Asset FBX & Seamless PBR Textures (`assets/models/facilities/CastleCourtyardGround.fbx` & `assets/models/facilities/textures/castle_courtyard/`) ➔ Roblox Studio (`ReplicatedStorage.Assets.Environment.CastleCourtyard_Ground`) ➔ Luau Integration (`EnvironmentSpawner.luau`, `IslandBuilder.luau`, `HubOverhaul.luau`)  
-**Approved Visual Preview:** `C:/Users/enter/.gemini/antigravity/brain/05ae6b20-23ac-40d3-8dc0-cb4a57c46b44/castle_ground_preview_grey_1794915305599.jpg`  
+**Approved Visual Previews:**
+- Courtyard scale & palette: `C:/Users/enter/.gemini/antigravity/brain/05ae6b20-23ac-40d3-8dc0-cb4a57c46b44/castle_ground_preview_grey_1794915305599.jpg`
+- Merchant Bazaar dirt apron & feathered edge: `C:/Users/enter/.gemini/antigravity/brain/05ae6b20-23ac-40d3-8dc0-cb4a57c46b44/merchant_dirt_preview_1794922824410.jpg`
+- Courtyard weathering motif: `C:/Users/enter/.gemini/antigravity/brain/05ae6b20-23ac-40d3-8dc0-cb4a57c46b44/courtyard_weathering_preview_1794922852052.jpg`  
 **Original Courtyard Reference:** `C:/Users/enter/.gemini/antigravity/brain/05ae6b20-23ac-40d3-8dc0-cb4a57c46b44/.user_uploaded/media_1794906995107_bd0f34c8.jpg`  
 **Stone Texture & Tile Scale References:**
 - Mixed flagstone & cobble motif: `C:/Users/enter/.gemini/antigravity/brain/05ae6b20-23ac-40d3-8dc0-cb4a57c46b44/.user_uploaded/media_1794914694724_9a9405e6.jpg`
@@ -77,40 +80,25 @@ Create `c:\WORK\infinite-tower\tools\blender\generate_castle_courtyard_ground.py
 - **Why Seamless Tiling (`64 px/stud`) Beats a Unique Whole-Plot Texture (`6.4 px/stud`):**
   - Roblox caps uploaded textures at `1024 × 1024`. Mapping one unique non-tiling `1024 × 1024` texture across `160 × 120` studs yields only `6.4 pixels/stud`, which blurs badly at player camera height.
   - Using a **toroidally seamless `1024 × 1024` PBR texture** tiled across `16.0 × 16.0` stud cells (`10 × 7.5` repeats across `160 × 120`) delivers **`64 pixels/stud`** crispness (`~205 × 205 px` per flagstone) and **`~50` flagstones across the `160`-stud width**, matching the approved preview (`~45–55` stones wide).
-- **Sub-Meshes Inside `CastleCourtyardGround.fbx` (2 `Opaque` `MeshPart`s in 1 Asset):**
-  1. `Courtyard_FlagstoneFloor` — Continuous `160 × 120` grey weathered mixed-flagstone & inset cobblestone ground plane (`ry = +0.020`, perimeter skirt to `-0.200`), UV-tiled seamlessly at `16.0` studs/repeat with `Tex_CastleCourtyardStone_{Color,Normal,Roughness}.png`.
-  2. `Courtyard_PlazaAndWalkways` — Bevelled 3D concentric fountain plaza rings (`R = 14.0` & `R = 17.8` + inner/outer curbs) and all 7 radial walkways (`Path_BridgeGate`, `Path_SummoningPortal`, `Path_BlacksmithForge`, `Path_Market`, `Path_OutskirtsGate`, `Path_SynthesisChamber`, `Path_TrainingArea`) at `ry = +0.045..0.075`, using `Tex_CastleWalkwaySlate_{Color,Normal,Roughness}.png` for the darker weathered slate stone tone shown in the approved preview.
-  - *(Optional `--single-mesh` CLI flag: if you ever want strictly 1 single `MeshPart` total, `--single-mesh` merges `Courtyard_PlazaAndWalkways` into `Courtyard_FlagstoneFloor` using aligned walkway UVs on `Tex_CastleCourtyardStone` and 3D bevel height separation, since Roblox allows one `SurfaceAppearance` per `MeshPart`.)*
+- **Sub-Meshes Inside `CastleCourtyardGround.fbx` (2 `MeshPart`s in 1 Single Imported `Model` Asset):**
+  1. **`Courtyard_FlagstoneFloor` (`Enum.AlphaMode.Opaque`, `1,760` tris):** Continuous `160 × 120` weathered grey castle flagstone brick floor (`ry = +0.020`, perimeter skirt to `-0.220`), seamlessly UV-tiled at `16.0` studs/repeat (`12 × 12` running-bond bricks = `1.33` studs per `1×1` stone). **All 7 radial walkways and concentric fountain plaza rings are removed** so bricks run continuously across the entire courtyard.
+  2. **`Courtyard_DirtAndWeathering` (`Enum.AlphaMode.Transparency`, non-overlapping conformed decals):** Alpha-feathered overlay sheets using `Tex_CastleWalkwaySlate_{Color,Normal,Roughness}.png` (`1024 × 1024` RGBA atlas) containing:
+     - **Merchant Bazaar Packed-Dirt Apron:** `41 × 30.5` stud high-res (`~15.6 px/stud`) warm brown earth bed at `(50, 36)` aligned with `Building_Market`'s yaw (`atan2(-50, -36)`), darkened under counters, gravel-peppered & mossy at its irregular outer rim, hovering cleanly at `floor_y + 0.012` (`+0.032`) underneath `Bazaar_FlagstonePath` Voronoi cobblestones (`+0.056..+0.088`).
+     - **Non-Overlapping Courtyard Weathering Patches:** Organic damp moss drifts around `PlazaFountain` base (`R ≈ 14.8`), perimeter wall shadows, and corner pockets (`+0.007`), plus branching macro stone fault fractures near facility entrances & open bays (`+0.008`).
 
-#### 1B. Seamless 1024×1024 PBR Texture Sets (`assets/models/facilities/textures/castle_courtyard/`)
+#### 1B. 1024×1024 PBR Texture Sets (`assets/models/facilities/textures/castle_courtyard/`)
 1. **`Tex_CastleCourtyardStone_{Color,Normal,Roughness}.png`** (`1024 × 1024`, toroidally seamless):
-   - **Layout (`5 × 5` organic mixed pavers per `16 × 16` stud tile):** Irregularly subdivided mix of primary flagstones (`~3.0–3.6` studs), half-width rectangular slabs, and `2×2` / `3×3` inset cobblestone clusters inspired by the reference texture, with slightly jittered rounded mortar joints (`0.12–0.22` stud bevelled gaps) so the floor reads naturally rather than as a rigid checkerboard.
-   - **Color Grading (Approved Grey Palette):** Cool weathered castle grey harmonizing with `FortressWalls` (`#3B4048` / `#4E555F`):
-     - Primary stone faces: `#565B64` to `#686E78` (subtle per-stone brightness & cool/warm-slate shift, avoiding bright white or muddy brown).
-     - Secondary weathered basalt stones: `#484D56`.
-     - Recessed gravel mortar & cracks: `#26292E` to `#31353C` with fine gravel speckle and subtle hairline fractures across occasional slabs.
-     - **Macro Luminance Normalization:** Apply a high-pass / regional mean balance across the `1024 × 1024` canvas so no single dark spot stands out as a repeating stamp across the `10 × 7.5` courtyard repeats.
-   - **Normal Map:** Crisp bevelled slab shoulders, fine stone grain relief, hairline crack grooves, and recessed pebbled mortar bed.
-   - **Roughness Map:** `0.74–0.84` on worn stone tops (catching subtle directional sunlight) and `0.90–0.96` inside mortar seams and pitted crevices.
-
-2. **`Tex_CastleWalkwaySlate_{Color,Normal,Roughness}.png`** (`1024 × 1024`, 2×2 atlas with `14px` padded cells):
-   - **Cell `(0, 0)` — Walkway Slate Slab:** Darker cool castle slate (`#424750` to `#4E545E`) with subtle stone grain and bevelled edge shading matching `castle_ground_preview_grey_1794915305599.jpg`.
-   - **Cell `(1, 0)` — Inner Cobble Trim Inlay:** Tight grey cobblestone strip pattern (`#3B4048` stones, `#22252A` seams) matching the textured center strips on the radial paths in the preview.
-   - **Cell `(0, 1)` — Raised Curb Stone:** Slightly lighter weathered ashlar trim (`#525864` to `#5D6370`) for plaza and walkway curb borders.
-   - **Cell `(1, 1)` — Deep Mortar & Plinth Backing:** Dark recessed stone (`#282C32`) for bevel skirts and underside faces.
+   - **Layout (`12 × 12` running-bond flagstones per `16 × 16` stud tile):** `1.33 × 1.33` stud square pavers (~82%) and `2.67 × 1.33` stud paired slabs (~18%) with non-periodic row staggers to eliminate repeating bands, plus corner spall chips on `~22%` of bricks.
+   - **Natural Cracks & Moss:** Forked fractures (`2.5 px` primary + branch fissures, `-0.26` carved height, normal strength `3.2`) on `~30%` of bricks, plus damp mortar-joint and bevel-shoulder moss (`~22%` of damp seam pockets, `#3A522E` to `#507040`) leaving stone centers weathered neutral grey (`#636568`).
+2. **`Tex_CastleWalkwaySlate_{Color,Normal,Roughness}.png`** (`1024 × 1024` RGBA splat atlas with transparent gutters):
+   - **`merchant_dirt` (`640 × 544` px):** Packed warm bazaar soil (`#46372A` damp counter shadow to `#7A6550` worn path), embedded gravel grit, perimeter moss fringe, and wall/box alpha fade.
+   - **`moss_colony` / `moss_drift` (`336 × 336` px each):** Organic multi-lobe moss colonies with fuzzy normal relief and feathered edges.
+   - **`crack_star` / `crack_split` (`464 × 432` & `508 × 288` px):** Branching multi-stone fault fissures fading smoothly to transparent edges.
 
 #### 1C. Geometry Specification (`CastleCourtyardGround.fbx`)
-- **Triangle Budget:** `< 3,500` triangles total (`Courtyard_FlagstoneFloor` `~1,700` tris + `Courtyard_PlazaAndWalkways` `~1,500` tris).
-- **`Courtyard_FlagstoneFloor`:**
-  - `32 × 24` quad grid spanning `X ∈ [-80.0, +80.0]`, `Z ∈ [-60.0, +60.0]` (`5 × 5` stud grid spacing).
-  - Top surface sits at `ry = +0.020` with tiny deterministic micro-undulation (`±0.005` studs) in open courtyard quadrants, smoothly clamped to flat `ry = +0.020` under walls (`|X| > 72` or `|Z| > 52`), central plaza (`R < 21`), `TrainingArea` (`Arena_Floor`), and `MarketCluster` (`Bazaar_FlagstonePath`).
-  - Planar world-space UVs: `u = (rx + 80.0) / 16.0`, `v = (-rz + 60.0) / 16.0` (exact seamless `10.0 × 7.5` tile span).
-  - Outer skirt wall extruded down around the perimeter from `ry = +0.020` to `ry = -0.220`.
-- **`Courtyard_PlazaAndWalkways`:**
-  - Exact coordinates matching `IslandBuilder.luau` lines 149–357:
-    - Inner plaza ring: `R = 14.0`, width `3.2`, 16 bevelled slabs (`ry = +0.048`) + inner curb ring (`R = 12.02`, width `0.60`, `ry = +0.075`).
-    - Outer plaza ring: `R = 17.8`, width `3.8`, 20 bevelled slabs (`ry = +0.048`) + outer curb ring (`R = 20.23`, width `0.78`, `ry = +0.075`, interrupted at the 7 walkway branch angles `|Δθ| < 0.24` rad).
-    - All 7 radial walkways (`Path_BridgeGate`, `Path_SummoningPortal`, `Path_BlacksmithForge`, `Path_Market`, `Path_OutskirtsGate`, `Path_SynthesisChamber`, `Path_TrainingArea`) built as bevelled center slabs (`ry = +0.048`) flanked by raised left/right curb stones (`ry = +0.075`, width `0.78`).
+- **Triangle Budget:** `< 2,500` triangles total (`Courtyard_FlagstoneFloor` `1,760` tris + `Courtyard_DirtAndWeathering` `~350–450` tris).
+- **`Courtyard_FlagstoneFloor`:** `32 × 24` quad grid at `ry = +0.020` (`±0.005` subtle open-bay undulation, flat `0.0` under walls, fountain center, TrainingArea, and Market dirt footprint), UVs `16.0` studs/repeat, perimeter skirt to `-0.220`.
+- **`Courtyard_DirtAndWeathering`:** `12 × 10` conformed quad sheet for the Merchant Dirt Apron (`floor_y + 0.012`), plus non-overlapping `2 × 2` conformed decal quads for fountain-rim/wall moss (`+0.007`) and macro fault cracks (`+0.008`).
 
 #### 1D. Manifest & Blender Verification Render
 - Write `assets/models/facilities/castle_courtyard_ground_manifest.json` recording bounding box size (`160 × ~0.30 × 120`), triangle counts, and texture relative paths.
@@ -156,20 +144,21 @@ Create `c:\WORK\infinite-tower\tools\blender\generate_castle_courtyard_ground.py
 3. **Add `EnvironmentSpawner.SpawnCastleCourtyardGround(parent: Instance, courtyardCenterCF: CFrame): Model?`:**
    - Look up `findTemplate("CastleCourtyard_Ground")`. If missing, return `nil`.
    - Clone and wrap as a `Model` named `"CastleCourtyard_Ground"`.
-   - Reset `PivotOffset = CFrame.identity` on descendant `BasePart`s, apply `Anchored = true`, `CanCollide = false`, `CanTouch = false`, `CanQuery = false`, `Massless = true`, `CastShadow = false`, `Material = Enum.Material.Plastic`, `Color = Color3.fromRGB(163, 162, 165)`, and ensure `SurfaceAppearance.AlphaMode = Enum.AlphaMode.Opaque`.
-   - Set `model.WorldPivot = CFrame.identity`, call `model:PivotTo(courtyardCenterCF)`, tag `model:SetAttribute("BlenderEnvAsset", "CastleCourtyard_Ground")`, `model:SetAttribute("GroundVersion", 1)`, and parent to `parent` (`FloatingFortressIsland`).
+   - Reset `PivotOffset = CFrame.identity` on descendant `BasePart`s, apply `Anchored = true`, `CanCollide = false`, `CanTouch = false`, `CanQuery = false`, `Massless = true`, `CastShadow = false`, `Material = Enum.Material.Plastic`, `Color = Color3.fromRGB(163, 162, 165)`.
+   - Set `SurfaceAppearance.AlphaMode = Enum.AlphaMode.Opaque` on `Courtyard_FlagstoneFloor` and `Enum.AlphaMode.Transparency` on `Courtyard_DirtAndWeathering`, and apply `DefaultGroundTextures.CastleCourtyardStone` / `CastleWalkwaySlate`.
+   - Set `model.WorldPivot = CFrame.identity`, call `model:PivotTo(courtyardCenterCF)`, tag `model:SetAttribute("BlenderEnvAsset", "CastleCourtyard_Ground")`, `model:SetAttribute("GroundVersion", 4)`, and parent to `parent` (`FloatingFortressIsland`).
 4. **Upgrade Existing Baked Plots in `EnvironmentSpawner.UpgradeExistingScene(roots)`:**
    - When `EnvironmentSpawner.HasTemplate("CastleCourtyard_Ground")` is `true`, iterate over every `FloatingFortressIsland` found under `roots`:
      - Locate `IslandTopSurface` (`BasePart`); reset `Material = Enum.Material.Slate`, `MaterialVariant = ""`, `Color = Color3.fromRGB(74, 78, 86)`.
      - Destroy any existing `CourtyardGroundTiles` folder (clearing all 246 legacy tiles / `BakedMeshes`).
      - Compute `courtyardOriginCF = CFrame.new(top.Position.X, top.Position.Y + top.Size.Y * 0.5, top.Position.Z) * top.CFrame.Rotation`.
-     - If `CastleCourtyard_Ground` is missing or its `GroundVersion` attribute `< 1`, destroy any stale copy and call `EnvironmentSpawner.SpawnCastleCourtyardGround(island, courtyardOriginCF)`.
+     - If `CastleCourtyard_Ground` is missing or its `GroundVersion` attribute `< CASTLE_GROUND_VERSION` (`4`), destroy any stale copy and call `EnvironmentSpawner.SpawnCastleCourtyardGround(island, courtyardOriginCF)`.
 
 #### 3B. Update `src/ServerScriptService/BaseOverhaul/IslandBuilder.luau`
 1. **Update `IslandBuilder.Config` (lines 31–36):**
    - Change `TopMaterial = Enum.Material.Slate`, `TopColor = Color3.fromRGB(74, 78, 86)`, `DampMossMaterial = Enum.Material.Slate`, `DampMossColor = Color3.fromRGB(58, 62, 70)`.
 2. **Update Procedural Fallback (`buildMossyFlagstoneCourtyard`):**
-   - Remove the 10 green/brown `DampMossPatch_*` rectangles and replace olive moss tint (`COLOR_MOSS_OLIVE` / `COLOR_DAMP_MOSS`) with weathered grey slate/basalt tones (`#3C4048`, `#4A4F59`, `#2E323A`) so even offline tests and unimported fallback places never show green grass or brown dirt patches inside the castle walls.
+   - Remove all 7 radial walkways, concentric fountain plaza rings, and the 10 green/brown `DampMossPatch_*` rectangles so even offline fallback places use pure grey flagstone courtyard bricks without building walkways.
 3. **Use Single Blender Asset When Imported (`IslandBuilder.Build` lines 504–508):**
    - Require `EnvironmentSpawner` lazily (`pcall(require, script.Parent:FindFirstChild("EnvironmentSpawner"))`).
    - If `envSpawner and envSpawner.HasTemplate("CastleCourtyard_Ground")`:
@@ -177,7 +166,7 @@ Create `c:\WORK\infinite-tower\tools\blender\generate_castle_courtyard_ground.py
    - Else fall back to the updated grey courtyard tile builder.
 
 #### 3C. Update `src/ServerScriptService/BaseOverhaul/HubOverhaul.luau`
-- Bump `HubOverhaul.Version` (line 33) from `35` to `36` so the next Studio rebake or server start rebuilds `Plot_1..Plot_8` cleanly.
+- Bump `HubOverhaul.Version` to `38` so the next Studio rebake or server start rebuilds `Plot_1..Plot_8` cleanly.
 
 ---
 

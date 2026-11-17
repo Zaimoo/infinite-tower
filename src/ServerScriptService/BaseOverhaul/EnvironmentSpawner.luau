@@ -41,18 +41,18 @@ EnvironmentSpawner.DefaultGroundTextures = {
 		RoughnessMap = "rbxassetid://117493914645472",
 	} :: TextureIdSet,
 	CastleCourtyardStone = {
-		ColorMap = "rbxassetid://135660447260601",
-		NormalMap = "rbxassetid://111527288005973",
-		RoughnessMap = "rbxassetid://90266220786908",
+		ColorMap = "rbxassetid://82545218528507",
+		NormalMap = "rbxassetid://133127431860013",
+		RoughnessMap = "rbxassetid://78361624196940",
 	} :: TextureIdSet,
 	CastleWalkwaySlate = {
-		ColorMap = "rbxassetid://134696968029039",
-		NormalMap = "rbxassetid://131026814744579",
-		RoughnessMap = "rbxassetid://73719482073868",
+		ColorMap = "rbxassetid://120661817320635",
+		NormalMap = "rbxassetid://100833408636267",
+		RoughnessMap = "rbxassetid://136483040545992",
 	} :: TextureIdSet,
 }
 
-local CASTLE_GROUND_VERSION = 3
+local CASTLE_GROUND_VERSION = 4
 
 local EXPECTED_HEIGHTS = {
 	HeroOakTree = 17.0,
@@ -724,15 +724,20 @@ function EnvironmentSpawner.SpawnCastleCourtyardGround(parent: Instance, courtya
 	for _, desc in model:GetDescendants() do
 		if desc:IsA("BasePart") then
 			desc.PivotOffset = CFrame.identity
-			configurePathPart(desc, Enum.AlphaMode.Opaque)
+			local isFloor = desc.Name == "Courtyard_FlagstoneFloor"
+			configurePathPart(desc, if isFloor then Enum.AlphaMode.Opaque else Enum.AlphaMode.Transparency)
 			local sa = desc:FindFirstChildWhichIsA("SurfaceAppearance", true)
 			if sa and sa:IsA("SurfaceAppearance") then
-				local texSet = if desc.Name:find("Walkway", 1, true)
-					then EnvironmentSpawner.DefaultGroundTextures.CastleWalkwaySlate
-					else EnvironmentSpawner.DefaultGroundTextures.CastleCourtyardStone
-				sa.ColorMap = texSet.ColorMap
-				sa.NormalMap = texSet.NormalMap
-				sa.RoughnessMap = texSet.RoughnessMap
+				local texSet = if isFloor
+					then EnvironmentSpawner.DefaultGroundTextures.CastleCourtyardStone
+					else EnvironmentSpawner.DefaultGroundTextures.CastleWalkwaySlate
+				-- Writing SurfaceAppearance maps needs Plugin capability: works in Studio bake,
+				-- while runtime falls back cleanly to the template's baked maps.
+				pcall(function()
+					sa.ColorMap = texSet.ColorMap
+					sa.NormalMap = texSet.NormalMap
+					sa.RoughnessMap = texSet.RoughnessMap
+				end)
 			end
 		end
 	end

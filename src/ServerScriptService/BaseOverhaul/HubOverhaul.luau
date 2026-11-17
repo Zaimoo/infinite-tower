@@ -30,7 +30,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 37 -- Bump to force a rebuild of baked geometry (37: 16-stud courtyard bricks + matched bazaar stone)
+HubOverhaul.Version = 38 -- Bump to force a rebuild of baked geometry (38: natural cracked/mossy courtyard + merchant dirt, no radial paths)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()

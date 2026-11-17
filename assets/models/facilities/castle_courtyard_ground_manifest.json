@@ -3,10 +3,10 @@
   "courtyard_length": 120.0,
   "floor_y": 0.02,
   "tile_studs": 16.0,
-  "total_tris": 3240,
+  "total_tris": 2232,
   "tri_breakdown": {
     "Courtyard_FlagstoneFloor": 1760,
-    "Courtyard_PlazaAndWalkways": 1480
+    "Courtyard_DirtAndWeathering": 472
   },
   "meshes": {
     "Courtyard_FlagstoneFloor": {
@@ -26,21 +26,21 @@
         -0.0
       ]
     },
-    "Courtyard_PlazaAndWalkways": {
+    "Courtyard_DirtAndWeathering": {
       "pos": [
-        5.1975,
-        0.0465,
-        -0.4815
+        -0.4568,
+        0.0277,
+        1.4425
       ],
       "size": [
-        78.7023,
-        0.063,
-        117.237
+        153.418,
+        0.0114,
+        118.1642
       ],
       "pivot_offset": [
-        -5.1975,
-        -0.0465,
-        0.4815
+        0.4568,
+        -0.0277,
+        -1.4425
       ]
     }
   },
