@@ -92,14 +92,19 @@ CAMPFIRE_POS_RBX = (-14.0, 0.0, -6.5)
 # Fence polyline in Guardpost-local coordinates
 PALISADE_POINTS: list[tuple[float, float]] = []
 SPLIT_RAIL_POINTS = [
-    (-34.2, 1.8),   # Western shoulder along left half of E-W dirt path
-    (-29.5, 3.8),   # Hugging dirt edge of E-W trail
-    (-24.0, 6.2),   # Hugging dirt edge of E-W trail
-    (-18.5, 7.6),   # Hugging dirt edge below campfire
-    (-13.2, 8.6),   # Hugging dirt bend right beside fork stepping stones
-    (-8.0, 8.2),    # Fork corner shoulder right next to connector stones
-    (-5.4, 3.8),    # Connector dirt edge running north toward campfire entry
-    (-5.2, -0.6),   # Connector path terminal post leaving campfire entryway open
+    (-34.2, 1.5),   # Western shoulder snapped to north dirt edge of E-W trail
+    (-31.2, 2.1),   # Hugging north dirt edge of E-W trail
+    (-28.0, 3.2),   # Hugging north dirt edge of E-W trail
+    (-24.0, 5.0),   # Hugging north dirt edge of E-W trail
+    (-18.5, 8.1),   # Hugging north dirt edge below campfire
+    (-15.8, 9.7),   # Hugging dirt bulge south of campfire
+    (-13.2, 10.4),  # Hugging dirt bend toward fork
+    (-9.8, 12.6),   # Approaching fork corner along dirt border
+    (-7.0, 13.2),   # Sharp fork corner tip snapped to dirt edge
+    (-6.5, 10.3),   # West dirt edge of connector trail
+    (-6.2, 7.0),    # West dirt edge of connector trail
+    (-5.7, 3.5),    # West dirt edge of connector trail
+    (-4.9, -0.6),   # Connector path terminal post leaving campfire entryway open
 ]
 
 

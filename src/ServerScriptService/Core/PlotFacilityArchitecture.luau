@@ -1616,7 +1616,7 @@ local GUARDPOST_OUTSKIRTS_MESHES: { BundledMeshSpec } = {
 	{ Name = "GuardTower_Props", MeshId = "rbxassetid://117458340250669", Size = V(8.0746, 11.3226, 13.2277), Pos = V(14.3302, 5.6387, -14.8373), PivotOffset = V(14.3302, -5.6387, -14.8373), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
 	{ Name = "Campfire_StoneHearth", MeshId = "rbxassetid://110052336686192", Size = V(6.2031, 0.8191, 6.2499), Pos = V(-14.1897, 0.4196, -6.4306), PivotOffset = V(-14.1897, -0.4196, -6.4306), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
 	{ Name = "Campfire_Area", MeshId = "rbxassetid://140525333251753", Size = V(13.3646, 2.7893, 12.0661), Pos = V(-13.8378, 1.1553, -6.6107), PivotOffset = V(-13.8378, -1.1553, -6.6107), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
-	{ Name = "Outskirts_Fence", MeshId = "rbxassetid://78808537589187", Size = V(30.1555, 4.4655, 10.2554), Pos = V(-19.6965, 2.2182, 4.0315), PivotOffset = V(-19.6965, -2.2182, 4.0315), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "Outskirts_Fence", MeshId = "rbxassetid://99231170039569", Size = V(30.4008, 4.4655, 14.8666), Pos = V(-19.5393, 2.2182, 6.3059), PivotOffset = V(-19.5393, -2.2182, 6.3059), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
 }
 
 local function buildGuardPostProceduralFallback(model: Model, centerCF: CFrame, fireCenter: CFrame)
@@ -1691,13 +1691,18 @@ function Arch.BuildGuardPost(folder: Instance, centerCF: CFrame): Part
 	end
 
 	local fenceSegments = {
-		{ a = V(-34.2, 1.7, 1.8), b = V(-29.5, 1.7, 3.8), h = 3.4, w = 0.9 },
-		{ a = V(-29.5, 1.7, 3.8), b = V(-24.0, 1.7, 6.2), h = 3.4, w = 0.9 },
-		{ a = V(-24.0, 1.7, 6.2), b = V(-18.5, 1.7, 7.6), h = 3.4, w = 0.9 },
-		{ a = V(-18.5, 1.7, 7.6), b = V(-13.2, 1.7, 8.6), h = 3.4, w = 0.9 },
-		{ a = V(-13.2, 1.7, 8.6), b = V(-8.0, 1.7, 8.2), h = 3.4, w = 0.9 },
-		{ a = V(-8.0, 1.7, 8.2), b = V(-5.4, 1.7, 3.8), h = 3.4, w = 0.9 },
-		{ a = V(-5.4, 1.7, 3.8), b = V(-5.2, 1.7, -0.6), h = 3.4, w = 0.9 },
+		{ a = V(-34.2, 1.7, 1.5), b = V(-31.2, 1.7, 2.1), h = 3.4, w = 0.9 },
+		{ a = V(-31.2, 1.7, 2.1), b = V(-28.0, 1.7, 3.2), h = 3.4, w = 0.9 },
+		{ a = V(-28.0, 1.7, 3.2), b = V(-24.0, 1.7, 5.0), h = 3.4, w = 0.9 },
+		{ a = V(-24.0, 1.7, 5.0), b = V(-18.5, 1.7, 8.1), h = 3.4, w = 0.9 },
+		{ a = V(-18.5, 1.7, 8.1), b = V(-15.8, 1.7, 9.7), h = 3.4, w = 0.9 },
+		{ a = V(-15.8, 1.7, 9.7), b = V(-13.2, 1.7, 10.4), h = 3.4, w = 0.9 },
+		{ a = V(-13.2, 1.7, 10.4), b = V(-9.8, 1.7, 12.6), h = 3.4, w = 0.9 },
+		{ a = V(-9.8, 1.7, 12.6), b = V(-7.0, 1.7, 13.2), h = 3.4, w = 0.9 },
+		{ a = V(-7.0, 1.7, 13.2), b = V(-6.5, 1.7, 10.3), h = 3.4, w = 0.9 },
+		{ a = V(-6.5, 1.7, 10.3), b = V(-6.2, 1.7, 7.0), h = 3.4, w = 0.9 },
+		{ a = V(-6.2, 1.7, 7.0), b = V(-5.7, 1.7, 3.5), h = 3.4, w = 0.9 },
+		{ a = V(-5.7, 1.7, 3.5), b = V(-4.9, 1.7, -0.6), h = 3.4, w = 0.9 },
 	}
 	for idx, seg in ipairs(fenceSegments) do
 		local mid = (seg.a + seg.b) * 0.5
@@ -1851,7 +1856,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 26 then
+	if existing and existing:GetAttribute("PrefabVersion") == 27 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1860,7 +1865,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 26)
+	prefabs:SetAttribute("PrefabVersion", 27)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")
