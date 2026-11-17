@@ -1602,21 +1602,21 @@ end
 --============================================================================
 -- 2.7 GUARDPOST OUTSKIRTS (`GuardpostOutskirts` — Watch Tower, Campfire & Fence)
 --============================================================================
-local GP_GROUND_CM = "rbxassetid://122503591905770"
-local GP_GROUND_NM = "rbxassetid://108838993593949"
-local GP_GROUND_RM = "rbxassetid://125432943427509"
+local GP_GROUND_CM = "rbxassetid://83407987265427"
+local GP_GROUND_NM = "rbxassetid://76071562517147"
+local GP_GROUND_RM = "rbxassetid://101783415919888"
 local GP_PROPS_CM = "rbxassetid://76221190618895"
 local GP_PROPS_NM = "rbxassetid://126518725174381"
 local GP_PROPS_RM = "rbxassetid://114591375821153"
 
 local GUARDPOST_OUTSKIRTS_MESHES: { BundledMeshSpec } = {
-	{ Name = "GuardTower_CobblePad", MeshId = "rbxassetid://86707800925659", Size = V(14.1276, 1.2697, 14.1181), Pos = V(16.5370, 0.6349, -14.3860), PivotOffset = V(16.5371, -0.6349, -14.3860), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
-	{ Name = "GuardTower_Structure", MeshId = "rbxassetid://94962682973717", Size = V(12.3770, 17.4903, 13.2736), Pos = V(16.5001, 8.7503, -14.0517), PivotOffset = V(16.5001, -8.7503, -14.0517), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
-	{ Name = "GuardTower_Roof", MeshId = "rbxassetid://77457018868714", Size = V(10.5261, 4.0905, 10.2756), Pos = V(16.5001, 16.0248, -14.5000), PivotOffset = V(16.5001, -16.0248, -14.5000), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
-	{ Name = "GuardTower_Props", MeshId = "rbxassetid://117458340250669", Size = V(8.0746, 11.3226, 13.2277), Pos = V(14.3303, 5.6387, -14.8373), PivotOffset = V(14.3303, -5.6387, -14.8373), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
-	{ Name = "Campfire_StoneHearth", MeshId = "rbxassetid://72437157501604", Size = V(12.8316, 0.8345, 12.4075), Pos = V(-13.9477, 0.4172, -6.4900), PivotOffset = V(-13.9477, -0.4172, -6.4900), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
-	{ Name = "Campfire_Area", MeshId = "rbxassetid://140525333251753", Size = V(13.3646, 2.7893, 12.0661), Pos = V(-13.8377, 1.1553, -6.6107), PivotOffset = V(-13.8377, -1.1553, -6.6107), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
-	{ Name = "Outskirts_Fence", MeshId = "rbxassetid://118569747134414", Size = V(23.8548, 4.6559, 21.5963), Pos = V(-17.5906, 2.3121, -3.6969), PivotOffset = V(-17.5906, -2.3121, -3.6969), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "GuardTower_CobblePad", MeshId = "rbxassetid://70780784796261", Size = V(12.6563, 1.3460, 12.6121), Pos = V(16.6867, 0.6730, -14.2553), PivotOffset = V(16.6867, -0.6730, -14.2553), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
+	{ Name = "GuardTower_Structure", MeshId = "rbxassetid://94962682973717", Size = V(12.3770, 17.4903, 13.2736), Pos = V(16.5000, 8.7503, -14.0517), PivotOffset = V(16.5000, -8.7503, -14.0517), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "GuardTower_Roof", MeshId = "rbxassetid://77457018868714", Size = V(10.5261, 4.0905, 10.2756), Pos = V(16.5000, 16.0248, -14.5000), PivotOffset = V(16.5000, -16.0248, -14.5000), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "GuardTower_Props", MeshId = "rbxassetid://117458340250669", Size = V(8.0746, 11.3226, 13.2277), Pos = V(14.3302, 5.6387, -14.8373), PivotOffset = V(14.3302, -5.6387, -14.8373), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "Campfire_StoneHearth", MeshId = "rbxassetid://110052336686192", Size = V(6.2031, 0.8191, 6.2499), Pos = V(-14.1897, 0.4196, -6.4306), PivotOffset = V(-14.1897, -0.4196, -6.4306), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
+	{ Name = "Campfire_Area", MeshId = "rbxassetid://140525333251753", Size = V(13.3646, 2.7893, 12.0661), Pos = V(-13.8378, 1.1553, -6.6107), PivotOffset = V(-13.8378, -1.1553, -6.6107), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "Outskirts_Fence", MeshId = "rbxassetid://78808537589187", Size = V(30.1555, 4.4655, 10.2554), Pos = V(-19.6965, 2.2182, 4.0315), PivotOffset = V(-19.6965, -2.2182, 4.0315), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
 }
 
 local function buildGuardPostProceduralFallback(model: Model, centerCF: CFrame, fireCenter: CFrame)
@@ -1691,10 +1691,13 @@ function Arch.BuildGuardPost(folder: Instance, centerCF: CFrame): Part
 	end
 
 	local fenceSegments = {
-		{ a = V(-29.0, 2.2, -14.0), b = V(-23.0, 2.2, -3.0), h = 4.4, w = 1.0 },
-		{ a = V(-23.0, 2.2, -3.0), b = V(-17.0, 2.2, 5.5), h = 4.4, w = 1.0 },
-		{ a = V(-17.0, 1.7, 5.5), b = V(-11.5, 1.7, 6.5), h = 3.4, w = 0.9 },
-		{ a = V(-11.5, 1.7, 6.5), b = V(-6.2, 1.7, 0.5), h = 3.4, w = 0.9 },
+		{ a = V(-34.2, 1.7, 1.8), b = V(-29.5, 1.7, 3.8), h = 3.4, w = 0.9 },
+		{ a = V(-29.5, 1.7, 3.8), b = V(-24.0, 1.7, 6.2), h = 3.4, w = 0.9 },
+		{ a = V(-24.0, 1.7, 6.2), b = V(-18.5, 1.7, 7.6), h = 3.4, w = 0.9 },
+		{ a = V(-18.5, 1.7, 7.6), b = V(-13.2, 1.7, 8.6), h = 3.4, w = 0.9 },
+		{ a = V(-13.2, 1.7, 8.6), b = V(-8.0, 1.7, 8.2), h = 3.4, w = 0.9 },
+		{ a = V(-8.0, 1.7, 8.2), b = V(-5.4, 1.7, 3.8), h = 3.4, w = 0.9 },
+		{ a = V(-5.4, 1.7, 3.8), b = V(-5.2, 1.7, -0.6), h = 3.4, w = 0.9 },
 	}
 	for idx, seg in ipairs(fenceSegments) do
 		local mid = (seg.a + seg.b) * 0.5
@@ -1848,7 +1851,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 17 then
+	if existing and existing:GetAttribute("PrefabVersion") == 25 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1857,7 +1860,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 17)
+	prefabs:SetAttribute("PrefabVersion", 25)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")

@@ -65,7 +65,7 @@ function OutskirtsBuilder.BuildTerrainFloor(folder: Instance, origin: CFrame)
 	ground.CanQuery = true
 
 	local envSpawner = getEnvSpawner()
-	if envSpawner and envSpawner.HasTemplate("Outskirts_Pathway") then
+	if envSpawner and (envSpawner.HasTemplate("Outskirts_Ground") or envSpawner.HasTemplate("Outskirts_Pathway")) then
 		return
 	end
 
@@ -92,7 +92,10 @@ end
 --============================================================================
 function OutskirtsBuilder.BuildCurvedPath(folder: Instance, origin: CFrame)
 	local envSpawner = getEnvSpawner()
-	if envSpawner and envSpawner.HasTemplate("Outskirts_Pathway") then
+	if envSpawner and envSpawner.HasTemplate("Outskirts_Ground") then
+		envSpawner.SpawnOutskirtsGround(folder, origin * CFrame.new(12, 0, 96))
+		return
+	elseif envSpawner and envSpawner.HasTemplate("Outskirts_Pathway") then
 		envSpawner.SpawnOutskirtsPathway(folder, origin * CFrame.new(12, 0.02, 96))
 		return
 	end
@@ -413,8 +416,8 @@ function OutskirtsBuilder.Build(folder: Instance, origin: CFrame)
 		{ Pos = V(23.5, 0, 65.5), Scale = 1.00, Yaw = 35 },
 		{ Pos = V(25.5, 0, 69.5), Scale = 0.85, Yaw = 120 },
 		{ Pos = V(1.5, 0, 66.5), Scale = 0.95, Yaw = 70 },
-		{ Pos = V(-3.5, 0, 103.5), Scale = 0.92, Yaw = 210 },
-		{ Pos = V(4.0, 0, 104.5), Scale = 0.85, Yaw = 15 },
+		{ Pos = V(-6.5, 0, 100.5), Scale = 0.92, Yaw = 210 },
+		{ Pos = V(1.5, 0, 101.2), Scale = 0.85, Yaw = 15 },
 		{ Pos = V(-1.0, 0, 121.0), Scale = 1.00, Yaw = 95 },
 		{ Pos = V(-6.0, 0, 126.5), Scale = 1.05, Yaw = 165 },
 		{ Pos = V(23.5, 0, 106.5), Scale = 1.05, Yaw = 55 },
@@ -432,7 +435,7 @@ function OutskirtsBuilder.Build(folder: Instance, origin: CFrame)
 	-- 4. Woodland Ferns nestled along gate walls, fence & pine roots
 	local ferns = {
 		{ Pos = V(-2.5, 0, 67.5), Scale = 1.00, Yaw = 40 },
-		{ Pos = V(1.5, 0, 103.5), Scale = 1.05, Yaw = 135 },
+		{ Pos = V(-1.5, 0, 101.5), Scale = 1.05, Yaw = 135 },
 		{ Pos = V(34.0, 0, 99.5), Scale = 1.00, Yaw = 75 },
 		{ Pos = V(38.0, 0, 79.0), Scale = 0.95, Yaw = 200 },
 		{ Pos = V(-15.0, 0, 118.0), Scale = 1.00, Yaw = 30 },
@@ -456,24 +459,63 @@ function OutskirtsBuilder.Build(folder: Instance, origin: CFrame)
 		buildMossyBoulder(folder, origin, r.Pos, r.Scale, r.RotY)
 	end
 
-	-- 6. Low Forest Grass Tufts along pathway edges & clearing meadow
+	-- 6. Dense Forest Grass Tufts hugging fence posts, trail borders, stones & bushes
 	local grassTufts = {
-		{ Pos = V(-8.0, 0, 70.0), Scale = 1.0, Yaw = 20 },
-		{ Pos = V(20.5, 0, 70.0), Scale = 0.9, Yaw = 85 },
-		{ Pos = V(5.5, 0, 76.0), Scale = 1.0, Yaw = 140 },
-		{ Pos = V(21.0, 0, 94.0), Scale = 1.1, Yaw = 45 },
-		{ Pos = V(-11.0, 0, 105.0), Scale = 1.0, Yaw = 210 },
-		{ Pos = V(8.0, 0, 105.5), Scale = 0.95, Yaw = 310 },
-		{ Pos = V(26.0, 0, 102.0), Scale = 1.05, Yaw = 65 },
-		{ Pos = V(16.0, 0, 114.0), Scale = 1.0, Yaw = 120 },
-		{ Pos = V(-8.5, 0, 116.5), Scale = 1.1, Yaw = 175 },
-		{ Pos = V(4.0, 0, 122.0), Scale = 1.0, Yaw = 240 },
-		{ Pos = V(22.0, 0, 118.0), Scale = 1.05, Yaw = 15 },
-		{ Pos = V(34.0, 0, 116.0), Scale = 0.95, Yaw = 95 },
-		{ Pos = V(-18.0, 0, 108.0), Scale = 1.0, Yaw = 160 },
-		{ Pos = V(-28.0, 0, 96.0), Scale = 1.1, Yaw = 55 },
-		{ Pos = V(36.0, 0, 74.0), Scale = 0.95, Yaw = 270 },
-		{ Pos = V(-24.0, 0, 70.0), Scale = 1.0, Yaw = 130 },
+		-- Around gatehouse & patio edges
+		{ Pos = V(-4.0, 0, 68.5), Scale = 1.25, Yaw = 20 },
+		{ Pos = V(7.0, 0, 69.5), Scale = 1.15, Yaw = 85 },
+		{ Pos = V(20.5, 0, 69.0), Scale = 1.20, Yaw = 140 },
+		{ Pos = V(24.5, 0, 72.0), Scale = 1.15, Yaw = 45 },
+		-- Hugging outer split-rail fence base along the dirt trail border
+		{ Pos = V(-21.8, 0, 98.0), Scale = 1.35, Yaw = 35 },
+		{ Pos = V(-19.5, 0, 99.0), Scale = 1.25, Yaw = 110 },
+		{ Pos = V(-17.0, 0, 100.2), Scale = 1.30, Yaw = 195 },
+		{ Pos = V(-14.2, 0, 101.4), Scale = 1.40, Yaw = 60 },
+		{ Pos = V(-11.5, 0, 102.4), Scale = 1.30, Yaw = 240 },
+		{ Pos = V(-8.8, 0, 103.2), Scale = 1.35, Yaw = 15 },
+		{ Pos = V(-6.2, 0, 103.8), Scale = 1.25, Yaw = 90 },
+		{ Pos = V(-1.5, 0, 104.6), Scale = 1.35, Yaw = 160 },
+		{ Pos = V(3.8, 0, 104.0), Scale = 1.30, Yaw = 215 },
+		{ Pos = V(6.4, 0, 100.0), Scale = 1.40, Yaw = 75 },
+		{ Pos = V(6.8, 0, 95.6), Scale = 1.20, Yaw = 310 },
+		-- Inside campfire edge & connector trail border
+		{ Pos = V(-6.5, 0, 82.0), Scale = 1.15, Yaw = 130 },
+		{ Pos = V(6.5, 0, 77.0), Scale = 1.25, Yaw = 55 },
+		{ Pos = V(19.0, 0, 76.5), Scale = 1.20, Yaw = 200 },
+		{ Pos = V(20.5, 0, 92.5), Scale = 1.30, Yaw = 115 },
+		{ Pos = V(17.5, 0, 97.0), Scale = 1.25, Yaw = 35 },
+		{ Pos = V(7.5, 0, 92.0), Scale = 1.15, Yaw = 175 },
+		{ Pos = V(19.5, 0, 103.5), Scale = 1.35, Yaw = 270 },
+		-- Main foreground trail borders & meadow pockets
+		{ Pos = V(-11.0, 0, 106.5), Scale = 1.30, Yaw = 210 },
+		{ Pos = V(-17.5, 0, 105.0), Scale = 1.25, Yaw = 40 },
+		{ Pos = V(-24.0, 0, 102.0), Scale = 1.35, Yaw = 120 },
+		{ Pos = V(-32.0, 0, 99.0), Scale = 1.30, Yaw = 290 },
+		{ Pos = V(-38.0, 0, 104.0), Scale = 1.40, Yaw = 75 },
+		{ Pos = V(-20.0, 0, 114.5), Scale = 1.35, Yaw = 160 },
+		{ Pos = V(-13.5, 0, 116.5), Scale = 1.45, Yaw = 25 },
+		{ Pos = V(-7.0, 0, 118.0), Scale = 1.30, Yaw = 195 },
+		{ Pos = V(-2.5, 0, 119.5), Scale = 1.25, Yaw = 85 },
+		{ Pos = V(4.0, 0, 121.0), Scale = 1.35, Yaw = 240 },
+		{ Pos = V(10.5, 0, 118.0), Scale = 1.30, Yaw = 145 },
+		{ Pos = V(16.5, 0, 115.0), Scale = 1.40, Yaw = 320 },
+		{ Pos = V(22.5, 0, 117.5), Scale = 1.35, Yaw = 15 },
+		{ Pos = V(28.5, 0, 115.5), Scale = 1.25, Yaw = 105 },
+		{ Pos = V(34.5, 0, 117.0), Scale = 1.30, Yaw = 200 },
+		{ Pos = V(40.0, 0, 112.0), Scale = 1.40, Yaw = 50 },
+		{ Pos = V(26.0, 0, 101.0), Scale = 1.30, Yaw = 65 },
+		{ Pos = V(32.5, 0, 104.5), Scale = 1.25, Yaw = 175 },
+		-- Tower perimeter & pine tree base accents
+		{ Pos = V(35.0, 0, 74.5), Scale = 1.25, Yaw = 270 },
+		{ Pos = V(36.0, 0, 86.0), Scale = 1.35, Yaw = 95 },
+		{ Pos = V(31.0, 0, 91.5), Scale = 1.20, Yaw = 185 },
+		{ Pos = V(27.0, 0, 93.0), Scale = 1.25, Yaw = 40 },
+		{ Pos = V(-24.0, 0, 70.0), Scale = 1.30, Yaw = 130 },
+		{ Pos = V(-28.0, 0, 94.0), Scale = 1.35, Yaw = 55 },
+		{ Pos = V(-36.0, 0, 118.0), Scale = 1.30, Yaw = 225 },
+		{ Pos = V(-28.0, 0, 121.0), Scale = 1.40, Yaw = 80 },
+		{ Pos = V(12.0, 0, 126.0), Scale = 1.35, Yaw = 155 },
+		{ Pos = V(39.0, 0, 122.0), Scale = 1.25, Yaw = 300 },
 	}
 	for _, g in ipairs(grassTufts) do
 		buildGrassTuft(folder, origin, g.Pos, g.Scale, g.Yaw)

@@ -36,9 +36,9 @@ EnvironmentSpawner.DefaultGroundTextures = {
 		RoughnessMap = "rbxassetid://103087013857397",
 	} :: TextureIdSet,
 	OutskirtsMeadow = {
-		ColorMap = "rbxassetid://122496820035361",
-		NormalMap = "rbxassetid://72470076666948",
-		RoughnessMap = "rbxassetid://77979090712529",
+		ColorMap = "rbxassetid://101944681219485",
+		NormalMap = "rbxassetid://122823615827601",
+		RoughnessMap = "rbxassetid://117493914645472",
 	} :: TextureIdSet,
 }
 
@@ -206,7 +206,7 @@ function EnvironmentSpawner.ApplyGroundMaterials(targetRoots: { Instance }): boo
 	local hasOutskirtsGrass = upsertMaterialVariant(
 		"OutskirtsForestGrass",
 		Enum.Material.Grass,
-		12,
+		18,
 		Enum.MaterialPattern.Organic,
 		outskirtsGrassTex
 	)
@@ -255,7 +255,7 @@ function EnvironmentSpawner.ApplyGroundMaterials(targetRoots: { Instance }): boo
 			if hasOutskirtsGrass and n == "OutskirtsGrounds" then
 				desc.Material = Enum.Material.Grass
 				desc.MaterialVariant = "OutskirtsForestGrass"
-				desc.Color = Color3.fromRGB(205, 222, 198)
+				desc.Color = Color3.fromRGB(232, 238, 224)
 			elseif hasGrass and (mat == Enum.Material.Grass or mat == Enum.Material.LeafyGrass) then
 				desc.Material = Enum.Material.Grass
 				desc.MaterialVariant = "HubMeadowGrass"
@@ -683,7 +683,44 @@ function EnvironmentSpawner.SpawnShrub(
 	return spawnPrefabModel("WildForestShrub", parent, baseCFrame, s, yaw, EXPECTED_HEIGHTS.WildForestShrub, nil, 0.14)
 end
 
+local function configurePathPart(desc: BasePart, alphaMode: Enum.AlphaMode)
+	desc.Anchored = true
+	desc.CanCollide = false
+	desc.CanQuery = false
+	desc.CanTouch = false
+	desc.CastShadow = false
+	desc.Transparency = if alphaMode == Enum.AlphaMode.Transparency then 0.015 else 0
+	desc.Material = Enum.Material.Plastic
+	desc.Color = Color3.fromRGB(163, 162, 165)
+	local sa = desc:FindFirstChildWhichIsA("SurfaceAppearance", true)
+	if sa and sa:IsA("SurfaceAppearance") then
+		sa.AlphaMode = alphaMode
+	end
+end
+
+function EnvironmentSpawner.SpawnOutskirtsGround(parent: Instance, guardpostCenterCF: CFrame): Model?
+	local template = findTemplate("Outskirts_Ground")
+	if not template then
+		return nil
+	end
+	local model = wrapAsModel(template:Clone(), "Outskirts_Ground")
+	model.WorldPivot = CFrame.identity
+	for _, desc in model:GetDescendants() do
+		if desc:IsA("BasePart") then
+			local isPathSplat = desc.Name:find("Ground_Path_", 1, true) ~= nil
+			configurePathPart(desc, if isPathSplat then Enum.AlphaMode.Transparency else Enum.AlphaMode.Opaque)
+		end
+	end
+	model:PivotTo(guardpostCenterCF)
+	model:SetAttribute("BlenderEnvAsset", "Outskirts_Ground")
+	model.Parent = parent
+	return model
+end
+
 function EnvironmentSpawner.SpawnOutskirtsPathway(parent: Instance, guardpostCenterCF: CFrame): Model?
+	if findTemplate("Outskirts_Ground") then
+		return EnvironmentSpawner.SpawnOutskirtsGround(parent, guardpostCenterCF)
+	end
 	local template = findTemplate("Outskirts_Pathway")
 	if not template then
 		return nil
@@ -692,22 +729,27 @@ function EnvironmentSpawner.SpawnOutskirtsPathway(parent: Instance, guardpostCen
 	model.WorldPivot = CFrame.identity
 	for _, desc in model:GetDescendants() do
 		if desc:IsA("BasePart") then
-			desc.Anchored = true
-			desc.CanCollide = false
-			desc.CanQuery = false
-			desc.CanTouch = false
-			desc.CastShadow = false
-			desc.Material = Enum.Material.Plastic
-			desc.Color = Color3.fromRGB(163, 162, 165)
-			local sa = desc:FindFirstChildWhichIsA("SurfaceAppearance", true)
-			if sa and sa:IsA("SurfaceAppearance") then
-				sa.AlphaMode = Enum.AlphaMode.Opaque
-			end
+			configurePathPart(desc, Enum.AlphaMode.Transparency)
 		end
 	end
 	model:PivotTo(guardpostCenterCF)
 	model:SetAttribute("BlenderEnvAsset", "Outskirts_Pathway")
 	model.Parent = parent
+
+	local stoneTemplate = findTemplate("Outskirts_SteppingStones")
+	if stoneTemplate then
+		local stones = wrapAsModel(stoneTemplate:Clone(), "Outskirts_SteppingStones")
+		stones.WorldPivot = CFrame.identity
+		for _, desc in stones:GetDescendants() do
+			if desc:IsA("BasePart") then
+				configurePathPart(desc, Enum.AlphaMode.Opaque)
+			end
+		end
+		stones:PivotTo(guardpostCenterCF)
+		stones:SetAttribute("BlenderEnvAsset", "Outskirts_SteppingStones")
+		stones.Parent = parent
+	end
+
 	return model
 end
 
