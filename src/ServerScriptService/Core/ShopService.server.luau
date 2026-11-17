@@ -4,17 +4,14 @@
 -- only place a purchase is granted, and it is idempotent:
 --   1. The player must be in this server with a loaded profile, or we answer NotProcessedYet and
 --      Roblox retries later (the player is charged only once a receipt is granted).
---   2. The receipt's PurchaseId is claimed in a DataStore with UpdateAsync. If it was already
---      claimed, the purchase was granted before: answer PurchaseGranted without granting again.
---   3. The grant runs; if it fails, the claim is released and we answer NotProcessedYet.
+--   2. The receipt's PurchaseId is recorded in the profile itself (profile.PurchaseIds) in the same
+--      step as the grant. A PurchaseId already there was granted before and is not granted again.
+--   3. The profile is saved, and only a successful save answers PurchaseGranted. The grant and its
+--      PurchaseId are written together, so they are saved together or lost together: if the save
+--      fails or the server dies first, Roblox retries the receipt and it is granted exactly once.
 -- Summon packs are paid random items: restricted players get Gems instead (ShopConfig.SafeGrant).
---
--- NOTE: player profiles are not yet saved to a DataStore (DataManager builds a fresh profile on
--- join), so granted items are lost when the player leaves. Keep every ProductId at 0 until
--- profile persistence exists.
 
 local MarketplaceService = game:GetService("MarketplaceService")
-local DataStoreService = game:GetService("DataStoreService")
 local PolicyService = game:GetService("PolicyService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,7 +20,10 @@ local ShopConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local AnvilBanner = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("AnvilBanner"))
 local InventoryCapacity = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 
-local Receipts = DataStoreService:GetDataStore("ShopReceipts_V1")
+-- Roblox only retries a receipt that is still pending, so the last few PurchaseIds are enough.
+local MAX_PURCHASE_IDS = 100
+-- PurchaseIds whose grant is running right now.
+local inFlight: { [string]: boolean } = {}
 
 local function dataManager(): any
 	return _G.DataManager
@@ -44,16 +44,6 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	restrictedCache[player] = nil
 end)
-
-local function withRetries<T>(fn: () -> T): (boolean, T?)
-	for attempt = 1, 3 do
-		local ok, result = pcall(fn)
-		if ok then return true, result end
-		warn(string.format("[ShopService] DataStore call failed (attempt %d): %s", attempt, tostring(result)))
-		task.wait(attempt)
-	end
-	return false, nil
-end
 
 -- Applies one grant to the loaded profile. Returns a toast line.
 local function grant(player: Player, offer: ShopConfig.Offer): string
@@ -110,35 +100,39 @@ MarketplaceService.ProcessReceipt = function(receipt: any): Enum.ProductPurchase
 		return Enum.ProductPurchaseDecision.NotProcessedYet -- retried when they're back
 	end
 
-	-- Claim this PurchaseId exactly once.
-	local key = tostring(receipt.PurchaseId)
-	local alreadyGranted = false
-	local claimed = withRetries(function()
-		return Receipts:UpdateAsync(key, function(existing)
-			if existing then
-				alreadyGranted = true
-				return nil -- keep the existing record
-			end
-			return { UserId = receipt.PlayerId, ProductId = receipt.ProductId, Offer = offer.Id, Time = os.time() }
-		end)
-	end)
-	if not claimed then
+	local profile = dm.GetProfile(player)
+	if type(profile.PurchaseIds) ~= "table" then profile.PurchaseIds = {} end
+	local purchaseIds: { string } = profile.PurchaseIds
+	local purchaseId = tostring(receipt.PurchaseId)
+
+	-- grant can yield (the PolicyService lookup), so a retry of the same receipt arriving meanwhile
+	-- is turned away rather than granted a second time.
+	if inFlight[purchaseId] then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	if alreadyGranted then
-		return Enum.ProductPurchaseDecision.PurchaseGranted
+	if not table.find(purchaseIds, purchaseId) then
+		inFlight[purchaseId] = true
+		local ok, result = pcall(grant, player, offer)
+		inFlight[purchaseId] = nil
+		if not ok then
+			warn("[ShopService] Grant failed: " .. tostring(result))
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		table.insert(purchaseIds, purchaseId)
+		while #purchaseIds > MAX_PURCHASE_IDS do
+			table.remove(purchaseIds, 1)
+		end
+		dm.SendToast(player, result :: string, "SUCCESS")
 	end
 
-	local ok, result = pcall(grant, player, offer)
-	if not ok then
-		warn("[ShopService] Grant failed, releasing the claim: " .. tostring(result))
-		withRetries(function()
-			return Receipts:RemoveAsync(key)
-		end)
-		return Enum.ProductPurchaseDecision.NotProcessedYet
+	-- Studio without API access saves nothing, so there is nothing to wait for.
+	if not dm.IsPersistent(player) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
-	dm.SendToast(player, result :: string, "SUCCESS")
-	-- Checkpoint the grant now rather than at the next autosave.
-	if dm.SaveProfile then task.spawn(dm.SaveProfile, player) end
-	return Enum.ProductPurchaseDecision.PurchaseGranted
+	-- Confirm only once the grant is saved. On failure the grant stays in this session and Roblox
+	-- retries the receipt; the PurchaseId above stops it being granted twice.
+	if dm.SaveProfile(player) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	return Enum.ProductPurchaseDecision.NotProcessedYet
 end

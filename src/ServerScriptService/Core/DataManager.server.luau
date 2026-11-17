@@ -253,6 +253,7 @@ export type PlayerProfile = {
 	PitRevision: number,
 	PlotIndex: number,
 	Raid: { LastRewardedRaid: number, BestDamage: number, Kills: number, Participations: number }?,
+	PurchaseIds: { string }?, -- Robux receipts already granted, newest last (ShopService)
 	Currencies: {
 		Gold: number,
 		Gems: number,
@@ -2356,11 +2357,31 @@ local persistentPlayers: { [Player]: boolean } = {}
 local releasedPlayers: { [Player]: boolean } = {}
 local savesInFlight = 0 -- releases still writing; BindToClose waits for these
 
--- Checkpoint save for purchases and other high-value grants. Keeps the session lock.
+-- Another server took the session (this one stopped refreshing the lock for longer than
+-- ProfileCodec.LockTimeoutSeconds). Nothing more this server does can be saved, so stop saving and
+-- send the player out to rejoin rather than let them keep playing unsaved.
+local function onLockLost(player: Player)
+	if releasedPlayers[player] then return end
+	releasedPlayers[player] = true
+	warn(`[DataManager] {player.UserId} lost the profile lock; kicking so they rejoin with their saved data`)
+	if player.Parent == Players then
+		player:Kick("Your save was opened on another server. Please rejoin.")
+	end
+end
+
+-- Checkpoint save for purchases and other high-value grants. Keeps the session lock. Returns
+-- whether the profile was written. Does nothing once the player's session is released.
 function DataManager.SaveProfile(player: Player): boolean
 	local profile = ActiveProfiles[player]
-	if not profile or not persistentPlayers[player] then return false end
-	return ProfilePersistence.Save(player.UserId, profile, false)
+	if not profile or not persistentPlayers[player] or releasedPlayers[player] then return false end
+	local saved, lockLost = ProfilePersistence.Save(player.UserId, profile, false)
+	if lockLost then onLockLost(player) end
+	return saved
+end
+
+-- True when this player's profile is written to the DataStore (false in Studio without API access).
+function DataManager.IsPersistent(player: Player): boolean
+	return persistentPlayers[player] == true
 end
 
 local function releaseProfile(player: Player)
