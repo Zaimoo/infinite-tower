@@ -39,6 +39,9 @@ local lastSelectorOpenTime = 0
 local selectorMode: "TRAVEL" | "ASSIGN" = "TRAVEL"
 local setViewSquad: (boolean) -> () -- forward declaration
 local render: () -> ()
+-- Declared up here because openSelector (above the camera section) reads it; declared lower down it was a
+-- nil global there, so opening the selector never left the bird's-eye squad view.
+local isViewingSquad = false
 
 -- Visual Palette
 local C = {
@@ -1151,7 +1154,6 @@ end
 -- ============================================================================
 -- BIRD'S-EYE SQUAD FOLLOW CAMERA
 -- ============================================================================
-local isViewingSquad = false
 local prevCameraType: Enum.CameraType? = nil
 local prevCameraSubject: Instance? = nil
 local zoomDist: number = 24
@@ -1548,6 +1550,14 @@ remotes.Context.OnClientEvent:Connect(function(c)
 			})
 		end)
 	elseif c.Stage == "COMMIT" then
+		if c.RequestId == "ENTITY_RESYNC" and context and c.FloorId == context.FloorId
+			and c.RoomGeneration == context.RoomGeneration and c.ViewEpoch == context.ViewEpoch then
+			-- The server re-sends the unchanged view with every entity resync. Nothing moved, so the
+			-- Master's velocity is left alone (zeroing it here stalled walking on each resync).
+			context = c
+			_G.TowerView = c
+			return
+		end
 		local prevFloor = lastCommittedFloorId
 		lastCommittedFloorId = c.FloorId
 		if prevFloor ~= nil and prevFloor ~= c.FloorId then
