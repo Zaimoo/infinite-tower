@@ -5,7 +5,7 @@
 --
 -- Remote (ReplicatedStorage.Remotes.ReforgeRemotes):
 --   ReforgeRequest (RemoteFunction): ("ROLL", artifactUUID) or ("CHOOSE", artifactUUID, "NEW" | "OLD").
---   Returns { Ok, Message, Trait? }. The new balance, trait and pending roll reach the client in the profile sync.
+--   Returns { Ok, Message, Enchantment? }. The new balance, enchantment and pending roll reach the client in the profile sync.
 -- The station's ProximityPrompt (ReforgeConfig.PromptName) only opens the client window; every action goes
 -- through the remote and is validated here.
 
@@ -19,7 +19,7 @@ local Rules = require(ReplicatedStorage.Shared.Util.ReforgeRules)
 
 export type Dependencies = {
 	GetProfile: (Player) -> any,
-	-- Sync that refreshes the deployed heroes' stats (a trait changes ATK, HP or attack speed).
+	-- Sync that refreshes the deployed heroes' stats (an enchantment changes ATK, HP or attack speed).
 	SyncProfile: (Player) -> (),
 }
 
@@ -40,7 +40,7 @@ local function allowRequest(player: Player): boolean
 	return allowed
 end
 
--- Adds profile.Reforge (old saves) and drops damaged traits. Run on load.
+-- Adds profile.Reforge (old saves) and drops damaged enchantments. Run on load.
 function ReforgeService.EnsureState(profile: any)
 	Rules.EnsureState(profile)
 end
@@ -53,9 +53,9 @@ local function handle(player: Player, action: any, uuid: any, choice: any): any
 	if type(uuid) ~= "string" or #uuid == 0 or #uuid > 64 then return { Ok = false, Message = "Choose a weapon." } end
 
 	if action == "ROLL" then
-		local ok, message, trait = Rules.Roll(profile, uuid, rng:NextNumber(), rng:NextNumber())
+		local ok, message, enchantment = Rules.Roll(profile, uuid, rng:NextNumber(), rng:NextNumber())
 		if ok then d.SyncProfile(player) end
-		return { Ok = ok, Message = message, Trait = trait }
+		return { Ok = ok, Message = message, Enchantment = enchantment }
 	elseif action == "CHOOSE" then
 		if choice ~= "NEW" and choice ~= "OLD" then return { Ok = false, Message = "Invalid choice." } end
 		local ok, message = Rules.Choose(profile, uuid, choice == "NEW")

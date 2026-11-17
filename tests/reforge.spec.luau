@@ -26,17 +26,17 @@ local function profile(gold: number): any
 	}
 end
 
-test("reforge: grade odds add up to 100% and each trait's bonus rises with grade", function()
+test("reforge: grade odds add up to 100% and each enchantment's bonus rises with grade", function()
 	local total = 0
 	for _, chance in Rules.GradeChances() do total += chance end
 	assert(math.abs(total - 1) < 1e-9, "grade chances add up to 1")
-	for _, id in Config.TraitOrder do
-		local values = Config.Traits[id].Values
+	for _, id in Config.EnchantmentOrder do
+		local values = Config.Enchantments[id].Values
 		assert(#values == #Config.Grades, id .. " has a value per grade")
 		for i = 2, #values do assert(values[i] > values[i - 1], id .. " rises with grade") end
 	end
-	assert(Config.Traits.KEEN.Values[#Config.Grades] <= 20 and Config.Traits.VIGOR.Values[#Config.Grades] <= 15,
-		"traits stay far below one hero star (x3.24), so they cannot replace promotion")
+	assert(Config.Enchantments.KEEN.Values[#Config.Grades] <= 20 and Config.Enchantments.VIGOR.Values[#Config.Grades] <= 15,
+		"enchantments stay far below one hero star (x3.24), so they cannot replace promotion")
 end)
 
 test("reforge: roll cost scales with rarity and stars", function()
@@ -54,30 +54,30 @@ test("reforge: grade rolls follow the weights and pity forces Epic or better", f
 	for _, roll in { 0, 0.3, 0.7, 0.99 } do
 		assert(Rules.RollGrade(roll, Config.PityRolls - 1) >= Config.PityGrade, "pity guarantees Epic or better")
 	end
-	assert(Rules.RollTraitId(0) == "KEEN" and Rules.RollTraitId(0.999) == "FOCUS")
+	assert(Rules.RollEnchantmentId(0) == "KEEN" and Rules.RollEnchantmentId(0.999) == "FOCUS")
 end)
 
 test("reforge: a roll charges once, parks the result, and keep new / keep old resolve it", function()
 	local p = profile(20000)
-	local ok, _, trait = Rules.Roll(p, "w1", 0, 0.6) -- KEEN, Uncommon
-	assert(ok and trait and trait.Id == "KEEN" and trait.Grade == 2)
+	local ok, _, enchantment = Rules.Roll(p, "w1", 0, 0.6) -- KEEN, Uncommon
+	assert(ok and enchantment and enchantment.Id == "KEEN" and enchantment.Grade == 2)
 	assert(p.Currencies.Gold == 15000, "charged 5,000")
 	assert(p.Reforge.Pending.UUID == "w1" and p.Reforge.Rolls == 1 and p.Reforge.Pity == 1)
-	assert(p.Artifacts.w1.Trait == nil, "nothing changes on the weapon until the Master chooses")
+	assert(p.Artifacts.w1.Enchantment == nil, "nothing changes on the weapon until the Master chooses")
 	-- Another weapon cannot be rolled while a result is waiting.
 	local blocked = Rules.Roll(p, "w2", 0, 0)
 	assert(not blocked and p.Currencies.Gold == 15000)
 	assert(Rules.Choose(p, "w1", true))
-	assert(p.Artifacts.w1.Trait.Id == "KEEN" and p.Artifacts.w1.Trait.Grade == 2 and p.Reforge.Pending == nil)
+	assert(p.Artifacts.w1.Enchantment.Id == "KEEN" and p.Artifacts.w1.Enchantment.Grade == 2 and p.Reforge.Pending == nil)
 	assert(not Rules.Choose(p, "w1", true), "nothing left to keep")
-	-- Roll again, keep the old trait.
+	-- Roll again, keep the old enchantment.
 	assert(Rules.Roll(p, "w1", 0.3, 0.99)) -- VIGOR, Legendary
 	assert(Rules.Choose(p, "w1", false))
-	assert(p.Artifacts.w1.Trait.Id == "KEEN" and p.Reforge.Pity == 0, "old trait kept; a Legendary roll resets pity")
+	assert(p.Artifacts.w1.Enchantment.Id == "KEEN" and p.Reforge.Pity == 0, "old enchantment kept; a Legendary roll resets pity")
 	-- Rolling again on the same weapon discards the waiting result.
 	assert(Rules.Roll(p, "w1", 0.6, 0))
 	assert(Rules.Roll(p, "w1", 0.8, 0))
-	assert(p.Reforge.Pending.Trait.Id == "FOCUS" and p.Currencies.Gold == 0)
+	assert(p.Reforge.Pending.Enchantment.Id == "FOCUS" and p.Currencies.Gold == 0)
 	assert(not Rules.Roll(p, "w1", 0, 0), "not enough Gold")
 end)
 
@@ -101,24 +101,24 @@ test("reforge: bad requests change nothing", function()
 	assert(not Rules.Choose(p, "w1", true) and p.Reforge.Pending == nil)
 end)
 
-test("reforge: save repair drops damaged traits and pending rolls", function()
+test("reforge: save repair drops damaged enchantments and pending rolls", function()
 	local p = profile(0)
-	p.Artifacts.w1.Trait = { Id = "NOPE", Grade = 2 }
-	p.Artifacts.w2.Trait = { Id = "KEEN", Grade = 9 }
-	p.Reforge = { Pity = -4, Rolls = "x", Pending = { UUID = "gone", Trait = { Id = "KEEN", Grade = 1 } } }
+	p.Artifacts.w1.Enchantment = { Id = "NOPE", Grade = 2 }
+	p.Artifacts.w2.Enchantment = { Id = "KEEN", Grade = 9 }
+	p.Reforge = { Pity = -4, Rolls = "x", Pending = { UUID = "gone", Enchantment = { Id = "KEEN", Grade = 1 } } }
 	Rules.EnsureState(p)
-	assert(p.Artifacts.w1.Trait == nil and p.Artifacts.w2.Trait == nil)
+	assert(p.Artifacts.w1.Enchantment == nil and p.Artifacts.w2.Enchantment == nil)
 	assert(p.Reforge.Pity == 0 and p.Reforge.Rolls == 0 and p.Reforge.Pending == nil)
 	local fresh = profile(0)
 	Rules.EnsureState(fresh)
 	assert(fresh.Reforge.Pity == 0 and fresh.Reforge.Pending == nil, "old saves gain the state")
 end)
 
-test("reforge: traits change hero stats, and Rift Attunement still caps the result", function()
+test("reforge: enchantments change hero stats, and Rift Attunement still caps the result", function()
 	local hero = { TemplateId = "hero_han", Stars = 3, Level = 10, QualityScalar = 1 }
 	local plain = { Star = 3, Rarity = 6, TemplateId = "art_rusty_daggers" }
 	local function with(id: string, grade: number): any
-		local w = table.clone(plain); w.Trait = { Id = id, Grade = grade }; return w
+		local w = table.clone(plain); w.Enchantment = { Id = id, Grade = grade }; return w
 	end
 	local base = Stats.GetCombatSnapshot(hero, plain)
 	local keen = Stats.GetCombatSnapshot(hero, with("KEEN", 6))
@@ -131,7 +131,7 @@ test("reforge: traits change hero stats, and Rift Attunement still caps the resu
 	local cap = Stats.GetAttunementCap(10)
 	local atk, hp = Stats.GetAttunedMultipliers(hero, with("KEEN", 6), 1, cap)
 	local capped = Stats.GetCombatSnapshot(hero, with("KEEN", 6), false, false, atk, hp)
-	assert(10 * capped.AttackDamage / capped.TickInterval + capped.Health <= cap * 1.001, "the cap still holds with a trait")
+	assert(10 * capped.AttackDamage / capped.TickInterval + capped.Health <= cap * 1.001, "the cap still holds with an enchantment")
 end)
 
 print(string.format("reforge.spec: %d passed", passed))

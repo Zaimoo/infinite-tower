@@ -77,9 +77,9 @@ function ForgeTransactions.new(options: { Clock: () -> number, GenerateToken: ()
 		local snapshot = { Revision = state.Revision, Heroes = {}, Artifacts = {}, Gold = profile.Currencies.Gold, Gems = profile.Currencies.Gems }
 		for id, artifact in profile.Artifacts or {} do
 			snapshot.Artifacts[id] = project(artifact, ARTIFACT_FIELDS, id)
-			-- The Weapon Reforge trait (GDD §7.6), for stat previews and the sell/upgrade warnings. Not part of the
-			-- revision signature: a new trait does not invalidate equipment undo or a material selection.
-			if ReforgeRules.IsTrait(artifact.Trait) then snapshot.Artifacts[id].Trait = { Id = artifact.Trait.Id, Grade = artifact.Trait.Grade } end
+			-- The Weapon Reforge enchantment (GDD §7.6), for stat previews and the sell/upgrade warnings. Not part of the
+			-- revision signature: a new enchantment does not invalidate equipment undo or a material selection.
+			if ReforgeRules.IsEnchantment(artifact.Enchantment) then snapshot.Artifacts[id].Enchantment = { Id = artifact.Enchantment.Id, Grade = artifact.Enchantment.Grade } end
 		end
 		for id, hero in profile.Heroes or {} do snapshot.Heroes[id] = project(hero, HERO_FIELDS, id) end
 		local nextSignature = signature(snapshot)

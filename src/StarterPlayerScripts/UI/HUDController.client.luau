@@ -2008,12 +2008,32 @@ end
 local PANEL_REFRESH_DELAY = 0.2
 local pendingTouched: { [string]: boolean }? = nil
 
+-- The server sends the whole profile once and deltas after it. A RemoteEvent fired before any
+-- listener is queued for the first listener only, and TowerController and Store connect long
+-- before this line, so on a slow join this script can miss that whole profile. Without a base
+-- every delta would be dropped and panels reading CurrentProfile (the Summoning Rift's Gems) would
+-- show 0 while the HUD bar showed the real balance. Ask the server to send it again.
+local RESYNC_RETRY_SECONDS = 6
+local lastResyncRequest = -math.huge
+local function requestProfileResync()
+	if CurrentProfile then return end
+	local remote = SyndicateRemotes:FindFirstChild("RequestProfileResync")
+	if not (remote and remote:IsA("RemoteEvent")) then return end
+	local now = os.clock()
+	if now - lastResyncRequest < RESYNC_RETRY_SECONDS then return end
+	lastResyncRequest = now
+	remote:FireServer()
+end
+
 ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if not profile then return end
 	local touched: { [string]: boolean }? = nil
 	if ProfileDelta.IsDelta(profile) then
 		-- Only what changed was sent: patch the cached profile, keeping every other field.
-		if not CurrentProfile then return end
+		if not CurrentProfile then
+			requestProfileResync()
+			return
+		end
 		touched = ProfileDelta.Apply(CurrentProfile, profile)
 		profile = CurrentProfile
 	else CurrentProfile = profile end
@@ -2040,6 +2060,12 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 			if merged then refreshPanels(merged) end
 		end)
 	end
+end)
+
+-- Missed the first whole profile already (another script took it): ask now rather than waiting for
+-- the next delta. If the server hasn't loaded the profile yet it ignores this and sends it anyway.
+task.defer(function()
+	if not CurrentProfile then requestProfileResync() end
 end)
 
 -- The HUD loop runs every frame but only touches the UI when what it shows changes.

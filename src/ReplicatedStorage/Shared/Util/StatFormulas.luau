@@ -170,15 +170,15 @@ function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: 
  local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)*B.HeroRarityCombat(StatFormulas.GetHeroRarity(hero))
  local power,speed=0,0
  if artifact then power,speed=ArtifactCatalog.CalculateEffectiveStats(artifact.Star,artifact.Rarity,nil,artifact.TemplateId) end
- -- Weapon Reforge trait (GDD §7.6): Keen multiplies damage, Vigor HP, Swift adds attack speed. Applied before
+ -- Weapon Reforge enchantment (GDD §7.6): Keen multiplies damage, Vigor HP, Swift adds attack speed. Applied before
  -- Rift Attunement, which reads this snapshot, so the cap still holds.
- local traitATK,traitHP,traitSpeed=ReforgeRules.Bonuses(artifact)
- speed+=traitSpeed
+ local enchantmentATK,enchantmentHP,enchantmentSpeed=ReforgeRules.Bonuses(artifact)
+ speed+=enchantmentSpeed
  local mult = trainingMultiplier or 1.0
  local baseATK,baseHP=(seed and seed.BaseATK_1Star or 35)*quality*growth,(seed and seed.BaseHP_1Star or 280)*quality*growth
  if seed and (seed :: any).Mirror then baseHP,baseATK=StatFormulas.GetMirrorBase(hero) end
- local damage=math.round(baseATK*(1+power/B.WeaponPowerDivisor)*mult*traitATK)
- local health=math.round(baseHP*(hpMultiplier or mult)*traitHP)
+ local damage=math.round(baseATK*(1+power/B.WeaponPowerDivisor)*mult*enchantmentATK)
+ local health=math.round(baseHP*(hpMultiplier or mult)*enchantmentHP)
  local baseInterval=seed and seed.AttackInterval or hero.AttackInterval or 1
  local interval=math.max(.2,baseInterval/(1+speed))
  local tickInterval=B.ScheduledInterval(interval)

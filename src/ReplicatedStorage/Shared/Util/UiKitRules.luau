@@ -146,8 +146,8 @@ function UiKitRules.ConfirmTier(action: string, ctx: { [string]: any }?): Tier
 	local c = ctx or {}
 	if action == "SELL" then
 		local rarity, stars = c.MaxRarity or 1, c.MaxStars or 1
-		-- An Epic or better Weapon Reforge trait (GDD §7.6) is expensive to roll again.
-		if rarity >= UiKitRules.ExaltedTier or stars >= 2 or (c.MaxTraitGrade or 0) >= 4 then return "Critical" end
+		-- An Epic or better Weapon Reforge enchantment (GDD §7.6) is expensive to roll again.
+		if rarity >= UiKitRules.ExaltedTier or stars >= 2 or (c.MaxEnchantmentGrade or 0) >= 4 then return "Critical" end
 		if rarity >= UiKitRules.RareTier then return "Hard" end
 		return "None"
 	elseif action == "UPGRADE" then
