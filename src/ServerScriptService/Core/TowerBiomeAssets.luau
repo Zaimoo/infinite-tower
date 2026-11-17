@@ -2,8 +2,13 @@
 -- Reference-guided, high-detail procedural environment & architectural kits for all 10 biomes.
 -- Every decorative part has CanCollide=false, CanQuery=false, CanTouch=false so it never
 -- obstructs HeroNavigation raycasts, pathfinding, or grounded mob spawn checks.
+-- Once the Tower Biome Kit (Blender meshes, ServerStorage.TowerBiomeKit) is imported, the trees, spires,
+-- arches, statues, mushrooms, cliffs, islands and clutter are drawn with its sculpted meshes instead; the
+-- part-built versions below stay as the fallback. Solid pieces keep their part as an invisible collider.
 local PropClearance = require(script.Parent.TowerPropClearance)
+local KitProps = require(script.Parent.TowerKitProps)
 local TowerLayout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
+local Kit = require(game.ReplicatedStorage.Shared.Config.TowerBiomeKit)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
@@ -47,7 +52,8 @@ Assets.AirborneKinds = table.freeze({
 	GalaxyPortal = true, LotusPortal = true, CorruptionCrescent = true,
 })
 
-function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: number, layout: any, theme: any)
+-- field: the floor's TowerTerrain field on a natural floor (the kit imported), else nil.
+function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: number, layout: any, theme: any, field: any?)
 	local kit = Instance.new("Model")
 	kit.Name = "BiomeAssets"
 	kit:SetAttribute("BiomeId", biome)
@@ -63,6 +69,28 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	local cliffColor = theme.CliffColor or theme.WallColor
 	local cliffMat = theme.CliffMaterial or Enum.Material.Rock
 	local liquidColor = theme.LiquidColor or accent
+
+	-- Tower Biome Kit: only when every template is imported, so a floor never mixes meshes and parts.
+	local biomeKit = Kit.Biomes[biome]
+	local kitOn = biomeKit ~= nil and KitProps.Ready()
+	-- Natural floor: terrain carries the chasm, cliffs, islands and seas, and the kit is scattered over it as
+	-- an ecosystem (section 7) instead of the part-built rows and clutter beds.
+	local natural = kitOn and field ~= nil
+	kit:SetAttribute("Natural", natural)
+	local resolveRole = KitProps.Resolver(biome, theme)
+	kit:SetAttribute("KitMeshes", kitOn)
+	-- Boxes (cliffs, ledges, islands) that get a kit rock fitted over them once the floor is built.
+	local KIT_CLIFF = { "CliffRockA", "CliffRockB" }
+	local KIT_SHELF = { "ChasmIsland" }
+	local kitDress: { [string]: { string } } = {
+		PerimeterSkyPeak = KIT_CLIFF, CornerHorizonMassif = KIT_CLIFF, CornerMidBastion = KIT_CLIFF,
+		NorthHorizonPeak = KIT_CLIFF, NorthCitadelWingCliff = KIT_CLIFF, StormPeakCrag = KIT_CLIFF,
+		InteriorObsidianCrag = KIT_CLIFF, VolcanoCalderaSlope = KIT_CLIFF,
+		-- Flat-topped: landmarks stand on these.
+		PerimeterCliffBase = KIT_SHELF, PerimeterCliffLedge = KIT_SHELF, NorthHorizonFoothill = KIT_SHELF,
+		InteriorChasmIslandBase = KIT_SHELF, ApexShelfMassif = KIT_SHELF,
+	}
+	local pendingDress: { BasePart } = {}
 
 	-- Every compound prop (tree, spire, arch, clutter cluster, island and what stands on it) is its own
 	-- Model tagged PropKind, so clearance removes a prop whole and never leaves floating pieces behind.
@@ -118,6 +146,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				p.Material = Enum.Material.SmoothPlastic
 			end
 			p.Transparency = math.clamp(p.Transparency, 0.15, 0.65)
+		elseif kitOn and kitDress[name] then
+			table.insert(pendingDress, p)
 		elseif p.Material == Enum.Material.Neon then
 			-- Bloom control for non-liquid surfaces: large Neon surfaces (sunbeams, portals, auroras)
 			-- blow out the screen, so render them as translucent plastic; small Neon accents are dimmed slightly.
@@ -148,6 +178,23 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		if trans then p.Transparency = trans end
 		p.Parent = currentParent
 		return p
+	end
+
+	-- Places a kit template at a room-local CFrame (origin = footprint centre on the ground, front +Z).
+	-- A number scales uniformly (times the template's RefScale); a Vector3 scales per axis.
+	local function kitAt(name: string, cf: CFrame, scale: Vector3 | number, override: KitProps.Override?): Model?
+		local s: Vector3 = if typeof(scale) == "number" then Vector3.one * (scale * (Kit.RefScale[name] or 1)) else scale
+		return KitProps.Place(currentParent, name, CFrame.new(origin) * cf, s, resolveRole, override)
+	end
+	-- A stable yaw per spot, so repeated props don't all face the same way.
+	local function yawAt(at: Vector3): number
+		return math.rad((at.X * 12.9898 + at.Z * 78.233) % 360)
+	end
+	-- Turns a part into an invisible collider/support for the kit mesh drawn over it.
+	local function ghost(p: BasePart)
+		p.Transparency = 1
+		p.CastShadow = false
+		p:SetAttribute("KitCollider", true)
 	end
 
 	local function beam(name: string, a: Vector3, b: Vector3, thickness: number, color: Color3?, material: Enum.Material?, trans: number?): Part
@@ -206,6 +253,31 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	local function arch(at: Vector3, span: number, pierH: number, depthSize: number, color: Color3?, mat: Enum.Material?, rotY: number?)
+		if kitOn then
+			-- Kit arch: a plinth and stacked masonry courses per pier (tiled, so tall ramp-arch piers keep
+			-- their proportions) under a crown scaled to the span. The piers stay solid as hidden colliders.
+			group("Arch", function()
+				local cf = CFrame.new(at) * CFrame.Angles(0, rotY or 0, 0)
+				local trim = { TRIM = { Color = color or theme.TrimColor, Material = mat or theme.TrimMaterial } }
+				local kd = depthSize / 6.5
+				local baseH = KitProps.Size("ArchPierBase").Y
+				local segH = KitProps.Size("ArchPierSegment").Y
+				local rise = math.max(pierH - baseH, 1)
+				local courses = math.max(1, math.round(rise / segH))
+				for _, s in { -1, 1 } do
+					local pier = block("ArchPier", V(depthSize * 0.85, pierH, depthSize), V(0, 0, 0), color, mat)
+					pier.CFrame = CFrame.new(origin) * cf * CFrame.new(s * span / 2, pierH / 2, 0)
+					ghost(pier)
+					local foot = cf * CFrame.new(s * span / 2, 0, 0)
+					kitAt("ArchPierBase", foot, V(kd, 1, kd), trim)
+					for c = 1, courses do
+						kitAt("ArchPierSegment", foot * CFrame.new(0, baseH + (c - 1) * rise / courses, 0), V(kd, rise / courses / segH, kd), trim)
+					end
+				end
+				kitAt("ArchCrown", cf * CFrame.new(0, pierH, 0), V(span / 24, span / 24, kd), trim)
+			end)
+			return
+		end
 		group("Arch", function()
 			local c = color or theme.TrimColor
 			local m = mat or theme.TrimMaterial
@@ -242,6 +314,27 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	local function spire(at: Vector3, height: number, widthBase: number, color: Color3, glow: Color3, isCrystal: boolean?)
+		if kitOn and biomeKit then
+			group("Spire", function()
+				-- The shaft and plinth stay solid as hidden colliders.
+				ghost(block("SpirePlinth", V(widthBase * 1.45, 5, widthBase * 1.45), at + V(0, 2.5, 0), color))
+				ghost(block("SpireShaft", V(widthBase, height, widthBase), at + V(0, height / 2 + 3, 0), color))
+				local o = {
+					TRIM = { Color = color, Material = theme.TrimMaterial },
+					GLOW = { Color = glow },
+					STONE = if isCrystal then nil else { Color = color },
+				}
+				if isCrystal then
+					kitAt("CrystalSpire", CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), V(widthBase / 11, height / 32, widthBase / 11), { CRYSTAL = { Color = color } })
+				else
+					local name = biomeKit.Spire
+					local refH = if name == "ObsidianSpire" then 42 elseif name == "FurnaceStack" then 40 else 40
+					local refW = if name == "ObsidianSpire" then 12 elseif name == "FurnaceStack" then 13 else 10
+					kitAt(name, CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), V(widthBase / refW, height / refH, widthBase / refW), o)
+				end
+			end)
+			return
+		end
 		group("Spire", function()
 			local mat = if isCrystal then Enum.Material.Ice else theme.TrimMaterial
 			block("SpirePlinth", V(widthBase * 1.45, 5, widthBase * 1.45), at + V(0, 2.5, 0), color, mat)
@@ -265,6 +358,14 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	local function mushroom(at: Vector3, mScale: number, corrupted: boolean)
+		if kitOn then
+			group("Mushroom", function()
+				kitAt("GiantMushroom", CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), mScale, if corrupted
+					then { CAP = { Color = rgb(138, 36, 118) }, GLOW = { Color = rgb(235, 75, 185) } }
+					else { CAP = { Color = rgb(68, 48, 168) }, GLOW = { Color = rgb(95, 245, 235) } })
+			end)
+			return
+		end
 		group("Mushroom", function()
 			local stemH = 30 * mScale
 			local capR = 24 * mScale
@@ -293,6 +394,17 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	local function tree(at: Vector3, tScale: number, corrupted: boolean, dead: boolean)
+		if kitOn and biomeKit then
+			group("Tree", function()
+				local name = if corrupted then "BlightTree" elseif dead then "DeadTree" else biomeKit.Tree
+				-- The ruin tree's foliage stays green wherever it grows (the Verdant head, Corrupted fallbacks).
+				local o = if name == "BanyanTree" and biome ~= "verdant_ruins"
+					then { FOLIAGE = { Color = rgb(54, 122, 60), Material = Enum.Material.Grass }, WOOD = { Color = rgb(82, 64, 46) } }
+					else nil
+				kitAt(name, CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), tScale, o)
+			end)
+			return
+		end
 		group("Tree", function()
 			local wood = if corrupted then rgb(28, 20, 34) elseif dead then rgb(42, 34, 32) else rgb(78, 62, 44)
 			local leaf1 = rgb(36, 98, 48)
@@ -324,6 +436,14 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	local function statue(at: Vector3, sScale: number, kind: string, faceSignX: number?)
+		if kitOn then
+			group("Statue", function()
+				local rotY = if faceSignX then (faceSignX > 0 and -math.pi / 2 or math.pi / 2) else 0
+				local name = if kind == "LionGuardian" then "LionGuardian" elseif kind == "TridentKing" then "RobedStatueTrident" else "RobedStatueStaff"
+				kitAt(name, CFrame.new(at) * CFrame.Angles(0, rotY, 0), sScale, { GLOW = { Color = accent } })
+			end)
+			return
+		end
 		group("Statue", function()
 			local c = theme.TrimColor
 			local rotY = if faceSignX then (faceSignX > 0 and -math.pi / 2 or math.pi / 2) else 0
@@ -446,10 +566,13 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif biome == "ashen_dunes" then
 			local crag = block("InteriorObsidianCrag", V(16 * lScale, 42 * lScale, 18 * lScale), at + V(0, 18 * lScale, 0), rgb(28, 22, 24), Enum.Material.Basalt)
 			crag.CFrame *= CFrame.Angles(0.18, 0, signX * 0.32)
+			-- With the kit the crag is dressed in rock columns; the flat fissure strips would float off it.
+			if not kitOn then
 			local fissure1 = block("CragMagmaFissureFront", V(1.6 * lScale, 34 * lScale, 1.2), V(0, 0, 0), rgb(255, 115, 28), Enum.Material.Neon)
 			fissure1.CFrame = crag.CFrame * CFrame.new(0, 2 * lScale, 9.1 * lScale)
 			local fissure2 = block("CragMagmaFissureSide", V(1.2, 32 * lScale, 1.6 * lScale), V(0, 0, 0), rgb(255, 135, 38), Enum.Material.Neon)
 			fissure2.CFrame = crag.CFrame * CFrame.new(-signX * 8.1 * lScale, 2 * lScale, 0)
+			end
 			spire(at + V(-signX * 10 * lScale, 0, 8 * lScale), 32 * lScale, 8.5 * lScale, theme.TrimColor, rgb(255, 125, 35), false)
 			if variantSeed % 2 == 1 then
 				arch(at + V(-signX * 8, 0, 12), 24 * lScale, 20 * lScale, 6.5, theme.TrimColor, Enum.Material.Sandstone, 0.3 * signX)
@@ -458,12 +581,27 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		elseif biome == "frozen_citadel" then
 			spire(at, 44 * lScale, 11 * lScale, rgb(135, 210, 248), accent, true)
-			spire(at + V(-signX * 10, -2, 9), 28 * lScale, 7.5 * lScale, rgb(155, 225, 255), accent, true)
+			if kitOn then
+				-- A snow-laden pine beside the ice spire.
+				group("Pine", function()
+					local pineAt = at + V(-signX * 13 * lScale, 0, 9 * lScale)
+					kitAt("PineTree", CFrame.new(pineAt) * CFrame.Angles(0, yawAt(pineAt), 0), 0.95 * lScale)
+				end)
+			else
+				spire(at + V(-signX * 10, -2, 9), 28 * lScale, 7.5 * lScale, rgb(155, 225, 255), accent, true)
+			end
 		elseif biome == "infernal_foundry" then
 			spire(at, 46 * lScale, 13 * lScale, rgb(40, 30, 32), rgb(255, 108, 28), false)
 			arch(at + V(-signX * 10, 0, 0), 24 * lScale, 22 * lScale, 7.5, theme.TrimColor, Enum.Material.Metal, math.pi / 2)
 		elseif biome == "thunder_highlands" then
-			if variantSeed % 2 == 0 then
+			if kitOn and variantSeed % 2 == 0 then
+				-- Wind-bent highland pines.
+				group("Pine", function()
+					kitAt("PineTree", CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), 1.05 * lScale)
+					local twin = at + V(-signX * 11 * lScale, 0, 7 * lScale)
+					kitAt("PineTree", CFrame.new(twin) * CFrame.Angles(0, yawAt(twin), 0), 0.75 * lScale)
+				end)
+			elseif variantSeed % 2 == 0 then
 				cyl("InteriorHighlandTower", at + V(0, 18 * lScale, 0), 10 * lScale, 36 * lScale, theme.TrimColor, Enum.Material.Cobblestone)
 				cyl("InteriorTowerCrown", at + V(0, 37 * lScale, 0), 11.5 * lScale, 4 * lScale, theme.TrimColor, Enum.Material.Cobblestone)
 			else
@@ -490,7 +628,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	local isCosmic = biome == "astral_archives"
 	local isAbyss = biome == "abyssal_throne"
 
-	if seaLevel < 0 then
+	if seaLevel < 0 and not natural then
 		local basinSurface = block(
 			"ElementalBasinSea",
 			V(w - 12, 0.6, d - 12),
@@ -527,6 +665,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- =========================================================================
 	-- 2. FULL-HEIGHT 360° PERIMETER CLIFF RANGES, CORNER MASSIFS & NORTH HORIZON
 	-- =========================================================================
+	-- (Natural floors: the terrain's mountain walls stand here instead.)
+	if not natural then
 	-- Hide all 4 outer room corners (NW, NE, SW, SE) with full-height mountain/citadel massifs
 	for _, sx in { -1, 1 } do
 		for _, sz in { -1, 1 } do
@@ -571,13 +711,14 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				-- Stepped mid cliff & lower terrace ledge protruding into the room
 				block("PerimeterCliffBase", V(38, lowerH, d / sideCount + 12), V(xEdge - s * 8, bottom + lowerH / 2, zPos), cliffColor, cliffMat)
 				block("PerimeterCliffLedge", V(28, lowerH * 0.62, d / sideCount + 4), V(xEdge - s * 20, bottom + lowerH * 0.31, zPos + 4), theme.GroundColor, theme.GroundMaterial)
-				wedge(
+				-- The kit rocks already slope; the wedge would poke through them.
+				if not kitOn then wedge(
 					"PerimeterCliffSlope",
 					V(d / sideCount + 4, lowerH * 0.42, 20),
 					CFrame.new(xEdge - s * 22, bottom + lowerH * 0.78, zPos) * CFrame.Angles(0, if s > 0 then -math.pi / 2 else math.pi / 2, 0),
 					cliffColor,
 					cliffMat
-				)
+				) end
 
 				if k % 2 == 0 then
 					waterfall(V(xEdge - s * 26, bottom, zPos), 12, lowerH * 0.62, liquidColor, if s > 0 then -math.pi / 2 else math.pi / 2)
@@ -593,6 +734,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 	end
+
+	end -- not natural (perimeter)
 
 	-- =========================================================================
 	-- 3. INTERIOR CHASM ISLANDS & OVERHEAD BRIDGE ARCHES (FILLS MIDGROUND VIEW!)
@@ -660,6 +803,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	for idxIsland, isl in innerIslands do
+		if natural then break end -- the terrain has its own knolls and plateaus
 		for _, s in { -1, 1 } do
 			local islX: number?, islZ: number = nil, isl.Z
 			for _, dz in { 0, 12, -12, 24, -24 } do
@@ -689,10 +833,15 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 	-- Foreground & Midground Lantern / Brazier Colonnades, Basin Courtyard Gardens & Gallery Flanking Structures
 	-- Central causeway runner & curbing across the wide Basin terrace
-	block("BasinCentralCauseway", V(34, 0.14, basin.Depth - 4), V(0, basin.Y + 0.04, basin.Z), theme.TrimColor, theme.TrimMaterial)
-	block("BasinCausewayInlay", V(20, 0.18, basin.Depth - 8), V(0, basin.Y + 0.06, basin.Z), theme.AccentColor, theme.GroundMaterial)
+	if not natural then
+		block("BasinCentralCauseway", V(34, 0.14, basin.Depth - 4), V(0, basin.Y + 0.04, basin.Z), theme.TrimColor, theme.TrimMaterial)
+		block("BasinCausewayInlay", V(20, 0.18, basin.Depth - 8), V(0, basin.Y + 0.06, basin.Z), theme.AccentColor, theme.GroundMaterial)
+	end
 
 	for _, s in { -1, 1 } do
+		-- This side's own gallery (a floor's layout moves each side on its own).
+		local gal = if s < 0 then layout.Platforms.WestGallery else layout.Platforms.EastGallery
+		if not natural then
 		-- Sunken elemental pools / magma trenches / cloud basins on the lateral margins of the Basin courtyard
 		local poolPos = V(s * (basin.Width * 0.44), basin.Y + 0.06, basin.Z)
 		group("BasinPool", function()
@@ -721,17 +870,18 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end)
 
 		-- Beyond the gallery edge there is no terrace, so these stand on the chasm floor.
-		local galOuter = V(s * (math.abs(westGal.X) + westGal.Width * 0.5 + 14), bottom, westGal.Z)
+		local galOuter = V(gal.X + s * (gal.Width * 0.5 + 14), bottom, gal.Z)
 		arch(galOuter, 38 * scale, 28 * scale, 9, theme.TrimColor, theme.TrimMaterial, math.pi / 2)
 		populateLandmark(galOuter + V(s * 8, 0, -24), 1.15 * scale, 1, s)
 		populateLandmark(galOuter + V(s * 8, 0, 24), 1.1 * scale, 2, s)
+		end -- not natural (basin and gallery dressing)
 
-		if biome == "fungal_hollow" then
+		if biome == "fungal_hollow" and not natural then
 			for v = 1, 4 do
-				beam("MyceliumVein", V(s * math.abs(westGal.X), bottom + 1, westGal.Z - 25 + v * 12), V(s * (math.abs(westGal.X) - 28), westGal.Y, westGal.Z - 18 + v * 10), 0.8, accent, Enum.Material.Neon, 0.12)
+				beam("MyceliumVein", V(gal.X, bottom + 1, gal.Z - 25 + v * 12), V(gal.X - s * 28, gal.Y, gal.Z - 18 + v * 10), 0.8, accent, Enum.Material.Neon, 0.12)
 			end
 		elseif biome == "astral_archives" then
-			local pedAt = V(s * (crossing.Width * 0.5 + 12), crossing.Y, crossing.Z + 12)
+			local pedAt = V(crossing.X + s * (crossing.Width * 0.5 + 12), crossing.Y, crossing.Z + 12)
 			group("Lectern", function()
 				block("GrimoireLectern", V(5, 6, 5), pedAt + V(0, 3, 0), theme.GroundColor, Enum.Material.Marble)
 				block("OpenStarGrimoire", V(4.5, 0.8, 3.2), pedAt + V(0, 6.5, 0), gold, Enum.Material.Neon)
@@ -1101,7 +1251,13 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 	local function spawnBiomeClutter(at: Vector3, clScale: number, variantSeed: number)
 		group("Clutter", function()
-			if biome == "verdant_ruins" then
+			if kitOn and biomeKit then
+				local list = biomeKit.Clutter
+				local name = list[variantSeed % #list + 1]
+				-- Ashen urns are buried terracotta.
+				local o = if biome == "ashen_dunes" and name == "StoneUrn" then { TRIM = { Color = rgb(175, 95, 65), Material = Enum.Material.Slate } } else nil
+				kitAt(name, CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), clScale, o)
+			elseif biome == "verdant_ruins" then
 				if variantSeed % 3 == 0 then
 					foliageBush(at, clScale)
 				elseif variantSeed % 3 == 1 then
@@ -1135,6 +1291,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end)
 	end
 
+	if not natural then
 	-- 1. Lateral clutter beds across the wide Basin terrace (flanking the central causeway)
 	for _, s in { -1, 1 } do
 		for k = 1, 6 do
@@ -1171,6 +1328,195 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local gatePos2 = V(s * 35, safe.Y, safe.Z - 8)
 		spawnBiomeClutter(gatePos2, 0.95 * scale, s + 1)
 	end
+
+	end -- not natural (clutter beds)
+
+	-- =========================================================================
+	-- 7. NATURAL FLOORS: AN ECOSYSTEM SCATTERED OVER THE TERRAIN
+	-- =========================================================================
+	-- Groves on open ground (a centrepiece, smaller companions, understory around them), trees climbing the
+	-- mountain slopes, boulders, rock outcrops half sunk in the slopes and a few monoliths, from the biome's
+	-- Ecology (TowerBiomeKit). Spots come from the terrain field (ground kind and slope), keep apart from
+	-- each other (Poisson-style), stay out of every camp and walkway lane, and are seeded by the floor id,
+	-- so every floor grows its own landscape the same way each time it is built.
+	if natural and field and biomeKit then
+		local eco = Kit.Ecology[biome]
+		local floorId = (parent:GetAttribute("FloorId") :: number?) or index
+		local rand = Random.new(floorId * 7919 + 13)
+		local placed: { { number } } = {}
+		local function radiusOf(name: string, s: number): number
+			local t = Kit.Templates[name]
+			return if t then math.max(t.Size.X, t.Size.Z) * 0.5 * s * (Kit.RefScale[name] or 1) * 0.6 else 4
+		end
+		-- r keeps props apart; laneR (default r) keeps them off walkways: a tree's canopy may overhang a path
+		-- high above heads, so trees only keep their trunk clear.
+		local function free(x: number, z: number, r: number, laneR: number?): boolean
+			for _, p in placed do
+				local dx, dz = p[1] - x, p[2] - z
+				if dx * dx + dz * dz < (p[3] + r) ^ 2 then
+					return false
+				end
+			end
+			for _, camp in layout.Camps do
+				local dx, dz = camp.X - x, camp.Z - z
+				if dx * dx + dz * dz < (38 + r) ^ 2 then
+					return false
+				end
+			end
+			local lr = laneR or r
+			return footprintClear(x, z, lr, lr)
+		end
+		local function open(kind: string, slope: number): boolean
+			return (kind == "CHASM" or kind == "MOUNTAIN" or kind == "LAWN") and slope < 0.6
+		end
+		-- Counts scale with the floor's size (a floor 5 room holds over twice a floor 1 room's ground).
+		local density = w * d / (380 * 420)
+		-- The ground at a spot: the terrain, or the top of a big terrace (its open lawn; never the Sanctuary,
+		-- a bend terrace or a ramp).
+		local function ground(x: number, z: number): (number, string, number)
+			local y, kind = field.Sample(x, z)
+			if kind == "WALK" then
+				for id, t in layout.Platforms do
+					if math.abs(x - t.X) < t.Width / 2 - 4 and math.abs(z - t.Z) < t.Depth / 2 - 4 then
+						local lawn = id ~= "Sanctuary" and not t.Bend and t.Width >= 60
+						return t.Y, if lawn then "LAWN" else "WALK", 0
+					end
+				end
+			end
+			return y, kind, field.Slope(x, z)
+		end
+		local function search(r: number, accept: (string, number, number) -> boolean, near: Vector3?, spread: number?, laneR: number?): (number?, number, number)
+			for _ = 1, 36 do
+				local x, z
+				if near then
+					local a, dist = rand:NextNumber(0, math.pi * 2), rand:NextNumber(0.35, 1) * (spread or 20)
+					x, z = near.X + math.cos(a) * dist, near.Z + math.sin(a) * dist
+				else
+					x, z = rand:NextNumber(-w / 2 + 14, w / 2 - 14), rand:NextNumber(-d / 2 + 14, d / 2 - 14)
+				end
+				if math.abs(x) < w / 2 - 6 and math.abs(z) < d / 2 - 6 then
+					local y, kind, slope = ground(x, z)
+					if accept(kind, slope, y) and free(x, z, r, laneR) then
+						return x, y, z
+					end
+				end
+			end
+			return nil, 0, 0
+		end
+		local function put(propKind: string, name: string, x: number, y: number, z: number, s: number, r: number, sink: number?)
+			table.insert(placed, { x, z, r })
+			group(propKind, function()
+				-- Placed on the terrain's own surface: the settle pass leaves it alone (TowerPropClearance).
+				currentParent:SetAttribute("OnTerrain", true)
+				local tilt = CFrame.Angles(rand:NextNumber(-0.05, 0.05), rand:NextNumber(0, math.pi * 2), rand:NextNumber(-0.05, 0.05))
+				kitAt(name, CFrame.new(x, y - (sink or 0.4), z) * tilt, s)
+			end)
+		end
+		local function pick(list: { string }): string
+			return list[rand:NextInteger(1, #list)]
+		end
+		-- Groves
+		for _ = 1, math.round(eco.Groves * 1.5 * density) do
+			local name = pick(eco.Trees)
+			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2])
+			local r = radiusOf(name, s)
+			local x, y, z = search(r, function(kind, slope) return open(kind, slope) end, nil, nil, r * 0.35)
+			if not x then continue end
+			put("Grove", name, x, y, z, s, r)
+			local centre = V(x, y, z)
+			for _ = 1, rand:NextInteger(1, eco.Companions + 1) do
+				local cs = s * rand:NextNumber(0.5, 0.8)
+				local cr = radiusOf(name, cs)
+				local cx, cy, cz = search(cr, function(kind, slope) return open(kind, slope) end, centre, r * 2.6, cr * 0.35)
+				if cx then put("Grove", name, cx, cy, cz, cs, cr) end
+			end
+			for _ = 1, eco.UnderPerGrove do
+				local under = pick(eco.Understory)
+				local us = rand:NextNumber(0.8, 1.35)
+				local ur = radiusOf(under, us)
+				local ux, uy, uz = search(ur, function(kind, slope)
+					return kind ~= "WALK" and kind ~= "BRIDGE" and kind ~= "POOL" and slope < 0.8
+				end, centre, r * 2.2)
+				if ux then put("Understory", under, ux, uy, uz, us, ur) end
+			end
+		end
+		-- Meadow: small understory scattered loosely over open ground and terrace lawns.
+		for _ = 1, math.floor(w * d / 1800) do
+			local name = pick(eco.Understory)
+			local ms = rand:NextNumber(0.6, 1.1)
+			local mr = radiusOf(name, ms)
+			local mx, my, mz = search(mr, function(kind, slope)
+				return (kind == "CHASM" or kind == "LAWN" or kind == "MOUNTAIN") and slope < 0.6
+			end)
+			if mx then put("Meadow", name, mx, my, mz, ms, mr, 0.3) end
+		end
+		-- Plateau rims: understory and boulders just inside each terrace's edge (never on a walkway or in a camp).
+		for id, t in layout.Platforms do
+			if id == "Sanctuary" then continue end
+			for _ = 1, math.floor((t.Width + t.Depth) / 40) do
+				local side = rand:NextInteger(1, 4)
+				local along = rand:NextNumber(-0.45, 0.45)
+				local x = if side <= 2 then t.X + along * t.Width else t.X + (if side == 3 then -1 else 1) * (t.Width / 2 - 5)
+				local z = if side <= 2 then t.Z + (if side == 1 then -1 else 1) * (t.Depth / 2 - 5) else t.Z + along * t.Depth
+				local name = if rand:NextNumber() < 0.7 then pick(eco.Understory) else "BoulderCluster"
+				local us = rand:NextNumber(0.8, 1.3)
+				local ur = radiusOf(name, us)
+				if free(x, z, ur) then put("TerraceEdge", name, x, t.Y, z, us, ur, 0.2) end
+			end
+		end
+		-- Trees climbing the mountain slopes
+		for _ = 1, math.round(eco.SlopeForestCount * 1.5 * density) do
+			local name = pick(eco.SlopeForest)
+			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2]) * 0.85
+			local r = radiusOf(name, s) * 0.7
+			local x, y, z = search(r, function(kind, slope, y)
+				return kind == "MOUNTAIN" and slope < 0.8 and y > field.Bottom + 6
+			end)
+			if x then put("SlopeTree", name, x, y, z, s, r, 1.2) end
+		end
+		-- Boulders
+		for _ = 1, math.round(eco.Rocks * density) do
+			local s = rand:NextNumber(0.9, 2.2)
+			local r = radiusOf("BoulderCluster", s)
+			local x, y, z = search(r, function(kind, slope)
+				return kind ~= "WALK" and kind ~= "BRIDGE" and kind ~= "POOL" and slope < 1.1
+			end)
+			if x then put("Boulders", "BoulderCluster", x, y, z, s, r, 0.6) end
+		end
+		-- Rock outcrops half sunk in the slopes
+		for i = 1, math.round(eco.Outcrops * 1.5 * density) do
+			local name = if i % 2 == 0 then "CliffRockA" else "CliffRockB"
+			local s = rand:NextNumber(0.16, 0.32)
+			local r = radiusOf(name, s) * 0.8
+			local x, y, z = search(r, function(kind, slope)
+				return (kind == "MOUNTAIN" or kind == "APRON") and slope > 0.45 and slope < 2.6
+			end)
+			if x then put("Outcrop", name, x, y, z, s, r, 2.5) end
+		end
+		-- Monoliths
+		for _ = 1, eco.MonolithCount do
+			local name = pick(eco.Monoliths)
+			local s = rand:NextNumber(eco.MonolithScale[1], eco.MonolithScale[2])
+			local r = radiusOf(name, s)
+			local x, y, z = search(r, function(kind, slope) return kind == "CHASM" and slope < 0.3 end)
+			if x then put("Monolith", name, x, y, z, s, r, 0.6) end
+		end
+		kit:SetAttribute("EcosystemProps", #placed)
+	end
+
+	-- Kit rock over the cliff, ledge and island boxes (after every caller has set its final CFrame). Each box
+	-- stays as the invisible collider and support; the rock takes its colour and material from the box.
+	local roomCentre = origin + V(0, 0, 0)
+	local dressed = 0
+	for _, p in pendingDress do
+		if p.Parent then
+			local names = kitDress[p.Name]
+			if names then
+				dressed += KitProps.DressBox(p, names, resolveRole, roomCentre + V(0, p.Position.Y - origin.Y, 0), { STONE = { Color = p.Color, Material = p.Material } })
+			end
+		end
+	end
+	kit:SetAttribute("KitRocks", dressed)
 
 	-- Keep every enemy camp completely clear of props (removed whole, see TowerPropClearance).
 	kit:SetAttribute("PropsClearedForCamps", PropClearance.Apply(kit, Assets.CampHitTest(origin, layout)))

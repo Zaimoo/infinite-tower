@@ -18,6 +18,14 @@ Infinite Tower uses **one shared server-authoritative navigation solver** (`Hero
 | `src/ServerScriptService/Combat/HeroTargeting.luau` | Per-tick combat target retention, focus priority, squad assist, connector `RouteCost` scoring, and generation-scoped unreachable target exclusion. |
 | `src/StarterPlayerScripts/Rendering/EntityRenderer.client.luau` | 60 FPS visual interpolation of 5 Hz server snapshots with ramp/landing support clamping and distinct teleport snapping. |
 
+## 2a. Per-Floor Layouts
+
+Every floor except floor 1 (the onboarding floor) has its own variation of its canonical layout, seeded by its floor id (`TowerLayout.Get(index, floorId)`): galleries, bastions, the Crossing and the Apex shift, resize and change height, each side on its own, and the long climbs to the Apex may wind through a small `Bend_<From>_<To>` terrace (`Bend = true`, no camp) as two ordinary connectors. The Sanctuary and the Basin never move. A variation is kept only if `TowerLayout.Validate` finds nothing the canonical layout does not already have (terraces overlapping or leaving the room, connectors running over a terrace or crossing, cramped camps); otherwise the next seed is tried, and the canonical layout is the fallback.
+
+Every consumer passes the floor id: `HeroNavigation` and `SquadMovement` keep one graph per floor, and camps, patrol routes (which follow both connectors of a bent path), boss portal spots, clearance lanes, the Relic Rain ramps and camp scaling all read the floor's own layout. `TowerNavigationGraph` needs no change: a bend terrace is just another node. `tests/tower-layout-variants.spec.luau` checks all 50 floors: determinism, validity, slopes, camps and patrols on walkways, and a route from the Sanctuary to every camp and terrace.
+
+On natural floors (GDD §3.3) the voxel terrain (`TowerTerrain`) never adds a way onto a walkway: within reach of a terrace, ramp or landing it stays a full voxel (4.5 studs) under its top and edge (voxel surfaces render a little off their requested height), never digs under the chasm floor (whose invisible Ground slab is the walking surface there), and falls away at 1.4 studs per stud or steeper, beyond `Navigation.Ground`'s 0.65 normal limit. A mountain may rise beside a walkway only as a canyon wall: past a 6-stud moat and at least 8 studs above every walkway in reach. Ramp curbs stay as invisible colliders, and the chasm's Ground slab stays as an invisible catch.
+
 ## 2. Shared Connector Contract & Physical Joins (`TowerLayout` / `TowerRoomBuilder`)
 
 1. **Connector Metadata:** Every link in `TowerLayout` defines:
