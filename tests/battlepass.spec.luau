@@ -328,4 +328,22 @@ test("quests: every quest metric has a source", function()
 	end
 end)
 
+test("Robux Gold packs grant minutes of frontier income and never less than their listed amount", function()
+	local Income = require(nodes["ReplicatedStorage.Shared.Util.FrontierIncome"])
+	local purse, hoard = ShopConfig.ById("gold_100k"), ShopConfig.ById("gold_1680k")
+	assert(purse and hoard and purse.IncomeMinutes == 10 and hoard.IncomeMinutes == 168)
+	assert(ShopConfig.GrantAmount(purse, 0) == 100000, "a new Master gets the listed amount")
+	assert(ShopConfig.GrantAmount(purse, nil) == 100000 and ShopConfig.GrantAmount(purse, 0 / 0) == 100000)
+	local last = 0
+	for floor = 1, 50 do
+		local rate = Income.GoldPerMinute(floor)
+		assert(rate >= last, "frontier income never falls as the Master climbs")
+		last = rate
+	end
+	local late = ShopConfig.GrantAmount(purse, 50)
+	assert(late == Income.Round(10 * Income.GoldPerMinute(50)) and late > 10000000, "a Floor 50 purse is ten minutes of Floor 50 income")
+	assert(ShopConfig.GrantAmount(hoard, 50) > 16 * late, "the bigger packs keep their bonus")
+	assert(ShopConfig.GrantAmount(ShopConfig.ById("gems_15700") :: any, 50) == 15700, "Gem packs never scale")
+end)
+
 print(string.format("battlepass.spec: %d passed", passed))

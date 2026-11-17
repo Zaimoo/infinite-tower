@@ -90,6 +90,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/NewsRules.luau',
     'ReplicatedStorage/Shared/Config/GuideConfig.luau',
     'ServerScriptService/Core/GuideLessons.luau',
+    'ReplicatedStorage/Shared/Util/FrontierIncome.luau',
     'ReplicatedStorage/Shared/Config/ShopConfig.luau',
     'ReplicatedStorage/Shared/Util/FortressTree.luau',
     'ReplicatedStorage/Shared/Util/InventoryCapacity.luau',

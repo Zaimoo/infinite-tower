@@ -222,8 +222,9 @@ function ArtifactCatalog.CalculateSellPrice(rarity: number, star: number, seedOr
 	return math.floor(basePrice * (1 + 0.5 * (s - 1)))
 end
 
-function ArtifactCatalog.GetStarPromotionCost(currentStar: number): any?
-	return B.Integer(currentStar, 1, 6) and B.WeaponPromotionCosts[currentStar] or nil
+-- Gold scales with the weapon's rarity (StatBalance.RarityGoldFactor); donors and Gems do not.
+function ArtifactCatalog.GetStarPromotionCost(currentStar: number, rarity: number?): any?
+	return B.WeaponPromotionCost(currentStar, rarity)
 end
 
 function ArtifactCatalog.GetFodderRequirement(currentStar: number): number

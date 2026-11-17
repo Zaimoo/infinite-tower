@@ -501,7 +501,7 @@ Archetypes define a hero's **combat role, base stats, attack cadence, range, lab
 ### 4.2a The Pit: Synthesis & Promotion
 The Pit (`PitService`, `PitBalanceConfig`, `PitMath`) holds the Synthesis Chamber and the Promotion Altar.
 - **Synthesis:** feed up to 100 donor heroes into a recipient. A donor is worth $100 	imes 3^{(E_{\star}-1)} + 25 	imes L$ EXP, where $E_{\star}$ is its effective star (Stars + Rarity − 1, capped at 7). Over-levelled donors lose efficiency (2.5% per level past a 5-level grace, never below 55%). Donors at 5★ effective or higher ask for confirmation. Synthesis costs **1 Gold per EXP applied** (rounded up, at least 50 Gold; EXP lost over the cap is not charged), set by `PitBalanceConfig.Synthesis.GoldPerXP` / `MinimumGold` and computed by `PitMath.GetSynthesisGoldCost`. The Synthesize button and the footer show the cost, and the server refuses the synthesis without enough Gold.
-- **Promotion** (Gold and Promotion Stones; the hero must be at Lv. 10 of its star):
+- **Promotion** (Gold and Promotion Stones; the hero must be at Lv. 10 of its star). The Gold below is the **base** price: it is multiplied by the hero's inherent rarity factor, **×1 Common and Uncommon, ×1.5 Rare, ×3 Superior, ×8 Exalted, ×25 Legendary, ×60 Mythical** (mirror heroes, rarity 7–11, use ×60), so late-game promotions keep pace with late-game Gold (`StatBalance.RarityGoldFactor`, `StatFormulas.GetPromotionGoldCost`). A full 1★ → 7★ path costs about 1.9M Gold for a Common, 47M for a Legendary and 114M for a Mythical. Promotion Stones are not scaled.
 
   | Step | Gold | Promotion Stones |
   | --- | --- | --- |
@@ -512,7 +512,7 @@ The Pit (`PitService`, `PitBalanceConfig`, `PitMath`) holds the Synthesis Chambe
   | 5★ → 6★ | 450,000 | 40 |
   | 6★ → 7★ | 1,250,000 | 85 |
 
-- **Mirror heroes** (§4.1) promote at the same Gold and Stone costs **without a level requirement** (they don't level: no synthesis EXP, no combat EXP), and each star adds +2% to their mirror share. Promoting the best normal hero is usually the better buy, since every mirror hero copies its ×1.5.
+- **Mirror heroes** (§4.1) promote at the same Gold (at the ×60 factor) and Stone costs **without a level requirement** (they don't level: no synthesis EXP, no combat EXP), and each star adds +2% to their mirror share. Promoting the best normal hero is usually the better buy, since every mirror hero copies its ×1.5.
 - **The last normal hero** can't be a donor, alone or with others: mirror heroes copy it (`PitService.LastNormalHeroReason`).
 - **Promotion Stones** drop from tower kills (`TowerFloorConfig.RollPromotionStones`, more on a first clear) and come with banked relics (0 / 1 / 2 / 5 for a Geode / Urn / Core / Heart, §5.5). New profiles start with 2.
 - **Soul Essence was removed**, with the Conversion (dissolve heroes into essence) and Craft (essence into Promotion Stones) actions that never had a screen. Synthesis and Promotion are the only Pit actions, so duplicates have one use: EXP. Schema v9 turns held essence into Promotion Stones (§8.3).
@@ -958,6 +958,9 @@ Potions are consumables kept in the Backpack's **Potions** tab. Drinking one sta
 
 ---
 
+### 4.10 Store Gold Packs
+The three Robux Gold packs (`ShopConfig.Gold`: Coin Purse 19 R$, Gold Strongbox 79 R$, Dragon's Hoard 199 R$) grant the **larger** of their listed amount (100K / 520K / 1.68M) and **10 / 52 / 168 minutes of the buyer's frontier income**, so a pack keeps its value as the Master climbs instead of becoming worth less than one relic. Frontier income (`Util/FrontierIncome`) is a fixed model of base tower Gold per minute on the Master's highest cleared floor: 30 Regular and 3 Elite kills plus one banked Regular relic (the floor's Geode/Urn mix), without Market, streak, friend or potion bonuses; Floor 50 is about 1.6M Gold per minute. The server works out the amount when the receipt is granted (`ShopConfig.GrantAmount`), and the Store card shows the same number. Gem packs do not scale.
+
 ## 5. BIOME BOSS ENCOUNTER DESIGN (MILESTONE FLOORS)
 
 ### 5.1 Architecture & Biome Milestone Cadence
@@ -1143,7 +1146,7 @@ Higher rarities (Tiers 8–16) retain stat formulas in [the complete weapon matr
 
 ### 7.3 Weapon Star Promotion (1★ to 7★)
 
-Promotion consumes other weapons of the **same rarity tier and star rank** (any weapon type, e.g., swords, daggers, bows, axes, staves, tomes), plus the listed Gold/Gems (`WeaponPromotion.IsDonorFor`). The recipient's inherent rarity never changes. Reject locked, equipped, duplicate, or recipient-as-donor UUIDs. Consumed donors return no previous investment. No random success roll applies.
+Promotion consumes other weapons of the **same rarity tier and star rank** (any weapon type, e.g., swords, daggers, bows, axes, staves, tomes), plus the listed Gold/Gems (`WeaponPromotion.IsDonorFor`). The Gold in the table is the base price and is multiplied by the weapon's rarity factor, the same table as hero promotion (×1 Common and Uncommon, ×1.5 Rare, ×3 Superior, ×8 Exalted, ×25 Legendary, ×60 Mythical and above, `StatBalance.WeaponPromotionCost`). Donors and Gems are not scaled. The recipient's inherent rarity never changes. Reject locked, equipped, duplicate, or recipient-as-donor UUIDs. Consumed donors return no previous investment. No random success roll applies.
 
 | Result stars | Power multiplier | Donors for this step | Gold | Gems |
 | --- | --- | --- | --- | --- |

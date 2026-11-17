@@ -114,7 +114,7 @@ end
 function Model.upgradeReason(snapshot: Snapshot, targetId: string?, materialIds: { string }): string?
 	local target = targetId and snapshot.Artifacts[targetId]
 	if not target then return "Choose an artifact to upgrade" end
-	local rule = Catalog.GetStarPromotionCost(target.Star)
+	local rule = Catalog.GetStarPromotionCost(target.Star, target.Rarity)
 	if not rule then return "Maximum 7 stars reached" end
 	local materials = Model.materials(snapshot, targetId, materialIds)
 	if #materials ~= #materialIds then return "Artifacts changed. Select eligible artifacts again." end

@@ -900,7 +900,7 @@ function C.UpgradePreviewPanel(props: { Snapshot: Snapshot, Target: Artifact, Ma
 	afterTarget.Star = math.min(Catalog.MaxStars, target.Star + 1)
 	local before = Catalog.GetStatBreakdown(target.TemplateId, target.Star, target.Rarity)
 	local after = Catalog.GetStatBreakdown(target.TemplateId, afterTarget.Star, target.Rarity)
-	local rule = Catalog.GetStarPromotionCost(target.Star)
+	local rule = Catalog.GetStarPromotionCost(target.Star, target.Rarity)
 	local owners = Model.ownerIds(props.Snapshot, target.UUID)
 	local hero = #owners == 1 and props.Snapshot.Heroes[owners[1]] or nil
 	local children: { [string]: any } = {

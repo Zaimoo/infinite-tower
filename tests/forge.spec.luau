@@ -260,6 +260,7 @@ end
 
 test("Six-donor final promotion preserves rarity and commits exact resources once", function()
 	local p, d = fixture()
+	p.Currencies.Gold = 50000 + Balance.WeaponPromotionCost(6, 7).Gold
 	local target = p.Artifacts.target
 	local ok, _, star = Promotion.Promote(p, "target", d)
 	assert(ok)
@@ -281,19 +282,20 @@ test("Every promotion step charges exactly once and retains identity, rarity and
 			p.Artifacts[donorId].Star = star
 		end
 		for i = 6, star + 1, -1 do d[i] = nil end
-		local rule = Balance.WeaponPromotionCosts[star]
+		local rule = Balance.WeaponPromotionCost(star, 7)
+		p.Currencies.Gold = 300000 + rule.Gold
 		local before = p.Artifacts.target
 		local ok = Promotion.Promote(p, "target", d)
 		assert(ok)
 		assert(p.Artifacts.target == before)
 		assertEqual(before.Star, star + 1)
 		assertEqual(before.Rarity, 7)
-		assertEqual(p.Currencies.Gold, 300000 - rule.Gold)
+		assertEqual(p.Currencies.Gold, 300000)
 		assertEqual(p.Currencies.Gems, 1000 - rule.Gems)
 		local _, speed = ArtifactCatalog.CalculateEffectiveStats(before.Star, before.Rarity)
 		assertEqual(speed, 0.3)
 		assert(not Promotion.Promote(p, "target", d))
-		assertEqual(p.Currencies.Gold, 300000 - rule.Gold)
+		assertEqual(p.Currencies.Gold, 300000)
 	end
 end)
 
@@ -410,3 +412,33 @@ test("Formatting supports damage and health above unsigned 32-bit range", functi
 end)
 
 print("All Forge spec tests passed successfully!")
+
+test("Promotion Gold scales with rarity for weapons and heroes; donors, Gems and stones do not", function()
+	assertEqual(Balance.RarityGoldFactor(1), 1)
+	assertEqual(Balance.RarityGoldFactor(6), 25)
+	assertEqual(Balance.RarityGoldFactor(7), 60)
+	assertEqual(Balance.RarityGoldFactor(11), 60)
+	assertEqual(Balance.RarityGoldFactor(nil), 1)
+	for star = 1, 6 do
+		local base = Balance.WeaponPromotionCosts[star]
+		local mythic = ArtifactCatalog.GetStarPromotionCost(star, 7)
+		assertEqual(mythic.Gold, base.Gold * 60)
+		assertEqual(mythic.Donors, base.Donors)
+		assertEqual(mythic.Gems, base.Gems)
+		assertEqual(ArtifactCatalog.GetStarPromotionCost(star, 1).Gold, base.Gold)
+	end
+	assert(ArtifactCatalog.GetStarPromotionCost(7, 7) == nil)
+	assertEqual(Stats.GetPromotionGoldCost(6, 7), 75000000)
+	assertEqual(Stats.GetPromotionGoldCost(6, 6), 31250000)
+	assertEqual(Stats.GetPromotionGoldCost(1, 1), 1500)
+	-- A Common weapon is charged its base price; a Mythical one cannot be promoted on a Common budget.
+	local p, d = fixture()
+	p.Artifacts.target.Star = 1
+	for _, donorId in ipairs(d) do p.Artifacts[donorId].Star = 1 end
+	for i = 6, 2, -1 do d[i] = nil end
+	p.Currencies.Gold = 500
+	assert(not Promotion.Promote(p, "target", d), "Mythical 1★ costs 30,000 Gold, not 500")
+	p.Currencies.Gold = 30000
+	assert(Promotion.Promote(p, "target", d))
+	assertEqual(p.Currencies.Gold, 0)
+end)

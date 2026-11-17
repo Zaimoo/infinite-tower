@@ -13,7 +13,7 @@ function P.Promote(profile: any, targetUUID: any, donors: any): (boolean,string,
 	local target=inventory and inventory[targetUUID]
 	if not target then return false,"Weapon not found",nil end
 	if not B.Integer(target.Star,1,7) or not B.Integer(target.Rarity,1,16) then return false,"Invalid weapon progression",nil end
-	local rule=B.WeaponPromotionCosts[target.Star]
+	local rule=B.WeaponPromotionCost(target.Star,target.Rarity)
 	if not rule then return false,"Maximum 7-star rank reached",target.Star end
 	local count=0
 	for key in pairs(donors) do

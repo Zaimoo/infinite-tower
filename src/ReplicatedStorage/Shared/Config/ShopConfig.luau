@@ -8,7 +8,9 @@
 -- Do not go live until player profiles are saved to a DataStore, or purchases are lost on leave.
 --
 -- Grants:
---   Gems / Gold: added to the profile's Currencies.
+--   Gems / Gold: added to the profile's Currencies. A Gold offer with IncomeMinutes grants the larger of its
+--                Amount and that many minutes of the buyer's frontier income (FrontierIncome, GDD §4.10), so a
+--                pack keeps its value as the Master climbs. The Store shows the same number.
 --   Summons:     free pulls on a hero banner. These are paid random items, so players whose
 --                PolicyService marks paid random items as restricted never see them, and the
 --                server converts any such purchase into Gems (the banner's 1x price per summon).
@@ -25,6 +27,7 @@ export type Offer = {
 	Grant: Grant,
 	Tag: string?, -- e.g. "BEST VALUE", "+20%"
 	WasPrice: number?, -- struck-through reference price
+	IncomeMinutes: number?, -- Gold offers: minutes of frontier income granted when that beats Amount
 }
 
 local ShopConfig = {}
@@ -32,6 +35,7 @@ local ShopConfig = {}
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HeroCatalog = require(ReplicatedStorage.Shared.Config.HeroCatalog)
 local ArtifactCatalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
+local FrontierIncome = require(ReplicatedStorage.Shared.Util.FrontierIncome)
 
 -- Gems a restricted player gets per summon: the 1x price of the banner the pack pulls on.
 function ShopConfig.GemsPerSummon(banner: string?): number
@@ -88,9 +92,9 @@ ShopConfig.Gems = table.freeze({
 } :: { Offer })
 
 ShopConfig.Gold = table.freeze({
-	table.freeze({ Id = "gold_100k", ProductId = 0, RobuxPrice = 19, Label = "Coin Purse", Grant = { Kind = "Gold", Amount = 100000 } }),
-	table.freeze({ Id = "gold_520k", ProductId = 0, RobuxPrice = 79, Label = "Gold Strongbox", Tag = "+25%", Grant = { Kind = "Gold", Amount = 520000 } }),
-	table.freeze({ Id = "gold_1680k", ProductId = 0, RobuxPrice = 199, Label = "Dragon's Hoard", Tag = "BEST VALUE", Grant = { Kind = "Gold", Amount = 1680000 } }),
+	table.freeze({ Id = "gold_100k", ProductId = 0, RobuxPrice = 19, Label = "Coin Purse", IncomeMinutes = 10, Grant = { Kind = "Gold", Amount = 100000 } }),
+	table.freeze({ Id = "gold_520k", ProductId = 0, RobuxPrice = 79, Label = "Gold Strongbox", Tag = "+25%", IncomeMinutes = 52, Grant = { Kind = "Gold", Amount = 520000 } }),
+	table.freeze({ Id = "gold_1680k", ProductId = 0, RobuxPrice = 199, Label = "Dragon's Hoard", Tag = "BEST VALUE", IncomeMinutes = 168, Grant = { Kind = "Gold", Amount = 1680000 } }),
 } :: { Offer })
 
 -- Premium Battle Pass (GDD §4.9). One purchase per season; the Battle Pass window sells it.
@@ -117,6 +121,14 @@ end
 
 function ShopConfig.ById(id: string): Offer?
 	return byId[id]
+end
+
+-- How much an offer grants a Master whose highest cleared floor is `highestClearedFloor`. Only Gold offers with
+-- IncomeMinutes scale; they never grant less than their listed Amount.
+function ShopConfig.GrantAmount(offer: Offer, highestClearedFloor: number?): number
+	if offer.Grant.Kind ~= "Gold" or not offer.IncomeMinutes then return offer.Grant.Amount end
+	local scaled = FrontierIncome.Round(offer.IncomeMinutes * FrontierIncome.GoldPerMinute(highestClearedFloor))
+	return math.max(offer.Grant.Amount, scaled)
 end
 
 -- Summons granted to a player who may not buy paid random items become Gems instead.

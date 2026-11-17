@@ -46,6 +46,20 @@ B.WeaponPromotionCosts = table.freeze({
 	[5] = table.freeze({Donors=5, Gold=75000, Gems=150}),
 	[6] = table.freeze({Donors=6, Gold=250000, Gems=500}),
 })
+-- Promotion Gold scales with inherent rarity, for heroes at The Pit and weapons at the Forge, so late-game
+-- promotions keep pace with late-game income. Tier 7 and above (Mythical, mirror heroes, Gildforged weapons)
+-- use the Mythical factor. Gems, donors and Promotion Stones are not scaled.
+B.RarityGoldMultiplier = table.freeze({1, 1, 1.5, 3, 8, 25, 60})
+function B.RarityGoldFactor(tier: any): number
+	local t = if B.Integer(tier, 1, 16) then tier else 1
+	return B.RarityGoldMultiplier[math.min(t, #B.RarityGoldMultiplier)]
+end
+-- The cost to promote a weapon of `rarity` from `star` to star + 1, or nil at 7★.
+function B.WeaponPromotionCost(star: any, rarity: any): any?
+	local rule = if B.Integer(star, 1, 6) then B.WeaponPromotionCosts[star] else nil
+	if not rule then return nil end
+	return table.freeze({Donors=rule.Donors, Gold=math.round(rule.Gold*B.RarityGoldFactor(rarity)), Gems=rule.Gems})
+end
 function B.Finite(value: any): boolean
 	return type(value)=="number" and value==value and math.abs(value)<math.huge
 end

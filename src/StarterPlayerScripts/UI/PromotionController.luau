@@ -1170,7 +1170,7 @@ function Promo.Render(self: any)
 	else
 		local stoneColor = C.TextMuted
 		if rule then
-			local reqGold, reqStones = rule.Gold or 1500, rule.PromotionStone or 1
+			local reqGold, reqStones = StatFormulas.GetPromotionGoldCost(recipient.Stars, StatFormulas.GetHeroRarity(recipient)), rule.PromotionStone or 1
 			self.CostLabel.Text = string.format(
 				'<font color="%s">GOLD: %s / %s</font>',
 				if goldOwned >= reqGold then "#39ff14" else "#ff5f55",
