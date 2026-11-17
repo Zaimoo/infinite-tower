@@ -225,9 +225,11 @@ do
 	near(skill.TravelSeconds, 0.9, "the constellation has time to draw before the first stars fall")
 	near(recipe.Skill.Radius, astrea.Skill.Radius, "constellation radius matches the kit")
 
-	-- The spin: Root keys that add up to one full turn, each under 180 degrees from the last,
-	-- finished before the release.
+	-- The spin: Root keys that add up to one full turn, each under 180 degrees from the last.
+	-- She lands side-on and holds that facing through the draw and the shot (squaring up only
+	-- after), so her facing last changes before the draw hand takes the string.
 	local skillClip = Clips.Get("hero_astrea", "BOW", "AttackSkill")
+	local skillRelease = Clips.Marker(skillClip, "Release", -1)
 	local turned, yaw, spunBy = 0, 0, 0
 	for _, key in skillClip.Keys do
 		local root = key.Pose.Root
@@ -236,12 +238,12 @@ do
 		assert(math.abs(step) < 180, "spin keys take the short way round")
 		turned += step
 		yaw = nextYaw
-		if root then
+		if math.abs(step) > 1e-3 and key.T <= skillRelease then
 			spunBy = key.T
 		end
 	end
 	near(turned, 360, "Constellation Judgment spins one full turn")
-	assert(spunBy < Clips.Marker(skillClip, "Release", -1), "the spin ends before the shot")
+	assert(skillClip.Draw and spunBy < skillClip.Draw.Set, "the spin ends before she draws for the shot")
 
 	-- The figure: every star inside the unit disc, every line between two stars and starting
 	-- from one already drawn, and every star on a line.
