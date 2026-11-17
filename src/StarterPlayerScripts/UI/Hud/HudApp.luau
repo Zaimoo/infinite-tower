@@ -251,31 +251,83 @@ local function rail(name: string, side: "Left" | "Right", top: number, bottom: n
 	}, children)
 end
 
--- The travel row: teleport buttons side by side at the top centre of the screen.
-local function travelRow(buttons: { any }, size: number, top: number)
-	local cellW = size + 24
-	local cellH = size + math.floor(math.floor(size * 0.36) * 0.55) -- RailButton's own height
+-- The travel row: teleport pills side by side inside Roblox's top bar, at the very top of the
+-- screen. The HUD root stops under the top bar (CoreUISafeInsets), so the row gets its own
+-- full-screen layer. Each pill is a rounded rectangle with bold text and no icon. When the top
+-- bar has no room for the row (a narrow phone), it sits just under the bar instead.
+local TRAVEL_GAP = 8
+local function travelPillSize(compact: boolean): Vector2
+	return if compact then Vector2.new(74, 30) else Vector2.new(92, 36)
+end
+local function travelRowWidth(count: number, compact: boolean): number
+	return count * travelPillSize(compact).X + (count - 1) * TRAVEL_GAP
+end
+-- True when the row fits in the free part of Roblox's top bar.
+local function travelFitsTopbar(count: number, compact: boolean): boolean
+	local bar = GuiService.TopbarInset
+	return bar.Height >= travelPillSize(compact).Y and bar.Width >= travelRowWidth(count, compact) + 16
+end
+local function travelRow(buttons: { any }, compact: boolean, screenX: number, below: number)
+	local pill = travelPillSize(compact)
+	local width = travelRowWidth(#buttons, compact)
+	local bar = GuiService.TopbarInset
+	local inBar = travelFitsTopbar(#buttons, compact)
+	local centerX = if inBar then math.clamp(screenX / 2, bar.Min.X + width / 2 + 8, bar.Max.X - width / 2 - 8) else screenX / 2
+	local top = if inBar then bar.Min.Y + math.floor((bar.Height - pill.Y) / 2) else bar.Max.Y + below
 	local children: { [string]: any } = {
-		Layout = e("UIGridLayout", {
-			CellSize = UDim2.fromOffset(cellW, cellH),
-			CellPadding = UDim2.fromOffset(L.RailGap, 0),
+		Layout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, TRAVEL_GAP),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	}
 	for i, b in buttons do
-		b.Order = i
-		b.Size = size
-		b.TipSide = "Right"
-		children["B" .. i] = e(Components.RailButton, b)
+		local accent: Color3 = b.Accent
+		children["B" .. i] = e("TextButton", {
+			Name = b.Label .. "RailButton", -- the onboarding guide points at these names
+			LayoutOrder = i,
+			Size = UDim2.fromOffset(pill.X, pill.Y),
+			BackgroundColor3 = accent,
+			AutoButtonColor = true,
+			Text = "",
+			[React.Event.Activated] = b.OnActivated,
+		}, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
+			Shade = e("UIGradient", {
+				Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(176, 176, 176)),
+				Rotation = 90,
+			}),
+			Edge = e("UIStroke", {
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Color = Color3.fromRGB(10, 6, 14),
+				Thickness = 2,
+			}),
+			Label = Components.HeavyLabel({
+				Size = UDim2.new(1, -12, 1, -8),
+				Position = UDim2.fromOffset(6, 4),
+				Text = string.upper(b.Label),
+				Gold = false,
+				Outline = 2,
+				MaxSize = if compact then 15 else 18,
+			}),
+		})
 	end
-	return e("Frame", {
-		Name = "TravelRow",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, top),
-		Size = UDim2.fromOffset(#buttons * cellW + (#buttons - 1) * L.RailGap, cellH),
-		BackgroundTransparency = 1,
-	}, children)
+	return ReactRoblox.createPortal(e("ScreenGui", {
+		Name = "TravelRowGui",
+		IgnoreGuiInset = true,
+		ScreenInsets = Enum.ScreenInsets.None,
+		DisplayOrder = 1,
+		ResetOnSpawn = false,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	}, {
+		TravelRow = e("Frame", {
+			Name = "TravelRow",
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.fromOffset(centerX, top),
+			Size = UDim2.fromOffset(width, pill.Y),
+			BackgroundTransparency = 1,
+		}, children),
+	}), LocalPlayer:WaitForChild("PlayerGui"))
 end
 
 local currentFacilityOpen: string? = nil
@@ -720,7 +772,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	-- Travel row (top centre): teleports to the Island, the Hub and the Tower.
 	local travelButtons = {
 		{
-			Icon = "Island",
 			Label = "Island",
 			Accent = Color3.fromRGB(52, 211, 153), -- #34D399 Emerald
 			OnActivated = function()
@@ -728,7 +779,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			end,
 		},
 		{
-			Icon = "Hub",
 			Label = "Hub",
 			Accent = Color3.fromRGB(245, 158, 11), -- #F59E0B Royal Amber
 			OnActivated = function()
@@ -736,7 +786,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			end,
 		},
 		{
-			Icon = "Tower",
 			Label = "Tower",
 			Accent = Color3.fromRGB(239, 68, 68), -- #EF4444 Crimson
 			OnActivated = function()
@@ -774,13 +823,14 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		Store.DrawerTop = currencyBottom + Components.CurrencyBarHeight
 	end
 	local leftSize = railSize(#leftButtons, leftBottom - leftTop)
-	-- The travel row sits at the top centre, under the floor boss banner when that shows; the View
-	-- Squad bar drops below it. It is hidden during a duel (the duel banner takes its place).
-	local travelSize = if compact then 44 else 52
-	local travelHeight = travelSize + math.floor(math.floor(travelSize * 0.36) * 0.55) -- RailButton's own height
-	local travelTop = if isFloorBossBannerVisible() then 96 else 8
+	-- The travel row sits inside Roblox's top bar, above the safe area, so nothing in the HUD has
+	-- to make room for it. Only when the bar is too narrow does it drop under the bar (and under
+	-- the floor boss banner when that shows), pushing the View Squad bar down. It is hidden
+	-- during a duel.
+	local travelBelow = if isFloorBossBannerVisible() then 96 else 8
 	local travelShown = not (_G.IsDuelActive and _G.IsDuelActive())
-	local viewSquadTop = if travelShown then travelTop + travelHeight + 10 else travelTop + 6
+	local travelInBar = travelFitsTopbar(#travelButtons, compact)
+	local viewSquadTop = if travelShown and not travelInBar then travelBelow + travelPillSize(compact).Y + 10 else travelBelow + 6
 	local rightSize = railSize(#rightButtons, rightBottom - rightTop)
 
 	local breakdown = {}
@@ -801,7 +851,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		Goal = if not modalFocus then e(Components.NextGoalCard, {
 			Goal = goal, Top = goalTop, GuideAction = if Store.GuideV2 then Store.GuideAction else nil, GuideVisible = Store.GuideVisible,
 		}) else nil,
-		Travel = if not modalFocus and travelShown then travelRow(travelButtons, travelSize, travelTop) else nil,
+		Travel = if not modalFocus and travelShown then travelRow(travelButtons, compact, screen.X, travelBelow) else nil,
 		LeftRail = if not modalFocus then rail("LeftRail", "Left", leftTop, leftBottom, leftSize, leftBottom - leftTop, leftButtons, screen.Y) else nil,
 		RightRail = if modalFocus then nil
 			elseif raid.InRaid then e(RaidHud.Leaderboard, { Top = rightTop, Bottom = rightBottom, Compact = compact })
