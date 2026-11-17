@@ -78,7 +78,7 @@ local ok,err=pcall(function()
 		firstHero.Position=T.GetRoom(5).Arrival.Position-Vector3.new(0,3,0);task.wait(1.7)
 		assert(rt.Metrics.Deaths==deaths+1 and not mob.IsAlive)
 		for i=hits+1,#damageLog do assert(damageLog[i].Id~=mob.NetId,"Dead actor hit") end
-		assert(T.Encounters[5].PayoutClaims[mob.Slot..":"..mob.LifeGeneration])
+		assert(T.Encounters[5].PayoutClaims[mob.NetId]==mob.LifeGeneration)
 		local a,b=command(p,"MEASURE"),command(q,"MEASURE")
 		for _,v in {a,b} do for _,rig in v.Rigs do assert(rig.Id~=mob.NetId,"Dead live rig remained") end end
 	end)
@@ -132,7 +132,7 @@ local ok,err=pcall(function()
 		T.GetRoom(5).EmptySince=os.clock()-62;waitFor(function() return T.GetRoom(5)==nil end,3);task.wait(.3)
 		T.EnsureRoom(5);task.wait(.4)
 		assert(not boss.IsAlive and boss.RespawnAt==deadline and boss.LifeGeneration==generation)
-		assert(T.Encounters[5].PayoutClaims[boss.Slot..":"..generation])
+		assert(T.Encounters[5].PayoutClaims[boss.NetId]==generation)
 	end)
 	detail.Metrics=rt.Metrics;rt.API.Damage=originalDamage
 end)

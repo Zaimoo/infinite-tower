@@ -39,6 +39,9 @@ local Bootstrapped=false
 local Buffered={}
 local EntitySequences: {[number]:number}={}
 local Generations: {[number]:number}={}
+-- When each actor's snapshot first showed an action this client has not received (see consume).
+local UnexpectedSince: {[string]:number}={}
+local UNEXPECTED_ACTION_GRACE=0.5
 local VisualFolder = Workspace:WaitForChild("ClientVisualEntities")
 local RenderGroundParams = RaycastParams.new()
 RenderGroundParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -968,14 +971,18 @@ local function clearView()
  for _,node in pairs(DyingNodes) do node.Model:Destroy() end;table.clear(DyingNodes)
  Actions=ActionState.New();_G.ClientCombatState.EnemyActions=Actions;table.clear(PendingActions)
  for _,node in pairs(VisualNodesByNetId) do node.Model:Destroy() end
- table.clear(VisualNodesByNetId);table.clear(MetadataByNetId);table.clear(EntitySequences);table.clear(Generations)
+ table.clear(VisualNodesByNetId);table.clear(MetadataByNetId);table.clear(EntitySequences);table.clear(Generations);table.clear(UnexpectedSince)
  VisualFolder:ClearAllChildren();_G.ClientCombatState.Metadata=MetadataByNetId
  _G.ClientCombatState.FocusedNetId=nil;_G.ClientCombatState.FloorBoss=nil
  Assembly=nil;Bootstrapped=false;table.clear(Buffered);LastBootstrap=0
 end
 TowerRemotes.Context.OnClientEvent:Connect(function(c)
  if c.Stage~="COMMIT" then return end
- if not Protocol.Same(c,View) or c.FloorId == 0 then clearView() end
+ -- The server answers every metadata request with a COMMIT of the unchanged view (ENTITY_RESYNC) and a
+ -- fresh roster; the bootstrap reconciles the nodes in place. Clearing here as well destroyed and rebuilt
+ -- every hero rig in the hub on each resync.
+ local resync = c.RequestId == "ENTITY_RESYNC" and Protocol.Same(c,View)
+ if not resync and (not Protocol.Same(c,View) or c.FloorId == 0) then clearView() end
  View=c;_G.TowerView=c
 end)
 local function retireVisual(id,at)
@@ -1091,7 +1098,16 @@ local function consume(buf: buffer)
    node.Highlight.OutlineColor=_G.ClientCombatState.FocusedNetId==id and Color3.fromRGB(0,255,235) or bit32.band(e.Flags,2)~=0 and Color3.fromRGB(255,195,40) or Color3.new(1,1,1)
    node.Highlight.OutlineTransparency=meta.TowerEnemy and (_G.ClientCombatState.FocusedNetId==id and .15 or .8) or .25
   end
-  if not ActionState.Expected(Actions,e,e.ActionSequence) then requestEntityMetadata() end
+  -- Snapshots are unreliable and actions reliable, so a snapshot often lands just before the START it
+  -- already counts. Only a gap that outlives that race means a lost action and is worth a full resync.
+  local actionKey=ActionState.Key(e)
+  if ActionState.Expected(Actions,e,e.ActionSequence) then
+   UnexpectedSince[actionKey]=nil
+  else
+   local since=UnexpectedSince[actionKey]
+   if not since then UnexpectedSince[actionKey]=now
+   elseif now-since>=UNEXPECTED_ACTION_GRACE then UnexpectedSince[actionKey]=nil;requestEntityMetadata() end
+  end
  end
 end
 TowerRemotes.TowerSnapshot.OnClientEvent:Connect(consume)
@@ -1157,7 +1173,7 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
   MetadataByNetId=nextMetadata;_G.ClientCombatState.Metadata=MetadataByNetId
   local bootstrapActions=Assembly.Actions
   _G.ClientCombatState.FloorBoss=Assembly.Boss
-  LastBootstrap=revision;Assembly=nil;Bootstrapped=true
+  LastBootstrap=revision;Assembly=nil;Bootstrapped=true;table.clear(UnexpectedSince)
   for _,chunk in pairs(bootstrapActions) do for _,action in chunk do applyAction(action) end end
   local queued=PendingActions;PendingActions={};for _,action in queued do applyAction(action) end
   local pending=Buffered;Buffered={};for _,buf in pending do consume(buf) end

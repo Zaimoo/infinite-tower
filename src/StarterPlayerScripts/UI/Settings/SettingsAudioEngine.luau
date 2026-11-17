@@ -241,12 +241,12 @@ function SettingsAudioEngine.updateVolumes(
 		oldAmb.Volume = if currentMuteAmbience then 0 else currentAmbienceVolume * CHANNEL_TRIM.Ambience
 	end
 
-	-- Dual enforcement: directly re-apply to all tracked sounds
+	-- Dual enforcement: directly re-apply to all tracked sounds. Unparented ones (pooled SFX between
+	-- plays) stay registered: dropping them here left their Volume listener connected, and the next play
+	-- registered a second one on top. Destroyed sounds unregister themselves.
 	for sound, _ in pairs(trackedSounds) do
 		if sound.Parent then
 			applyVolumeToSound(sound)
-		else
-			trackedSounds[sound] = nil
 		end
 	end
 

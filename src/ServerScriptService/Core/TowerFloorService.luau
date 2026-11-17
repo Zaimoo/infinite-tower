@@ -157,6 +157,11 @@ local function alive(player: Player): (Model?,BasePart?)
 	if not h or h.Health<=0 or not root or not root:IsA("BasePart") then return nil,nil end
 	return c,root
 end
+-- Declared before commit, which banks carried cargo on a safe arrival (it used to be declared after it,
+-- so that call hit a nil global and rolled every such transfer back).
+local function storeCargo(player: Player, location: any?)
+	for _,a in pairs(adapters) do if a.StoreCargo then a.StoreCargo(player, location) end end
+end
 local function commit(player: Player)
 	local s=states[player];local p=s and s.Pending;if not p then return end
 	local char,root=alive(player)
@@ -536,9 +541,6 @@ local function disconnectCargo(player: Player)
 	for _,a in pairs(adapters) do if a.DropCargo then a.DropCargo(player) end end
 end
 Service.DisconnectCargo = disconnectCargo
-local function storeCargo(player: Player, location: any?)
-	for _,a in pairs(adapters) do if a.StoreCargo then a.StoreCargo(player, location) end end
-end
 function Service.Init()
 	if started then return end;started=true;remotes=remoteFolder()
 	-- Edit-time previews are replaced by the authoritative lazily built rooms in Play.

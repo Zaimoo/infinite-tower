@@ -159,7 +159,7 @@ function Runtime.new(api: any): any
 			end
 		end
 		if changed then
-			api.Changed()
+			api.Changed(floorId)
 		end
 	end
 	function self:SpawnBoss(floorId: number, player: any?)
@@ -349,7 +349,7 @@ function Runtime.new(api: any): any
 			EnemyId = enemyId,
 			StartServerTime = now,
 		})
-		api.Changed()
+		api.Changed(floorId)
 		return boss
 	end
 	function self:Death(m, killer)
@@ -363,9 +363,12 @@ function Runtime.new(api: any): any
 		m.State = "DEAD"
 		api.Navigation.Clear(m)
 		local ledger = api.Tower.Encounters[m.FloorId]
-		local key = tostring(m.Slot) .. ":" .. tostring(m.LifeGeneration)
-		if ledger.PayoutClaims[key] then return end
-		ledger.PayoutClaims[key] = true
+		-- One claim per mob (NetIds are never reused), holding the life that paid out. Keyed by Slot:Life
+		-- it collided once ResetCamps refilled a slot at life 1, and that mob's death then never paid or
+		-- reported; it also grew by one key per kill for the server's lifetime.
+		local life = m.LifeGeneration or 1
+		if ledger.PayoutClaims[m.NetId] == life then return end
+		ledger.PayoutClaims[m.NetId] = life
 		self.Metrics.Deaths += 1
 		-- Summoned bosses and surge packs never respawn on a timer; the next one needs a fresh kill threshold.
 		-- Camp members wait for the rest of their camp, then SyncRooms respawns the whole camp as a wave.
@@ -375,13 +378,13 @@ function Runtime.new(api: any): any
 		-- Claim before any reward/profile callback. Travel and simultaneous hits cannot retry it.
 		api.Reward(m, killer)
 		if AffixRules.Has(m, "SPLITTING") then self:SpawnSplit(m) end
-		api.Changed()
+		api.Changed(m.FloorId)
 		if m.Summoned then
 			task.delay(3, function()
 				if not m.IsAlive and api.Mobs[m.NetId] == m then
 					api.Mobs[m.NetId] = nil
 					if ledger.Surge then ledger.Surge[m.NetId] = nil end
-					api.Changed()
+					api.Changed(m.FloorId)
 				end
 			end)
 		end
@@ -520,7 +523,7 @@ function Runtime.new(api: any): any
 				spawned += 1
 			end
 		end
-		if spawned > 0 then api.Changed() end
+		if spawned > 0 then api.Changed(floorId) end
 		return spawned
 	end
 	-- The floor's camp roster (CampRoster): which Regular type each member is (every camp holds all of
@@ -607,15 +610,17 @@ function Runtime.new(api: any): any
 				api.Navigation.Clear(m)
 				if api.Mobs[m.NetId] then api.Mobs[m.NetId] = nil; removed += 1 end
 				ledger.Slots[slot] = nil
+				ledger.PayoutClaims[m.NetId] = nil -- the slot refills with a new NetId; this one never returns
 			end
 		end
 		for netId, m in pairs(ledger.Surge or {}) do
 			self:Cancel(m, "CAMP_RESET")
 			if api.Mobs[netId] then api.Mobs[netId] = nil; removed += 1 end
 			ledger.Surge[netId] = nil
+			ledger.PayoutClaims[netId] = nil
 		end
 		ledger.Roster = nil
-		if removed > 0 then api.Changed() end
+		if removed > 0 then api.Changed(floor) end
 		return removed
 	end
 	-- Patrols: replan a wiped patrol (fresh type mix, maybe a support, back to the route start), and
@@ -680,7 +685,7 @@ function Runtime.new(api: any): any
 		return plan.Center + Vector3.new(offset.X, 0, offset.Z)
 	end
 	function self:SyncRooms(now)
-		local changed = false
+		local changedFloors: { [number]: boolean } = {}
 		for floor, placements in pairs(Config.Floors) do
 			local room = api.Tower.GetRoom(floor)
 			local ledger = api.Tower.Encounters[floor]
@@ -867,7 +872,7 @@ function Runtime.new(api: any): any
 					if not api.Mobs[m.NetId] then
 						if m.LastOrigin then m.EntityGeneration += 1 end
 						api.Mobs[m.NetId] = m
-						changed = true
+						changedFloors[floor] = true
 					end
 					if not m.IsAlive and m.RespawnAt == math.huge and not m.Summoned then
 						m.RespawnAt = CampWaves.ScheduleRespawn(m.DiedAt, campAlive[placement.CampId] == true, now) or math.huge
@@ -912,14 +917,15 @@ function Runtime.new(api: any): any
 						m.ActionSequence = 0
 						m.BornAt = now
 						if e.Role == "BOSS" then ledger.BossGeneration = m.LifeGeneration end
-						changed = true
+						changedFloors[floor] = true
 					end
 				end
 				-- Scaled-in members that are no longer wanted leave once they are dead.
 				for slot, m in pairs(ledger.Slots) do
 					if slot >= Config.PatrolSlotBase and not effective[slot] and not m.IsAlive then
-						if api.Mobs[m.NetId] then api.Mobs[m.NetId] = nil; changed = true end
+						if api.Mobs[m.NetId] then api.Mobs[m.NetId] = nil; changedFloors[floor] = true end
 						ledger.Slots[slot] = nil
+						ledger.PayoutClaims[m.NetId] = nil
 					end
 				end
 			elseif ledger and ledger.Slots then
@@ -934,26 +940,27 @@ function Runtime.new(api: any): any
 						m.LocalPosition = m.Position - (room and room.Origin or m.LastOrigin)
 						api.Navigation.Clear(m)
 						api.Mobs[m.NetId] = nil
-						changed = true
+						changedFloors[floor] = true
 					end
 				end
 				for netId, m in pairs(ledger.Surge or {}) do
 					self:Cancel(m, "ROOM_RETIRED_OR_DISABLED")
 					api.Mobs[netId] = nil
 					ledger.Surge[netId] = nil
-					changed = true
+					ledger.PayoutClaims[netId] = nil
+					changedFloors[floor] = true
 				end
 				for netId, m in pairs(api.Mobs) do
-					if m.TowerEnemy and m.Role == "BOSS" and m.FloorId == floorId then
+					if m.TowerEnemy and m.Role == "BOSS" and m.FloorId == floor then
 						self:Cancel(m, "ROOM_RETIRED_OR_DISABLED")
 						api.Navigation.Clear(m)
 						api.Mobs[netId] = nil
-						changed = true
+						changedFloors[floor] = true
 					end
 				end
 			end
 		end
-		if changed then api.Changed() end
+		for changedFloor in changedFloors do api.Changed(changedFloor) end
 	end
 	-- Living tower mobs in the same room as `m`, within `radius`. ROUSE's aura includes the caster.
 	function self:Allies(m, radius, includeSelf)

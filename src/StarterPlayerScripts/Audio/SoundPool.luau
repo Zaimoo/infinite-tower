@@ -57,13 +57,16 @@ end
 -- Release a Sound back into the pool
 function SoundPool.Release(s: Sound)
 	if not s:IsA("Sound") then return end
-	s:Stop()
-	s.SoundId = ""
-	s.Parent = nil
-
+	-- Count the voice free first: a Sound played on a part that was destroyed mid-play is destroyed with
+	-- it, its Parent is locked and the reset below throws. That used to skip this line, so every such
+	-- play leaked one of the MAX_CONCURRENT_ACTIVE voices for good.
 	activeCount = math.max(0, activeCount - 1)
-
-	if #freePool < MAX_POOL_SIZE then
+	local reusable = pcall(function()
+		s:Stop()
+		s.SoundId = ""
+		s.Parent = nil
+	end)
+	if reusable and #freePool < MAX_POOL_SIZE then
 		table.insert(freePool, s)
 	else
 		s:Destroy()
