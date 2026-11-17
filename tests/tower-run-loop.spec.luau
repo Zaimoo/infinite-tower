@@ -95,23 +95,54 @@ test("Floor 1 fits starter Han and a starter Rare feels stronger immediately", f
 	assert(Hardcore.StarterGems == 900)
 end)
 
-test("Tower combat ramps back to the original curve on Floor 15", function()
+test("Tower combat uses the reference curve from Floor 10 and keeps Floors 1-9 relief", function()
 	for _, role in { "REGULAR", "ELITE", "ALPHA", "BOSS" } do
-		local previousHPRatio, previousATKRatio = 0, 0
-		for floor = 10, 50 do
+		for floor = 1, 50 do
 			local stats = Balance.GetTowerFloorStats(floor, role)
 			local reference = Balance.GetFloorStats(floor, role)
-			if floor < 15 then
-				local hpRatio, atkRatio = stats.MaxHP / reference.MaxHP, stats.ATK / reference.ATK
-				assert(hpRatio < 1 and atkRatio < 1, "Floors 10–14 retain some early relief")
-				assert(hpRatio > previousHPRatio and atkRatio > previousATKRatio, "the relief tapers by floor")
-				previousHPRatio, previousATKRatio = hpRatio, atkRatio
+			if floor < Balance.CurveStartFloor then
+				assert(stats.MaxHP < reference.MaxHP and stats.ATK <= reference.ATK, "Floors 1-9 keep their early relief")
 			else
-				assert(stats.MaxHP == reference.MaxHP and stats.ATK == reference.ATK,
-					"the original curve is restored on Floor 15 for every role")
+				assert(stats.MaxHP == reference.MaxHP and stats.ATK == reference.ATK, "tower fights follow the reference from Floor 10")
 			end
 		end
 	end
+	-- Enemy damage keeps climbing through the last biome instead of flattening after Floor 40.
+	assert(Balance.GetFloorStats(50, "BOSS").ATK > 10 * Balance.GetFloorStats(40, "BOSS").ATK)
+end)
+
+-- A squad "clears" a floor when it kills the floor's Alpha (Biome Boss on the 5th floor) within 60 s and its
+-- weakest hero survives at least 4 of its basic hits, with Lv 5 Training Grounds and attunement at that floor.
+local function highestCleared(templates: { string }, stars: number, level: number, weapon: { number }): number
+	local cleared = Balance.CurveStartFloor - 1
+	for floor = Balance.CurveStartFloor, 50 do
+		local cap = StatFormulas.GetAttunementCap(floor)
+		local dps, weakest = 0, math.huge
+		for _, id in templates do
+			local hero = { TemplateId = id, Stars = stars, Level = level, QualityScalar = 1 }
+			local artifact = { Star = weapon[2], Rarity = weapon[1] }
+			local atk, hp = StatFormulas.GetAttunedMultipliers(hero, artifact, 1.4, cap)
+			local v = StatFormulas.GetCombatSnapshot(hero, artifact, false, false, atk, hp)
+			dps += v.AttackDamage / v.TickInterval
+			weakest = math.min(weakest, v.Health)
+		end
+		local apex = Balance.GetTowerFloorStats(floor, if floor % 5 == 0 then "BOSS" else "ALPHA")
+		if apex.MaxHP / dps > 60 or weakest / apex.ATK < 4 then break end
+		cleared = floor
+	end
+	return cleared
+end
+
+test("Floor 50 needs a full 7-star Legendary/Mythical squad and Floor 10 needs promotion", function()
+	local hybrid = { "hero_han", "hero_astrea", "hero_edis", "hero_solaris", "hero_rhyman" }
+	local exalted = { "hero_archon", "hero_ignis", "hero_diran", "hero_valeria", "hero_archon" }
+	local rare = { "hero_catio", "hero_eolka", "hero_aaron", "hero_velkist", "hero_catio" }
+	assert(highestCleared(hybrid, 7, 10, { 6, 5 }) == 50, "7★ Legendary/Mythical squad clears Floor 50")
+	assert(highestCleared(hybrid, 6, 10, { 7, 7 }) < 50, "a 6★ squad cannot clear Floor 50 even with Mythical 7★ weapons")
+	assert(highestCleared(hybrid, 5, 10, { 6, 3 }) < 48, "a 5★ squad stalls in the last biome")
+	assert(highestCleared(exalted, 4, 10, { 5, 3 }) < 45, "a 4★ Exalted squad stalls before the last biome")
+	assert(highestCleared(rare, 1, 10, { 3, 1 }) < 10, "an unpromoted Rare/Uncommon squad cannot clear Floor 10")
+	assert(highestCleared(rare, 2, 5, { 3, 1 }) >= 10, "promoting to 2★ opens Floor 10")
 end)
 
 test("Tower enemy stats rise within each biome", function()
@@ -297,7 +328,7 @@ test("Phase 6: Rift Attunement caps one hero's tower power by the Master's highe
 		last = cap
 	end
 	local cap10 = StatFormulas.GetAttunementCap(10)
-	assert(StatFormulas.GetAttunementCap(1) == 35250 and cap10 == 950000, "retuning floor guidance preserves the cap")
+	assert(StatFormulas.GetAttunementCap(1) == 29375 and cap10 == 1000000, "retuning floor guidance preserves the cap")
 	assert(StatFormulas.GetTowerSquadPower({
 		MaxFloorReached = 10, SquadPower = 3 * cap10, SquadPowerByHero = { a = 2.5 * cap10, b = 0.5 * cap10 },
 	}) == 1.5 * cap10, "the selector counts each deployed hero at their own capped power")

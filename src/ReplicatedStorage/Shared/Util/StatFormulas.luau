@@ -185,8 +185,8 @@ end
 
 -- Rift Attunement (Phase 6): in the tower, one hero's power is capped by how far its Master has climbed, so a lucky or premium
 -- pull is felt without skipping a biome. The pull itself (hero, star, rarity) is never changed, and labor is not capped.
--- The cap is about 1.5x an on-curve hero two floors ahead of the highest floor reached, and rises with every new floor.
-StatFormulas.AttunementHeadroom = 1.5
+-- The cap is about 1.25x an on-curve hero two floors ahead of the highest floor reached, and rises with every new floor.
+StatFormulas.AttunementHeadroom = 1.25
 StatFormulas.AttunementFloorsAhead = 2
 local attunementCaps: { number }? = nil
 function StatFormulas.GetAttunementCap(maxFloorReached: number?): number
