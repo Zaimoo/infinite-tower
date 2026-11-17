@@ -1461,7 +1461,11 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		end
 		return
 	end
-	_G.CurrentProfile = profile
+	-- HUDController owns the cache. Only fill it if the HUD hasn't yet, so the HUD bar never shows
+	-- a copy that the HUD's deltas don't patch.
+	if not _G.CurrentProfile then
+		_G.CurrentProfile = profile
+	end
 	if panel.Visible then
 		render()
 	end
