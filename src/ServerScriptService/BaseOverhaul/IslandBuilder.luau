@@ -136,33 +136,9 @@ local function buildMossyFlagstoneCourtyard(
 	local halfW = courtyardSize.X * 0.5
 	local halfL = courtyardSize.Y * 0.5
 
-	-- 2. Radial Walkway Definitions (Connecting Fountain Plaza to Bridge Gate, Outskirts Gate & all 5 Stations)
+	-- 2. Facility clearances (radial paths and concentric fountain rings removed — pure flagstone courtyard floor)
 	local trainingCornerLen = math.sqrt(66.8 * 66.8 + 46.8 * 46.8)
 	local trainingDirX, trainingDirZ = -66.8 / trainingCornerLen, 46.8 / trainingCornerLen
-	local radialWalkways = {
-		{ Name = "Path_BridgeGate", P0 = Vector3.new(0, 0, -19.6), P1 = Vector3.new(0, 0, -56.0), Width = 9.2, Segments = 5 },
-		{ Name = "Path_SummoningPortal", P0 = Vector3.new(16.0, 0, -11.4), P1 = Vector3.new(41.5, 0, -29.5), Width = 8.4, Segments = 4 },
-		{ Name = "Path_BlacksmithForge", P0 = Vector3.new(19.6, 0, -0.8), P1 = Vector3.new(44.5, 0, -1.8), Width = 8.4, Segments = 4 },
-		{ Name = "Path_Market", P0 = Vector3.new(16.2, 0, 11.2), P1 = Vector3.new(40.8, 0, 28.9), Width = 8.4, Segments = 5 },
-		{ Name = "Path_OutskirtsGate", P0 = Vector3.new(4.8, 0, 19.0), P1 = Vector3.new(14.0, 0, 56.0), Width = 9.0, Segments = 5 },
-		{ Name = "Path_SynthesisChamber", P0 = Vector3.new(-16.6, 0, -10.6), P1 = Vector3.new(-32.0, 0, -20.4), Width = 8.4, Segments = 3 },
-		{ Name = "Path_TrainingArea", P0 = Vector3.new(trainingDirX * 19.65, 0, trainingDirZ * 19.65), P1 = Vector3.new(trainingDirX * 36.4, 0, trainingDirZ * 36.4), Width = 8.4, Segments = 3 },
-	}
-
-	local radialBranchAngles = {}
-	for _, rw in ipairs(radialWalkways) do
-		table.insert(radialBranchAngles, math.atan2(rw.P0.X, rw.P0.Z))
-	end
-
-	local function isNearBranchAngle(theta: number): boolean
-		for _, bAngle in ipairs(radialBranchAngles) do
-			local diff = math.atan2(math.sin(theta - bAngle), math.cos(theta - bAngle))
-			if math.abs(diff) < 0.24 then
-				return true
-			end
-		end
-		return false
-	end
 
 	local trainCenterX, trainCenterZ = trainingDirX * 49.0, trainingDirZ * 49.0
 	local trainYaw = -math.atan2(66.8, 46.8)
@@ -185,10 +161,10 @@ local function buildMossyFlagstoneCourtyard(
 		end
 	end
 
-	-- Helper to check if a courtyard (x, z) point overlaps any radial walkway or facility footprint
+	-- Helper to check if a courtyard (x, z) point overlaps any facility footprint
 	local function isPointOnWalkwayOrFacility(px: number, pz: number): boolean
 		local distCenter = math.sqrt(px * px + pz * pz)
-		if distCenter < 21.6 then
+		if distCenter < 14.5 then
 			return true
 		end
 		-- Keep random courtyard flagstones outside Market's enlarged organic flagstone bazaar perimeter
@@ -204,152 +180,10 @@ local function buildMossyFlagstoneCourtyard(
 		if halfWTrain > 0 and math.abs(tlx) < (halfWTrain + 1.6) then
 			return true
 		end
-		for _, rw in ipairs(radialWalkways) do
-			local ax, az = rw.P0.X, rw.P0.Z
-			local bx, bz = rw.P1.X, rw.P1.Z
-			local abx, abz = bx - ax, bz - az
-			local abLenSq = abx * abx + abz * abz
-			if abLenSq > 0.01 then
-				local t = math.clamp(((px - ax) * abx + (pz - az) * abz) / abLenSq, 0, 1)
-				local cx = ax + t * abx
-				local cz = az + t * abz
-				local dx, dz = px - cx, pz - cz
-				if (dx * dx + dz * dz) < ((rw.Width * 0.5 + 2.8) ^ 2) then
-					return true
-				end
-			end
-		end
 		return false
 	end
 
-	-- 3. Concentric Fountain Plaza (Radius ~ 12.2 to 20.4 studs, 0.06 stud flagstones + 0.08 stud curbs)
-	-- Ring 1: Inner Flagstone Apron Ring (R = 14.0, Width = 3.2, 16 slabs with 0.18 stud mossy gaps)
-	local innerRingR = 14.0
-	local innerRingW = 3.2
-	local innerSegments = 16
-	local mortarGap = 0.18
-
-	for i = 1, innerSegments do
-		local a0 = ((i - 1) / innerSegments) * math.pi * 2
-		local a1 = (i / innerSegments) * math.pi * 2
-		local aMid = (a0 + a1) * 0.5
-		local chord = 2 * innerRingR * math.sin((a1 - a0) * 0.5) - mortarGap
-		local cx = math.sin(aMid) * innerRingR
-		local cz = math.cos(aMid) * innerRingR
-		local tangentDir = Vector3.new(math.cos(aMid), 0, -math.sin(aMid))
-		local yawJitter = math.rad(tileRng:NextNumber(-1.5, 1.5))
-		local segCF = CFrame.lookAt(Vector3.new(cx, 0.03, cz), Vector3.new(cx, 0.03, cz) + tangentDir)
-			* CFrame.Angles(0, yawJitter, 0)
-
-		makeGroundTile(
-			string.format("PlazaInner_Flagstone_%d", i),
-			Vector3.new(innerRingW, 0.06, chord),
-			segCF,
-			primaryStonePalette[((i - 1) % #primaryStonePalette) + 1],
-			if i % 2 == 0 then Enum.Material.Slate else Enum.Material.Cobblestone
-		)
-
-		-- Inner raised stone curb hugging the Fountain plinth (0.08 studs high)
-		local curbInR = innerRingR - innerRingW * 0.5 - 0.38
-		local curbInChord = 2 * curbInR * math.sin((a1 - a0) * 0.5) - 0.15
-		local ix = math.sin(aMid) * curbInR
-		local iz = math.cos(aMid) * curbInR
-		makeGroundTile(
-			string.format("PlazaInner_Curb_%d", i),
-			Vector3.new(0.60, 0.08, curbInChord),
-			CFrame.lookAt(Vector3.new(ix, 0.04, iz), Vector3.new(ix, 0.04, iz) + tangentDir),
-			curbStonePalette[((i - 1) % #curbStonePalette) + 1],
-			Enum.Material.Slate
-		)
-	end
-
-	-- Ring 2: Outer Flagstone Plaza Ring (R = 17.8, Width = 3.8, 20 slabs with 0.22 stud mossy gaps)
-	local outerRingR = 17.8
-	local outerRingW = 3.8
-	local outerSegments = 20
-	local curbWidth = 0.78
-
-	for i = 1, outerSegments do
-		local a0 = ((i - 1) / outerSegments) * math.pi * 2
-		local a1 = (i / outerSegments) * math.pi * 2
-		local aMid = (a0 + a1) * 0.5
-		local chord = 2 * outerRingR * math.sin((a1 - a0) * 0.5) - 0.22
-		local cx = math.sin(aMid) * outerRingR
-		local cz = math.cos(aMid) * outerRingR
-		local tangentDir = Vector3.new(math.cos(aMid), 0, -math.sin(aMid))
-		local yawJitter = math.rad(tileRng:NextNumber(-2.0, 2.0))
-		local segCF = CFrame.lookAt(Vector3.new(cx, 0.03, cz), Vector3.new(cx, 0.03, cz) + tangentDir)
-			* CFrame.Angles(0, yawJitter, 0)
-
-		makeGroundTile(
-			string.format("PlazaOuter_Flagstone_%d", i),
-			Vector3.new(outerRingW, 0.06, chord),
-			segCF,
-			primaryStonePalette[((i + 1) % #primaryStonePalette) + 1],
-			if i % 3 == 0 then Enum.Material.Cobblestone else Enum.Material.Slate
-		)
-
-		-- Outer raised curb stones (0.08 studs high, skipped where radial walkways branch out)
-		if not isNearBranchAngle(aMid) then
-			local outerCurbR = outerRingR + outerRingW * 0.5 + curbWidth * 0.5 + 0.14
-			local outerChord = 2 * outerCurbR * math.sin((a1 - a0) * 0.5) - 0.20
-			local ox = math.sin(aMid) * outerCurbR
-			local oz = math.cos(aMid) * outerCurbR
-			makeGroundTile(
-				string.format("PlazaOuter_Curb_%d", i),
-				Vector3.new(curbWidth, 0.08, outerChord),
-				CFrame.lookAt(Vector3.new(ox, 0.04, oz), Vector3.new(ox, 0.04, oz) + tangentDir),
-				curbStonePalette[((i + 2) % #curbStonePalette) + 1],
-				Enum.Material.Slate
-			)
-		end
-	end
-
-	-- 4. Build Radial Cobblestone/Slate Walkways (8.4-9.2 studs wide, 0.06 stud slabs + 0.08 stud curbs)
-	for _, rw in ipairs(radialWalkways) do
-		local dir = rw.P1 - rw.P0
-		local totalDist = dir.Magnitude
-		if totalDist >= 1 then
-			local unit = dir.Unit
-			local segLen = totalDist / rw.Segments
-			local lookCF = CFrame.lookAt(Vector3.zero, unit)
-			local innerWidth = rw.Width - curbWidth * 2 - 0.30
-
-			for s = 1, rw.Segments do
-				local t = (s - 0.5) / rw.Segments
-				local pos = rw.P0:Lerp(rw.P1, t)
-				local yawJitter = math.rad(tileRng:NextNumber(-2.2, 2.2))
-				local col = primaryStonePalette[((s + tileRng:NextInteger(0, 3)) % #primaryStonePalette) + 1]
-				local mat = if (s % 2 == 0) then Enum.Material.Cobblestone else Enum.Material.Slate
-
-				makeGroundTile(
-					string.format("%s_Slab_%d", rw.Name, s),
-					Vector3.new(innerWidth, 0.06, segLen - 0.24),
-					CFrame.new(pos.X, 0.03, pos.Z) * lookCF * CFrame.Angles(0, yawJitter, 0),
-					col,
-					mat
-				)
-
-				-- Left and Right raised curb flagstones (0.08 studs high) with mortar gap
-				for _, side in ipairs({ -1, 1 }) do
-					local curbOffset = lookCF.RightVector * (side * (rw.Width * 0.5 - curbWidth * 0.5))
-					local curbCol = curbStonePalette[((s + (if side > 0 then 1 else 2)) % #curbStonePalette) + 1]
-					local curbYaw = math.rad(tileRng:NextNumber(-1.5, 1.5))
-					makeGroundTile(
-						string.format("%s_Curb_%d_%s", rw.Name, s, if side < 0 then "L" else "R"),
-						Vector3.new(curbWidth, 0.08, segLen - 0.28),
-						CFrame.new(pos.X + curbOffset.X, 0.04, pos.Z + curbOffset.Z)
-							* lookCF
-							* CFrame.Angles(0, curbYaw, 0),
-						curbCol,
-						Enum.Material.Slate
-					)
-				end
-			end
-		end
-	end
-
-	-- 5. Organic Mossy Flagstone Courtyard Scatter (Deterministic math.noise across intermediate & perimeter zones)
+	-- 3. Organic Flagstone Courtyard Scatter (Deterministic math.noise across intermediate & perimeter zones)
 	local marginWallX = halfW - 9.0 -- 71 studs (inside castle walls)
 	local marginWallZ = halfL - 8.5 -- 51.5 studs (inside castle walls)
 	local stepX = 8.2
