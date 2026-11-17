@@ -361,7 +361,9 @@ The hub's lighting tells the story: the fortresses are a refuge, the tower is a 
 | :--- | :--- | :--- |
 | **Sanctuary** | Plots, bridges and the Cloister Commons | Golden afternoon: warm sun, soft blue bounce light, clear air, saturated colour, gentle bloom and sun rays, exposure +0.3 |
 | **Dread** | The tower walkway and the tower itself | Crimson murk: dusky red ambient, moderate red haze, slightly drained colour, red glows that bloom, exposure +0.05. Dark in mood but bright enough that the Master, their heroes and the causeway stay readable |
-| **Storm** | Off-map tower floors | The original moody storm grade, unchanged |
+| **Storm** | Off-map tower floors | The moody storm grade, tinted per biome (below) |
+
+On a tower floor, Storm takes its biome's grade (`HubLighting.BiomeGrades`, `HubLighting.TowerPreset`): ambient, colour shift, atmosphere colour and haze, tint, saturation and, for some biomes, exposure, contrast and bloom. Verdant Ruins is golden jungle haze, Fungal Hollow a deep bioluminescent blue, Ashen Dunes hot orange dust, Frozen Citadel cold clear blue, Infernal Foundry forge red, Thunder Highlands violet storm light, Corrupted Grove magenta murk, Sunken Sanctuary aqua, Astral Archives indigo starlight and Abyssal Throne a violet void. The controller reads the floor from the room grid (`HubLighting.TowerBiomeAt`) and blends over about a second when a Master travels between biomes; leaving the tower fades out from the last biome's grade.
 
 Dread fades in by distance from the tower centre: none beyond 470 studs (the Commons' south edge at 476 and every plot), full within 395 (the walkway). Crossing the Pilgrim's Causeway is the transition, so the light drains as players approach the tower and returns as they walk home. The presets adjust `ExposureCompensation`, not `Brightness`, so the Settings brightness slider keeps working. The plot bridges use pale warm stone and cream marble rails; crimson is reserved for the tower side.
 

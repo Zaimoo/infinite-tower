@@ -2,7 +2,8 @@
 -- StarterPlayerScripts/Rendering/HubLightingController.client.luau
 -- Blends this player's lighting by where their character stands (HubLighting): warm "Sanctuary" light on
 -- the plots and the Masters' Commons, crimson "Dread" as they cross the causeway to the tower, and the
--- original "Storm" grade on the off-map tower floors. Lighting changes made here are local to this client.
+-- "Storm" grade on the off-map tower floors, tinted per biome (HubLighting.TowerPreset). Lighting changes
+-- made here are local to this client.
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -101,8 +102,9 @@ local function apply(p: Preset)
 	end
 end
 
--- Target weights: how much Dread and how much Storm the current position calls for.
-local function targetWeights(): (number, number)
+-- Target weights: how much Dread and how much Storm the current position calls for, and on a tower floor
+-- the biome whose grade tints Storm (HubLighting.TowerPreset).
+local function targetWeights(): (number, number, number?)
 	local pos: Vector3
 	if _G.IsViewingSquad and _G.IsViewingSquad() then
 		local cam = workspace.CurrentCamera
@@ -114,13 +116,18 @@ local function targetWeights(): (number, number)
 	end
 	local zone, dread = HubLighting.Classify(pos.X, pos.Z)
 	if zone == "Storm" then
-		return 0, 1
+		return 0, 1, HubLighting.TowerBiomeAt(pos.X, pos.Z)
 	end
-	return dread, 0
+	return dread, 0, nil
 end
 
-local dreadW, stormW = targetWeights()
+local dreadW, stormW, startBiome = targetWeights()
 local lastDread, lastStorm = -1, -1
+-- The tower grade in use, blended from the previous biome's toward the current one's (towerT 0 -> 1).
+local towerFrom: Preset = HubLighting.TowerPreset(startBiome)
+local towerTo: Preset = towerFrom
+local towerBiome: number? = startBiome
+local towerT = 1
 
 -- Colour FX switched: re-apply on the next step even if the player has not moved
 Lighting:GetAttributeChangedSignal(COLOR_FX_ATTRIBUTE):Connect(function()
@@ -128,12 +135,27 @@ Lighting:GetAttributeChangedSignal(COLOR_FX_ATTRIBUTE):Connect(function()
 end)
 
 local function stepHubLighting(dt: number)
-	local wantDread, wantStorm = targetWeights()
+	local wantDread, wantStorm, wantBiome = targetWeights()
 	local k = 1 - math.exp(-BLEND_RATE * dt)
 	dreadW += (wantDread - dreadW) * k
 	stormW += (wantStorm - stormW) * k
 
-	if math.abs(dreadW - lastDread) < 0.002 and math.abs(stormW - lastStorm) < 0.002 then
+	-- Off the floors the grade keeps its last biome, so leaving a floor fades out from that biome's look.
+	if wantBiome and wantBiome ~= towerBiome then
+		towerFrom = if towerT >= 1 then towerTo else mix(towerFrom, towerTo, towerT)
+		towerTo = HubLighting.TowerPreset(wantBiome)
+		towerBiome = wantBiome
+		towerT = 0
+	end
+	local gradeMoving = towerT < 1
+	if gradeMoving then
+		towerT = math.min(1, towerT + k * (1 - towerT) + dt * 0.05)
+		if towerT > 0.998 then
+			towerT = 1
+		end
+	end
+
+	if not gradeMoving and math.abs(dreadW - lastDread) < 0.002 and math.abs(stormW - lastStorm) < 0.002 then
 		return
 	end
 	lastDread, lastStorm = dreadW, stormW
@@ -142,7 +164,8 @@ local function stepHubLighting(dt: number)
 	workspace:SetAttribute("WeatherTowerProximity", dreadW)
 
 	local hub = mix(Presets.Sanctuary, Presets.Dread, dreadW)
-	apply(mix(hub, Presets.Storm, stormW))
+	local tower = if towerT >= 1 then towerTo else mix(towerFrom, towerTo, towerT)
+	apply(mix(hub, tower, stormW))
 end
 -- Heartbeat, not RenderStepped: nothing here tracks the camera or a moving character, so it need not hold up the frame
 RunService.Heartbeat:Connect(function(dt: number)
