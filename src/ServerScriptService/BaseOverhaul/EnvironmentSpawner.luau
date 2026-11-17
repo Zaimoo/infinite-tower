@@ -35,6 +35,11 @@ EnvironmentSpawner.DefaultGroundTextures = {
 		NormalMap = "rbxassetid://110784451800881",
 		RoughnessMap = "rbxassetid://103087013857397",
 	} :: TextureIdSet,
+	OutskirtsMeadow = {
+		ColorMap = "rbxassetid://122496820035361",
+		NormalMap = "rbxassetid://72470076666948",
+		RoughnessMap = "rbxassetid://77979090712529",
+	} :: TextureIdSet,
 }
 
 local EXPECTED_HEIGHTS = {
@@ -45,6 +50,10 @@ local EXPECTED_HEIGHTS = {
 	WildForestShrub = 2.9,
 	GroundProp_MeadowTurfClump = 1.45,
 	Ground_MossyRootCollar = 0.85,
+	Outskirts_LushBush = 2.4,
+	Outskirts_WoodlandFern = 1.19,
+	Outskirts_MossyBoulder = 1.96,
+	Outskirts_GrassTuft = 1.18,
 }
 
 local warnedEnvMissing = false
@@ -193,6 +202,14 @@ function EnvironmentSpawner.ApplyGroundMaterials(targetRoots: { Instance }): boo
 		Enum.MaterialPattern.Organic,
 		grassTex
 	)
+	local outskirtsGrassTex = EnvironmentSpawner.DefaultGroundTextures.OutskirtsMeadow
+	local hasOutskirtsGrass = upsertMaterialVariant(
+		"OutskirtsForestGrass",
+		Enum.Material.Grass,
+		12,
+		Enum.MaterialPattern.Organic,
+		outskirtsGrassTex
+	)
 	local hasCobble = upsertMaterialVariant(
 		"HubMedievalCobble",
 		Enum.Material.Cobblestone,
@@ -235,7 +252,11 @@ function EnvironmentSpawner.ApplyGroundMaterials(targetRoots: { Instance }): boo
 			end
 
 			local mat = desc.Material
-			if hasGrass and (mat == Enum.Material.Grass or mat == Enum.Material.LeafyGrass) then
+			if hasOutskirtsGrass and n == "OutskirtsGrounds" then
+				desc.Material = Enum.Material.Grass
+				desc.MaterialVariant = "OutskirtsForestGrass"
+				desc.Color = Color3.fromRGB(205, 222, 198)
+			elseif hasGrass and (mat == Enum.Material.Grass or mat == Enum.Material.LeafyGrass) then
 				desc.Material = Enum.Material.Grass
 				desc.MaterialVariant = "HubMeadowGrass"
 				-- Neutralize strong vertex color tint so PBR ground albedo reads crisply
@@ -288,12 +309,16 @@ local function configureFoliageMeshPart(part: BasePart, isFoliage: boolean, isTu
 		end
 		part.Material = Enum.Material.Grass
 	else
-		part.CanCollide = not (part.Name:find("Collar", 1, true) ~= nil)
+		local pname = part.Name
+		local isCollar = pname:find("Collar", 1, true) ~= nil
+		local isBoulder = pname:find("Boulder", 1, true) ~= nil
+		part.CanCollide = not isCollar
 		part.CanQuery = part.CanCollide
 		part.Massless = not part.CanCollide
-		part.CastShadow = not (part.Name:find("Collar", 1, true) ~= nil)
-		part.Material = if part.Name:find("Collar", 1, true) ~= nil
+		part.CastShadow = not isCollar
+		part.Material = if isCollar
 			then Enum.Material.Ground
+			elseif isBoulder then Enum.Material.Slate
 			else Enum.Material.Wood
 	end
 
@@ -335,7 +360,10 @@ local function spawnPrefabModel(
 			desc.PivotOffset = CFrame.identity
 			local n = desc.Name
 			local isFol = n:find("Foliage", 1, true) ~= nil
+				or n:find("LushBush", 1, true) ~= nil
+				or n:find("Fern", 1, true) ~= nil
 			local isTurf = n:find("Turf", 1, true) ~= nil
+				or n:find("GrassTuft", 1, true) ~= nil
 			configureFoliageMeshPart(desc, isFol, isTurf, tintColor)
 			local half = desc.Size * 0.5
 			local pMin = desc.Position - half
@@ -653,6 +681,89 @@ function EnvironmentSpawner.SpawnShrub(
 	local s = scale or r:NextNumber(0.85, 1.20)
 	local yaw = r:NextNumber(0, math.tau)
 	return spawnPrefabModel("WildForestShrub", parent, baseCFrame, s, yaw, EXPECTED_HEIGHTS.WildForestShrub, nil, 0.14)
+end
+
+function EnvironmentSpawner.SpawnOutskirtsPathway(parent: Instance, guardpostCenterCF: CFrame): Model?
+	local template = findTemplate("Outskirts_Pathway")
+	if not template then
+		return nil
+	end
+	local model = wrapAsModel(template:Clone(), "Outskirts_Pathway")
+	model.WorldPivot = CFrame.identity
+	for _, desc in model:GetDescendants() do
+		if desc:IsA("BasePart") then
+			desc.Anchored = true
+			desc.CanCollide = false
+			desc.CanQuery = false
+			desc.CanTouch = false
+			desc.CastShadow = false
+			desc.Material = Enum.Material.Plastic
+			desc.Color = Color3.fromRGB(163, 162, 165)
+			local sa = desc:FindFirstChildWhichIsA("SurfaceAppearance", true)
+			if sa and sa:IsA("SurfaceAppearance") then
+				sa.AlphaMode = Enum.AlphaMode.Opaque
+			end
+		end
+	end
+	model:PivotTo(guardpostCenterCF)
+	model:SetAttribute("BlenderEnvAsset", "Outskirts_Pathway")
+	model.Parent = parent
+	return model
+end
+
+function EnvironmentSpawner.SpawnOutskirtsBush(
+	parent: Instance,
+	baseCFrame: CFrame,
+	scale: number?,
+	yaw: number?,
+	rng: Random?
+): Model?
+	local r = rng or Random.new()
+	local s = scale or r:NextNumber(0.85, 1.15)
+	local y = yaw or r:NextNumber(0, math.tau)
+	if EnvironmentSpawner.HasTemplate("Outskirts_LushBush") then
+		return spawnPrefabModel("Outskirts_LushBush", parent, baseCFrame, s, y, EXPECTED_HEIGHTS.Outskirts_LushBush, nil, 0.14)
+	end
+	return EnvironmentSpawner.SpawnShrub(parent, baseCFrame, s, r)
+end
+
+function EnvironmentSpawner.SpawnOutskirtsFern(
+	parent: Instance,
+	baseCFrame: CFrame,
+	scale: number?,
+	yaw: number?,
+	rng: Random?
+): Model?
+	local r = rng or Random.new()
+	local s = scale or r:NextNumber(0.88, 1.16)
+	local y = yaw or r:NextNumber(0, math.tau)
+	return spawnPrefabModel("Outskirts_WoodlandFern", parent, baseCFrame, s, y, EXPECTED_HEIGHTS.Outskirts_WoodlandFern, nil, 0.05)
+end
+
+function EnvironmentSpawner.SpawnOutskirtsBoulder(
+	parent: Instance,
+	baseCFrame: CFrame,
+	scale: number?,
+	yaw: number?,
+	rng: Random?
+): Model?
+	local r = rng or Random.new()
+	local s = scale or r:NextNumber(0.95, 1.35)
+	local y = yaw or r:NextNumber(0, math.tau)
+	return spawnPrefabModel("Outskirts_MossyBoulder", parent, baseCFrame, s, y, EXPECTED_HEIGHTS.Outskirts_MossyBoulder, nil, 0.18)
+end
+
+function EnvironmentSpawner.SpawnOutskirtsGrassTuft(
+	parent: Instance,
+	baseCFrame: CFrame,
+	scale: number?,
+	yaw: number?,
+	rng: Random?
+): Model?
+	local r = rng or Random.new()
+	local s = scale or r:NextNumber(0.82, 1.28)
+	local y = yaw or r:NextNumber(0, math.tau)
+	return spawnPrefabModel("Outskirts_GrassTuft", parent, baseCFrame, s, y, EXPECTED_HEIGHTS.Outskirts_GrassTuft, nil, 0.04)
 end
 
 local function isTreeCanopyName(name: string): boolean

@@ -1,0 +1,294 @@
+{
+  "gp_plot_origin": [
+    12.0,
+    0.0,
+    96.0
+  ],
+  "guardpost_tris": 6056,
+  "guardpost_tri_breakdown": {
+    "GuardTower_CobblePad": 854,
+    "GuardTower_Structure": 1552,
+    "GuardTower_Roof": 972,
+    "GuardTower_Props": 628,
+    "Campfire_Area": 700,
+    "Campfire_StoneHearth": 282,
+    "Outskirts_Fence": 1068
+  },
+  "env_kit_tris": 981,
+  "env_kit_tri_breakdown": {
+    "Outskirts_Pathway": 650,
+    "Outskirts_LushBush": 160,
+    "Outskirts_WoodlandFern": 90,
+    "Outskirts_MossyBoulder": 60,
+    "Outskirts_GrassTuft": 21
+  },
+  "tower_pos_local": [
+    16.5,
+    0.0,
+    -14.5
+  ],
+  "tower_yaw_deg": -82.0,
+  "lantern_pos_local": [
+    12.7977,
+    12.15,
+    -9.5869
+  ],
+  "campfire_pos_local": [
+    -14.0,
+    0.0,
+    -6.5
+  ],
+  "palisade_points_local": [
+    [
+      -29.0,
+      -14.0
+    ],
+    [
+      -23.0,
+      -3.0
+    ],
+    [
+      -17.0,
+      5.5
+    ]
+  ],
+  "split_rail_points_local": [
+    [
+      -17.0,
+      5.5
+    ],
+    [
+      -11.5,
+      6.5
+    ],
+    [
+      -6.2,
+      0.5
+    ]
+  ],
+  "guardpost_meshes": {
+    "GuardTower_CobblePad": {
+      "pos": [
+        16.537,
+        0.6349,
+        -14.3859
+      ],
+      "size": [
+        14.1276,
+        1.2697,
+        14.1181
+      ],
+      "pivot_offset": [
+        -16.537,
+        -0.6349,
+        14.3859
+      ]
+    },
+    "GuardTower_Structure": {
+      "pos": [
+        16.5,
+        8.7503,
+        -14.0517
+      ],
+      "size": [
+        12.377,
+        17.4903,
+        13.2736
+      ],
+      "pivot_offset": [
+        -16.5,
+        -8.7503,
+        14.0517
+      ]
+    },
+    "GuardTower_Roof": {
+      "pos": [
+        16.5,
+        16.0248,
+        -14.5
+      ],
+      "size": [
+        10.5261,
+        4.0905,
+        10.2756
+      ],
+      "pivot_offset": [
+        -16.5,
+        -16.0248,
+        14.5
+      ]
+    },
+    "GuardTower_Props": {
+      "pos": [
+        14.3302,
+        5.6387,
+        -14.8373
+      ],
+      "size": [
+        8.0746,
+        11.3226,
+        13.2277
+      ],
+      "pivot_offset": [
+        -14.3302,
+        -5.6387,
+        14.8373
+      ]
+    },
+    "Campfire_Area": {
+      "pos": [
+        -13.8377,
+        1.1553,
+        -6.6107
+      ],
+      "size": [
+        13.3646,
+        2.7893,
+        12.0661
+      ],
+      "pivot_offset": [
+        13.8377,
+        -1.1553,
+        6.6107
+      ]
+    },
+    "Campfire_StoneHearth": {
+      "pos": [
+        -13.9477,
+        0.4172,
+        -6.49
+      ],
+      "size": [
+        12.8316,
+        0.8345,
+        12.4075
+      ],
+      "pivot_offset": [
+        13.9477,
+        -0.4172,
+        6.49
+      ]
+    },
+    "Outskirts_Fence": {
+      "pos": [
+        -17.5906,
+        2.3121,
+        -3.6969
+      ],
+      "size": [
+        23.8548,
+        4.6559,
+        21.5963
+      ],
+      "pivot_offset": [
+        17.5906,
+        -2.3121,
+        3.6969
+      ]
+    }
+  },
+  "env_kit_meshes": {
+    "Outskirts_Pathway": {
+      "pos": [
+        -10.9498,
+        0.0683,
+        -5.9095
+      ],
+      "size": [
+        139.0426,
+        0.1365,
+        59.5811
+      ],
+      "pivot_offset": [
+        10.9498,
+        -0.0683,
+        5.9095
+      ]
+    },
+    "Outskirts_LushBush": {
+      "pos": [
+        0.0556,
+        1.7193,
+        -0.1691
+      ],
+      "size": [
+        4.6244,
+        2.4066,
+        4.188
+      ],
+      "pivot_offset": [
+        -0.0556,
+        -1.7193,
+        0.1691
+      ]
+    },
+    "Outskirts_WoodlandFern": {
+      "pos": [
+        -0.184,
+        0.574,
+        -0.035
+      ],
+      "size": [
+        3.5239,
+        1.1881,
+        3.8282
+      ],
+      "pivot_offset": [
+        0.184,
+        -0.574,
+        0.035
+      ]
+    },
+    "Outskirts_MossyBoulder": {
+      "pos": [
+        0.1309,
+        1.241,
+        -0.0411
+      ],
+      "size": [
+        4.1588,
+        1.9561,
+        3.8161
+      ],
+      "pivot_offset": [
+        -0.1309,
+        -1.241,
+        0.0411
+      ]
+    },
+    "Outskirts_GrassTuft": {
+      "pos": [
+        0.0073,
+        0.5914,
+        -0.0075
+      ],
+      "size": [
+        0.6046,
+        1.1827,
+        0.9232
+      ],
+      "pivot_offset": [
+        -0.0073,
+        -0.5914,
+        0.0075
+      ]
+    }
+  },
+  "textures": {
+    "ground": {
+      "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_GuardpostGround_Color.png",
+      "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_GuardpostGround_Normal.png",
+      "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_GuardpostGround_Roughness.png"
+    },
+    "props": {
+      "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_GuardpostProps_Color.png",
+      "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_GuardpostProps_Normal.png",
+      "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_GuardpostProps_Roughness.png"
+    },
+    "meadow": {
+      "color": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsMeadow_Color.png",
+      "normal": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsMeadow_Normal.png",
+      "roughness": "assets/models/facilities/textures/outskirts_guardhouse/Tex_OutskirtsMeadow_Roughness.png"
+    }
+  }
+}
