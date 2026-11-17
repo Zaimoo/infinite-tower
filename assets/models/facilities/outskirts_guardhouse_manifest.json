@@ -4,11 +4,11 @@
     0.0,
     96.0
   ],
-  "guardpost_tris": 5912,
+  "guardpost_tris": 5864,
   "guardpost_tri_breakdown": {
     "GuardTower_CobblePad": 1110,
     "GuardTower_Structure": 1552,
-    "GuardTower_Roof": 972,
+    "GuardTower_Roof": 924,
     "GuardTower_Props": 628,
     "Campfire_Area": 700,
     "Campfire_StoneHearth": 386,

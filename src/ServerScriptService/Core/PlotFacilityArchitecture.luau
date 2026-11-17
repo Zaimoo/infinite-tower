@@ -1612,7 +1612,7 @@ local GP_PROPS_RM = "rbxassetid://114591375821153"
 local GUARDPOST_OUTSKIRTS_MESHES: { BundledMeshSpec } = {
 	{ Name = "GuardTower_CobblePad", MeshId = "rbxassetid://70780784796261", Size = V(12.6563, 1.3460, 12.6121), Pos = V(16.6867, 0.6730, -14.2553), PivotOffset = V(16.6867, -0.6730, -14.2553), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
 	{ Name = "GuardTower_Structure", MeshId = "rbxassetid://94962682973717", Size = V(12.3770, 17.4903, 13.2736), Pos = V(16.5000, 8.7503, -14.0517), PivotOffset = V(16.5000, -8.7503, -14.0517), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
-	{ Name = "GuardTower_Roof", MeshId = "rbxassetid://77457018868714", Size = V(10.5261, 4.0905, 10.2756), Pos = V(16.5000, 16.0248, -14.5000), PivotOffset = V(16.5000, -16.0248, -14.5000), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
+	{ Name = "GuardTower_Roof", MeshId = "rbxassetid://92789248062540", Size = V(10.5261, 4.0905, 10.2756), Pos = V(16.5000, 16.0248, -14.5000), PivotOffset = V(16.5000, -16.0248, -14.5000), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
 	{ Name = "GuardTower_Props", MeshId = "rbxassetid://117458340250669", Size = V(8.0746, 11.3226, 13.2277), Pos = V(14.3302, 5.6387, -14.8373), PivotOffset = V(14.3302, -5.6387, -14.8373), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
 	{ Name = "Campfire_StoneHearth", MeshId = "rbxassetid://110052336686192", Size = V(6.2031, 0.8191, 6.2499), Pos = V(-14.1897, 0.4196, -6.4306), PivotOffset = V(-14.1897, -0.4196, -6.4306), ColorMap = GP_GROUND_CM, NormalMap = GP_GROUND_NM, RoughnessMap = GP_GROUND_RM, CastShadow = false },
 	{ Name = "Campfire_Area", MeshId = "rbxassetid://140525333251753", Size = V(13.3646, 2.7893, 12.0661), Pos = V(-13.8378, 1.1553, -6.6107), PivotOffset = V(-13.8378, -1.1553, -6.6107), ColorMap = GP_PROPS_CM, NormalMap = GP_PROPS_NM, RoughnessMap = GP_PROPS_RM, CastShadow = true },
@@ -1851,7 +1851,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 25 then
+	if existing and existing:GetAttribute("PrefabVersion") == 26 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1860,7 +1860,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 25)
+	prefabs:SetAttribute("PrefabVersion", 26)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")

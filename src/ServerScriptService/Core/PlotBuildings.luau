@@ -16,7 +16,7 @@ local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 53 -- 53: Tight corner Outskirts_Fence hugging dirt fork beside stepping stones (52: Open split-rail Outskirts_Fence lining left dirt path shoulder)
+local VERSION = 54 -- 54: Remove green moss patches/shingles from GuardTower_Roof (53: Tight corner Outskirts_Fence hugging dirt fork beside stepping stones)
 
 local function attachPrompt(
 	parent: Instance,

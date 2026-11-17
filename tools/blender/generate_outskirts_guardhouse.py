@@ -1467,11 +1467,9 @@ def build_guardtower_structure(mat_props: bpy.types.Material, col: bpy.types.Col
 def build_guardtower_roof(mat_props: bpy.types.Material, col: bpy.types.Collection) -> tuple[bpy.types.Object, int]:
     bm = bmesh.new()
     uv = bm.loops.layers.uv.new("UVMap")
-    rng = random.Random(2044)
 
     c_timber = (0, 0)
     c_shingle = (2, 0)
-    c_moss = (3, 0)
 
     yaw_rad = math.radians(TOWER_YAW_DEG)
     pitch = math.radians(38.0)
@@ -1509,25 +1507,16 @@ def build_guardtower_roof(mat_props: bpy.types.Material, col: bpy.types.Collecti
                 tz = -roof_len_z * 0.44 + (c_i + 0.5) * col_step + stag * 0.4
                 tz = max(-roof_len_z * 0.43, min(roof_len_z * 0.43, tz))
                 gx_s, gy_s, gz_s = tower_local_to_gp(sx, sy, tz)
-                is_moss = (s > 0 and r >= n_rows - 2 and c_i in (1, 2, 4, 5))
-                sh_cell = c_moss if (is_moss and rng.random() < 0.55) else c_shingle
                 add_box_rbx(
                     bm, uv, (gx_s, gy_s, gz_s),
                     (row_step * 1.24, 0.15, col_step * 1.04),
-                    sh_cell,
+                    c_shingle,
                     (0.0, yaw_rad, -s * (pitch - 0.07)),
                 )
 
     # Heavy ridge cap beam sealing the apex cleanly
     rx, ry, rz = tower_local_to_gp(0.0, ridge_y + 0.18, 0.0)
     add_box_rbx(bm, uv, (rx, ry, rz), (0.68, 0.48, roof_len_z + 0.36), c_timber, (0.0, yaw_rad, 0.0))
-
-    # Sculpted green moss patches sitting flush on the lower shingles of the right roof slope
-    for idx, (dist_d, tz, sc) in enumerate([(4.0, 2.2, 0.85), (4.3, 0.3, 0.95), (4.1, -1.9, 0.80), (3.0, 2.8, 0.70)]):
-        mx = math.cos(pitch) * dist_d + math.sin(pitch) * 0.30
-        my = ridge_y - math.sin(pitch) * dist_d + math.cos(pitch) * 0.30
-        gx, gy, gz = tower_local_to_gp(mx, my, tz)
-        add_box_rbx(bm, uv, (gx, gy, gz), (1.05 * sc, 0.16 * sc, 1.30 * sc), c_moss, (0.0, yaw_rad + 0.12 * idx, -pitch))
 
     return finalize_mesh_obj("GuardTower_Roof", bm, mat_props, col)
 
