@@ -31,9 +31,13 @@ test("AnimeSfxManifest contains all 126 WAV entries with valid metadata", functi
 		assert(type(entry.Channels) == "number" and entry.Channels >= 1, "invalid Channels for " .. key)
 		assert(AnimeSfxManifest.Get(key) == entry, "Get mismatch for " .. key)
 		assert(AnimeSfxManifest.GetStudioId(key) == entry.StudioId, "GetStudioId mismatch for " .. key)
-		assert(AnimeSfxManifest.GetPlayableId(key, true) == entry.StudioId, "GetPlayableId(true) mismatch for " .. key)
 		if entry.AssetId == "" then
+			assert(AnimeSfxManifest.GetPlayableId(key, true) == entry.StudioId, "GetPlayableId(true) mismatch for " .. key)
 			assert(AnimeSfxManifest.GetPlayableId(key, false) == nil, "expected nil GetPlayableId(false) when AssetId is empty for " .. key)
+		else
+			assert(string.match(entry.AssetId, "^rbxassetid://%d+$") ~= nil, "bad AssetId for " .. key)
+			assert(AnimeSfxManifest.GetPlayableId(key, true) == entry.AssetId, "uploaded AssetId should win in Studio for " .. key)
+			assert(AnimeSfxManifest.GetPlayableId(key, false) == entry.AssetId, "uploaded AssetId should play live for " .. key)
 		end
 	end
 	assert(count == 126, "expected 126 Entries pairs, got " .. tostring(count))
