@@ -27,7 +27,9 @@ local isSettingFOV = false
 local brightnessCC: ColorCorrectionEffect
 local glassBlur: BlurEffect
 
-local trackedLights: { [Light]: boolean } = {}
+-- Weak keys: every light that ever enters Workspace lands here (weapon glows on each hero rebuild, VFX,
+-- tower rooms). A strong table kept each destroyed one alive until the next shadow toggle.
+local trackedLights: { [Light]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 
 local function ensureEffect<T>(className: string, name: string): T
 	local found = Lighting:FindFirstChild(name)

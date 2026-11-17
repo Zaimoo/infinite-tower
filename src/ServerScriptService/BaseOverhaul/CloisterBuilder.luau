@@ -793,6 +793,20 @@ end
 --============================================================================
 -- J. REFLECTING POOL (north wedge)
 --============================================================================
+-- Primitive weeping willow standing at `w`, used when the WeepingWillowTree template is missing.
+-- `scale` grows it about its base (1.0 is the size the plain pool uses).
+local function willowTree(parent: Instance, w: CFrame, scale: number)
+	local s = scale
+	makePart({ Name = "WillowTrunk", Size = Vector3.new(2.2, 11, 2.2) * s, CFrame = w * CFrame.new(0, 5.5 * s, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = parent })
+	for j, ball in { { 0, 12, 0, 13 }, { -3, 10.5, 2, 9 }, { 3, 10.5, -2, 9 } } do
+		makePart({ Name = "WillowCanopy_" .. j, Shape = Enum.PartType.Ball, Size = Vector3.new(ball[4], ball[4], ball[4]) * s, CFrame = w * CFrame.new(ball[1] * s, ball[2] * s, ball[3] * s), Color = Color3.fromRGB(110, 150, 70), Material = Enum.Material.Grass, Decorative = true, Parent = parent })
+	end
+	for k = 0, 5 do
+		local a = math.rad(k * 60)
+		makePart({ Name = "WillowFrond", Size = Vector3.new(1.2, 7, 1.2) * s, CFrame = w * CFrame.new(math.cos(a) * 5.5 * s, 7 * s, math.sin(a) * 5.5 * s), Color = Color3.fromRGB(96, 136, 62), Material = Enum.Material.Grass, Decorative = true, Parent = parent })
+	end
+end
+
 local function buildPool(model: Model, root: CFrame)
 	local f = folder("ReflectingPool", model)
 	local pc = root
@@ -841,14 +855,7 @@ local function buildPool(model: Model, root: CFrame)
 		if envSpawner.HasTemplate("WeepingWillowTree") then
 			envSpawner.SpawnWillow(f, w, 1.0, willowRng)
 		else
-			makePart({ Name = "WillowTrunk", Size = Vector3.new(2.2, 11, 2.2), CFrame = w * CFrame.new(0, 5.5, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = f })
-			for j, ball in { { 0, 12, 0, 13 }, { -3, 10.5, 2, 9 }, { 3, 10.5, -2, 9 } } do
-				makePart({ Name = "WillowCanopy_" .. j, Shape = Enum.PartType.Ball, Size = Vector3.new(ball[4], ball[4], ball[4]), CFrame = w * CFrame.new(ball[1], ball[2], ball[3]), Color = Color3.fromRGB(110, 150, 70), Material = Enum.Material.Grass, Decorative = true, Parent = f })
-			end
-			for k = 0, 5 do
-				local a = math.rad(k * 60)
-				makePart({ Name = "WillowFrond", Size = Vector3.new(1.2, 7, 1.2), CFrame = w * CFrame.new(math.cos(a) * 5.5, 7, math.sin(a) * 5.5), Color = Color3.fromRGB(96, 136, 62), Material = Enum.Material.Grass, Decorative = true, Parent = f })
-			end
+			willowTree(f, w, 1.0)
 		end
 	end
 	-- Fountain jet in the middle of the pool
@@ -1031,7 +1038,7 @@ function CloisterBuilder.Build(container: Instance): Model
 			if envSpawner.HasTemplate("WeepingWillowTree") then
 				envSpawner.SpawnWillow(poolFolder, w, 1.3, willowRng)
 			else
-				willowTree(poolFolder, w, willowRng)
+				willowTree(poolFolder, w, 1.3)
 			end
 		end
 	else

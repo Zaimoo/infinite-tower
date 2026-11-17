@@ -379,7 +379,37 @@ local function sendBootstrap(player: Player)
  end
  TowerRemotes.TowerEntityState:FireClient(player,context,{Kind="COMPLETE",BootstrapRevision=BootstrapRevision,LifecycleRevision=CombatLifecycleRevision})
 end
-local function bootstrapAll() for _,p in Players:GetPlayers() do sendBootstrap(p) end end
+-- Tower roster changes (kills, waves, boss summons) only concern the players viewing that floor, and
+-- several can land in one tick: they are queued per floor and sent once, at the end of the frame or
+-- before the next snapshot, whichever comes first. Bootstrapping every player on every kill cost
+-- O(kills x players x entities) and flooded every client with full rosters for floors it never sees.
+local PendingBootstrapFloors: { [number]: boolean } = {}
+local bootstrapFlushQueued = false
+local function flushFloorBootstraps()
+ bootstrapFlushQueued = false
+ if next(PendingBootstrapFloors) == nil then return end
+ local floors = PendingBootstrapFloors
+ PendingBootstrapFloors = {}
+ for _,p in Players:GetPlayers() do
+  if floors[Tower.Context(p).FloorId] then sendBootstrap(p) end
+ end
+end
+local function queueFloorBootstrap(floorId: number?)
+ if type(floorId) ~= "number" then
+  -- Unknown floor: every player, but still coalesced.
+  for _,p in Players:GetPlayers() do PendingBootstrapFloors[Tower.Context(p).FloorId] = true end
+ else
+  PendingBootstrapFloors[floorId] = true
+ end
+ if not bootstrapFlushQueued then
+  bootstrapFlushQueued = true
+  task.defer(flushFloorBootstraps)
+ end
+end
+local function bootstrapAll()
+ table.clear(PendingBootstrapFloors) -- everyone gets a fresh roster now
+ for _,p in Players:GetPlayers() do sendBootstrap(p) end
+end
 local function broadcastMetadata(targetPlayer: Player?)
 	if targetPlayer then sendBootstrap(targetPlayer) else bootstrapAll() end
 end
@@ -499,19 +529,20 @@ function CombatSimulation.RefreshPlayerHeroStats(player: Player)
 	local state = ActiveMasters[player]
 	local profile = getDataManager().GetProfile(player)
 	if not state or not profile then return end
-	local metadataChanged = false
 	for uuid, simHero in pairs(state.DeployedHeroes) do
 		local hero = profile.Heroes[uuid]
 		if hero then
 			local atkMult, hpMult = attunedMultiplier(player, profile, hero, StatFormulas.GetEquippedArtifact(profile,hero))
 			local atk, hp, _, interval = StatFormulas.GetEffectiveCombatStats(hero, false, false, StatFormulas.GetEquippedArtifact(profile,hero), atkMult, hpMult)
-			metadataChanged = metadataChanged or simHero.Level ~= hero.Level or simHero.Stars ~= hero.Stars or simHero.MaxHP ~= hp
+			if simHero.Level ~= hero.Level or simHero.Stars ~= hero.Stars or simHero.MaxHP ~= hp then
+				-- Nameplate data only: the players viewing this hero's floor get a fresh roster (coalesced).
+				queueFloorBootstrap(simHero.FloorId)
+			end
 			simHero.Level, simHero.Stars = hero.Level, hero.Stars
 			simHero.EffectiveATK, simHero.MaxHP, simHero.AttackInterval = atk, hp, interval
 			simHero.CurrentHP = math.min(simHero.CurrentHP, hp)
 		end
 	end
-	if metadataChanged then broadcastMetadata(nil) end
 end
 
 --============================================================================
@@ -2943,6 +2974,8 @@ local ENEMY_STATE_TO_ENUM: { [string]: number } = { IDLE = 20, CHASE = 21, WINDU
 -- reads these fields, so cloning the whole sim table every snapshot was wasted allocation.
 local SnapshotRecords: { [any]: any } = setmetatable({}, { __mode = "k" }) :: any
 local function broadcastReplicationSnapshot(now: number)
+ -- Rosters queued this tick go out before the snapshot that carries their entities.
+ flushFloorBootstraps()
  SnapshotSequence=(SnapshotSequence+1)%4294967296
  local serverNow=Workspace:GetServerTimeNow()
  local byFloor={}
@@ -3262,7 +3295,7 @@ if RunService:IsStudio() then
 end
 
 Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=ActiveMobsByNetId,Navigation=HeroNavigation,Allocate=allocateNetId,
- Changed=bootstrapAll,
+ Changed=queueFloorBootstrap,
  OnRaidSignature=function(mob,now) if _G.RaidService then _G.RaidService.OnSignature(mob,now) end end,
  Announce=function(floorId,text)
   for _,p in Players:GetPlayers() do
