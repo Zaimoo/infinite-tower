@@ -2343,7 +2343,7 @@ PotionService.Init({
 	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
 })
 
--- Weapon Reforge (GDD §7.6): the Runesmith's Anvil on the Commons. A trait changes hero stats, and the
+-- Weapon Reforge (GDD §7.6): the Runesmith's Anvil on the Commons. An enchantment changes hero stats, and the
 -- progression sync refreshes the deployed heroes' stats.
 ReforgeService.Init({
 	GetProfile = function(player: Player) return ActiveProfiles[player] end,

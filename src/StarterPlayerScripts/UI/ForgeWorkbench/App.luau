@@ -325,17 +325,17 @@ local function App(props: Types.Props)
 	-- Superior is a Hard confirm (arms after 1 s); Exalted+ or any ★2+ weapon must be held to confirm.
 	local function handleSellAction()
 		if sell.SelectedCount == 0 or busy then return end
-		local maxRarity, maxStars, maxTrait = 1, 1, 0
+		local maxRarity, maxStars, maxEnchantment = 1, 1, 0
 		local items = {}
 		for _, artifact in sell.SelectedItems do
 			maxRarity = math.max(maxRarity, artifact.Rarity or 1)
 			maxStars = math.max(maxStars, artifact.Star or 1)
-			local traited = ReforgeRules.IsTrait(artifact.Trait)
-			if traited then maxTrait = math.max(maxTrait, artifact.Trait.Grade) end
+			local enchanted = ReforgeRules.IsEnchantment(artifact.Enchantment)
+			if enchanted then maxEnchantment = math.max(maxEnchantment, artifact.Enchantment.Grade) end
 			table.insert(items, string.format("%s · %s %d★%s", artifact.DisplayName, Catalog.GetRarityInfo(artifact.Rarity or 1).Name, artifact.Star or 1,
-				if traited then " · " .. ReforgeRules.Describe(artifact.Trait) else ""))
+				if enchanted then " · " .. ReforgeRules.Describe(artifact.Enchantment) else ""))
 		end
-		local tier = Kit.Rules.ConfirmTier("SELL", { MaxRarity = maxRarity, MaxStars = maxStars, MaxTraitGrade = maxTrait })
+		local tier = Kit.Rules.ConfirmTier("SELL", { MaxRarity = maxRarity, MaxStars = maxStars, MaxEnchantmentGrade = maxEnchantment })
 		if tier == "None" then
 			sell.Sell()
 			return
@@ -343,7 +343,7 @@ local function App(props: Types.Props)
 		Kit.Confirm.Ask({
 			Tier = tier,
 			Title = string.format("Sell %d weapon%s?", sell.SelectedCount, if sell.SelectedCount == 1 then "" else "s"),
-			Body = string.format("They're gone for good%s. You get %s Gold.", if maxTrait > 0 then ", with their reforged traits" else "", Balance.Format(sell.TotalGold)),
+			Body = string.format("They're gone for good%s. You get %s Gold.", if maxEnchantment > 0 then ", with their enchantments" else "", Balance.Format(sell.TotalGold)),
 			Items = items,
 			ConfirmText = "Sell",
 			OnConfirm = function() sell.Sell() end,
