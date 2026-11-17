@@ -23,8 +23,8 @@ end
 -- biome; each floor reshapes its own copy, seeded by its floor id: galleries, bastions, the Crossing and
 -- the Apex shift, resize and change height (each side on its own, so floors are no longer mirror images),
 -- and a few paths wind through a small "bend" terrace instead of running straight. The Sanctuary and the
--- Basin never move (arrival, banking and the travel portals depend on them), and floor 1, the onboarding
--- floor, keeps the canonical layout. A variation is kept only if
+-- Basin never move (arrival, banking and the travel portals depend on them), and hand-authored floors
+-- (AUTHORED below, starting with floor 1) take their own fixed shape instead. A variation is kept only if
 -- it passes Layout.Validate; otherwise the next seed is tried, and the canonical layout is the fallback.
 local VARIANT_ATTEMPTS = 16
 
@@ -70,6 +70,38 @@ local function variation(index: number, floorId: number, attempt: number): any
 	return v
 end
 
+-- Hand-authored floors (docs/prompts/verdant-ruins-floor-layouts-prompt.md). An authored floor is not a
+-- seeded variation: it moves terraces to its own fixed spots and replaces the path list, so its shape
+-- (not just its proportions) differs from the canonical layout. Terrace ids keep their roles (Basin is the
+-- entry level, the Galleries the wings, the Crossing the central spine, Apex the summit), so every
+-- consumer keeps working; Names gives each terrace its in-world name. Validated like any variation.
+local AUTHORED: {[number]: any} = {
+	-- Floor 1, Overgrown Threshold (Verdant Ruins): the Solmere's front door. A narrow processional avenue
+	-- runs from the fern hollow straight up grand steps to the cracked Dawn Gate, so the summit is in view
+	-- from the Sanctuary; two low glades flank it at different heights, and the east glade's path rejoins
+	-- the avenue instead of climbing to the Apex on its own.
+	[1] = {
+		Key = "verdant:1",
+		Name = "Overgrown Threshold",
+		-- Ramps and stairs are Solmere flagstone causeways with mossy kerbs (TowerRoomBuilder), and the
+		-- canopy of giant trees replaces the ramp arches (TowerBiomeAssets).
+		PathStyle = "SOLMERE",
+		Crossing = {X = 0, Y = 3, Z = -34, Width = 52, Depth = 96},
+		WestGallery = {X = -116, Y = 4, Z = -30, Width = 84, Depth = 76},
+		EastGallery = {X = 118, Y = 6, Z = -40, Width = 84, Depth = 76},
+		Apex = {X = 0, Y = 12, Z = -140, Width = 104, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"}, {"Basin", "Crossing"},
+			{"Crossing", "Apex"}, {"WestGallery", "Apex"}, {"EastGallery", "Crossing"},
+		},
+		Names = {
+			Sanctuary = "Fallen Gate", Basin = "Pilgrim Hollow", Crossing = "Processional Avenue",
+			WestGallery = "Shrine Glade", EastGallery = "Banyan Well", Apex = "Dawn Gate",
+		},
+	},
+}
+
 local function build(index: number, v: any?): any
 	assert(index >= 1 and index <= 5 and index % 1 == 0)
 	local w, d = widths[index], depths[index]
@@ -80,7 +112,7 @@ local function build(index: number, v: any?): any
 			x, y, z = o.X or x, o.Y or y, o.Z or z
 			width, depth = o.Width or width, o.Depth or depth
 		end
-		local p = {Id=id, X=x, Y=y, Z=z, Width=width, Depth=depth}
+		local p: any = {Id=id, X=x, Y=y, Z=z, Width=width, Depth=depth}
 		platforms[id] = p
 		return p
 	end
@@ -142,14 +174,23 @@ local function build(index: number, v: any?): any
 			Z=mz+nz*bend.Offset, Width=bend.Width, Depth=bend.Depth, Bend=true}
 		link(a, id); link(id, b)
 	end
-	link("Sanctuary", "Basin")
-	route("Basin", "WestGallery"); route("Basin", "EastGallery"); link("Basin", "Crossing")
-	link("Crossing", "Apex")
-	if index >= 4 then
-		link("WestGallery", "WestBastion"); link("EastGallery", "EastBastion")
-		route("WestBastion", "Apex"); route("EastBastion", "Apex")
+	if v and v.Paths then
+		for _, path in v.Paths do route(path[1], path[2]) end
 	else
-		route("WestGallery", "Apex"); route("EastGallery", "Apex")
+		link("Sanctuary", "Basin")
+		route("Basin", "WestGallery"); route("Basin", "EastGallery"); link("Basin", "Crossing")
+		link("Crossing", "Apex")
+		if index >= 4 then
+			link("WestGallery", "WestBastion"); link("EastGallery", "EastBastion")
+			route("WestBastion", "Apex"); route("EastBastion", "Apex")
+		else
+			route("WestGallery", "Apex"); route("EastGallery", "Apex")
+		end
+	end
+	if v and v.Names then
+		for id, name in v.Names do
+			if platforms[id] then platforms[id].Name = name end
+		end
 	end
 	local camps = {}
 	local function camp(id, terrace, dx, elite, boss, size)
@@ -192,7 +233,7 @@ local function build(index: number, v: any?): any
 	end
 	return {Width=w, Depth=d, Height=heights[index], Bottom=bottom, ReturnLinks=returns,
 		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe, EliteCount=eliteCount, Index=index,
-		Varied=v ~= nil}
+		Varied=v ~= nil, Authored=v and v.Key or nil, Name=v and v.Name or nil, PathStyle=v and v.PathStyle or nil}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,
@@ -272,9 +313,14 @@ local variantAttempt: {[number]: number} = {}
 -- The layout for a floor. With a floor id it is that floor's own variation of the canonical layout for
 -- `index` (= (floorId - 1) % 5 + 1); without one it is the canonical layout (specs, tools).
 function Layout.Get(index: number, floorId: number?): any
-	-- Floor 1 is the onboarding floor the guide teaches on: it keeps the canonical layout.
-	if not floorId or floorId == 1 then
+	if not floorId then
 		return build(index)
+	end
+	-- Hand-authored floors are fixed, not seeded. Floor 1 is also the onboarding floor: the guide only
+	-- points at the floor boss wherever it stands, so it needs no particular shape, only a fixed one.
+	local authored = AUTHORED[floorId]
+	if authored then
+		return build(index, authored)
 	end
 	local allowed = {}
 	local known = variantAttempt[floorId]

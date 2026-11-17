@@ -768,9 +768,12 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			arch(V(mid.X, bottom, mid.Z), span, rise + (mid.Y - 2 - bottom), depthSize, color, theme.TrimMaterial, yaw)
 		end)
 	end
-	rampArch(ramp1Mid, ramp1Yaw, 42, 28 * scale, 8, theme.TrimColor)
-	rampArch(ramp2Mid, ramp2Yaw, 38, 30 * scale, 8, theme.TrimColor)
-	rampArch(stairMid, stairYaw, 42, 34 * scale, 9, gold)
+	-- A hand-authored floor can arch its paths with something of its own (Floor 1: a canopy of giant trees).
+	if not layout.Authored then
+		rampArch(ramp1Mid, ramp1Yaw, 42, 28 * scale, 8, theme.TrimColor)
+		rampArch(ramp2Mid, ramp2Yaw, 38, 30 * scale, 8, theme.TrimColor)
+		rampArch(stairMid, stairYaw, 42, 34 * scale, 9, gold)
+	end
 
 	if biome == "corrupted_grove" then
 		for _, at in { { ramp1Mid, ramp1Yaw }, { ramp2Mid, ramp2Yaw }, { stairMid, stairYaw } } do
@@ -939,6 +942,245 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 			beam("HengeLightningStrike", hengeAt + V(0, 4 * scale, 0), hengeAt + V(4, h - 8, -6), 2.0, accent, Enum.Material.Neon)
 		end)
+	end
+
+	-- =========================================================================
+	-- 4b. HAND-AUTHORED FLOOR SET PIECES (TowerLayout AUTHORED)
+	-- =========================================================================
+	-- Floor 1, Overgrown Threshold: the Solmere's front door. Their motif is the carved sun disc; the
+	-- Heartroot's sap (emerald-gold) is what still glows. Pieces stand clear of every walkway and camp.
+	-- Ground the authored pieces claim (x, z, radius): the natural ecosystem (section 7) grows around them.
+	local reservedSpots: { { number } } = {}
+	if layout.Authored == "verdant:1" then
+		local sap = rgb(150, 235, 120)
+		local limestone = rgb(196, 190, 168)
+		local verdigris = rgb(92, 150, 128)
+		-- A carved sun disc facing +Z (toward the Sanctuary): rim ring, eight rays and a glowing core.
+		local function sunDisc(name: string, at: Vector3, radius: number, tilt: CFrame?, glow: boolean)
+			local face = CFrame.new(at) * (tilt or CFrame.identity)
+			ring(name .. "Rim", at, radius, math.max(0.6, radius * 0.16), gold, Enum.Material.Cobblestone, tilt, 0, math.pi * 2, 14)
+			for k = 0, 7 do
+				local a = k * math.pi / 4
+				beam(name .. "Ray", face:PointToWorldSpace(V(math.cos(a) * radius * 1.05, math.sin(a) * radius * 1.05, 0)),
+					face:PointToWorldSpace(V(math.cos(a) * radius * 1.55, math.sin(a) * radius * 1.55, 0)), math.max(0.5, radius * 0.18), verdigris, Enum.Material.Slate)
+			end
+			local core = cyl(name .. "Core", at, radius * 0.55, math.max(0.4, radius * 0.12), if glow then sap else gold, if glow then Enum.Material.Neon else Enum.Material.Cobblestone)
+			core.CFrame = CFrame.new(origin) * face * CFrame.Angles(0, math.pi / 2, 0)
+			return core
+		end
+		-- Glow-lilies: low emerald blooms the Bloom Tenders keep (they open at night).
+		local function lilies(at: Vector3, count: number)
+			for k = 1, count do
+				local a = k * 2.4
+				local p = at + V(math.cos(a) * (1 + k * 0.6), 0, math.sin(a) * (1 + k * 0.6))
+				cyl("GlowLilyPad", p + V(0, 0.15, 0), 1.3, 0.3, rgb(46, 112, 58), Enum.Material.Grass)
+				orb("GlowLilyBloom", p + V(0, 0.8, 0), V(0.9, 0.9, 0.9), sap, Enum.Material.Neon)
+			end
+		end
+
+		-- The Dawn Gate: a cracked sun-gate on the back half of the summit, framing the boss portals and the
+		-- temple behind them. The west half of the lintel still stands with the sun disc hanging askew from it;
+		-- the east half lies broken on the terrace. Its piers stand outside the portal lanes.
+		local gateZ = apex.Z - apex.Depth / 2 + 12
+		local pierX, pierH = 37, 30 * scale
+		group("DawnGate", function()
+			for _, s in { -1, 1 } do
+				block("DawnGateArchPier", V(8, pierH, 8), V(apex.X + s * pierX, apex.Y + pierH / 2, gateZ), limestone, Enum.Material.Limestone)
+				block("DawnGatePierCap", V(10, 2, 10), V(apex.X + s * pierX, apex.Y + pierH + 1, gateZ), gold, Enum.Material.Cobblestone)
+				beam("DawnGateIvy", V(apex.X + s * (pierX + 4.2), apex.Y + 0.5, gateZ + 2), V(apex.X + s * (pierX + 3.6), apex.Y + pierH - 3, gateZ + 3), 0.8, rgb(54, 126, 62), Enum.Material.Grass)
+			end
+			-- Intact west half of the lintel, cracked off just past the centre.
+			block("DawnGateLintel", V(pierX + 8, 5, 9), V(apex.X - pierX / 2 + 2, apex.Y + pierH + 4.5, gateZ), limestone, Enum.Material.Limestone)
+			local discAt = V(apex.X + 3, apex.Y + pierH - 6, gateZ + 1)
+			local core = sunDisc("DawnGateSun", discAt, 7 * scale, CFrame.Angles(0, 0, math.rad(-14)), true)
+			pointLight(core, sap, 1.2, 40)
+			beam("DawnGateSunChain", V(apex.X + 1, apex.Y + pierH + 2, gateZ), discAt + V(0, 7 * scale, 0), 0.6, rgb(70, 74, 68), Enum.Material.Metal)
+		end)
+		group("FallenLintel", function()
+			-- The broken east half, tipped onto the terrace beside its pier.
+			-- Lying along the terrace's east edge, clear of the summit camp and the Ascend portal's lane.
+			local at = V(apex.X + apex.Width / 2 - 8, apex.Y + 2.5, gateZ + 16)
+			local p = block("DawnGateFallenLintel", V(20, 5, 9), at, limestone, Enum.Material.Limestone)
+			p.CFrame = CFrame.new(origin + at) * CFrame.Angles(0, math.rad(84), math.rad(5))
+		end)
+		-- A shaft of dawn light through the crack, onto the summit.
+		beam("JungleSunbeam", V(apex.X + 30, h - 4, gateZ - 30), V(apex.X + 4, apex.Y + 1, apex.Z - 6), 12, rgb(250, 222, 150), Enum.Material.SmoothPlastic, 0.9)
+
+		-- Sun-disc stelae down both edges of the Processional Avenue, discs facing the pilgrims coming up from
+		-- the Sanctuary; the northmost pair still glows. They stand just outside the avenue's landing lanes
+		-- (21 studs either side of its centre), so nothing hangs inward; any that would stand on a walkway
+		-- (the east glade's path joins the avenue) is left out.
+		for _, s in { -1, 1 } do
+			for k = -1, 1 do
+				local at = V(crossing.X + s * (crossing.Width / 2 - 2.5), crossing.Y, crossing.Z + k * 30)
+				if footprintClear(at.X, at.Z, 1.8, 1.2) then
+					group("Stela", function()
+						block("SolmereStela", V(3.6, 13 * scale, 2.4), at + V(0, 6.5 * scale, 0), limestone, Enum.Material.Limestone)
+						block("StelaMossCap", V(3.6, 0.8, 2.4), at + V(0, 13 * scale + 0.4, 0), rgb(70, 120, 66), Enum.Material.Grass)
+						sunDisc("StelaSun", at + V(0, 10 * scale, 1.3), 1.1, nil, k == -1)
+					end)
+				end
+			end
+		end
+
+		-- Two stelae that fell into the fern beds of the Pilgrim Hollow, either side of the causeway.
+		for _, s in { -1, 1 } do
+			local at = V(s * 62, basin.Y, basin.Z + 14)
+			if footprintClear(at.X, at.Z, 7, 7) then
+				group("FallenStela", function()
+					local p = block("SolmereStelaFallen", V(3.6, 2.4, 13 * scale), at + V(0, 1.2, 0), limestone, Enum.Material.Limestone)
+					p.CFrame = CFrame.new(origin + at + V(0, 1.2, 0)) * CFrame.Angles(0, math.rad(s * 28), 0)
+					block("FernBed", V(10, 0.4, 14), at + V(s * 2, 0.2, 1), rgb(52, 110, 54), Enum.Material.Grass)
+					lilies(at + V(-s * 5, 0, -4), 4)
+				end)
+			end
+		end
+
+		-- Shrine Glade: three small sun shrines along the west glade's outer edge, past its camp.
+		local westGlade = layout.Platforms.WestGallery
+		for k = -1, 1 do
+			local at = V(westGlade.X - westGlade.Width / 2 + 6, westGlade.Y, westGlade.Z + k * 22)
+			if footprintClear(at.X, at.Z, 3, 3) then
+				group("SunShrine", function()
+					block("SunShrinePlinth", V(5, 1.2, 5), at + V(0, 0.6, 0), limestone, Enum.Material.Limestone)
+					block("SunShrinePost", V(2.4, 6, 2.4), at + V(0, 4.2, 0), limestone, Enum.Material.Limestone)
+					sunDisc("SunShrineDisc", at + V(0, 8.6, 0), 1.8, CFrame.Angles(0, math.pi / 2, 0), k == 0)
+					-- Lilies on the outer side: inward they would fall inside the camp's 34-stud clearance.
+					lilies(at + V(-2.5, 0, 3), 3)
+				end)
+			end
+		end
+
+		-- Banyan Well: a Solmere well on the east glade with a banyan grown over it.
+		local eastGlade = layout.Platforms.EastGallery
+		local wellAt = V(eastGlade.X + eastGlade.Width / 2 - 12, eastGlade.Y, eastGlade.Z - eastGlade.Depth / 2 + 14)
+		if footprintClear(wellAt.X, wellAt.Z, 7, 7) then
+			group("BanyanWell", function()
+				cyl("SolmereWellRim", wellAt + V(0, 1.6, 0), 5, 3.2, limestone, Enum.Material.Limestone)
+				cyl("SolmereWellWater", wellAt + V(0, 2.9, 0), 4.1, 0.4, rgb(60, 120, 110), Enum.Material.Glass, 0.2)
+				orb("WellSapGlow", wellAt + V(0, 3.2, 0), V(2, 0.6, 2), sap, Enum.Material.Neon, 0.3)
+				for k = 1, 4 do
+					local a = k * math.pi / 2 + 0.4
+					beam("WellRoot", wellAt + V(math.cos(a) * 9, 0.6, math.sin(a) * 9), wellAt + V(math.cos(a) * 4.6, 3.4, math.sin(a) * 4.6), 1.4, rgb(78, 62, 44), Enum.Material.Wood)
+				end
+				tree(wellAt + V(-4, 0, -4), 0.7 * scale, false, false)
+			end)
+		end
+
+		-- The Heartroot's giants: six colossal figs whose trunks stand off every walkway and whose boughs arch
+		-- over the paths high above heads, so the climb runs through a green tunnel: a pair over the arrival and
+		-- the Pilgrim Hollow, one either side of the avenue, and a pair framing the Dawn Gate. Boughs leave the
+		-- trunk above every lane (walk surface + 14) and camp band (camp + 22); each tip carries a banyan crown
+		-- (the kit mesh on a natural floor), and aerial roots hang no lower than 38 studs.
+		local bark = rgb(82, 64, 46)
+		local barkDark = rgb(62, 48, 36)
+		local vine = rgb(54, 122, 60)
+		local function limb(name: string, a: Vector3, b: Vector3, diameter: number, color: Color3): Part
+			local p = block(name, V(math.max(0.1, (b - a).Magnitude), diameter, diameter), (a + b) / 2, color, Enum.Material.Wood, Enum.PartType.Cylinder)
+			-- A cylinder's axis is its X: turn it from the look direction onto the a -> b line.
+			p.CFrame = CFrame.lookAt(origin + (a + b) / 2, origin + b) * CFrame.Angles(0, math.pi / 2, 0)
+			return p
+		end
+		local function groundAt(x: number, z: number): number
+			for _, t in layout.Platforms do
+				if math.abs(x - t.X) <= t.Width / 2 and math.abs(z - t.Z) <= t.Depth / 2 then
+					return t.Y
+				end
+			end
+			return if field then (field.Sample(x, z)) else bottom
+		end
+		local LOWEST_HANG = 38
+		-- A crown of leaves wrapped round a bough end (or the trunk's top): only the banyan's foliage, with its
+		-- trunk and roots dropped, sunk so the branch end sits inside the lower third of the leaves. A whole tree
+		-- stood on a branch reads as a tree floating in the air. Never lower than the hanging roots' floor.
+		local function canopy(at: Vector3, s: number)
+			if kitOn and biomeKit then
+				local crown = kitAt(biomeKit.Tree, CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), s)
+				if not crown then
+					return
+				end
+				local leaves: BasePart? = nil
+				for _, p in crown:GetDescendants() do
+					if p:IsA("BasePart") then
+						if ((p:GetAttribute("Role") :: string?) or p.Name) == "FOLIAGE" and not leaves then
+							leaves = p
+						else
+							p:Destroy()
+						end
+					end
+				end
+				if not leaves then
+					crown:Destroy()
+					return
+				end
+				local target = origin + at
+				local low = leaves.Position.Y - leaves.Size.Y / 2
+				local wantLow = math.max(target.Y - leaves.Size.Y * 0.3, origin.Y + LOWEST_HANG - 4)
+				crown:PivotTo(crown:GetPivot() + V(target.X - leaves.Position.X, wantLow - low, target.Z - leaves.Position.Z))
+				return
+			end
+			local leaf1, leaf2 = rgb(36, 98, 48), rgb(54, 126, 62)
+			local lift = math.max(0, LOWEST_HANG - 4 - (at.Y - 4 * s))
+			orb("CanopyLeaves", at + V(0, 5 * s + lift, 0), V(34 * s, 16 * s, 30 * s), leaf1, Enum.Material.Grass)
+			orb("CanopyLeaves", at + V(9 * s, 10 * s + lift, -6 * s), V(24 * s, 12 * s, 22 * s), leaf2, Enum.Material.Grass)
+			orb("CanopyLeaves", at + V(-8 * s, 9 * s + lift, 7 * s), V(22 * s, 11 * s, 24 * s), leaf2, Enum.Material.Grass)
+		end
+		-- boughs: { yaw in degrees (0 = north/-Z, 90 = east), reach, rise }
+		local function giant(x: number, z: number, height: number, boughs: { { number } })
+			if not footprintClear(x, z, 16, 16) then
+				return
+			end
+			table.insert(reservedSpots, { x, z, 30 })
+			local gy = groundAt(x, z)
+			local base = V(x, gy - 1.5, z)
+			group("HeartrootGiant", function()
+				if natural then
+					currentParent:SetAttribute("OnTerrain", true)
+				end
+				for k = 0, 6 do
+					local a = k * math.pi * 2 / 7 + x * 0.013
+					limb("HeartrootButtress", base + V(math.cos(a) * 3, 13, math.sin(a) * 3), V(x + math.cos(a) * 15, gy - 1, z + math.sin(a) * 15), 4.2, barkDark)
+				end
+				local lean = V(math.sin(x * 0.07) * 3, 0, math.cos(z * 0.05) * 3)
+				local p2 = base + V(0, height * 0.42, 0) + lean * 0.5
+				local p3 = base + V(0, height * 0.78, 0) + lean
+				local top = base + V(0, height, 0) + lean * 1.2
+				limb("HeartrootTrunk", base, p2 + V(0, 1, 0), 15, bark)
+				limb("HeartrootTrunk", p2, p3 + V(0, 1, 0), 12.5, bark)
+				limb("HeartrootTrunk", p3, top, 10, bark)
+				-- A vein of sunsap glowing up the bark.
+				beam("HeartrootSapVein", base + V(0, 3, 7.4), p2 + lean * 0.1 + V(0, 0, 6.2), 0.55, sap, Enum.Material.Neon, 0.25)
+				for _, b in boughs do
+					local yaw = math.rad(b[1])
+					local dir = V(math.sin(yaw), 0, -math.cos(yaw))
+					local from = p3 + dir * 3
+					local elbow = from + dir * (b[2] * 0.55) + V(0, b[3], 0)
+					local tip = from + dir * b[2] + V(0, b[3] - 5, 0)
+					limb("HeartrootBough", from, elbow, 6.5, bark)
+					limb("HeartrootBough", elbow, tip, 4.5, bark)
+					canopy(tip, 0.8 * scale)
+					for j = 1, 3 do
+						local hangTop = from:Lerp(tip, 0.25 + j * 0.2) - V(0, 2, 0)
+						local hangLow = math.max(LOWEST_HANG, hangTop.Y - 10 - j * 4)
+						if hangTop.Y - hangLow > 3 then
+							beam("HeartrootAerialRoot", hangTop, V(hangTop.X, hangLow, hangTop.Z), 0.7, vine, Enum.Material.Grass)
+						end
+					end
+				end
+				canopy(top + V(0, 3, 0), 1.0 * scale)
+			end)
+		end
+		-- Over the arrival: boughs reach in over the Hollow, the arrival ramp and the Sanctuary's edge.
+		for _, s in { -1, 1 } do
+			giant(s * 120, 126, 56, { { -s * 90, 78, 10 }, { -s * 58, 80, 14 }, { -s * 128, 66, 6 } })
+		end
+		-- Either side of the avenue: one between it and the Shrine Glade, one between the stairs and the Banyan Well.
+		giant(-50, -30, 58, { { 90, 52, 12 }, { 32, 58, 14 }, { 200, 50, 8 }, { -100, 44, 10 } })
+		giant(50, -82, 60, { { -90, 54, 12 }, { -150, 54, 10 }, { 60, 44, 12 }, { 165, 48, 8 } })
+		-- Framing the Dawn Gate: boughs over the summit and behind the gate.
+		for _, s in { -1, 1 } do
+			giant(s * 100, -128, 64, { { -s * 90, 68, 12 }, { -s * 40, 60, 14 }, { -s * 140, 54, 10 } })
+		end
 	end
 
 	-- =========================================================================
@@ -1343,7 +1585,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local eco = Kit.Ecology[biome]
 		local floorId = (parent:GetAttribute("FloorId") :: number?) or index
 		local rand = Random.new(floorId * 7919 + 13)
-		local placed: { { number } } = {}
+		local placed: { { number } } = table.clone(reservedSpots)
 		local function radiusOf(name: string, s: number): number
 			local t = Kit.Templates[name]
 			return if t then math.max(t.Size.X, t.Size.Z) * 0.5 * s * (Kit.RefScale[name] or 1) * 0.6 else 4

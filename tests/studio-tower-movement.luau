@@ -6,7 +6,7 @@ return function(room: any, speed: number?, slots: number?, options: any?)
 	local Navigation = options.Navigation or require(game.ServerScriptService.Core.HeroNavigation)
 	local Layout = options.Layout or require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 	local Policy = if options.Policy ~= nil then options.Policy else (game.ServerScriptService.Combat:FindFirstChild("SquadMovement") and require(game.ServerScriptService.Combat.SquadMovement))
-	local layout = Layout.Get((room.FloorId - 1) % 5 + 1)
+	local layout = Layout.ForFloor(room.FloorId)
 	local results = {}
 	local actors = {}
 	local ownerKey = {}

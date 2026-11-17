@@ -20,8 +20,23 @@ local function same(a: any, b: any): boolean
 	return true
 end
 
-test("Floor 1 keeps the canonical layout; every other floor reshapes its own, the same way every time", function()
-	assert(same(Layout.Get(1, 1), Layout.Get(1)), "the onboarding floor must stay canonical")
+test("Floor 1 is the hand-authored Overgrown Threshold: fixed, and shaped differently from the canonical layout", function()
+	local room = Layout.ForFloor(1)
+	assert(room.Authored == "verdant:1" and room.Name == "Overgrown Threshold")
+	assert(same(room, Layout.Get(1, 1)), "the authored floor is not fixed")
+	assert(not same(room, Layout.Get(1)), "floor 1 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- The east glade rejoins the avenue instead of climbing to the Apex; the avenue ends in grand steps.
+	assert(paths.EastGallery_Crossing == "RAMP" and paths.EastGallery_Apex == nil)
+	assert(paths.Crossing_Apex == "STAIRS" and paths.WestGallery_Apex == "RAMP")
+	local avenue = room.Platforms.Crossing
+	assert(avenue.Name == "Processional Avenue" and avenue.Depth > avenue.Width, "the avenue runs north-south")
+	assert(room.Platforms.Apex.X == 0, "the Dawn Gate is in line with the Sanctuary")
+	assert(room.EliteCount == 1)
+end)
+
+test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do
 		local index = (id - 1) % 5 + 1
