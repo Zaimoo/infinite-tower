@@ -8,7 +8,7 @@ Infinite Tower uses **one shared server-authoritative navigation solver** (`Hero
 
 | Module | Responsibility |
 | --- | --- |
-| `src/ReplicatedStorage/Shared/Config/TowerLayout.luau` | Authored platform bounds, connector IDs, usable widths, flat landing extents, slope/stair bounds, and clearance lanes for all 5 floor variants. |
+| `src/ReplicatedStorage/Shared/Config/TowerLayout.luau` | Authored platform bounds, connector IDs, usable widths, flat landing extents, slope/stair bounds, and clearance lanes for the 5 canonical layouts, plus each floor's own seeded variation (`Get(index, floorId)`, `ForFloor`, `Validate`; see §2a). |
 | `src/ServerScriptService/Core/TowerRoomBuilder.luau` | Constructs terraces, full-width flat landings, flared approaches, flush sloped decks/stairs, tapered curbs, and chasm return ramps. |
 | `src/ServerScriptService/Core/TowerPropClearance.luau` | Enforces clear walkways, landing footprints, and grounded prop rules across all 50 biome floors. |
 | `src/ServerScriptService/Core/TowerNavigationGraph.luau` | Pure topology graph: platform/connector location (`Locate`), shortest connector routes (`Route`), directed mid-connector progress preservation, and route cost (`Remaining`). |

@@ -145,7 +145,7 @@ local function dropMeteor(floorId: number)
 	local room = Tower.GetRoom(floorId)
 	local floor = TowerFloorConfig.Get(floorId)
 	if not room or room.Status ~= "READY" or not room.Origin or not floor then return end
-	local links = TowerLayout.Get(floor.IndexInBiome).Links
+	local links = TowerLayout.Get(floor.IndexInBiome, floorId).Links
 	local link = links[rng:NextInteger(1, #links)]
 	if link.From == "Sanctuary" then return end
 	local t = rng:NextNumber(0.2, 0.8)

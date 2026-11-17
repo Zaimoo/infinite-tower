@@ -258,7 +258,7 @@ local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = t
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
 	local boxes = {}
-	for _, lane in Layout.Lanes(index) do
+	for _, lane in Layout.Lanes(index, model:GetAttribute("FloorId")) do
 		local a = origin + Vector3.new(lane.AX, lane.AY, lane.AZ)
 		local b = origin + Vector3.new(lane.BX, lane.BY, lane.BZ)
 		local frame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, (lane.Above - lane.Below) / 2, 0)
@@ -293,7 +293,7 @@ function Builder.Build(id: number, generation: number): any
 	local theme = Themes[floorSpec.BiomeId] or Themes.verdant_ruins
 	local origin = Builder.Origin(id)
 	local idx = floorSpec.IndexInBiome
-	local layout = Layout.Get(idx)
+	local layout = Layout.Get(idx, id)
 	local safe = layout.Sanctuary
 
 	local model = Instance.new("Model")
@@ -724,7 +724,7 @@ function Builder.Build(id: number, generation: number): any
    table.insert(clearancePoints,origin+a:Lerp(b,step/math.ceil((b-a).Magnitude/3))+Vector3.new(0,2.5,0))
   end
  end
- for _,placement in Layout.Placements(require(game.ReplicatedStorage.Shared.Config.MobCatalog).Biomes[math.ceil(id/5)],idx) do
+ for _,placement in Layout.Placements(require(game.ReplicatedStorage.Shared.Config.MobCatalog).Biomes[math.ceil(id/5)],idx,id) do
   table.insert(clearancePoints,origin+Vector3.new(placement.X,placement.Y+2.5,placement.Z))
  end
  -- A solid part in the way removes its whole prop (TowerPropClearance), so nothing is left floating.

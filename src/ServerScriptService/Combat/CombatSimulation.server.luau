@@ -430,7 +430,7 @@ local function getAssignedSpawnRoot(room: any): Vector3
 		return room and room.Arrival and room.Arrival.Position or Vector3.new(0, 3, 0)
 	end
 	local idx = ((room.FloorId - 1) % 5) + 1
-	local layout = TowerLayout.Get(idx)
+	local layout = TowerLayout.Get(idx, room.FloorId)
 	local basin = layout.Platforms.Basin
 	return room.Origin + Vector3.new(basin.X, basin.Y + 3, basin.Z)
 end
@@ -3038,7 +3038,7 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 	local isMaxFloor = floorId >= TowerRewards.FloorCount
 	local theme = TowerRoomBuilder.Theme(floorSpec.BiomeId)
 	local stone, gold = TowerPortalKit.Palette(theme)
-	local spots = TowerLayout.PortalSpots(floorSpec.IndexInBiome)
+	local spots = TowerLayout.PortalSpots(floorSpec.IndexInBiome, floorId)
 
 	local holder = Instance.new("Model")
 	holder.Name = "FloorAscensionPortal"

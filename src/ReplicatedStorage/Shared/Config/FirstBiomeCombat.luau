@@ -234,7 +234,7 @@ end
 
 for floorId = 1, TowerFloorConfig.FloorCount do
 	local floor = assert(TowerFloorConfig.Get(floorId))
-	C.Floors[floorId] = Layout.Placements(MobCatalog.Biomes[floor.BiomeIndex], floor.IndexInBiome)
+	C.Floors[floorId] = Layout.Placements(MobCatalog.Biomes[floor.BiomeIndex], floor.IndexInBiome, floorId)
 end
 function C.Get(id: string)
 	return C.Entries[id]

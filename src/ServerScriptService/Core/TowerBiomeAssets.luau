@@ -603,25 +603,35 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	local crossing = layout.Platforms.Crossing
 	local apex = layout.Platforms.Apex
 
-	-- Overhead Monumental Archways / Canopies / Ribs spanning across the central spine ramps
-	local ramp1Mid = V(0, (safe.Y + basin.Y) * 0.5, (safe.Z - safe.Depth * 0.5 + basin.Z + basin.Depth * 0.5) * 0.5)
-	local ramp2Mid = V(0, (basin.Y + crossing.Y) * 0.5, (basin.Z - basin.Depth * 0.5 + crossing.Z + crossing.Depth * 0.5) * 0.5)
-	local stairMid = V(0, (crossing.Y + apex.Y) * 0.5, (crossing.Z - crossing.Depth * 0.5 + apex.Z + apex.Depth * 0.5) * 0.5)
+	-- Overhead Monumental Archways / Canopies / Ribs spanning across the central spine ramps, at each ramp's
+	-- middle and turned square to it (a floor's own layout can angle its ramps).
+	local function spineMid(from: string, to: string): (Vector3, number)
+		for _, link in layout.Links do
+			if link.From == from and link.To == to then
+				local dx, dz = link.BX - link.AX, link.BZ - link.AZ
+				return V((link.AX + link.BX) / 2, (link.AY + link.BY) / 2, (link.AZ + link.BZ) / 2), math.atan2(dx, dz)
+			end
+		end
+		return V(0, 0, 0), 0
+	end
+	local ramp1Mid, ramp1Yaw = spineMid("Sanctuary", "Basin")
+	local ramp2Mid, ramp2Yaw = spineMid("Basin", "Crossing")
+	local stairMid, stairYaw = spineMid("Crossing", "Apex")
 
 	-- The piers rise from the chasm floor beside the ramp; the crown stays at its old height above the ramp.
 	-- Tagged RampArch: it straddles the walkway on purpose, so walkway clearance leaves it alone.
-	local function rampArch(mid: Vector3, span: number, rise: number, depthSize: number, color: Color3)
+	local function rampArch(mid: Vector3, yaw: number, span: number, rise: number, depthSize: number, color: Color3)
 		group("RampArch", function()
-			arch(V(mid.X, bottom, mid.Z), span, rise + (mid.Y - 2 - bottom), depthSize, color, theme.TrimMaterial, 0)
+			arch(V(mid.X, bottom, mid.Z), span, rise + (mid.Y - 2 - bottom), depthSize, color, theme.TrimMaterial, yaw)
 		end)
 	end
-	rampArch(ramp1Mid, 42, 28 * scale, 8, theme.TrimColor)
-	rampArch(ramp2Mid, 38, 30 * scale, 8, theme.TrimColor)
-	rampArch(stairMid, 42, 34 * scale, 9, gold)
+	rampArch(ramp1Mid, ramp1Yaw, 42, 28 * scale, 8, theme.TrimColor)
+	rampArch(ramp2Mid, ramp2Yaw, 38, 30 * scale, 8, theme.TrimColor)
+	rampArch(stairMid, stairYaw, 42, 34 * scale, 9, gold)
 
 	if biome == "corrupted_grove" then
-		for _, rPos in { ramp1Mid, ramp2Mid, stairMid } do
-			ring("PathwayThornArch", rPos + V(0, 8, 0), 28 * scale, 3.2, rgb(24, 16, 28), Enum.Material.Wood, nil, 0.15, math.pi - 0.15, 12)
+		for _, at in { { ramp1Mid, ramp1Yaw }, { ramp2Mid, ramp2Yaw }, { stairMid, stairYaw } } do
+			ring("PathwayThornArch", at[1] + V(0, 8, 0), 28 * scale, 3.2, rgb(24, 16, 28), Enum.Material.Wood, CFrame.Angles(0, at[2], 0), 0.15, math.pi - 0.15, 12)
 		end
 	end
 
@@ -634,7 +644,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 	-- Islands keep off every walkway (TowerLayout.Lanes): each one tries its authored spot first, then
 	-- steps outward or along the room until its footprint is clear, and is left out if nothing fits.
-	local lanes = TowerLayout.Lanes(index)
+	local lanes = TowerLayout.Lanes(index, parent:GetAttribute("FloorId"))
 	local function footprintClear(x: number, z: number, halfX: number, halfZ: number): boolean
 		local radius = math.sqrt(halfX * halfX + halfZ * halfZ)
 		for _, lane in lanes do
@@ -730,10 +740,10 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				orb("ArmillaryCore", pedAt + V(0, 13, 0), V(2.4, 2.4, 2.4), accent, Enum.Material.Neon)
 			end)
 		elseif biome == "abyssal_throne" then
-			local obAt = V(s * (crossing.Width * 0.5 + 22), bottom, crossing.Z - 12)
+			local obAt = V(crossing.X + s * (crossing.Width * 0.5 + 22), bottom, crossing.Z - 12)
 			group("ChainedSpire", function()
 				spire(obAt, 62 * scale, 14, rgb(22, 18, 30), accent, false)
-				chain(obAt + V(0, 52 * scale, 0), V(s * 28, apex.Y + 28, apex.Z))
+				chain(obAt + V(0, 52 * scale, 0), V(apex.X + s * 28, apex.Y + 28, apex.Z))
 			end)
 		end
 	end
@@ -758,16 +768,14 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- Right foreground: Seated Stone Lion Guardian on mossy plinth (from Verdant Ruins.png)
 		statue(V(basin.Width * 0.36, basin.Y, basin.Z - 6), 1.3 * scale, "LionGuardian", 1)
 		for _, s in { -1, 1 } do
-			statue(V(s * (apex.Width * 0.5 + 18), apex.Y - 2, apex.Z + 18), 1.25 * scale, "LionGuardian", s)
+			statue(V(apex.X + s * (apex.Width * 0.5 + 18), apex.Y - 2, apex.Z + 18), 1.25 * scale, "LionGuardian", s)
 		end
 
 	elseif biome == "sunken_sanctuary" then
 		-- Twin Colossal Flanking Statues: Robed Goddess with Staff (West) & Poseidon King with Trident (East)
-		local statZ = westGal.Z - 18
-		local statY = westGal.Y
-		local statX = math.abs(westGal.X) - 12
-		statue(V(-statX, statY, statZ), 1.45 * scale, "StaffGoddess", -1)
-		statue(V(statX, statY, statZ), 1.45 * scale, "TridentKing", 1)
+		local eastGal = layout.Platforms.EastGallery
+		statue(V(westGal.X + 12, westGal.Y, westGal.Z - 18), 1.45 * scale, "StaffGoddess", -1)
+		statue(V(eastGal.X - 12, eastGal.Y, eastGal.Z - 18), 1.45 * scale, "TridentKing", 1)
 
 	elseif biome == "thunder_highlands" then
 		-- West Ridge: Circular Stone Henge Portal Ring struck by vertical lightning (from Thunder Highlands.jpeg)
@@ -786,7 +794,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- =========================================================================
 	-- 5. MONUMENTAL NORTH APEX CITADEL / TEMPLE / PORTAL & OVERHEAD SKY SPECTACLE
 	-- =========================================================================
-	local backdrop = V(0, apex.Y, -d / 2 + 24)
+	local backdrop = V(apex.X, apex.Y, -d / 2 + 24)
 
 	-- Rock shelf behind the Apex terrace, level with it, so the citadel, temple and throne backdrops
 	-- stand on ground instead of hanging over the chasm.

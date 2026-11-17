@@ -19,11 +19,67 @@ local function landings(link: any, ux: number, uz: number, lengthA: number, leng
 		BX=link.BX+ux*lengthB, BY=link.BY, BZ=link.BZ+uz*lengthB, Width=link.Width+8}
 end
 
-function Layout.Get(index: number): any
+-- Per-floor variation (GDD §3.3). The five layouts above are the canonical shapes, one per floor of a
+-- biome; each floor reshapes its own copy, seeded by its floor id: galleries, bastions, the Crossing and
+-- the Apex shift, resize and change height (each side on its own, so floors are no longer mirror images),
+-- and a few paths wind through a small "bend" terrace instead of running straight. The Sanctuary and the
+-- Basin never move (arrival, banking and the travel portals depend on them), and floor 1, the onboarding
+-- floor, keeps the canonical layout. A variation is kept only if
+-- it passes Layout.Validate; otherwise the next seed is tried, and the canonical layout is the fallback.
+local VARIANT_ATTEMPTS = 16
+
+-- Deterministic generator (not Roblox Random, so specs and the server see the same layouts).
+local function generator(seed: number): (number, number) -> number
+	local s = (seed * 2654435761 + 97) % 4294967296
+	return function(lo: number, hi: number): number
+		s = (s * 1664525 + 1013904223) % 4294967296
+		return lo + (hi - lo) * (s / 4294967296)
+	end
+end
+
+local function variation(index: number, floorId: number, attempt: number): any
+	local r = generator(floorId * 131 + attempt * 7919)
+	local w, d = widths[index], depths[index]
+	local v: any = {}
+	-- Galleries and bastions: the outer edge never moves past the canonical one (the perimeter and the
+	-- chasm return ramps stay clear); they move inward, away from the Basin, and up or down.
+	for _, side in {"West", "East"} do
+		local sign = if side == "West" then -1 else 1
+		local width = math.round(r(72, 88))
+		local outer = w*.28 + 42 - r(0, w*.03)
+		v[side.."Gallery"] = {X = sign*(outer - width/2), Z = -d*.06 + r(-d*.05, 0),
+			Y = 8 + math.round(r(-2, 4)), Width = width, Depth = math.round(r(66, 82))}
+		local bWidth = math.round(r(72, 88))
+		local bOuter = w*.28 + 42 - r(0, w*.035)
+		v[side.."Bastion"] = {X = sign*(bOuter - bWidth/2), Z = -d*.31 + r(-d*.02, d*.02),
+			Y = 14 + math.round(r(-2, 3)), Width = bWidth, Depth = math.round(r(66, 80))}
+	end
+	v.Crossing = {X = r(-w*.035, w*.035), Z = -d*.04 + r(-d*.025, d*.015),
+		Y = if index >= 3 then 5 + math.round(r(-2, 3)) else math.round(r(0, 2)), Width = math.round(r(64, 78)), Depth = math.round(r(52, 62))}
+	v.Apex = {X = r(-w*.05, w*.05), Y = apexHeights[index] + math.round(r(-2, 2)), Width = math.round(r(92, 110)), Depth = math.round(r(74, 84))}
+	-- Paths that wind: the long climbs to the Apex bend through a small terrace, pulled out toward the
+	-- room's side (from a gallery) or toward its back wall (from a bastion), where there is room.
+	v.Bends = {}
+	local climbs = if index >= 4 then {"WestBastion", "EastBastion"} else {"WestGallery", "EastGallery"}
+	for _, from in climbs do
+		if r(0, 1) < 0.8 then
+			v.Bends[from.."_Apex"] = {Offset = r(24, 44), Pull = if index >= 4 then "BACK" else "OUT", Along = r(0.42, 0.58),
+				Width = math.round(r(34, 40)), Depth = math.round(r(34, 40))}
+		end
+	end
+	return v
+end
+
+local function build(index: number, v: any?): any
 	assert(index >= 1 and index <= 5 and index % 1 == 0)
 	local w, d = widths[index], depths[index]
 	local platforms, links = {}, {}
 	local function platform(id, x, y, z, width, depth)
+		local o = v and v[id]
+		if o then
+			x, y, z = o.X or x, o.Y or y, o.Z or z
+			width, depth = o.Width or width, o.Depth or depth
+		end
 		local p = {Id=id, X=x, Y=y, Z=z, Width=width, Depth=depth}
 		platforms[id] = p
 		return p
@@ -65,14 +121,35 @@ function Layout.Get(index: number): any
 		landings(connector,ux,uz,math.max(20,2*math.abs(insetA-edgeA)+12),math.max(20,2*math.abs(insetB-edgeB)+12))
 		table.insert(links, connector)
 	end
+	-- A path from a to b; on a varied floor it may wind through a bend terrace beside the straight line
+	-- (two connectors, a -> Bend_a_b -> b). Bend terraces carry Bend = true and hold no camp.
+	local function route(a, b)
+		local bend = v and v.Bends and v.Bends[a.."_"..b]
+		if not bend then
+			link(a, b)
+			return
+		end
+		local p, q = platforms[a], platforms[b]
+		local dx, dz = q.X-p.X, q.Z-p.Z
+		local length = math.sqrt(dx*dx+dz*dz)
+		local nx, nz = -dz/length, dx/length
+		local mx, mz = p.X+dx*bend.Along, p.Z+dz*bend.Along
+		-- Pull OUT: away from the room's centre line; BACK: toward the back wall (-Z).
+		local flip = if bend.Pull == "BACK" then nz > 0 else nx*mx < 0
+		if flip then nx, nz = -nx, -nz end
+		local id = "Bend_"..a.."_"..b
+		platforms[id] = {Id=id, X=mx+nx*bend.Offset, Y=math.round((p.Y+q.Y)/2),
+			Z=mz+nz*bend.Offset, Width=bend.Width, Depth=bend.Depth, Bend=true}
+		link(a, id); link(id, b)
+	end
 	link("Sanctuary", "Basin")
-	link("Basin", "WestGallery"); link("Basin", "EastGallery"); link("Basin", "Crossing")
+	route("Basin", "WestGallery"); route("Basin", "EastGallery"); link("Basin", "Crossing")
 	link("Crossing", "Apex")
 	if index >= 4 then
 		link("WestGallery", "WestBastion"); link("EastGallery", "EastBastion")
-		link("WestBastion", "Apex"); link("EastBastion", "Apex")
+		route("WestBastion", "Apex"); route("EastBastion", "Apex")
 	else
-		link("WestGallery", "Apex"); link("EastGallery", "Apex")
+		route("WestGallery", "Apex"); route("EastGallery", "Apex")
 	end
 	local camps = {}
 	local function camp(id, terrace, dx, elite, boss, size)
@@ -114,7 +191,141 @@ function Layout.Get(index: number): any
 		end
 	end
 	return {Width=w, Depth=d, Height=heights[index], Bottom=bottom, ReturnLinks=returns,
-		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe, EliteCount=eliteCount}
+		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe, EliteCount=eliteCount, Index=index,
+		Varied=v ~= nil}
+end
+
+-- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,
+-- connectors running over a terrace they do not join, connectors crossing, cramped camps.
+function Layout.Validate(room: any): {string}
+	local problems = {}
+	local margin = 30
+	local list = {}
+	for id, p in room.Platforms do table.insert(list, p) end
+	table.sort(list, function(a, b) return a.Id < b.Id end)
+	for i, p in list do
+		local fixed = p.Id == "Sanctuary" or p.Id == "Basin" -- full-width, never varied
+		if not fixed and (math.abs(p.X)+p.Width/2 > room.Width/2-margin or math.abs(p.Z)+p.Depth/2 > room.Depth/2-12) then
+			table.insert(problems, p.Id.." leaves the room")
+		end
+		for j = i+1, #list do
+			local q = list[j]
+			if math.abs(p.X-q.X) < (p.Width+q.Width)/2+10 and math.abs(p.Z-q.Z) < (p.Depth+q.Depth)/2+10 then
+				table.insert(problems, p.Id.." crowds "..q.Id)
+			end
+		end
+	end
+	local connectors = table.clone(room.Links)
+	for _, link in room.ReturnLinks do table.insert(connectors, link) end
+	local function inside(p: any, x: number, z: number, pad: number): boolean
+		return math.abs(x-p.X) < p.Width/2+pad and math.abs(z-p.Z) < p.Depth/2+pad
+	end
+	for _, link in connectors do
+		local dx, dz = link.BX-link.AX, link.BZ-link.AZ
+		local length = math.sqrt(dx*dx+dz*dz)
+		local nx, nz = -dz/length, dx/length
+		for _, p in list do
+			local hit = false
+			if p.Id ~= link.From and p.Id ~= link.To then
+				for step = 0, 20 do
+					for _, side in {-1, 0, 1} do
+						local x = link.AX+dx*step/20+nx*side*link.Width/2
+						local z = link.AZ+dz*step/20+nz*side*link.Width/2
+						if inside(p, x, z, 1) then hit = true end
+					end
+				end
+			end
+			if hit then table.insert(problems, link.Id.." runs over "..p.Id) end
+		end
+	end
+	-- Connectors must not cross: away from a shared terrace, centrelines stay a deck width apart.
+	local function sample(link: any, t: number): (number, number)
+		return link.AX+(link.BX-link.AX)*t, link.AZ+(link.BZ-link.AZ)*t
+	end
+	for i, a in connectors do
+		for j = i+1, #connectors do
+			local b = connectors[j]
+			local shared = a.From == b.From or a.From == b.To or a.To == b.From or a.To == b.To
+			local clear = (a.Width+b.Width)/2+6
+			local closest = math.huge
+			for s = 0, 16 do
+				for u = 0, 16 do
+					local ta, tb = s/16, u/16
+					local ax, az = sample(a, ta)
+					local bx, bz = sample(b, tb)
+					closest = math.min(closest, math.sqrt((ax-bx)^2+(az-bz)^2))
+				end
+			end
+			if not shared and closest < clear then
+				table.insert(problems, a.Id.." crosses "..b.Id)
+			end
+		end
+	end
+	for _, camp in room.Camps do
+		if camp.Radius < 10 then table.insert(problems, camp.Id.." is cramped") end
+	end
+	return problems
+end
+
+local variantAttempt: {[number]: number} = {}
+
+-- The layout for a floor. With a floor id it is that floor's own variation of the canonical layout for
+-- `index` (= (floorId - 1) % 5 + 1); without one it is the canonical layout (specs, tools).
+function Layout.Get(index: number, floorId: number?): any
+	-- Floor 1 is the onboarding floor the guide teaches on: it keeps the canonical layout.
+	if not floorId or floorId == 1 then
+		return build(index)
+	end
+	local allowed = {}
+	local known = variantAttempt[floorId]
+	if known == 0 then
+		return build(index)
+	end
+	-- A variation may keep the canonical layout's own quirks (the chasm return ramps' feet tuck beside the
+	-- galleries on floors 3-4 of a biome), but must add no new problem.
+	for _, problem in Layout.Validate(build(index)) do allowed[problem] = true end
+	local function attemptAt(attempt: number): any?
+		local v = variation(index, floorId, attempt)
+		-- A bend that does not fit is dropped on its own; the rest of the variation can still stand.
+		for _ = 1, 3 do
+			local ok, room = pcall(build, index, v)
+			local fresh = {}
+			if ok then
+				for _, problem in Layout.Validate(room) do
+					if not allowed[problem] then table.insert(fresh, problem) end
+				end
+				if #fresh == 0 then return room end
+			end
+			local dropped = false
+			for key in v.Bends do
+				local id = "Bend_"..key
+				local blamed = not ok
+				for _, problem in fresh do
+					if string.find(problem, id, 1, true) then blamed = true end
+				end
+				if blamed then v.Bends[key] = nil; dropped = true end
+			end
+			if not dropped then return nil end
+		end
+		return nil
+	end
+	if known then
+		return attemptAt(known) or build(index)
+	end
+	for attempt = 1, VARIANT_ATTEMPTS do
+		local room = attemptAt(attempt)
+		if room then
+			variantAttempt[floorId] = attempt
+			return room
+		end
+	end
+	variantAttempt[floorId] = 0
+	return build(index)
+end
+
+-- The floor's own layout (Layout.Get with the floor's index in its biome).
+function Layout.ForFloor(floorId: number): any
+	return Layout.Get((floorId-1)%5+1, floorId)
 end
 
 -- Walkways that must stay clear of scenery: every ramp and stair (with a 3-stud shoulder), a 20 x 20
@@ -127,15 +338,24 @@ end
 --   BASIN_LOOP     every floor: Basin west -> foot of the Crossing ramp -> Basin east
 --   GALLERY_WEST/EAST  floor 3 on: Gallery centre -> along its link -> Apex (floor 3) or Bastion (4-5)
 --   BASTION_RING   floors 4-5: West Bastion -> Apex edge -> East Bastion
-function Layout.PatrolRoutes(index: number): {[string]: {{X: number, Y: number, Z: number}}}
-	local room = Layout.Get(index)
+-- On a floor whose path winds through a bend terrace, routes follow both connectors of the path.
+function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: number, Y: number, Z: number}}}
+	local room = Layout.Get(index, floorId)
 	local p = room.Platforms
 	local function point(x, y, z) return {X=x, Y=y, Z=z} end
-	local function linkBetween(from, to)
+	local function find(from, to)
 		for _, link in room.Links do
 			if link.From == from and link.To == to then return link end
 		end
 		return nil
+	end
+	-- The connectors of the path from -> to, in order (one, or two through Bend_from_to).
+	local function pathBetween(from, to): {any}?
+		local direct = find(from, to)
+		if direct then return {direct} end
+		local bend = "Bend_"..from.."_"..to
+		local a, b = find(from, bend), find(bend, to)
+		return if a and b then {a, b} else nil
 	end
 	local basin = p.Basin
 	local backZ = basin.Z - basin.Depth*0.3
@@ -149,30 +369,34 @@ function Layout.PatrolRoutes(index: number): {[string]: {{X: number, Y: number, 
 	if index >= 3 then
 		for _, side in {"West", "East"} do
 			local gallery = p[side.."Gallery"]
-			local link = assert(linkBetween(side.."Gallery", if index >= 4 then side.."Bastion" else "Apex"))
-			routes["GALLERY_"..string.upper(side)] = {
-				point(gallery.X, gallery.Y, gallery.Z),
-				point(link.AX, link.AY, link.AZ),
-				point(link.BX, link.BY, link.BZ),
-			}
+			local route = {point(gallery.X, gallery.Y, gallery.Z)}
+			for _, link in assert(pathBetween(side.."Gallery", if index >= 4 then side.."Bastion" else "Apex")) do
+				table.insert(route, point(link.AX, link.AY, link.AZ))
+				table.insert(route, point(link.BX, link.BY, link.BZ))
+			end
+			routes["GALLERY_"..string.upper(side)] = route
 		end
 	end
 	if index >= 4 then
-		local west, east = assert(linkBetween("WestBastion", "Apex")), assert(linkBetween("EastBastion", "Apex"))
-		routes.BASTION_RING = {
-			point(p.WestBastion.X, p.WestBastion.Y, p.WestBastion.Z),
-			point(west.AX, west.AY, west.AZ),
-			point(west.BX, west.BY, west.BZ),
-			point(east.BX, east.BY, east.BZ),
-			point(east.AX, east.AY, east.AZ),
-			point(p.EastBastion.X, p.EastBastion.Y, p.EastBastion.Z),
-		}
+		local west, east = assert(pathBetween("WestBastion", "Apex")), assert(pathBetween("EastBastion", "Apex"))
+		local ring = {point(p.WestBastion.X, p.WestBastion.Y, p.WestBastion.Z)}
+		for _, link in west do
+			table.insert(ring, point(link.AX, link.AY, link.AZ))
+			table.insert(ring, point(link.BX, link.BY, link.BZ))
+		end
+		for i = #east, 1, -1 do
+			local link = east[i]
+			table.insert(ring, point(link.BX, link.BY, link.BZ))
+			table.insert(ring, point(link.AX, link.AY, link.AZ))
+		end
+		table.insert(ring, point(p.EastBastion.X, p.EastBastion.Y, p.EastBastion.Z))
+		routes.BASTION_RING = ring
 	end
 	return routes
 end
 
-function Layout.Lanes(index: number): {any}
-	local room = Layout.Get(index)
+function Layout.Lanes(index: number, floorId: number?): {any}
+	local room = Layout.Get(index, floorId)
 	local lanes = {}
 	local function lane(id, ax, ay, az, bx, by, bz, halfWidth)
 		table.insert(lanes, {Id=id, AX=ax, AY=ay, AZ=az, BX=bx, BY=by, BZ=bz, HalfWidth=halfWidth, Below=2, Above=14})
@@ -193,7 +417,7 @@ function Layout.Lanes(index: number): {any}
 	lane("BasinCauseway", 0, basin.Y, basin.Z+basin.Depth/2, 0, basin.Y, basin.Z-basin.Depth/2, 20)
 	lane("SanctuaryExit", 0, safe.Y, safe.Z-12, 0, safe.Y, safe.Z-safe.Depth/2, 18)
 	-- The boss portals' spots (Phase H) are kept clear the same way.
-	for id, spot in Layout.PortalSpots(index) do
+	for id, spot in Layout.PortalSpots(index, floorId) do
 		lane("Portal"..id, spot.X, spot.Y, spot.Z-5, spot.X, spot.Y, spot.Z+5, 10)
 	end
 	return lanes
@@ -201,18 +425,18 @@ end
 
 -- Where the boss portals rise when a floor's boss falls (Phase H): side by side at the back of the
 -- Apex terrace, facing the arena. Ascend leads up (or home from floor 50); Rerun replays the floor.
-function Layout.PortalSpots(index: number): {[string]: {X: number, Y: number, Z: number}}
-	local apex = Layout.Get(index).Platforms.Apex
+function Layout.PortalSpots(index: number, floorId: number?): {[string]: {X: number, Y: number, Z: number}}
+	local apex = Layout.Get(index, floorId).Platforms.Apex
 	local z = apex.Z - apex.Depth/2 + 12
 	return {
-		Ascend = {X=16, Y=apex.Y, Z=z},
-		Rerun = {X=-16, Y=apex.Y, Z=z},
+		Ascend = {X=apex.X+16, Y=apex.Y, Z=z},
+		Rerun = {X=apex.X-16, Y=apex.Y, Z=z},
 	}
 end
 
-function Layout.Placements(biome: any, index: number): {any}
+function Layout.Placements(biome: any, index: number, floorId: number?): {any}
 	local result = {}
-	for _, camp in Layout.Get(index).Camps do
+	for _, camp in Layout.Get(index, floorId).Camps do
 		for slot=1,camp.Size do
 			local enemy = biome.RegularEnemyIds[if slot%2==0 then 2 else 1]
 			if camp.Boss and slot==1 then enemy=biome.BossEnemyId
