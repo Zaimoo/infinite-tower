@@ -97,7 +97,7 @@ function Screens.DetailPanel(props: DetailPanelProps)
 	local currentDPS = if canCompare and currentArt then Stats.GetCombatSnapshot(hero, currentArt).DPS else nil
 	local dpsDelta = if heroDPS and currentDPS then heroDPS - currentDPS else 0
 
-	local rule = Catalog.GetStarPromotionCost(artifact.Star)
+	local rule = Catalog.GetStarPromotionCost(artifact.Star, artifact.Rarity)
 	local maxRank = rule == nil
 
 	return e("Frame", {

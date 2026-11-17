@@ -188,7 +188,7 @@ local function AnvilWeaponTile(props: { Order: number, WeaponId: string, Focused
 end
 
 -- A Gem / Gold card.
-local function currencyCard(order: number, offer: ShopConfig.Offer, icon: string, tone: string, onBuy: (ShopConfig.Offer) -> ())
+local function currencyCard(order: number, offer: ShopConfig.Offer, amount: number, icon: string, tone: string, onBuy: (ShopConfig.Offer) -> ())
 	local t = Tones[tone]
 	return Panel({ LayoutOrder = order, Size = UDim2.fromOffset(196, 236), Radius = 14, Top = t.Top, Bottom = Tones.Deep.Bottom, Rail = t.Rail }, {
 		Tag = if offer.Tag then Components.Pill({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 8, 0, -10), Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X,
@@ -196,7 +196,7 @@ local function currencyCard(order: number, offer: ShopConfig.Offer, icon: string
 			{ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), TextScaled = false, TextSize = 13, Outline = 2, Gold = false, Text = offer.Tag, ZIndex = 9 }) else nil,
 		Art = IconAt(icon, 86, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 16), ZIndex = 4 }),
 		Amount = inkNumber({ Position = UDim2.fromOffset(8, 108), Size = UDim2.new(1, -16, 0, 34), MaxSize = 30, TextColor3 = if offer.Grant.Kind == "Gems" then Color3.fromRGB(170, 250, 255) else TEXT.Gold,
-			Text = Components.Abbreviate(offer.Grant.Amount), ZIndex = 4 }),
+			Text = Components.Abbreviate(amount), ZIndex = 4 }),
 		Label = Body({ Position = UDim2.fromOffset(8, 144), Size = UDim2.new(1, -16, 0, 18), TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center, Text = offer.Label, ZIndex = 4 }),
 		Buy = e(PriceButton, { Offer = offer, Tone = "Gold", Position = UDim2.fromOffset(12, 176), Size = UDim2.new(1, -24, 0, 46), OnBuy = onBuy }),
 	})
@@ -516,7 +516,8 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 				Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder, Wraps = true }),
 		}
 		for i, offer in list do
-			kids["C" .. i] = currencyCard(i, offer, icon, tone, buy)
+			-- Gold packs follow the Master's frontier floor (ShopConfig.GrantAmount), the same number the server grants.
+			kids["C" .. i] = currencyCard(i, offer, ShopConfig.GrantAmount(offer, profile and profile.HighestClearedFloor), icon, tone, buy)
 		end
 		return e("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, kids)
 	end

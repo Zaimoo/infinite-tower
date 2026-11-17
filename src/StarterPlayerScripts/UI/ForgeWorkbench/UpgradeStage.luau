@@ -10,7 +10,7 @@ local e = React.createElement
 
 return function(props: any)
 	local target = props.Target
-	local rule = Catalog.GetStarPromotionCost(target.Star)
+	local rule = Catalog.GetStarPromotionCost(target.Star, target.Rarity)
 	local count = if rule then rule.Donors else 0
 	local rarity = Catalog.GetRarityInfo(target.Rarity)
 	local filled = 0

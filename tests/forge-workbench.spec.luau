@@ -65,7 +65,7 @@ test("promotion receipts deduplicate same-ID submissions and do not grant undo",
 	local command=request("UPGRADE",{ArtifactId="target",MaterialIds={"donor"}})
 	local first,committed=api.Execute(p,command,true)
 	local repeated,repeatedCommit=api.Execute(p,command,true)
-	assert(first.Ok and repeated.Ok and p.Currencies.Gold==99500 and p.Artifacts.target.Star==2)
+	assert(first.Ok and repeated.Ok and p.Currencies.Gold==98500 and p.Artifacts.target.Star==2)
 	assert(committed==true and repeatedCommit==false) -- reward/sync hooks must not run twice
 	assert(first.UndoToken==nil and first.Snapshot.Revision==repeated.Snapshot.Revision)
 	first.Snapshot.Artifacts.target.Star=7
@@ -120,7 +120,7 @@ test("replays after receipt expiry remain harmless because progression revision 
 	local command=request("UPGRADE",{ArtifactId="target",MaterialIds={"donor"}})
 	assert(api.Execute(p,command,true).Ok)
 	advance(601)
-	assert(not api.Execute(p,command,true).Ok and p.Currencies.Gold==99500 and p.Artifacts.target.Star==2)
+	assert(not api.Execute(p,command,true).Ok and p.Currencies.Gold==98500 and p.Artifacts.target.Star==2)
 end)
 test("NaN revisions, spoofed IDs, duplicate donors and unknown operations cannot mutate",function()
 	local api,p,request=setup()

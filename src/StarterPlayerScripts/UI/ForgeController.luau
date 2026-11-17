@@ -2215,7 +2215,7 @@ function Forge:RenderUpgradeView()
 
 	-- Cost & Copies
 	local isMaxRank = (currentStar >= maxStars)
-	local cost = ArtifactCatalog.GetStarPromotionCost(currentStar) or { Gold = 0, Gems = 0 }
+	local cost = ArtifactCatalog.GetStarPromotionCost(currentStar, target.Rarity) or { Gold = 0, Gems = 0 }
 	local copiesCount = #self.FodderUUIDs
 	local copiesColor = if copiesCount >= reqFodder and reqFodder > 0 then "#4ADE80" else "#F6F4FF"
 

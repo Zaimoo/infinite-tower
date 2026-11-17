@@ -126,7 +126,7 @@ local function UpgradeResult(props: UpgradeResultProps)
 		end
 	end
 
-	local nextRule = Catalog.GetStarPromotionCost(after.Star)
+	local nextRule = Catalog.GetStarPromotionCost(after.Star, after.Rarity)
 	local canUpgradeAgain = not props.MaxRank and nextRule ~= nil
 
 	return e("Frame", {

@@ -287,7 +287,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 			local rule = Config.Promotion[recipient.Stars]
 			if recipient.Stars >= Config.MaxStars or not rule then reject("This hero has reached the maximum " .. Config.MaxStars .. "★ rank.")
 			else
-				preview.Costs = { Gold = rule.Gold, PromotionStone = rule.PromotionStone }
+				preview.Costs = { Gold = Stats.GetPromotionGoldCost(recipient.Stars, Stats.GetHeroRarity(recipient)), PromotionStone = rule.PromotionStone }
 				-- Mirror heroes don't level, so they promote without a level requirement (+2% mirror per star).
 				local mirror = Stats.IsMirror(recipient)
 				preview.Requirements = if mirror then {} else { { Label = "Reach the current level cap", Current = recipient.Level, Required = Stats.GetMaxLevel(recipient.Stars), Met = recipient.Level >= Stats.GetMaxLevel(recipient.Stars) } }

@@ -149,7 +149,7 @@ end)
 
 test("Gildforged Tier-8 weapons promote together and resolve sockets & builder templates", function()
 	local profile = {
-		Currencies = { Gold = 10000, Gems = 0 },
+		Currencies = { Gold = 40000, Gems = 0 },
 		Heroes = {},
 		Artifacts = {
 			a1 = { UUID = "a1", TemplateId = GILD_IDS.SWORD_SHIELD, Rarity = 8, Star = 1, Locked = false },
@@ -160,7 +160,7 @@ test("Gildforged Tier-8 weapons promote together and resolve sockets & builder t
 	check(not Promotion.IsDonorFor(profile.Artifacts.a1, profile.Artifacts.n7), "tier-7 donor rejected")
 	check(Promotion.IsDonorFor(profile.Artifacts.a1, profile.Artifacts.a2), "tier-8 donor accepted across archetypes")
 	local ok, _, newStar = Promotion.Promote(profile, "a1", { "a2" })
-	check(ok and newStar == 2 and profile.Artifacts.a2 == nil and profile.Currencies.Gold == 9500, "promoted to 2★")
+	check(ok and newStar == 2 and profile.Artifacts.a2 == nil and profile.Currencies.Gold == 10000, "promoted to 2★ at the Mythical Gold factor")
 
 	for weaponType, id in pairs(GILD_IDS) do
 		local prefab, resolvedType = HeroSockets.ResolvePrefab(id, nil, ArtifactCatalog.Seeds)

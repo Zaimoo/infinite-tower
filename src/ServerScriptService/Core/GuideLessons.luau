@@ -59,7 +59,7 @@ local function upgradeCandidate(profile: any): string?
 		end
 	end
 	for uuid, artifact in profile.Artifacts do
-		local rule = Balance.WeaponPromotionCosts[artifact.Star]
+		local rule = Balance.WeaponPromotionCost(artifact.Star, artifact.Rarity)
 		if rule and profile.Currencies.Gold >= rule.Gold and profile.Currencies.Gems >= rule.Gems then
 			local key = `{artifact.Rarity}:{artifact.Star}`
 			local selfCount = if artifact.Locked or artifact.EquippedHeroUUID or equipped[uuid] then 0 else 1

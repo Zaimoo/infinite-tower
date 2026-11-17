@@ -174,7 +174,7 @@ local function App(props: Types.Props)
 	local items = React.useMemo(function() return Model.inventory(snapshot, filter, forge.HeroId) end, { snapshot, filter, forge.HeroId })
 	local heroes = React.useMemo(function() return Model.sortedHeroes(snapshot) end, { snapshot })
 	local filterKey = table.concat({filter.Query, filter.Ownership, tostring(filter.Rarity), filter.WeaponType, filter.Sort}, "|")
-	local rule = target and Catalog.GetStarPromotionCost(target.Star)
+	local rule = target and Catalog.GetStarPromotionCost(target.Star, target.Rarity)
 	local maxRank = target ~= nil and rule == nil
 	local upgradeReason = Model.upgradeReason(snapshot, forge.TargetId, forge.Materials)
 

@@ -66,9 +66,11 @@ local function grant(player: Player, offer: ShopConfig.Offer): string
 		dm.SyncProfile(player)
 		return string.format("Purchase complete: +%d Gems!", g.Amount)
 	elseif g.Kind == "Gold" then
-		profile.Currencies.Gold += g.Amount
+		-- Gold packs scale with the buyer's frontier floor at the moment the receipt is granted.
+		local amount = ShopConfig.GrantAmount(offer, profile.HighestClearedFloor)
+		profile.Currencies.Gold += amount
 		dm.SyncProfile(player)
-		return string.format("Purchase complete: +%d Gold!", g.Amount)
+		return string.format("Purchase complete: +%d Gold!", amount)
 	elseif g.Kind == "BattlePass" then
 		local message = dm.UnlockPremiumPass(player)
 		dm.SyncProfile(player)

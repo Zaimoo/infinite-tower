@@ -49,10 +49,10 @@ function StatFormulas.GetPromotionLaborMult(stars: number): number
 	return PitBalanceConfig.Promotion.LaborMultiplier ^ (stars - 1)
 end
 
--- Promotion Gold Cost
-function StatFormulas.GetPromotionGoldCost(currentStars: number): number
+-- Promotion Gold cost from `currentStars`, scaled by the hero's inherent rarity (StatBalance.RarityGoldFactor).
+function StatFormulas.GetPromotionGoldCost(currentStars: number, rarity: number?): number
 	local cost = PitBalanceConfig.Promotion[currentStars]
-	return cost and cost.Gold or 9999999
+	return if cost then math.round(cost.Gold * B.RarityGoldFactor(rarity)) else 9999999
 end
 
 -- Inherent rarity tier (Phase 4 §7). Saves without the field fall back to the template's rarity.
