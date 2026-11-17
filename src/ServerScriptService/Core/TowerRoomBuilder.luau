@@ -462,12 +462,24 @@ function Builder.Build(id: number, generation: number): any
 		p:SetAttribute("NavigationStructure",true)
 		p:SetAttribute("ConnectorId",id)
 	end
+	-- Solmere paths (a hand-authored floor's PathStyle, TowerLayout): on a natural floor the ramps are pale
+	-- flagstone causeways with step lips, moss along the edges and visible mossy kerbs, the grand stairs are
+	-- limestone, and the landings take the terrace's own ground so they don't read as tiles laid on the grass.
+	local solmere = natural and layout.PathStyle == "SOLMERE"
+	local flagstone = Color3.fromRGB(176, 170, 148)
+	local flagstoneDark = Color3.fromRGB(138, 134, 114)
+	local moss = Color3.fromRGB(86, 132, 58)
+	local groundPalette = TowerTerrain.Palettes[floorSpec.BiomeId]
 	local function landing(pad: any, id: string)
 		local a=origin+Vector3.new(pad.AX,pad.AY,pad.AZ)
 		local b=origin+Vector3.new(pad.BX,pad.BY,pad.BZ)
 		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
 		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
 		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
+		if solmere then
+			p.Color = theme.GroundColor
+			if groundPalette then p.Material = groundPalette.Ground end
+		end
 		structure(p,id)
 	end
 	for _, link in layout.Links do
@@ -492,8 +504,8 @@ function Builder.Build(id: number, generation: number): any
 					"GrandStairTread",
 					Vector3.new(link.Width, 2, flat.Magnitude / steps + 0.15),
 					Vector3.new(center.X, top - 1, center.Z),
-					theme.TrimColor,
-					theme.TrimMaterial
+					if solmere then (if step % 2 == 0 then flagstone else flagstoneDark) else theme.TrimColor,
+					if solmere then Enum.Material.Limestone else theme.TrimMaterial
 				)
 				tread.CFrame = CFrame.lookAt(tread.Position, tread.Position + flat)
 				structure(tread,link.Id)
@@ -505,7 +517,24 @@ function Builder.Build(id: number, generation: number): any
 			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
 			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -0.96, 0)
 			structure(ramp,link.Id)
-			if natural then
+			if solmere then
+				ramp.Color = flagstone
+				ramp.Material = Enum.Material.Cobblestone
+				-- Step lips every few studs (flush trim, walked over, never collide) read as a stepped causeway,
+				-- and moss creeps in along both edges.
+				local length = delta.Magnitude
+				local lips = math.max(1, math.floor((length - 4) / 3.2))
+				for i = 1, lips do
+					local at = a:Lerp(b, (i - 0.5) / lips)
+					local lip = decor(model, "RampStepLip", Vector3.new(link.Width - 5.5, 0.16, 0.7), at, flagstoneDark, Enum.Material.Limestone)
+					lip.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.07, 0)
+				end
+				for _, side in { -1, 1 } do
+					local edgeAt = mid + right * (side * (link.Width / 2 - 3.1))
+					local mossEdge = decor(model, "RampMossEdge", Vector3.new(1.8, 0.2, math.max(1, length - 3)), edgeAt, moss, Enum.Material.Grass)
+					mossEdge.CFrame = CFrame.lookAt(edgeAt, edgeAt + delta) * CFrame.new(0, 0.08, 0)
+				end
+			elseif natural then
 				ramp.Color = theme.GroundColor:Lerp(theme.TrimColor, 0.35)
 			else
 				local inlay = decor(model, "RampPathInlay", Vector3.new(link.Width * 0.55, 0.12, delta.Magnitude), mid, theme.AccentColor, theme.GroundMaterial)
@@ -518,8 +547,13 @@ function Builder.Build(id: number, generation: number): any
 			for _, side in { -1, 1 } do
 				local curbOffset = right * (side * (link.Width / 2 - 1.1))
 				local curbGroup = propGroup(model, "BridgeCurb")
-				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, math.max(1,delta.Magnitude-4)), mid + curbOffset, theme.TrimColor, theme.TrimMaterial, 1)
+				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, math.max(1,delta.Magnitude-4)), mid + curbOffset, if solmere then flagstoneDark else theme.TrimColor, if solmere then Enum.Material.Limestone else theme.TrimMaterial, if solmere then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
+				if solmere then
+					-- A visible Solmere kerb: limestone with a cushion of moss on top.
+					local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.6, 0.5, math.max(1, delta.Magnitude - 5)), mid + curbOffset, moss, Enum.Material.Grass)
+					cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.05, 0)
+				end
 			end
 			continue
 		end

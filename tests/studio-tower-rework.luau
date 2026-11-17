@@ -12,7 +12,7 @@ return function(firstFloor: number, lastFloor: number, keepPreviews: boolean?)
 	if keepPreviews and not previews then previews=Instance.new("Folder"); previews.Name="TowerReworkPreviews"; previews.Parent=workspace end
 	for id=firstFloor,lastFloor do
 		local room=Builder.Build(id,1)
-		local layout=Layout.Get((id-1)%5+1)
+		local layout=Layout.ForFloor(id)
 		local params=RaycastParams.new()
 		params.FilterType=Enum.RaycastFilterType.Include; params.FilterDescendantsInstances={room.Model}; params.RespectCanCollide=true
 		assert(Protocol.InZone(room.Arrival.Position,room.Origin,room.Zones[1]),"Unsafe arrival "..id)

@@ -13,7 +13,7 @@ return function(firstFloor: number, lastFloor: number)
 		local room
 		local ok,failure=pcall(function()
 			room=Builder.Build(id,900001)
-			local layout=Layout.Get((id-1)%5+1)
+			local layout=Layout.ForFloor(id)
 			local connectors=table.clone(layout.Links)
 			for _,link in layout.ReturnLinks do table.insert(connectors,link)end
 			local params=RaycastParams.new()

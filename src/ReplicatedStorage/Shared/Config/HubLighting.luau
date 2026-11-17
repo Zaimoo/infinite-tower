@@ -239,21 +239,54 @@ HubLighting.BiomeGrades = BiomeGrades
 HubLighting.FloorGridOrigin = 12000
 HubLighting.FloorGridSpacing = 2400
 
--- The biome index (1..10) of the tower floor room at (x, z), or nil off the floor grid.
-function HubLighting.TowerBiomeAt(x: number, z: number): number?
+-- Per-floor grades, layered over the biome's: a hand-authored floor (TowerLayout AUTHORED) can set its own
+-- time of day. ClockTime is shared by every preset (the sun never swings), so time of day is read through
+-- colour shift, ambient and air. Only the listed fields change.
+local FloorGrades: { [number]: { [string]: any } } = {
+	-- Floor 1, Overgrown Threshold: dawn. Low warm gold from the east, cool shade, morning mist in the hollow.
+	[1] = {
+		Ambient = c(62, 70, 66), OutdoorAmbient = c(112, 108, 96), ColorShift_Top = c(255, 214, 158), ColorShift_Bottom = c(64, 82, 84),
+		AtmosphereDensity = 0.3, AtmosphereColor = c(214, 190, 156), AtmosphereDecay = c(118, 132, 116), AtmosphereHaze = 1.25,
+		TintColor = c(255, 244, 226), Saturation = 0.14, ExposureCompensation = -0.05, BloomIntensity = 0.32,
+	},
+}
+HubLighting.FloorGrades = FloorGrades
+
+-- The floor id (1..50) of the tower floor room at (x, z), or nil off the floor grid.
+function HubLighting.TowerFloorAt(x: number, z: number): number?
 	local col = math.round((x - HubLighting.FloorGridOrigin) / HubLighting.FloorGridSpacing)
 	local row = math.round((z - HubLighting.FloorGridOrigin) / HubLighting.FloorGridSpacing)
 	if col < 0 or col > 9 or row < 0 or row > 4 then
 		return nil
 	end
-	local floorId = row * 10 + col + 1
-	return math.ceil(floorId / 5)
+	return row * 10 + col + 1
+end
+
+-- The biome index (1..10) of the tower floor room at (x, z), or nil off the floor grid.
+function HubLighting.TowerBiomeAt(x: number, z: number): number?
+	local floorId = HubLighting.TowerFloorAt(x, z)
+	return if floorId then math.ceil(floorId / 5) else nil
 end
 
 local gradeCache: { [number]: Preset } = {}
+local floorCache: { [number]: Preset } = {}
 
--- Storm with the biome's grade applied (Storm itself for nil or an unknown biome).
-function HubLighting.TowerPreset(biomeIndex: number?): Preset
+-- Storm with the biome's grade applied (Storm itself for nil or an unknown biome), and the floor's own
+-- grade over that when floorId has one.
+function HubLighting.TowerPreset(biomeIndex: number?, floorId: number?): Preset
+	local floorGrade = floorId and FloorGrades[floorId]
+	if floorId and floorGrade then
+		local cached = floorCache[floorId]
+		if cached then
+			return cached
+		end
+		local out = table.clone(HubLighting.TowerPreset(biomeIndex)) :: any
+		for key, value in floorGrade do
+			out[key] = value
+		end
+		floorCache[floorId] = out
+		return out
+	end
 	local grade = biomeIndex and BiomeGrades[biomeIndex]
 	if not biomeIndex or not grade then
 		return Presets.Storm

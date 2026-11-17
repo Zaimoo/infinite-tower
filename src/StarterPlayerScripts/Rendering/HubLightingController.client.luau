@@ -103,7 +103,7 @@ local function apply(p: Preset)
 end
 
 -- Target weights: how much Dread and how much Storm the current position calls for, and on a tower floor
--- the biome whose grade tints Storm (HubLighting.TowerPreset).
+-- the floor whose biome (and own floor) grade tints Storm (HubLighting.TowerPreset).
 local function targetWeights(): (number, number, number?)
 	local pos: Vector3
 	if _G.IsViewingSquad and _G.IsViewingSquad() then
@@ -116,17 +116,22 @@ local function targetWeights(): (number, number, number?)
 	end
 	local zone, dread = HubLighting.Classify(pos.X, pos.Z)
 	if zone == "Storm" then
-		return 0, 1, HubLighting.TowerBiomeAt(pos.X, pos.Z)
+		return 0, 1, HubLighting.TowerFloorAt(pos.X, pos.Z)
 	end
 	return dread, 0, nil
 end
 
-local dreadW, stormW, startBiome = targetWeights()
+local dreadW, stormW, startFloor = targetWeights()
+
+-- A floor's grade: its biome's, with the floor's own over it when it has one (HubLighting.FloorGrades).
+local function floorPreset(floorId: number?): Preset
+	return HubLighting.TowerPreset(if floorId then math.ceil(floorId / 5) else nil, floorId)
+end
+
 local lastDread, lastStorm = -1, -1
--- The tower grade in use, blended from the previous biome's toward the current one's (towerT 0 -> 1).
-local towerFrom: Preset = HubLighting.TowerPreset(startBiome)
+-- The tower grade in use, blended from the previous floor's toward the current one's (towerT 0 -> 1).
+local towerFrom: Preset = floorPreset(startFloor)
 local towerTo: Preset = towerFrom
-local towerBiome: number? = startBiome
 local towerT = 1
 
 -- Colour FX switched: re-apply on the next step even if the player has not moved
@@ -135,16 +140,17 @@ Lighting:GetAttributeChangedSignal(COLOR_FX_ATTRIBUTE):Connect(function()
 end)
 
 local function stepHubLighting(dt: number)
-	local wantDread, wantStorm, wantBiome = targetWeights()
+	local wantDread, wantStorm, wantFloor = targetWeights()
 	local k = 1 - math.exp(-BLEND_RATE * dt)
 	dreadW += (wantDread - dreadW) * k
 	stormW += (wantStorm - stormW) * k
 
-	-- Off the floors the grade keeps its last biome, so leaving a floor fades out from that biome's look.
-	if wantBiome and wantBiome ~= towerBiome then
+	-- Off the floors the grade keeps its last floor's, so leaving a floor fades out from that floor's look.
+	-- Presets are cached, so floors that share a grade (most of a biome) don't restart the blend.
+	local wantGrade = if wantFloor then floorPreset(wantFloor) else nil
+	if wantGrade and wantGrade ~= towerTo then
 		towerFrom = if towerT >= 1 then towerTo else mix(towerFrom, towerTo, towerT)
-		towerTo = HubLighting.TowerPreset(wantBiome)
-		towerBiome = wantBiome
+		towerTo = wantGrade
 		towerT = 0
 	end
 	local gradeMoving = towerT < 1

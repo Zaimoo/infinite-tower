@@ -115,4 +115,28 @@ test("Each tower floor takes its own biome's lighting grade", function()
 	assert(Light.TowerBiomeAt(-14000, -14000) == nil, "the raid arena is not a tower floor")
 end)
 
+test("A floor with its own grade layers it over its biome's; the others keep the biome's", function()
+	local storm = Light.Presets.Storm
+	for id, grade in Light.FloorGrades do
+		local biome = math.ceil(id / 5)
+		local preset = Light.TowerPreset(biome, id)
+		for key, value in grade do
+			assert(typeof(value) == typeof(storm[key]), "floor grade " .. id .. " field " .. key .. " has the wrong type")
+			assert(preset[key] == value, "floor " .. id .. " does not apply " .. key)
+		end
+		for key, value in Light.BiomeGrades[biome] do
+			if grade[key] == nil then assert(preset[key] == value, "floor " .. id .. " lost its biome's " .. key) end
+		end
+		assert(Light.TowerPreset(biome, id) == preset, "floor grades are not cached")
+	end
+	assert(Light.FloorGrades[1] ~= nil, "floor 1 (Overgrown Threshold) has its dawn grade")
+	assert(Light.TowerPreset(1, 2) == Light.TowerPreset(1), "a floor without its own grade shares its biome's")
+	for id = 1, 50 do
+		local x = 12000 + ((id - 1) % 10) * 2400
+		local z = 12000 + math.floor((id - 1) / 10) * 2400
+		assert(Light.TowerFloorAt(x + 200, z - 250) == id, "floor " .. id .. " reads the wrong floor id")
+	end
+	assert(Light.TowerFloorAt(0, 0) == nil)
+end)
+
 print(string.format("tower-biome-kit: %d passed", passed))

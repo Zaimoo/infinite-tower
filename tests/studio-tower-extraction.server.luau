@@ -22,7 +22,7 @@ local ok,err=xpcall(function()
 	profile.Facilities.GuardPost.Level=0 -- pause passive gold during exact payout checks
 	for id=1,50 do
 		local room=Tower.EnsureRoom(id)
-		local layout=Layout.Get((id-1)%5+1)
+		local layout=Layout.ForFloor(id)
 		state.FloorId=id; state.RoomGeneration=room.RoomGeneration
 		local field=room.Origin+Vector3.new(0,4,layout.Platforms.Basin.Z+34)
 		root.CFrame=CFrame.new(field); state.BankArmed=false
