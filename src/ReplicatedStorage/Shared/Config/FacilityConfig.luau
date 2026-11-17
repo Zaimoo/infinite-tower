@@ -253,8 +253,8 @@ FacilityConfig.FacilityLayout = {
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any), -- F, so it never competes with the [E] Recall hotkey
 	},
 	SynthesisChamber = {
-		Offset = Vector3.new(-44, 0, -28),
-		RotationY = math.atan2(44, 28),
+		Offset = Vector3.new(-50, 0, -32),
+		RotationY = math.atan2(50, 32),
 		Radius = 28,
 		Dimensions = Vector3.new(40.0, 41.0, 45.0),
 		DoorOpenAngleDeg = 95,
