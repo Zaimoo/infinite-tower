@@ -28,11 +28,11 @@ IslandBuilder.Config = {
 	InnerStalactiteCount = 10, -- Deep jagged rock points tapering toward the bottom tip
 	RandomSeed = 4042026, -- Fixed seed so all 6 cloned islands have identical geometry
 
-	-- Materials & Colors (Mossy Gothic Flagstone Courtyard Palette — image_892b9a.jpg)
-	TopMaterial = Enum.Material.LeafyGrass,
-	TopColor = Color3.fromRGB(53, 74, 46), -- #354A2E Deep Forest Moss sub-layer
-	DampMossMaterial = Enum.Material.Ground,
-	DampMossColor = Color3.fromRGB(42, 59, 36), -- #2A3B24 Damp Earth / Perimeter Moss
+	-- Materials & Colors (Weathered Grey Castle Flagstone Courtyard Palette)
+	TopMaterial = Enum.Material.Slate,
+	TopColor = Color3.fromRGB(74, 78, 86), -- Neutral weathered castle stone sub-layer
+	DampMossMaterial = Enum.Material.Slate,
+	DampMossColor = Color3.fromRGB(58, 62, 70),
 	RimMaterial = Enum.Material.Cobblestone,
 	RimColor = Color3.fromRGB(62, 66, 70),
 	RockMaterial = Enum.Material.Slate,
@@ -50,6 +50,21 @@ IslandBuilder.Config = {
 local PartKit = require(script.Parent:WaitForChild("PartKit"))
 local makePart = PartKit.Part
 local makeWedge = PartKit.Wedge
+
+local cachedEnvSpawner: any = false
+local function getEnvSpawner(): any?
+	if cachedEnvSpawner ~= false then
+		return cachedEnvSpawner
+	end
+	local mod = script.Parent and script.Parent:FindFirstChild("EnvironmentSpawner")
+	if mod and mod:IsA("ModuleScript") then
+		local ok, res = pcall(require, mod)
+		cachedEnvSpawner = if ok then res else nil
+	else
+		cachedEnvSpawner = nil
+	end
+	return cachedEnvSpawner
+end
 
 --============================================================================
 -- MOSSY FLAGSTONE COURTYARD GROUND BUILDER (image_892b9a.jpg)
@@ -71,12 +86,11 @@ local function buildMossyFlagstoneCourtyard(
 	local tileRng = Random.new(seed + 892)
 	local noiseSeed = (seed % 997) * 0.137
 
-	-- 4 Weathered Gothic Stone Tones + Damp Moss Earth Palette (Extracted from image_892b9a.jpg)
-	local COLOR_WEATHERED_SLATE = Color3.fromRGB(62, 66, 74) -- #3E424A Primary Flagstone
-	local COLOR_LIGHT_ASH = Color3.fromRGB(78, 84, 92) -- #4E545C Highlight Ash Flagstone
-	local COLOR_DARK_BASALT = Color3.fromRGB(43, 46, 52) -- #2B2E34 Shadow / Damp Basalt
-	local COLOR_MOSS_OLIVE = Color3.fromRGB(63, 74, 60) -- #3F4A3C Moss-Tinted Olive Stone
-	local COLOR_DAMP_MOSS = Color3.fromRGB(42, 59, 36) -- #2A3B24 Damp Earth / Perimeter Moss
+	-- 4 Weathered Gothic Stone Tones (Cool Castle Grey Palette)
+	local COLOR_WEATHERED_SLATE = Color3.fromRGB(74, 78, 86) -- #4A4E56 Primary Flagstone
+	local COLOR_LIGHT_ASH = Color3.fromRGB(88, 92, 100) -- #585C64 Highlight Ash Flagstone
+	local COLOR_DARK_BASALT = Color3.fromRGB(56, 60, 68) -- #383C44 Shadow / Basalt
+	local COLOR_MOSS_OLIVE = Color3.fromRGB(66, 70, 78) -- #42464E Secondary Weathered Slate
 
 	local primaryStonePalette = {
 		COLOR_WEATHERED_SLATE,
@@ -118,30 +132,9 @@ local function buildMossyFlagstoneCourtyard(
 		})
 	end
 
-	-- 1. Darker Damp-Moss Earth Patches (0.02 studs thin at Y = 0.01) near perimeter castle walls & corners
+	-- 1. Courtyard dimensions (fallback procedural scatter uses uniform grey slate without moss patches)
 	local halfW = courtyardSize.X * 0.5
 	local halfL = courtyardSize.Y * 0.5
-	local dampMossPatches = {
-		{ Pos = Vector3.new(halfW - 18, 0.01, -halfL + 16), Size = Vector3.new(26, 0.02, 22), Yaw = 4 },
-		{ Pos = Vector3.new(halfW - 16, 0.01, halfL - 18), Size = Vector3.new(24, 0.02, 24), Yaw = -6 },
-		{ Pos = Vector3.new(-halfW + 18, 0.01, -halfL + 18), Size = Vector3.new(26, 0.02, 24), Yaw = 5 },
-		{ Pos = Vector3.new(-halfW + 18, 0.01, halfL - 18), Size = Vector3.new(26, 0.02, 24), Yaw = -4 },
-		{ Pos = Vector3.new(halfW - 12, 0.01, 0), Size = Vector3.new(16, 0.02, 34), Yaw = 2 },
-		{ Pos = Vector3.new(-halfW + 12, 0.01, 2), Size = Vector3.new(16, 0.02, 32), Yaw = -3 },
-		{ Pos = Vector3.new(-22, 0.01, -halfL + 10), Size = Vector3.new(28, 0.02, 12), Yaw = 1 },
-		{ Pos = Vector3.new(24, 0.01, -halfL + 10), Size = Vector3.new(28, 0.02, 12), Yaw = -2 },
-		{ Pos = Vector3.new(-18, 0.01, halfL - 10), Size = Vector3.new(30, 0.02, 12), Yaw = 2 },
-		{ Pos = Vector3.new(40, 0.01, halfL - 10), Size = Vector3.new(24, 0.02, 12), Yaw = -2 },
-	}
-	for idx, patch in ipairs(dampMossPatches) do
-		makeGroundTile(
-			string.format("DampMossPatch_%d", idx),
-			patch.Size,
-			CFrame.new(patch.Pos) * CFrame.Angles(0, math.rad(patch.Yaw), 0),
-			COLOR_DAMP_MOSS,
-			Enum.Material.Ground
-		)
-	end
 
 	-- 2. Radial Walkway Definitions (Connecting Fountain Plaza to Bridge Gate, Outskirts Gate & all 5 Stations)
 	local trainingCornerLen = math.sqrt(66.8 * 66.8 + 46.8 * 46.8)
@@ -501,10 +494,15 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		})
 	end
 
-	-- 1B. Mossy Green & Grey Flagstone Courtyard Ground (Concentric Plaza, Radial Walkways & Mossy Scatter)
-	local courtyardTiles = buildMossyFlagstoneCourtyard(islandModel, CFrame.identity, Vector2.new(cfg.TopWidth, courtyardL), cfg.RandomSeed)
-	-- Swap the ~246 thin tile slabs for the Blender-merged meshes when they are imported (SceneryBake)
-	SceneryBake.Apply(courtyardTiles, CFrame.identity, "CourtyardGroundTiles")
+	-- 1B. Weathered Grey Flagstone Courtyard Ground (prefer single Blender-authored asset; fallback to parts)
+	local envSpawner = getEnvSpawner()
+	if envSpawner and envSpawner.HasTemplate("CastleCourtyard_Ground") then
+		envSpawner.SpawnCastleCourtyardGround(islandModel, CFrame.identity)
+	else
+		local courtyardTiles = buildMossyFlagstoneCourtyard(islandModel, CFrame.identity, Vector2.new(cfg.TopWidth, courtyardL), cfg.RandomSeed)
+		-- Swap the thin tile slabs for the Blender-merged meshes when they are imported (SceneryBake)
+		SceneryBake.Apply(courtyardTiles, CFrame.identity, "CourtyardGroundTiles")
+	end
 
 	-- 1C. Courtyard Carved Stone Benches (Phase 2.3 Accent Props)
 	local accentsFolder = Instance.new("Folder")

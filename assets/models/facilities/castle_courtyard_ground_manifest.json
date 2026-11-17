@@ -1,0 +1,59 @@
+{
+  "courtyard_width": 160.0,
+  "courtyard_length": 120.0,
+  "floor_y": 0.02,
+  "tile_studs": 16.0,
+  "total_tris": 3240,
+  "tri_breakdown": {
+    "Courtyard_FlagstoneFloor": 1760,
+    "Courtyard_PlazaAndWalkways": 1480
+  },
+  "meshes": {
+    "Courtyard_FlagstoneFloor": {
+      "pos": [
+        0.0,
+        -0.0975,
+        0.0
+      ],
+      "size": [
+        160.0,
+        0.2449,
+        120.0
+      ],
+      "pivot_offset": [
+        -0.0,
+        0.0975,
+        -0.0
+      ]
+    },
+    "Courtyard_PlazaAndWalkways": {
+      "pos": [
+        5.1975,
+        0.0465,
+        -0.4815
+      ],
+      "size": [
+        78.7023,
+        0.063,
+        117.237
+      ],
+      "pivot_offset": [
+        -5.1975,
+        -0.0465,
+        0.4815
+      ]
+    }
+  },
+  "textures": {
+    "courtyard_stone": {
+      "color": "assets/models/facilities/textures/castle_courtyard/Tex_CastleCourtyardStone_Color.png",
+      "normal": "assets/models/facilities/textures/castle_courtyard/Tex_CastleCourtyardStone_Normal.png",
+      "roughness": "assets/models/facilities/textures/castle_courtyard/Tex_CastleCourtyardStone_Roughness.png"
+    },
+    "walkway_slate": {
+      "color": "assets/models/facilities/textures/castle_courtyard/Tex_CastleWalkwaySlate_Color.png",
+      "normal": "assets/models/facilities/textures/castle_courtyard/Tex_CastleWalkwaySlate_Normal.png",
+      "roughness": "assets/models/facilities/textures/castle_courtyard/Tex_CastleWalkwaySlate_Roughness.png"
+    }
+  }
+}

@@ -40,7 +40,19 @@ EnvironmentSpawner.DefaultGroundTextures = {
 		NormalMap = "rbxassetid://122823615827601",
 		RoughnessMap = "rbxassetid://117493914645472",
 	} :: TextureIdSet,
+	CastleCourtyardStone = {
+		ColorMap = "rbxassetid://135660447260601",
+		NormalMap = "rbxassetid://111527288005973",
+		RoughnessMap = "rbxassetid://90266220786908",
+	} :: TextureIdSet,
+	CastleWalkwaySlate = {
+		ColorMap = "rbxassetid://134696968029039",
+		NormalMap = "rbxassetid://131026814744579",
+		RoughnessMap = "rbxassetid://73719482073868",
+	} :: TextureIdSet,
 }
+
+local CASTLE_GROUND_VERSION = 3
 
 local EXPECTED_HEIGHTS = {
 	HeroOakTree = 17.0,
@@ -252,7 +264,11 @@ function EnvironmentSpawner.ApplyGroundMaterials(targetRoots: { Instance }): boo
 			end
 
 			local mat = desc.Material
-			if hasOutskirtsGrass and n == "OutskirtsGrounds" then
+			if n == "IslandTopSurface" then
+				desc.Material = Enum.Material.Slate
+				desc.MaterialVariant = ""
+				desc.Color = Color3.fromRGB(74, 78, 86)
+			elseif hasOutskirtsGrass and n == "OutskirtsGrounds" then
 				desc.Material = Enum.Material.Grass
 				desc.MaterialVariant = "OutskirtsForestGrass"
 				desc.Color = Color3.fromRGB(232, 238, 224)
@@ -696,6 +712,35 @@ local function configurePathPart(desc: BasePart, alphaMode: Enum.AlphaMode)
 	if sa and sa:IsA("SurfaceAppearance") then
 		sa.AlphaMode = alphaMode
 	end
+end
+
+function EnvironmentSpawner.SpawnCastleCourtyardGround(parent: Instance, courtyardCenterCF: CFrame): Model?
+	local template = findTemplate("CastleCourtyard_Ground")
+	if not template then
+		return nil
+	end
+	local model = wrapAsModel(template:Clone(), "CastleCourtyard_Ground")
+	model.WorldPivot = CFrame.identity
+	for _, desc in model:GetDescendants() do
+		if desc:IsA("BasePart") then
+			desc.PivotOffset = CFrame.identity
+			configurePathPart(desc, Enum.AlphaMode.Opaque)
+			local sa = desc:FindFirstChildWhichIsA("SurfaceAppearance", true)
+			if sa and sa:IsA("SurfaceAppearance") then
+				local texSet = if desc.Name:find("Walkway", 1, true)
+					then EnvironmentSpawner.DefaultGroundTextures.CastleWalkwaySlate
+					else EnvironmentSpawner.DefaultGroundTextures.CastleCourtyardStone
+				sa.ColorMap = texSet.ColorMap
+				sa.NormalMap = texSet.NormalMap
+				sa.RoughnessMap = texSet.RoughnessMap
+			end
+		end
+	end
+	model:PivotTo(courtyardCenterCF)
+	model:SetAttribute("BlenderEnvAsset", "CastleCourtyard_Ground")
+	model:SetAttribute("GroundVersion", CASTLE_GROUND_VERSION)
+	model.Parent = parent
+	return model
 end
 
 function EnvironmentSpawner.SpawnOutskirtsGround(parent: Instance, guardpostCenterCF: CFrame): Model?
@@ -1232,6 +1277,41 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 							EnvironmentSpawner.SpawnPond(spec.template, pondsFolder :: Instance, pondCF, spec.scale, spec.yaw, spec.modelName)
 							upgraded += 1
 						end
+					end
+				end
+			end
+		end
+	end
+
+	if EnvironmentSpawner.HasTemplate("CastleCourtyard_Ground") then
+		for _, root in ipairs(roots) do
+			local islands: { Model } = {}
+			if root:IsA("Model") and root.Name == "FloatingFortressIsland" then
+				table.insert(islands, root)
+			end
+			for _, desc in root:GetDescendants() do
+				if desc:IsA("Model") and desc.Name == "FloatingFortressIsland" then
+					table.insert(islands, desc)
+				end
+			end
+			for _, island in ipairs(islands) do
+				local top = island:FindFirstChild("IslandTopSurface")
+				if top and top:IsA("BasePart") then
+					top.Material = Enum.Material.Slate
+					top.MaterialVariant = ""
+					top.Color = Color3.fromRGB(74, 78, 86)
+					local legacyTiles = island:FindFirstChild("CourtyardGroundTiles")
+					if legacyTiles then
+						legacyTiles:Destroy()
+					end
+					local existingGround = island:FindFirstChild("CastleCourtyard_Ground")
+					if not (existingGround and existingGround:GetAttribute("GroundVersion") == CASTLE_GROUND_VERSION) then
+						if existingGround then
+							existingGround:Destroy()
+						end
+						local courtyardOriginCF = CFrame.new(top.Position.X, top.Position.Y + top.Size.Y * 0.5, top.Position.Z) * top.CFrame.Rotation
+						EnvironmentSpawner.SpawnCastleCourtyardGround(island, courtyardOriginCF)
+						upgraded += 1
 					end
 				end
 			end

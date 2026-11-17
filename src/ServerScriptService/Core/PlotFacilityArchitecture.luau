@@ -945,9 +945,9 @@ end
 --============================================================================
 -- 2.3 MARKET CLUSTER (`MarketCluster` — 4-Stall Merchant Bazaar)
 --============================================================================
-local MB_GROUND_CM = "rbxassetid://100560967661665"
-local MB_GROUND_NM = "rbxassetid://76492701795761"
-local MB_GROUND_RM = "rbxassetid://116909121077069"
+local MB_GROUND_CM = "rbxassetid://113914176453341"
+local MB_GROUND_NM = "rbxassetid://123858544123055"
+local MB_GROUND_RM = "rbxassetid://116192881674411"
 local MB_PROPS_CM = "rbxassetid://138033743603856"
 local MB_PROPS_NM = "rbxassetid://125626595855578"
 local MB_PROPS_RM = "rbxassetid://109367096016299"
@@ -1856,7 +1856,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 27 then
+	if existing and existing:GetAttribute("PrefabVersion") == 28 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1865,7 +1865,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 27)
+	prefabs:SetAttribute("PrefabVersion", 28)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")
