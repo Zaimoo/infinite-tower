@@ -38,6 +38,7 @@ local RAID_FLOOR=require(game:GetService("ReplicatedStorage").Shared.Config.Raid
 local TowerRun=require(Shared.Util.TowerRun)
 local AttackTimeline=require(Shared.Util.AttackTimeline)
 local HeroActionTiming=require(Shared.Util.HeroActionTiming)
+local ReforgeRules=require(Shared.Util.ReforgeRules)
 local HeroImpactQueue=require(script.Parent.HeroImpactQueue)
 local HeroTargeting=require(script.Parent.HeroTargeting)
 local HeroSkillEffects=require(script.Parent.HeroSkillEffects)
@@ -2253,6 +2254,9 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 					end
 				end
 			end
+			-- Focus (Weapon Reforge, GDD §7.6): the equipped weapon's trait charges the gauge faster.
+			local heroRecord = profile and profile.Heroes[simHero.HeroUUID]
+			if heroRecord then gain *= ReforgeRules.GaugeMultiplier(StatFormulas.GetEquippedArtifact(profile, heroRecord)) end
 			simHero.Stamina = math.clamp((simHero.Stamina or 0) + gain, 0, 100)
 		end
 		if profile and profile.Heroes[simHero.HeroUUID] then

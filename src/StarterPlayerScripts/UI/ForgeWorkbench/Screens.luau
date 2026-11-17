@@ -5,6 +5,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local Catalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 local Stats = require(ReplicatedStorage.Shared.Util.StatFormulas)
 local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
+local ReforgeRules = require(ReplicatedStorage.Shared.Util.ReforgeRules)
 local Icons = require(script.Parent.Parent.Hud.Icons)
 local C = require(script.Parent.Components)
 local Model = require(script.Parent.Model)
@@ -481,7 +482,9 @@ function Screens.UpgradeReview(props: ReviewProps)
 	local tiles: { [string]: any } = {
 		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center }),
 	}
+	local traitLost = false
 	for i, material in props.Materials do
+		traitLost = traitLost or ReforgeRules.IsTrait(material.Trait)
 		tiles["M" .. i] = e("Frame", { LayoutOrder = i, Size = UDim2.fromOffset(84, 84), BackgroundTransparency = 1 }, {
 			Tile = e(C.ArtifactTile, { Snapshot = props.Snapshot, Artifact = material, Material = true, Order = i, ShowPreview = true, OnSelect = function() end }),
 		})
@@ -510,7 +513,7 @@ function Screens.UpgradeReview(props: ReviewProps)
 		}),
 		-- 3. What it costs: the weapons destroyed, and Gold
 		Destroyed = e("Frame", { Name = "Destroyed", Position = UDim2.new(0, 0, 0.46, 100), Size = UDim2.new(0.62, 0, 0, 118), BackgroundTransparency = 1 }, {
-			Label = e(C.Text, { Text = if props.Changed then "INVENTORY CHANGED · GO BACK AND REVIEW" else "WILL BE DESTROYED", TextSize = 15, TextColor3 = T.Bad, Size = UDim2.new(1, 0, 0, 22) }),
+			Label = e(C.Text, { Text = if props.Changed then "INVENTORY CHANGED · GO BACK AND REVIEW" elseif traitLost then "WILL BE DESTROYED · REFORGED TRAITS LOST" else "WILL BE DESTROYED", TextSize = 15, TextColor3 = T.Bad, Size = UDim2.new(1, 0, 0, 22) }),
 			Tiles = e("Frame", { Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 0, 88), BackgroundTransparency = 1 }, tiles),
 		}),
 		Cost = e("Frame", { Name = "Cost", Position = UDim2.new(0.62, 8, 0.46, 100), Size = UDim2.new(0.38, -8, 0, 110), BackgroundColor3 = Color3.new(1, 1, 1) }, {
