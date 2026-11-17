@@ -37,7 +37,7 @@ local TowerAtmosphereController = {}
 TowerAtmosphereController.Config = {
 	ArenaCenter = Vector3.new(0, HubLayout.TowerWalkwayY, 0), -- (0, 16, 0)
 	BridgeTargetSnapPoint = Vector3.new(0, HubLayout.TowerWalkwayY, -358), -- Front edge of TowerHubArrival / Bridge
-	DefaultStackCount = 8, -- Number of stacked `Tower_Mid_Segment` modules
+	DefaultStackCount = 16, -- Number of stacked `Tower_Mid_Segment` modules (matches TowerBuilder.Config.MidSegmentCount)
 	BaseSegmentHeight = 84,
 	MidSegmentHeight = 96,
 

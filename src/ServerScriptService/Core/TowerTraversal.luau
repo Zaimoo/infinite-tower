@@ -125,4 +125,46 @@ function Traversal.Apply(tower: Model)
 	tower:SetAttribute("TraversalVersion", VERSION)
 	tower:SetAttribute("WalkableFloors", #entries)
 end
+-- The arrival terrace, runner and rails in front of the tower gate, built once into BaseOverhaulGeometry.
+function Traversal.EnsureHubArrival(geometry: Instance)
+	if not geometry:FindFirstChild("TowerHubArrival") then
+		local p = Instance.new("Part")
+		p.Name = "TowerHubArrival"
+		p.Size = Vector3.new(96, 2.4, 70)
+		p.Position = Vector3.new(0, 15, -325)
+		p.Anchored = true
+		p.CanCollide = true
+		p.Material = Enum.Material.Slate
+		p.Color = Color3.fromRGB(55, 45, 52)
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.Parent = geometry
+
+		local runner = Instance.new("Part")
+		runner.Name = "TowerHubArrival_Runner"
+		runner.Size = Vector3.new(32, 0.2, 68)
+		runner.Position = Vector3.new(0, 16.1, -325)
+		runner.Anchored = true
+		runner.CanCollide = false
+		runner.Material = Enum.Material.Granite
+		runner.Color = Color3.fromRGB(145, 28, 38)
+		runner.TopSurface = Enum.SurfaceType.Smooth
+		runner.BottomSurface = Enum.SurfaceType.Smooth
+		runner.Parent = geometry
+
+		for _, side in { -1, 1 } do
+			local rail = Instance.new("Part")
+			rail.Name = side < 0 and "TowerHubArrival_RailL" or "TowerHubArrival_RailR"
+			rail.Size = Vector3.new(1.2, 4, 24)
+			rail.Position = Vector3.new(side * 47.4, 18, -348)
+			rail.Anchored = true
+			rail.CanCollide = true
+			rail.Material = Enum.Material.Granite
+			rail.Color = Color3.fromRGB(112, 26, 37)
+			rail.TopSurface = Enum.SurfaceType.Smooth
+			rail.BottomSurface = Enum.SurfaceType.Smooth
+			rail.Parent = geometry
+		end
+	end
+end
 return Traversal

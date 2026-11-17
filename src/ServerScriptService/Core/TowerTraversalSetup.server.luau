@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Service = require(script.Parent.TowerFloorService)
 local StaticGeometry = require(script.Parent.StaticGeometry)
+local Traversal = require(script.Parent.TowerTraversal)
 Service.Init()
 
 local geometry = workspace:WaitForChild("BaseOverhaulGeometry")
@@ -23,9 +24,11 @@ local function apply(model: Instance)
 		if old then old.Parent = recovery end
 
 		local rings = model:WaitForChild("TowerRings")
+		-- Under the Blender remodel (GothicTowerShell) the rings are collision only, hidden inside the mesh
+		local meshed = model:GetAttribute("ShellMeshed") == true
 		for _, p in rings:GetChildren() do
 			if p:IsA("BasePart") then
-				p.Transparency = 0
+				p.Transparency = if meshed then 1 else 0
 				p.CanCollide = true
 				p.CanQuery = true
 			end
@@ -80,46 +83,8 @@ local function apply(model: Instance)
 			end
 		end
 
-		-- Ensure wide, solid arrival terrace is present
-		if not geometry:FindFirstChild("TowerHubArrival") then
-			local p = Instance.new("Part")
-			p.Name = "TowerHubArrival"
-			p.Size = Vector3.new(96, 2.4, 70)
-			p.Position = Vector3.new(0, 15, -325)
-			p.Anchored = true
-			p.CanCollide = true
-			p.Material = Enum.Material.Slate
-			p.Color = Color3.fromRGB(55, 45, 52)
-			p.TopSurface = Enum.SurfaceType.Smooth
-			p.BottomSurface = Enum.SurfaceType.Smooth
-			p.Parent = geometry
-
-			local runner = Instance.new("Part")
-			runner.Name = "TowerHubArrival_Runner"
-			runner.Size = Vector3.new(32, 0.2, 68)
-			runner.Position = Vector3.new(0, 16.1, -325)
-			runner.Anchored = true
-			runner.CanCollide = false
-			runner.Material = Enum.Material.Granite
-			runner.Color = Color3.fromRGB(145, 28, 38)
-			runner.TopSurface = Enum.SurfaceType.Smooth
-			runner.BottomSurface = Enum.SurfaceType.Smooth
-			runner.Parent = geometry
-
-			for _, side in { -1, 1 } do
-				local rail = Instance.new("Part")
-				rail.Name = side < 0 and "TowerHubArrival_RailL" or "TowerHubArrival_RailR"
-				rail.Size = Vector3.new(1.2, 4, 24)
-				rail.Position = Vector3.new(side * 47.4, 18, -348)
-				rail.Anchored = true
-				rail.CanCollide = true
-				rail.Material = Enum.Material.Granite
-				rail.Color = Color3.fromRGB(112, 26, 37)
-				rail.TopSurface = Enum.SurfaceType.Smooth
-				rail.BottomSurface = Enum.SurfaceType.Smooth
-				rail.Parent = geometry
-			end
-		end
+		-- Wide, solid arrival terrace in front of the gate (also baked into the place by tests/studio-rebake-hub.luau)
+		Traversal.EnsureHubArrival(geometry)
 	end
 end
 

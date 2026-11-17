@@ -215,6 +215,9 @@ function Kit.Build(parent: Instance): Portal
 	fit.MinTextSize = 14
 	fit.Parent = title
 	local status = label("Status", 70, 38, 22, Color3.new(1, 1, 1))
+	-- Neutral text until RaidService writes the scheduled boss and countdown (also what a baked preview shows)
+	title.Text = "RAID PORTAL"
+	status.Text = ""
 	model.Parent = parent
 	return { Model = model, Trigger = trigger, Prompt = prompt, Title = title, Status = status }
 end
