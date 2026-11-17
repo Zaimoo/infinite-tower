@@ -2,7 +2,7 @@
   "courtyard_width": 160.0,
   "courtyard_length": 120.0,
   "floor_y": 0.02,
-  "tile_studs": 24.0,
+  "tile_studs": 16.0,
   "total_tris": 3240,
   "tri_breakdown": {
     "Courtyard_FlagstoneFloor": 1760,

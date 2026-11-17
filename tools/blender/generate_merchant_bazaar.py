@@ -217,35 +217,57 @@ def _put_cell(
 
 
 def generate_bazaar_ground_textures() -> tuple[Path, Path, Path]:
-    """Generate Tex_BazaarGround_{Color,Normal,Roughness}.png (4x4 organic ground & grass atlas)."""
+    """Generate Tex_BazaarGround_{Color,Normal,Roughness}.png (4x4 stone & grass atlas matching castle courtyard granite)."""
     col, height, rough = _make_atlas_buffers()
     uu, vv = _cell_coords()
+    radial = np.hypot(uu - 0.5, vv - 0.5)
+    # Soft outer bevel AO covering Voronoi f_top rims & f_side skirts (lv in [0.08, 0.28]) without staining top faces
+    edge_ao = np.clip(1.0 - np.clip((radial - 0.30) / 0.16, 0.0, 1.0) * 0.22, 0.78, 1.0)
 
-    # 4 weathered polygonal cobblestone surface variations in row 0
-    stone_palettes = [
-        (np.array([112.0, 115.0, 122.0]), np.array([82.0, 84.0, 89.0]), 101),    # (0,0) Medium slate grey
-        (np.array([124.0, 118.0, 108.0]), np.array([92.0, 87.0, 80.0]), 102),    # (1,0) Warm limestone taupe
-        (np.array([94.0, 101.0, 110.0]), np.array([70.0, 75.0, 83.0]), 103),     # (2,0) Cool steel slate
-        (np.array([132.0, 128.0, 121.0]), np.array([98.0, 95.0, 89.0]), 104),    # (3,0) Pale chalky cobble
+    # 5 weathered cool-neutral castle granite cells used by stone_cells [(0,0), (1,0), (2,0), (3,0), (0,1)]
+    stone_specs = [
+        ((0, 0), -0.60, 0.05, 0.00, True,  0.48,  0.04, 101),  # Darker slate-ash granite
+        ((1, 0),  0.30, 0.10, 0.00, False, 0.00,  0.00, 102),  # Lighter weathered castle stone
+        ((2, 0), -0.18, -0.08, 0.14, True, 2.15, -0.05, 103),  # Mid neutral grey stone w/ hairline crack
+        ((3, 0),  0.65, 0.12, 0.00, False, 0.00,  0.00, 104),  # Pale weathered flagstone grey
+        ((0, 1), -0.08, -0.05, 0.22, True, 1.25,  0.03, 201),  # Weathered ash stone w/ subtle crack & trace lichen
     ]
-    for idx, (hi_c, lo_c, seed) in enumerate(stone_palettes):
-        n1 = fbm_grid(CELL_PX, CELL_PX, seed, (64, 32, 16, 8))
-        grain = fbm_grid(CELL_PX, CELL_PX, seed + 50, (16, 8, 4))
-        speck = np.clip(n1 * 0.65 + grain * 0.35, 0.0, 1.0)
-        # Subtle chipped dark mineral edge & worn lighter face
-        edge_vignette = np.clip(1.0 - 0.25 * (np.maximum(np.abs(uu - 0.5), np.abs(vv - 0.5)) * 2.0) ** 3, 0.72, 1.0)
-        rgb = (lo_c[None, None, :] + speck[..., None] * (hi_c - lo_c)[None, None, :]) * edge_vignette[..., None]
-        h_map = 0.45 + 0.38 * speck * edge_vignette
-        r_map = np.clip(0.84 + 0.12 * (1.0 - speck), 0.78, 0.96)
-        _put_cell(col, height, rough, (idx, 0), rgb, h_map, r_map)
 
-    # (0,1): Moss-flecked border stone
-    n_moss_stone = fbm_grid(CELL_PX, CELL_PX, 201, (64, 32, 16, 8))
-    moss_mask = np.clip((fbm_grid(CELL_PX, CELL_PX, 202, (48, 24, 12)) - 0.52) * 3.4, 0.0, 1.0)
-    base_st = np.array([96.0, 100.0, 94.0]) + n_moss_stone[..., None] * np.array([28.0, 28.0, 26.0])
-    moss_col = np.array([66.0, 98.0, 48.0]) + n_moss_stone[..., None] * np.array([22.0, 30.0, 14.0])
-    rgb_moss = base_st * (1.0 - moss_mask[..., None]) + moss_col * moss_mask[..., None]
-    _put_cell(col, height, rough, (0, 1), rgb_moss, 0.5 + 0.35 * n_moss_stone, 0.88 + 0.06 * moss_mask)
+    for cell, tone, warmth, moss_hint, has_crack, crack_ang, crack_off, seed in stone_specs:
+        n_stone = fbm_grid(CELL_PX, CELL_PX, seed, (48, 24, 12, 6))
+        n_grain = fbm_grid(CELL_PX, CELL_PX, seed + 50, (6, 3, 2))
+
+        base_grey = np.array([99.0, 101.0, 104.0], dtype=np.float32)
+        tone_shift = tone * np.array([12.0, 12.0, 12.0], dtype=np.float32)
+        warm_shift = warmth * np.array([3.5, 2.5, 0.0], dtype=np.float32)
+        weather_var = (n_stone[..., None] - 0.5) * np.array([24.0, 24.0, 23.5], dtype=np.float32)
+        grain_var = (n_grain[..., None] - 0.5) * np.array([11.0, 11.0, 11.0], dtype=np.float32)
+
+        pitting = np.clip((0.36 - n_stone) * 2.1, 0.0, 1.0)[..., None]
+        lichen = np.clip((n_stone - 0.60) * moss_hint * 1.1, 0.0, 0.08)[..., None]
+        crack = np.zeros_like(n_stone)
+        if has_crack:
+            ca = math.cos(crack_ang)
+            sa = math.sin(crack_ang)
+            c_dist = np.abs((uu - 0.5) * ca + (vv - 0.5) * sa - crack_off + (n_stone - 0.5) * 0.065)
+            inside = radial < 0.42
+            crack = np.where(inside, np.clip(1.0 - c_dist / 0.0085, 0.0, 1.0), 0.0)
+
+        rgb = (base_grey + tone_shift + warm_shift + weather_var + grain_var) * edge_ao[..., None]
+        rgb = rgb * (1.0 - pitting * 0.14)
+        rgb = rgb * (1.0 - lichen) + np.array([82.0, 86.0, 79.0], dtype=np.float32) * lichen
+        rgb = rgb * (1.0 - crack[..., None] * 0.24)
+
+        h_map = (
+            0.58
+            + tone * 0.03
+            + 0.16 * (n_stone - 0.5)
+            + 0.07 * (n_grain - 0.5)
+            - 0.09 * pitting[..., 0]
+            - 0.18 * crack
+        ) * (0.76 + 0.24 * edge_ao)
+        r_map = np.clip(0.79 - 0.05 * (n_stone - 0.5) + 0.07 * crack - tone * 0.02, 0.70, 0.89)
+        _put_cell(col, height, rough, cell, rgb, h_map, r_map)
 
     # (1,1): Stylized grass blade gradient (root -> sunlit blade tip, fine striated veins)
     n_grass = fbm_grid(CELL_PX, CELL_PX, 211, (32, 16, 8))
@@ -265,22 +287,22 @@ def generate_bazaar_ground_textures() -> tuple[Path, Path, Path]:
     rgb_grass *= (0.90 + 0.16 * n_grass[..., None])
     _put_cell(col, height, rough, (1, 1), rgb_grass, 0.45 + 0.25 * streak, np.full((CELL_PX, CELL_PX), 0.84))
 
-    # (2,1): Packed dark bazaar soil / earth between cobblestones
-    n_dirt = fbm_grid(CELL_PX, CELL_PX, 221, (32, 16, 8, 4))
-    rgb_dirt = np.array([58.0, 52.0, 42.0]) + n_dirt[..., None] * np.array([34.0, 30.0, 22.0])
-    _put_cell(col, height, rough, (2, 1), rgb_dirt, 0.35 + 0.3 * n_dirt, np.full((CELL_PX, CELL_PX), 0.94))
+    # (2,1): Dark packed mortar/gravel earth between cobblestones
+    n_dirt = fbm_grid(CELL_PX, CELL_PX, 221, (16, 8, 4))
+    rgb_dirt = np.array([46.0, 48.0, 52.0]) + n_dirt[..., None] * np.array([16.0, 16.0, 16.0])
+    _put_cell(col, height, rough, (2, 1), rgb_dirt, 0.30 + 0.25 * n_dirt, np.full((CELL_PX, CELL_PX), 0.93))
 
-    # (3,1): Charcoal curb slate
-    n_curb = fbm_grid(CELL_PX, CELL_PX, 231, (48, 24, 12))
-    rgb_curb = np.array([72.0, 76.0, 84.0]) + n_curb[..., None] * np.array([28.0, 30.0, 32.0])
-    _put_cell(col, height, rough, (3, 1), rgb_curb, 0.48 + 0.32 * n_curb, np.full((CELL_PX, CELL_PX), 0.87))
+    # (3,1): Charcoal curb granite matching courtyard ash tones
+    n_curb = fbm_grid(CELL_PX, CELL_PX, 231, (24, 12, 6))
+    rgb_curb = np.array([72.0, 74.0, 78.0]) + n_curb[..., None] * np.array([22.0, 22.0, 22.0])
+    _put_cell(col, height, rough, (3, 1), rgb_curb, 0.48 + 0.30 * n_curb, np.full((CELL_PX, CELL_PX), 0.84))
 
-    # Fill unused bottom cells with clean fallback stone so no blank black pixels exist
+    # Fill unused bottom cells with clean fallback granite so no blank black pixels exist
     for cy in (2, 3):
         for cx in range(4):
-            _put_cell(col, height, rough, (cx, cy), rgb_dirt if cy == 3 else rgb_curb, 0.45 + 0.25 * n_curb, np.full((CELL_PX, CELL_PX), 0.88))
+            _put_cell(col, height, rough, (cx, cy), rgb_dirt if cy == 3 else rgb_curb, 0.45 + 0.25 * n_curb, np.full((CELL_PX, CELL_PX), 0.86))
 
-    norm_rgb = height_to_normal_rgb(height, strength=2.4)
+    norm_rgb = height_to_normal_rgb(height, strength=2.8)
     norm_rgba = np.dstack([norm_rgb, np.full((TEX_SIZE, TEX_SIZE), 255, dtype=np.uint8)])
     rough_rgba = np.dstack([rough, rough, rough, np.full((TEX_SIZE, TEX_SIZE), 255, dtype=np.uint8)])
 

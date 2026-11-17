@@ -57,7 +57,7 @@ COURTYARD_W = 160.0  # X in [-80, +80]
 COURTYARD_L = 120.0  # Z in [-60, +60]
 FLOOR_Y = 0.020
 SKIRT_BOTTOM_Y = -0.220
-TILE_STUDS = 24.0  # 24x24 stud seamless repeat (8x8 base grid = 3.0 studs/stone -> ~53 stones across 160 studs)
+TILE_STUDS = 16.0  # 16x16 stud seamless repeat (12x12 base grid = 1.33 studs/stone -> ~120 stones across 160 studs)
 
 TEX_SIZE = 1024
 ATLAS_CELL_PX = 512
@@ -175,31 +175,32 @@ def _build_toroidal_stone_layout(grid_n: int, seed: int) -> list[tuple[float, fl
     stones: list[tuple[float, float, float, float, dict]] = []
 
     def add_stone(gx: float, gy: float, gw: float, gh: float, row_shift: float, is_small: bool) -> None:
-        # Tight, crisp mortar joints matching real castle courtyard pavers
-        pad = rng.uniform(0.0036, 0.0054)
+        # Tight, crisp mortar joints scaled for smaller 1.33-stud player-scale castle bricks
+        pad = rng.uniform(0.0022, 0.0032)
         cx = ((gx + gw * 0.5 + row_shift) / grid_n) % 1.0
         cy = ((gy + gh * 0.5) / grid_n) % 1.0
-        hx = max(0.015, (gw / grid_n) * 0.5 - pad)
-        hy = max(0.015, (gh / grid_n) * 0.5 - pad)
-        cx = (cx + rng.uniform(-0.0014, 0.0014)) % 1.0
-        cy = (cy + rng.uniform(-0.0014, 0.0014)) % 1.0
+        hx = max(0.012, (gw / grid_n) * 0.5 - pad)
+        hy = max(0.012, (gh / grid_n) * 0.5 - pad)
+        cx = (cx + rng.uniform(-0.0009, 0.0009)) % 1.0
+        cy = (cy + rng.uniform(-0.0009, 0.0009)) % 1.0
         meta = {
             "tone": rng.uniform(-1.0, 1.0),
             "warmth": rng.uniform(-0.35, 0.35),
             "moss_hint": rng.uniform(0.0, 1.0) if rng.random() < 0.22 else 0.0,
             "height_off": rng.uniform(-0.03, 0.035),
-            "corner_r": rng.uniform(0.0055, 0.0095) if not is_small else rng.uniform(0.0045, 0.0075),
-            "tilt_u": rng.uniform(-0.025, 0.025),
-            "tilt_v": rng.uniform(-0.025, 0.025),
+            "corner_r": rng.uniform(0.0038, 0.0062) if not is_small else rng.uniform(0.0030, 0.0050),
+            "tilt_u": rng.uniform(-0.022, 0.022),
+            "tilt_v": rng.uniform(-0.022, 0.022),
             "has_crack": (not is_small) and (rng.random() < 0.16),
             "crack_ang": rng.uniform(0.0, math.pi),
-            "crack_off": rng.uniform(-0.32, 0.32) * min(hx, hy),
+            "crack_off": rng.uniform(-0.30, 0.30) * min(hx, hy),
             "rough_off": rng.uniform(-0.035, 0.035),
         }
         stones.append((cx, cy, hx, hy, meta))
 
-    # Row-level half-stone staggers break up long continuous straight lines naturally
-    row_shifts = [0.0 if (y % 2 == 0) else 0.38 for y in range(grid_n)]
+    # Non-periodic row staggers across the 12 rows prevent repeating vertical bands when tiled 10x
+    base_shifts = [0.0, 0.42, 0.18, 0.65, 0.30, 0.78, 0.08, 0.52, 0.25, 0.70, 0.12, 0.48]
+    row_shifts = [base_shifts[y % len(base_shifts)] for y in range(grid_n)]
 
     coords = [(gx, gy) for gy in range(grid_n) for gx in range(grid_n)]
     rng.shuffle(coords)
@@ -227,25 +228,25 @@ def _build_toroidal_stone_layout(grid_n: int, seed: int) -> list[tuple[float, fl
 def generate_courtyard_stone_textures() -> tuple[Path, Path, Path]:
     """
     Generate 1024x1024 toroidally seamless weathered grey castle flagstone PBR maps.
-    Designed to tile cleanly across 160x120 studs at 24 studs/repeat (~53 stones wide).
+    Designed to tile cleanly across 160x120 studs at 16 studs/repeat (~120 stones wide).
     """
     R = TEX_SIZE
     u_lin = np.linspace(0.0, 1.0, R, endpoint=False, dtype=np.float32)
     uu, vv = np.meshgrid(u_lin, u_lin)
 
     # Subtle toroidal domain warp so edges feel hand-hewn & natural without distorting straight coursing
-    warp_u = (_tileable_fbm(R, 811, (24, 48, 96)) - 0.5) * 0.0055
-    warp_v = (_tileable_fbm(R, 823, (24, 48, 96)) - 0.5) * 0.0055
+    warp_u = (_tileable_fbm(R, 811, (36, 72, 144)) - 0.5) * 0.0036
+    warp_v = (_tileable_fbm(R, 823, (36, 72, 144)) - 0.5) * 0.0036
     u_w = (uu + warp_u) % 1.0
     v_w = (vv + warp_v) % 1.0
 
     # Stone face & mortar grain noise (100% toroidal)
     n_macro = _tileable_fbm(R, 831, (16, 32))
-    n_stone = _tileable_fbm(R, 841, (48, 96, 192))
+    n_stone = _tileable_fbm(R, 841, (64, 128, 256))
     n_grain = _tileable_fbm(R, 853, (192, 384))
     n_grit = _tileable_noise(R, 384, 863)
 
-    stones = _build_toroidal_stone_layout(grid_n=8, seed=4042026)
+    stones = _build_toroidal_stone_layout(grid_n=12, seed=4042026)
 
     best_sd = np.full((R, R), 1.0, dtype=np.float32)
     stone_tone = np.zeros((R, R), dtype=np.float32)
@@ -280,26 +281,26 @@ def generate_courtyard_stone_textures() -> tuple[Path, Path, Path]:
         if meta["has_crack"]:
             ca = math.cos(meta["crack_ang"])
             sa = math.sin(meta["crack_ang"])
-            c_dist = np.abs(dx * ca + dy * sa - meta["crack_off"] + (n_stone - 0.5) * 0.015)
-            in_stone = sd < -0.005
-            c_hit = np.where(in_stone, np.clip(1.0 - c_dist / 0.0024, 0.0, 1.0), 0.0)
+            c_dist = np.abs(dx * ca + dy * sa - meta["crack_off"] + (n_stone - 0.5) * 0.010)
+            in_stone = sd < -0.0035
+            c_hit = np.where(in_stone, np.clip(1.0 - c_dist / 0.0017, 0.0, 1.0), 0.0)
             crack_mask = np.maximum(crack_mask, c_hit)
 
     # Tight stone plateau mask & crisp bevel shoulder
-    bevel_w = 0.0045
+    bevel_w = 0.0032
     stone_mask = np.clip((-best_sd) / bevel_w, 0.0, 1.0)
     stone_mask = stone_mask * stone_mask * (3.0 - 2.0 * stone_mask)
 
-    edge_ao = np.clip((-best_sd) / 0.009, 0.0, 1.0)
-    edge_ao = 0.78 + 0.22 * (edge_ao * edge_ao * (3.0 - 2.0 * edge_ao))
+    edge_ao = np.clip((-best_sd) / 0.0065, 0.0, 1.0)
+    edge_ao = 0.80 + 0.20 * (edge_ao * edge_ao * (3.0 - 2.0 * edge_ao))
 
     # Neutral weathered castle grey palette (R ~= G ~= B, slightly cool-neutral slate/ash matching approved preview)
     base_grey = np.array([99.0, 101.0, 104.0], dtype=np.float32)
-    tone_shift = stone_tone[..., None] * np.array([13.0, 13.0, 13.0], dtype=np.float32)
-    warm_shift = stone_warmth[..., None] * np.array([3.5, 2.5, 0.0], dtype=np.float32)
+    tone_shift = stone_tone[..., None] * np.array([9.0, 9.0, 9.0], dtype=np.float32)
+    warm_shift = stone_warmth[..., None] * np.array([3.0, 2.0, 0.0], dtype=np.float32)
     weather_var = (n_stone[..., None] - 0.5) * np.array([22.0, 22.0, 21.5], dtype=np.float32)
     grain_var = (n_grain[..., None] - 0.5) * np.array([10.0, 10.0, 10.0], dtype=np.float32)
-    macro_var = (n_macro[..., None] - 0.5) * 7.0
+    macro_var = (n_macro[..., None] - 0.5) * 2.0
 
     # Subtle pitted wear & faint muted lichen/mineral patina inside stone texture
     pitting = np.clip((0.35 - n_stone) * 2.1, 0.0, 1.0)[..., None]
@@ -310,7 +311,7 @@ def generate_courtyard_stone_textures() -> tuple[Path, Path, Path]:
     stone_rgb = stone_rgb * (1.0 - crack_mask[..., None] * 0.20)
 
     # Tight dark weathered mortar crevices with fine granite grit
-    gravel_dark = np.array([43.0, 45.0, 48.0], dtype=np.float32)
+    gravel_dark = np.array([48.0, 50.0, 54.0], dtype=np.float32)
     gravel_speck = np.clip((n_grit - 0.56) * 2.5, 0.0, 1.0)[..., None] * np.array([18.0, 18.0, 19.0], dtype=np.float32)
     mortar_rgb = gravel_dark + n_grain[..., None] * 12.0 + gravel_speck
 
@@ -393,9 +394,9 @@ def generate_walkway_slate_textures() -> tuple[Path, Path, Path]:
     put_cell(0, 0, rgb_00, 0.48 + 0.18 * n_s1 + 0.08 * n_s2, 0.80 - 0.05 * n_s1)
 
     # (1,0) Tightly fitted chiseled angular cobblestone mosaic (matching courtyard stone style, zero polka-dots)
-    cells_c = 6
-    w_u = (_tileable_fbm(C, 911, (18, 36)) - 0.5) * 0.016
-    w_v = (_tileable_fbm(C, 912, (18, 36)) - 0.5) * 0.016
+    cells_c = 8
+    w_u = (_tileable_fbm(C, 911, (24, 48)) - 0.5) * 0.012
+    w_v = (_tileable_fbm(C, 912, (24, 48)) - 0.5) * 0.012
     u_cob = (uu + w_u) % 1.0
     v_cob = (vv + w_v) % 1.0
     cob_sd = np.full((C, C), 1.0, dtype=np.float32)
@@ -406,9 +407,9 @@ def generate_walkway_slate_textures() -> tuple[Path, Path, Path]:
         for rx in range(cells_c):
             ccx = ((rx + 0.5 + shift + rng_c.uniform(-0.04, 0.04)) / cells_c) % 1.0
             ccy = ((ry + 0.5 + rng_c.uniform(-0.04, 0.04)) / cells_c) % 1.0
-            hx = (0.5 / cells_c) - rng_c.uniform(0.008, 0.012)
-            hy = (0.5 / cells_c) - rng_c.uniform(0.008, 0.012)
-            rad_c = rng_c.uniform(0.012, 0.020)
+            hx = (0.5 / cells_c) - rng_c.uniform(0.006, 0.009)
+            hy = (0.5 / cells_c) - rng_c.uniform(0.006, 0.009)
+            rad_c = rng_c.uniform(0.009, 0.015)
             dx = ((u_cob - ccx + 0.5) % 1.0) - 0.5
             dy = ((v_cob - ccy + 0.5) % 1.0) - 0.5
             qx = np.abs(dx) - (hx - rad_c)

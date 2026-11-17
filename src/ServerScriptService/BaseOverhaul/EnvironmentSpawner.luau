@@ -41,18 +41,18 @@ EnvironmentSpawner.DefaultGroundTextures = {
 		RoughnessMap = "rbxassetid://117493914645472",
 	} :: TextureIdSet,
 	CastleCourtyardStone = {
-		ColorMap = "rbxassetid://91654174814436",
-		NormalMap = "rbxassetid://116009044902802",
-		RoughnessMap = "rbxassetid://139106405889436",
+		ColorMap = "rbxassetid://135660447260601",
+		NormalMap = "rbxassetid://111527288005973",
+		RoughnessMap = "rbxassetid://90266220786908",
 	} :: TextureIdSet,
 	CastleWalkwaySlate = {
-		ColorMap = "rbxassetid://77901626964675",
-		NormalMap = "rbxassetid://99652202879915",
-		RoughnessMap = "rbxassetid://122474102976776",
+		ColorMap = "rbxassetid://134696968029039",
+		NormalMap = "rbxassetid://131026814744579",
+		RoughnessMap = "rbxassetid://73719482073868",
 	} :: TextureIdSet,
 }
 
-local CASTLE_GROUND_VERSION = 2
+local CASTLE_GROUND_VERSION = 3
 
 local EXPECTED_HEIGHTS = {
 	HeroOakTree = 17.0,
@@ -725,6 +725,15 @@ function EnvironmentSpawner.SpawnCastleCourtyardGround(parent: Instance, courtya
 		if desc:IsA("BasePart") then
 			desc.PivotOffset = CFrame.identity
 			configurePathPart(desc, Enum.AlphaMode.Opaque)
+			local sa = desc:FindFirstChildWhichIsA("SurfaceAppearance", true)
+			if sa and sa:IsA("SurfaceAppearance") then
+				local texSet = if desc.Name:find("Walkway", 1, true)
+					then EnvironmentSpawner.DefaultGroundTextures.CastleWalkwaySlate
+					else EnvironmentSpawner.DefaultGroundTextures.CastleCourtyardStone
+				sa.ColorMap = texSet.ColorMap
+				sa.NormalMap = texSet.NormalMap
+				sa.RoughnessMap = texSet.RoughnessMap
+			end
 		end
 	end
 	model:PivotTo(courtyardCenterCF)
