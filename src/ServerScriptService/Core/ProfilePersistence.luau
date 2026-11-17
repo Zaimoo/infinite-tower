@@ -66,9 +66,11 @@ function ProfilePersistence.Load(userId: number, isStillHere: () -> boolean): Lo
 	return { Ok = false, Persistent = false, Reason = "Your data is still open on another server." }
 end
 
--- Saves (and optionally releases). Returns false if the write failed or the lock was lost.
-function ProfilePersistence.Save(userId: number, profile: any, release: boolean): boolean
-	if not available or not store then return false end
+-- Saves (and optionally releases). Returns whether it was written, and whether it was refused
+-- because this server no longer holds the lock (the second value is false when the write failed
+-- for another reason, such as DataStore errors).
+function ProfilePersistence.Save(userId: number, profile: any, release: boolean): (boolean, boolean)
+	if not available or not store then return false, false end
 	local ds = store :: DataStore
 	local data = ProfileCodec.Sanitize(profile)
 	local written = false
@@ -82,8 +84,9 @@ function ProfilePersistence.Save(userId: number, profile: any, release: boolean)
 		end)
 		return true
 	end)
-	if ok and not written then warn(`[ProfilePersistence] Save {userId} skipped: session lock lost`) end
-	return ok and written
+	local lockLost = ok and not written
+	if lockLost then warn(`[ProfilePersistence] Save {userId} skipped: session lock lost`) end
+	return ok and written, lockLost
 end
 
 return ProfilePersistence

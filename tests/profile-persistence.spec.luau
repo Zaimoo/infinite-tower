@@ -41,6 +41,17 @@ test("persistence: write keeps or releases the lock and never overwrites another
 	check(Codec.Write({ Lock = { JobId = "B", Time = 1 } }, "A", 60, {}, true) == nil, "overwrote other server")
 end)
 
+test("persistence: a save that lands after the release never locks the record again", function()
+	local released = Codec.Write({ Lock = { JobId = "A", Time = 1 } }, "A", 60, { Gold = 9 }, true)
+	check(released and released.Lock == nil, "release")
+	check(Codec.Write(released, "A", 70, { Gold = 8 }, false) == nil, "late autosave re-locked a released record")
+	check(Codec.Write(released, "A", 70, { Gold = 8 }, true) == nil, "second release overwrote a released record")
+	check(Codec.Write(nil, "A", 70, { Gold = 8 }, false) == nil, "wrote a record this server never claimed")
+	check(Codec.Write({ Data = { Gold = 20 } }, "studio-1", 70, {}, false) == nil, "studio wrote an unlocked record")
+	local reclaimed = Codec.Claim(released, "B", 80)
+	check(reclaimed and reclaimed.Data.Gold == 9 and reclaimed.Lock.JobId == "B", "next server cannot claim")
+end)
+
 test("persistence: a Studio session reclaims a lock left by a killed Studio session", function()
 	local left = { Data = { Gold = 7 }, Lock = { JobId = "studio-100", Time = 995 } }
 	local claim = Codec.Claim(left, "studio-200", 1000)

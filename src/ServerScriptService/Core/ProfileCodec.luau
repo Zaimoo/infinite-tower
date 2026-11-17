@@ -66,10 +66,14 @@ function ProfileCodec.Claim(record: Record?, jobId: string, now: number): Record
 	return { Data = current.Data, Lock = { JobId = jobId, Time = now }, SavedAt = current.SavedAt }
 end
 
--- UpdateAsync transform for saving. Cancels (nil) if this server lost the lock, so a stale server
--- can never overwrite progress made elsewhere. `release` clears the lock on leave/shutdown.
+-- UpdateAsync transform for saving. Cancels (nil) unless the record still holds this server's lock:
+-- a stale server can never overwrite progress made elsewhere, and a save that lands after the
+-- release (an autosave retrying, a purchase checkpoint) can't lock the record again and keep the
+-- player out until the lock times out. Claim always sets a lock, so an unlocked record means this
+-- session already ended. `release` clears the lock on leave/shutdown.
 function ProfileCodec.Write(record: Record?, jobId: string, now: number, data: any, release: boolean): Record?
-	if not ProfileCodec.OwnsLock(record and record.Lock, jobId) then return nil end
+	local lock = record and record.Lock
+	if not lock or not ProfileCodec.OwnsLock(lock, jobId) then return nil end
 	return { Data = data, Lock = if release then nil else { JobId = jobId, Time = now }, SavedAt = now }
 end
 
