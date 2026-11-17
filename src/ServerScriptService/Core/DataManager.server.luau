@@ -67,6 +67,16 @@ if not PitRequestFunc then
 end
 
 local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") :: RemoteEvent
+-- A client script that missed the first whole profile (a RemoteEvent fired before any listener is
+-- queued for the first listener only) asks for it again here, instead of dropping every delta.
+local RequestProfileResyncEvent = SyndicateRemotes:FindFirstChild("RequestProfileResync") :: RemoteEvent
+if not RequestProfileResyncEvent then
+	RequestProfileResyncEvent = Instance.new("RemoteEvent")
+	RequestProfileResyncEvent.Name = "RequestProfileResync"
+	RequestProfileResyncEvent.Parent = SyndicateRemotes
+end
+local PROFILE_RESYNC_COOLDOWN = 5
+local lastProfileResync: { [Player]: number } = {}
 local SystemToastEvent = SyndicateRemotes:WaitForChild("SystemToast") :: RemoteEvent
 
 local SaveUserSettingsFunc = SyndicateRemotes:FindFirstChild("SaveUserSettings") :: RemoteFunction?
@@ -620,6 +630,17 @@ end
 function DataManager.ResyncProfile(player: Player)
 	SentProfiles[player] = nil
 end
+
+-- Takes no arguments: the client can only ask for its own profile, at most once per cooldown.
+RequestProfileResyncEvent.OnServerEvent:Connect(function(player: Player)
+	local now = os.clock()
+	if now - (lastProfileResync[player] or -math.huge) < PROFILE_RESYNC_COOLDOWN then return end
+	lastProfileResync[player] = now
+	local profile = ActiveProfiles[player]
+	if not profile then return end -- still loading: the first sync will send the whole profile
+	SentProfiles[player] = nil
+	sendProfile(player, profile)
+end)
 
 -- Sends what changed and nothing else: no migrations, no squad rebuild, no plot refresh. For frequent
 -- changes that only move numbers the client displays (kill Gold and Gems, passive Gold, stamina).
@@ -2437,6 +2458,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	lastLeaderstatsWrite[player] = nil
 	pendingCombatSync[player] = nil
 	lastSettingsSave[player] = nil
+	lastProfileResync[player] = nil
 	SentProfiles[player] = nil
 	ActiveProfiles[player] = nil
 	persistentPlayers[player] = nil
