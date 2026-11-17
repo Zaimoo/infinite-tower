@@ -604,6 +604,8 @@ local function gardenClearings(): { { number } }
 	end
 	local portal = HubLayout.RaidPortal
 	table.insert(list, { portal.X, portal.Z, portal.ClearRadius + 6 })
+	local anvil = HubLayout.ReforgeStation
+	table.insert(list, { anvil.X, anvil.Z, anvil.ClearRadius + 6 })
 	local c = HubLayout.HubCentre
 	for i = 1, HubLayout.PlotCount do
 		local slot = HubLayout.PlotSlots[i]

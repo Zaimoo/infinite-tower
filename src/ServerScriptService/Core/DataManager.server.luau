@@ -31,6 +31,7 @@ local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
 local RewardsService = require(script.Parent:WaitForChild("RewardsService"))
 local PotionService = require(script.Parent:WaitForChild("PotionService"))
+local ReforgeService = require(script.Parent:WaitForChild("ReforgeService"))
 local BattlePassService = require(script.Parent:WaitForChild("BattlePassService"))
 local PotionRules = require(Shared:WaitForChild("Util"):WaitForChild("PotionRules"))
 local BattlePassRules = require(Shared:WaitForChild("Util"):WaitForChild("BattlePassRules"))
@@ -2320,6 +2321,13 @@ PotionService.Init({
 	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
 })
 
+-- Weapon Reforge (GDD §7.6): the Runesmith's Anvil on the Commons. A trait changes hero stats, and the
+-- progression sync refreshes the deployed heroes' stats.
+ReforgeService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
+})
+
 BattlePassService.Init({
 	GetProfile = function(player: Player) return ActiveProfiles[player] end,
 	SendToast = DataManager.SendToast,
@@ -2387,6 +2395,7 @@ local function onPlayerAdded(player: Player)
 	RewardsService.EnsureState(profile)
 	PotionService.EnsureState(profile)
 	BattlePassService.EnsureState(profile)
+	ReforgeService.EnsureState(profile)
 	ActiveProfiles[player] = profile
 	persistentPlayers[player] = loaded.Persistent or nil
 	releasedPlayers[player] = nil

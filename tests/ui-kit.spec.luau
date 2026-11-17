@@ -109,6 +109,8 @@ test("sell confirmation follows the plan's risk table", function()
 end)
 
 test("other actions map to their tiers", function()
+	assert(Rules.ConfirmTier("SELL", { MaxRarity = 1, MaxStars = 1, MaxTraitGrade = 4 }) == "Critical", "an Epic reforged trait must be held to sell")
+	assert(Rules.ConfirmTier("SELL", { MaxRarity = 1, MaxStars = 1, MaxTraitGrade = 3 }) == "None")
 	assert(Rules.ConfirmTier("UPGRADE", { MaxDonorRarity = 2 }) == "None")
 	assert(Rules.ConfirmTier("UPGRADE", { MaxDonorRarity = 3 }) == "Hard")
 	assert(Rules.ConfirmTier("SYNTHESIS", { RequiresRareConfirmation = true }) == "Hard")

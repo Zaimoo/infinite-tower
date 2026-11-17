@@ -6,6 +6,7 @@ local Promotion = require(ReplicatedStorage.Shared.Util.WeaponPromotion)
 local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
 local InventoryCapacity = require(ReplicatedStorage.Shared.Util.InventoryCapacity)
 local EquipBest = require(ReplicatedStorage.Shared.Util.EquipBest)
+local ReforgeRules = require(ReplicatedStorage.Shared.Util.ReforgeRules)
 
 local ForgeTransactions = {}
 local ARTIFACT_FIELDS = { "UUID", "TemplateId", "DisplayName", "Type", "Rarity", "Star", "Locked", "EquippedHeroUUID" }
@@ -74,7 +75,12 @@ function ForgeTransactions.new(options: { Clock: () -> number, GenerateToken: ()
 	function service.Snapshot(profile: any): any
 		local state = session(profile)
 		local snapshot = { Revision = state.Revision, Heroes = {}, Artifacts = {}, Gold = profile.Currencies.Gold, Gems = profile.Currencies.Gems }
-		for id, artifact in profile.Artifacts or {} do snapshot.Artifacts[id] = project(artifact, ARTIFACT_FIELDS, id) end
+		for id, artifact in profile.Artifacts or {} do
+			snapshot.Artifacts[id] = project(artifact, ARTIFACT_FIELDS, id)
+			-- The Weapon Reforge trait (GDD §7.6), for stat previews and the sell/upgrade warnings. Not part of the
+			-- revision signature: a new trait does not invalidate equipment undo or a material selection.
+			if ReforgeRules.IsTrait(artifact.Trait) then snapshot.Artifacts[id].Trait = { Id = artifact.Trait.Id, Grade = artifact.Trait.Grade } end
+		end
 		for id, hero in profile.Heroes or {} do snapshot.Heroes[id] = project(hero, HERO_FIELDS, id) end
 		local nextSignature = signature(snapshot)
 		if nextSignature ~= state.Signature then
