@@ -49,7 +49,7 @@ end
 -- Prop kinds that hang in the air by design (rings, chains, gears, sky pieces); the settle pass skips them.
 Assets.AirborneKinds = table.freeze({
 	Ring = true, Chain = true, Cogwheel = true, Orrery = true, Eclipse = true, CavernSkylight = true,
-	GalaxyPortal = true, LotusPortal = true, CorruptionCrescent = true,
+	GalaxyPortal = true, LotusPortal = true, CorruptionCrescent = true, AirborneVineCable = true,
 })
 
 -- field: the floor's TowerTerrain field on a natural floor (the kit imported), else nil.
@@ -1589,10 +1589,10 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end)
 
-		-- Twin crouching Vinebound Guardian statues flanking the front Gatehouse moat bridge approach.
+		-- Twin crouching Vinebound Guardian statues flanking the front corner piers of the Gatehouse.
 		for _, sx in { -1, 1 } do
-			local gAt = V(sx * 34, crossing.Y, crossing.Z + 12)
-			if footprintClear(gAt.X, gAt.Z, 5, 5) then
+			local gAt = V(sx * 30, crossing.Y, crossing.Z + 24)
+			if footprintClear(gAt.X, gAt.Z, 4.5, 4.5) then
 				group("VineboundGuardian", function()
 					if KitProps.Has("VineboundGuardian") then
 						kitAt("VineboundGuardian", CFrame.new(gAt) * CFrame.Angles(0, math.rad(-sx * 16), 0), 1.0, f4Override)
@@ -1605,21 +1605,23 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 
-		-- 2. Crenellated Curtain Wall stretching east and west from the Gatehouse with collapsed breaches.
+		-- 2. Crenellated Curtain Wall stretching east and west from the Gatehouse behind the wall-walks with collapsed breaches.
 		for _, spot in {
-			{ -68, 42, 0.08 }, { -104, 34, -0.06 },
-			{ 68, 42, -0.08 }, { 104, 30, 0.06 },
+			{ -70, -6, 0.14 }, { -104, -24, -0.22 },
+			{ 70, -6, -0.14 }, { 104, -24, 0.22 },
 		} do
-			if footprintClear(spot[1], spot[2], 16, 5) then
+			if footprintClear(spot[1], spot[2], 15, 4) then
 				table.insert(reservedSpots, { spot[1], spot[2], 18 })
 				group("CurtainWallRuins", function()
 					if natural then currentParent:SetAttribute("OnTerrain", true) end
 					-- Stone moat plinth anchoring wall segment down into bottom (-8)
-					block("CurtainWallPlinth", V(32, crossing.Y - bottom + 1, 8), V(spot[1], (crossing.Y + bottom) / 2, spot[2]), limestone, Enum.Material.Limestone)
+					local plinth = block("CurtainWallPlinth", V(30, crossing.Y - bottom + 1, 7), V(spot[1], (crossing.Y + bottom) / 2, spot[2]), limestone, Enum.Material.Limestone)
+					plinth.CFrame = CFrame.new(origin + V(spot[1], (crossing.Y + bottom) / 2, spot[2])) * CFrame.Angles(0, spot[3], 0)
 					if KitProps.Has("CurtainWallRuins") then
 						kitAt("CurtainWallRuins", CFrame.new(V(spot[1], crossing.Y, spot[2])) * CFrame.Angles(0, spot[3], 0), 1.0, f4Override)
 					else
-						block("CurtainWallBody", V(30, 14, 5.5), V(spot[1], crossing.Y + 7, spot[2]), limestone, Enum.Material.Limestone)
+						local wallBody = block("CurtainWallBody", V(28, 14, 5.5), V(spot[1], crossing.Y + 7, spot[2]), limestone, Enum.Material.Limestone)
+						wallBody.CFrame = CFrame.new(origin + V(spot[1], crossing.Y + 7, spot[2])) * CFrame.Angles(0, spot[3], 0)
 					end
 				end)
 			end
@@ -1657,9 +1659,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end)
 		end
 
-		-- 4. Roofless Barracks spear racks (WestGallery outer flank) & Sun Shrine Altar (EastGallery outer flank).
-		local rackAt = V(westGal.X - westGal.Width / 2 + 5, westGal.Y, westGal.Z)
-		if footprintClear(rackAt.X, rackAt.Z, 3, 6) then
+		-- 4. Roofless Barracks spear racks & ruin gables (WestGallery outer flank) & Sun Shrine Altar + gable (EastGallery).
+		local rackAt = V(westGal.X - 36, westGal.Y, westGal.Z - 32)
+		if footprintClear(rackAt.X, rackAt.Z, 2.5, 5) then
 			group("BarracksSpearRack", function()
 				block("SpearRackFrame", V(2.4, 5.5, 10), rackAt + V(0, 2.75, 0), barkDark, Enum.Material.Wood)
 				for sIdx = -1, 1 do
@@ -1667,18 +1669,34 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end
 			end)
 		end
-		local altarAt = V(eastGal.X + eastGal.Width / 2 - 6, eastGal.Y, eastGal.Z)
-		if footprintClear(altarAt.X, altarAt.Z, 4, 4) then
+		local wGableAt = V(westGal.X - 38, westGal.Y, westGal.Z - 14)
+		if footprintClear(wGableAt.X, wGableAt.Z, 3, 8) then
+			group("BarracksGableWall", function()
+				block("BarracksGableBase", V(4, 14, 15), wGableAt + V(0, 7, 0), limestone, Enum.Material.Limestone)
+				block("BarracksGablePeak", V(3.6, 6, 8), wGableAt + V(0, 17, 0), limestone, Enum.Material.Limestone)
+				mossTuft(wGableAt + V(0, 14.5, 0), V(4.6, 1.4, 15.6))
+			end)
+		end
+		local altarAt = V(eastGal.X + 36, eastGal.Y, eastGal.Z - 32)
+		if footprintClear(altarAt.X, altarAt.Z, 3.5, 4) then
 			group("SunShrineAltar", function()
 				block("AltarPlinth", V(5.5, 3.2, 6.5), altarAt + V(0, 1.6, 0), limestone, Enum.Material.Limestone)
 				sunDisc("CrackedAltarSun", altarAt + V(0, 6.2, 0), 2.1, CFrame.Angles(0, -math.pi / 2, math.rad(12)), true)
 			end)
 		end
+		local eGableAt = V(eastGal.X + 38, eastGal.Y, eastGal.Z - 14)
+		if footprintClear(eGableAt.X, eGableAt.Z, 3, 8) then
+			group("SunShrineGableWall", function()
+				block("ShrineGableBase", V(4, 13, 15), eGableAt + V(0, 6.5, 0), limestone, Enum.Material.Limestone)
+				block("ShrineGablePeak", V(3.6, 5.5, 8), eGableAt + V(0, 15.7, 0), limestone, Enum.Material.Limestone)
+				mossTuft(eGableAt + V(0, 13.5, 0), V(4.6, 1.4, 15.6))
+			end)
+		end
 
 		-- 5. Marsh reeds, lily pads & toppled ashlar rubble in the Outer Ward green moat.
 		for _, spot in {
-			{ -46, bottom + 3.2, 74 }, { 48, bottom + 3.2, 76 }, { -108, bottom + 3.2, 82 },
-			{ 112, bottom + 3.2, 78 }, { -86, bottom + 3.2, -46 }, { 88, bottom + 3.2, -48 },
+			{ -48, bottom + 3.2, 72 }, { 48, bottom + 3.2, 72 }, { -138, bottom + 3.2, 72 },
+			{ 138, bottom + 3.2, 72 }, { -88, bottom + 3.2, -50 }, { 88, bottom + 3.2, -50 },
 		} do
 			if footprintClear(spot[1], spot[3], 4, 4) then
 				group("MoatReedRaft", function()
@@ -1692,8 +1710,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 		for _, spot in {
-			{ -52, basin.Y, basin.Z - 36, 0.4 }, { 54, basin.Y, basin.Z - 34, -0.5 },
-			{ -122, basin.Y, basin.Z + 12, 0.8 }, { 122, basin.Y, basin.Z + 12, -0.7 },
+			{ -50, basin.Y, basin.Z + 8, 0.4 }, { 52, basin.Y, basin.Z + 8, -0.5 },
+			{ -158, basin.Y, basin.Z + 24, 0.8 }, { 158, basin.Y, basin.Z + 24, -0.7 },
 		} do
 			if footprintClear(spot[1], spot[3], 5, 4) then
 				group("ToppledWallRubble", function()
@@ -1703,10 +1721,11 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 
-		-- 6. Perimeter vine-draped Heartroot giants & colossal background tree looming behind Inner Keep.
-		giant(-204, 96, 60, { { 60, 56, 12 }, { 10, 50, 10 } })
-		giant(204, 96, 60, { { -60, 56, 12 }, { -10, 50, 10 } })
-		giant(-54, -242, 78, { { 70, 68, 16 }, { 125, 58, 12 }, { 25, 56, 14 } })
+		-- 6. Perimeter vine-draped Heartroot giants outside return ramps & colossal background trees behind Inner Keep.
+		giant(-238, 84, 62, { { 65, 56, 12 }, { 15, 50, 10 } })
+		giant(238, 84, 62, { { -65, 56, 12 }, { -15, 50, 10 } })
+		giant(-62, -246, 82, { { 70, 68, 16 }, { 125, 58, 12 }, { 25, 56, 14 } })
+		giant(62, -246, 76, { { -70, 64, 15 }, { -120, 56, 12 }, { -25, 52, 12 } })
 	end
 	end
 

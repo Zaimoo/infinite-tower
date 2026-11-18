@@ -2,7 +2,7 @@
 
 Copy everything below the line into a Claude Code session opened at the repo root.
 
-> **Status (2026-11-18).** **Floors 1, 2, and 3 are built.** Several parts of the original brief evolved once `main` gained per-floor variation (PR #327), natural voxel terrain (`TowerTerrain.luau`), and sculpted mesh kits (`TowerBiomeKit.luau`):
+> **Status (2026-11-18).** **Floors 1, 2, 3, and 4 are built.** Several parts of the original brief evolved once `main` gained per-floor variation (PR #327), natural voxel terrain (`TowerTerrain.luau`), and sculpted mesh kits (`TowerBiomeKit.luau`):
 > - Part 4.1–4.2 is mostly done already: `TowerLayout.Get(index, floorId)` / `ForFloor` give every floor its own layout, every consumer passes the floor id, graphs are cached per floor and portal spots follow the Apex.
 > - Authored floors (`AUTHORED` in `TowerLayout`) keep core role ids (`Sanctuary`, `Basin`, `WestGallery`, `EastGallery`, `Crossing`, `WestBastion`, `EastBastion`, `Apex`), carry in-world titles in `Names`, can add extra platforms (`ExtraPlatforms`, e.g. Floor 2's `AqueductNorth`), set `Stairs = { [linkId] = true }` to force `Kind = "STAIRS"`, and supply custom `Paths`. Set pieces key on `layout.Authored`, and per-floor lighting presets live in `HubLighting.FloorGrades[floorId]` (applied by `HubLightingController.client.luau`), not a separate `TowerFloorEnvironments` module.
 > - Sculpted Blender kits (`TowerBiomeKit.ExtraTemplates` + `TowerKitProps.Has` with native-part fallbacks) and sculpted `Terrain` walkways/water (instead of floating water parts or boxy green colliders) are now part of the pipeline; see §4.3 below before building Floors 3–5.
@@ -241,23 +241,23 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
 
 | Platform | Role | Centre (X, Y, Z) | Size | Character |
 | --- | --- | --- | --- | --- |
-| `OuterWard` | ENTRY | 0, 0, 150 | 440 × 118 | Marsh meadow, reeds, toppled wall blocks |
-| `Gatehouse` | CROSSING | 0, 5, 48 | 74 × 60 | The burst gate, a strangler fig through its arch |
-| `Barracks` | WING | −158, 8, 18 | 86 × 78 | Roofless barracks; racks of mossy stone spears |
-| `SunShrine` | WING | 158, 8, 6 | 86 × 78 | Open-air shrine with a cracked sun-disc altar |
-| `WestTower` | UPPER_WING | −152, 14, −140 | 84 × 76 | Vine-wrapped round tower, top floor open to the sky |
-| `EastTower` | UPPER_WING | 152, 16, −150 | 84 × 76 | Leaning tower, held up by the vines that broke it |
-| `InnerKeep` | APEX | 0, 22, −198 | 104 × 80 | Keep courtyard, the roof gone, vines as a ceiling |
+| `OuterWard` (`Basin`) | ENTRY | 0, 0, 160 | 440 × 114 | Marsh meadow on direct `Terrain`, reeds, toppled wall blocks |
+| `Gatehouse` (`Crossing`) | CROSSING | 0, 5, 48 | 74 × 60 | The burst gatehouse deck, strangler fig through its north `GatehouseArch` (`Z = 8`) |
+| `Barracks` (`WestGallery`) | WING | −158, 8, 12 | 86 × 78 | Roofless bastion deck; racks of mossy stone spears & ruin gable |
+| `SunShrine` (`EastGallery`) | WING | 158, 8, 4 | 86 × 78 | Open-air shrine deck with a cracked sun-disc altar & ruin gable |
+| `WestTower` (`WestBastion`) | UPPER_WING | −152, 14, −140 | 84 × 76 | Upright vine-wrapped `VineboundTower` overlooking inner marsh |
+| `EastTower` (`EastBastion`) | UPPER_WING | 152, 16, −150 | 84 × 76 | Leaning `VineboundTower`, held up by the strangler vines that broke it |
+| `InnerKeep` (`Apex`) | APEX | 0, 22, −198 | 104 × 80 | Keep courtyard framed behind by the roofless `VineboundKeep` citadel |
 
-**Links:** Sanctuary→OuterWard; OuterWard→Gatehouse; OuterWard→Barracks; OuterWard→SunShrine; Gatehouse→Barracks (west **wall-walk**); Gatehouse→SunShrine (east wall-walk); Barracks→WestTower; SunShrine→EastTower; WestTower→InnerKeep; EastTower→InnerKeep; Gatehouse→InnerKeep (**STAIRS**, the processional climb through the inner ward). Two return ramps from the moat floor to the OuterWard.
+**Links:** Sanctuary→OuterWard (`Terrain` ramp); OuterWard→Gatehouse; OuterWard→Barracks; OuterWard→SunShrine; Gatehouse→Barracks (west **wall-walk**); Gatehouse→SunShrine (east wall-walk); Barracks→WestTower; SunShrine→EastTower; WestTower→InnerKeep; EastTower→InnerKeep; Gatehouse→InnerKeep (**STAIRS**, the processional climb through the inner ward). Two `Terrain` return ramps (`ChasmWest` / `ChasmEast`, `Z = 59..102`) climb from the moat floor to the OuterWard.
 
-**Camps (35, 4 Elites):** `WARD_WEST` 5, `WARD_EAST` 5, `GATEHOUSE` 5, `BARRACKS` 5 (Elite), `SUN_SHRINE` 5 (Elite), `WEST_TOWER` 5 (Elite), `EAST_TOWER` 5 (Elite). The runtime still picks which camps the Elites lead (`CampRoster`); the flags only fix the count.
+**Camps (35, 4 Elites):** canonical camp ids (`BASIN_WEST`, `BASIN_EAST`, `CENTRAL_CROSSING`, `WEST_GALLERY`, `EAST_GALLERY`, `UPPER_WEST`, `UPPER_EAST`, `APEX_SANCTUM`) holding 35 live mobs across 7 camps (4 Elites) plus the Apex Alpha (`CampRoster`).
 
-**Patrols:** `ENTRY_LOOP` (the moat-side edge of the Outer Ward), `WALL_WALK` (Barracks → Gatehouse → SunShrine, the floor's signature route), `TOWER_RING` (WestTower → Keep edge → EastTower, replacing `BASTION_RING`).
+**Patrols:** `BASIN_LOOP` (Outer Ward marsh loop), `WALL_WALK` (Barracks ↔ Gatehouse ↔ SunShrine, `TowerLayout.PatrolRoutes`), `GALLERY_WEST`/`GALLERY_EAST`, and `BASTION_RING` (West Tower → Inner Keep edge → East Tower).
 
-**Set pieces:** the curtain wall as a long crenellated line with three collapsed gaps; the strangler fig bursting through the gatehouse arch; vine "cables" between the towers and the keep (sagging, grounded at both ends); half-swallowed guardian statues in Vinebound poses at the gate; a moat of still green water with lily pads and mist.
+**Set pieces:** crenellated `CurtainWallRuins` with collapsed breaches flanking behind the Gatehouse; `GatehouseArch` (`RampArch`-tagged) choked by a strangler fig; twin `VineboundGuardian` statues at the Gatehouse corners; `AirborneVineCable` strands connecting West/East `VineboundTower`s high toward `VineboundKeep`; marsh moat (`Water` at `Bottom + 3.2`) with `ReedPondCluster`s / lily rafts, `ToppledWallRubble`, and flanking `HeartrootGiant`s; plus optional Blender meshes in `assets-source/tower/verdant_f4_kit/VerdantF4Kit.fbx`.
 
-**Ecosystem weight:** vines, stone and mist. Fewer flowers, more threat.
+**Ecosystem weight:** vines, stone and overcast grey-green mist (`HubLighting.FloorGrades[4]`). Fewer flowers, more threat.
 
 ### Floor 5: Mossbound Court (`BOSS_ARENA`)
 
@@ -306,7 +306,7 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
 
 ## Part 3: Environment and lighting per floor
 
-Per-floor lighting overrides live in **`src/ReplicatedStorage/Shared/Config/HubLighting.luau`** under **`FloorGrades[floorId]`**, layered over the biome lighting preset by `HubLightingController.client.luau` and respecting the player's Graphics quality setting. Floors 1, 2, and 3 are populated; Floors 4–5 add `FloorGrades[4..5]` without adding a new controller or remote.
+Per-floor lighting overrides live in **`src/ReplicatedStorage/Shared/Config/HubLighting.luau`** under **`FloorGrades[floorId]`**, layered over the biome lighting preset by `HubLightingController.client.luau` and respecting the player's Graphics quality setting. Floors 1–4 are populated; Floor 5 adds `FloorGrades[5]` without adding a new controller or remote.
 
 | Floor | Time of day | Light | Atmosphere | Accents |
 | --- | --- | --- | --- | --- |
@@ -415,7 +415,7 @@ Then run `tests/studio-tower-prop-audit.luau` in Studio for affected/all floors 
 
 Don't run the playtest yourself. End with a **How to test** checklist the user can follow in Studio, covering at least:
 
-1. Floors 1–5: arrive, check you land out of aggro with feet grounded on Terrain (no cratering or invisible floating colliders), and walk to the Apex by every route (plus optional `VerdantF2Kit.fbx` / `VerdantF3Kit.fbx` import via `tests/studio-tower-biome-kit-import.luau` when testing sculpted meshes).
+1. Floors 1–5: arrive, check you land out of aggro with feet grounded on Terrain (no cratering or invisible floating colliders), and walk to the Apex by every route (plus optional `VerdantF2Kit.fbx` / `VerdantF3Kit.fbx` / `VerdantF4Kit.fbx` import via `tests/studio-tower-biome-kit-import.luau` when testing sculpted meshes).
 2. Floor 2: confirm the aqueduct gap has no link and the Mill detour works.
 3. Floors 3–5: jump into the chasm, and climb out by a return ramp.
 4. Squad follow, recall (`E`) and assigned-squad routing on ramps, stairs and wall-walks.
