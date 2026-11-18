@@ -269,6 +269,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(236, 244, 232), Saturation = -0.04, ExposureCompensation = -0.04, BloomIntensity = 0.24,
 		SunRaysIntensity = 0.06, SunRaysSpread = 0.4,
 	},
+	-- Floor 5, Mossbound Court: golden hour fading to dusk. Warm amber horizon shafts meeting cool emerald cenote mist.
+	[5] = {
+		Ambient = c(64, 72, 62), OutdoorAmbient = c(122, 114, 92), ColorShift_Top = c(255, 218, 152), ColorShift_Bottom = c(56, 104, 88),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(196, 208, 172), AtmosphereDecay = c(124, 134, 96), AtmosphereHaze = 1.35,
+		TintColor = c(255, 244, 224), Saturation = 0.16, ExposureCompensation = 0.02, BloomIntensity = 0.38,
+		SunRaysIntensity = 0.22, SunRaysSpread = 0.85,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

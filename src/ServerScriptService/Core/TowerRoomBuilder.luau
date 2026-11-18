@@ -357,6 +357,14 @@ function Builder.Build(id: number, generation: number): any
 			EastBastion = true,
 			Apex = true,
 		},
+		["verdant:5"] = {
+			Crossing = true,
+			WestGallery = true,
+			EastGallery = true,
+			WestBastion = true,
+			EastBastion = true,
+			Apex = true,
+		},
 	}
 	local SUSPENDED_LINKS: { [string]: { [string]: boolean } } = {
 		["verdant:3"] = {
@@ -379,10 +387,21 @@ function Builder.Build(id: number, generation: number): any
 			EastBastion_Apex = true,
 			Crossing_Apex = true,
 		},
+		["verdant:5"] = {
+			Basin_Crossing = true,
+			Basin_WestGallery = true,
+			Basin_EastGallery = true,
+			WestGallery_WestBastion = true,
+			EastGallery_EastBastion = true,
+			WestBastion_Apex = true,
+			EastBastion_Apex = true,
+			Crossing_Apex = true,
+		},
 	}
 	local function isDirectTerrainLayout(l: any): boolean
-		return l.Authored == "verdant:1" or l.Authored == "verdant:2" or l.Authored == "verdant:3" or l.Authored == "verdant:4"
+		return l.Authored == "verdant:1" or l.Authored == "verdant:2" or l.Authored == "verdant:3" or l.Authored == "verdant:4" or l.Authored == "verdant:5"
 	end
+	local isFortressStone = layout.Authored == "verdant:4" or layout.Authored == "verdant:5"
 	local function isArchitecturalDeck(l: any, platformName: string?): boolean
 		local map = l.Authored and DECK_PLATFORMS[l.Authored]
 		return map ~= nil and platformName ~= nil and map[platformName] == true
@@ -411,14 +430,14 @@ function Builder.Build(id: number, generation: number): any
 		ceilZ.CastShadow = false
 	end
 	for _, sx in { -1, 1 } do
-		local ceilX = decor(model, "VaultCeilingX", Vector3.new(borderX + 8, 6, openD), origin + Vector3.new(sx * (width / 2 - borderX / 2), height + 3, 0), theme.WallColor, theme.WallMaterial)
+		local ceilX = decor(model, "VaultCeilingX", Vector3.new(borderX + 8, 5.7, openD), origin + Vector3.new(sx * (width / 2 - borderX / 2), height + 3.05, 0), theme.WallColor, theme.WallMaterial)
 		ceilX.CastShadow = false
 	end
 	for _, sz in { -1, 1 } do
 		decor(model, "SkylightRimZ", Vector3.new(openW + 12, 3.5, 4), origin + Vector3.new(0, height + 1, sz * (openD / 2)), theme.TrimColor, theme.TrimMaterial)
 	end
 	for _, sx in { -1, 1 } do
-		decor(model, "SkylightRimX", Vector3.new(4, 3.5, openD + 12), origin + Vector3.new(sx * (openW / 2), height + 1, 0), theme.TrimColor, theme.TrimMaterial)
+		decor(model, "SkylightRimX", Vector3.new(4, 3.3, openD + 12), origin + Vector3.new(sx * (openW / 2), height + 1.15, 0), theme.TrimColor, theme.TrimMaterial)
 	end
 
 	-- High-altitude natural skylight light source (casts soft sunlight/skylight down across the room)
@@ -527,9 +546,9 @@ function Builder.Build(id: number, generation: number): any
 						for rIdx, ringW in { 0.86, 0.64, 0.42, 0.22 } do
 							flatDisc(
 								"StumpGrowthRing",
-								topCenter - Vector3.new(0, 0.04 - rIdx * 0.008, 0),
+								topCenter + Vector3.new(0, 0.01 + rIdx * 0.035, 0),
 								stumpDia * ringW,
-								0.12,
+								0.10,
 								if rIdx % 2 == 0 then stumpWoodColor:Lerp(Color3.new(1, 1, 1), 0.14) else rootBarkDark:Lerp(stumpWoodColor, 0.55),
 								Enum.Material.Wood
 							)
@@ -564,8 +583,8 @@ function Builder.Build(id: number, generation: number): any
 							local rx = math.cos(ang) * (terrace.Width * 0.34)
 							local rz = math.sin(ang) * (terrace.Depth * 0.32)
 							local lobeDia = 24 + ((k * 7) % 9)
-							local lobePos = topCenter + Vector3.new(rx, -1.65 - (k % 2) * 0.2, rz)
-							flatDisc("RootIslandLobe", lobePos, lobeDia, 3.1, if k % 2 == 0 then moss else solmereLimestone, if k % 2 == 0 then Enum.Material.LeafyGrass else Enum.Material.Limestone, true)
+							local lobePos = topCenter + Vector3.new(rx, -1.68 - (k % 4) * 0.14, rz)
+							flatDisc("RootIslandLobe", lobePos, lobeDia, 3.0, if k % 2 == 0 then moss else solmereLimestone, if k % 2 == 0 then Enum.Material.LeafyGrass else Enum.Material.Limestone, true)
 							-- Curved braided Heartroot rim ribs gripping the lobe edges & anchored directly into the solid core
 							local nextAng = (k + 1) * (math.pi * 2 / lobes) + (terrace.X * 0.03)
 							local p0 = topCenter + Vector3.new(math.cos(ang) * (terrace.Width * 0.42), -1.1, math.sin(ang) * (terrace.Depth * 0.40))
@@ -581,48 +600,55 @@ function Builder.Build(id: number, generation: number): any
 								rootCylinder("KnotUnderSapVein", midRoot, topRoot - Vector3.new(0, 0.5, 0), 0.65, rootSapColor, Enum.Material.Neon)
 							end
 						end
-						-- Scatter flat irregular stone pavers & moss pads flush across the island top
+						-- Scatter flat irregular stone pavers staggered vertically across the island top (no coplanar shimmer)
 						for k = 1, 7 do
 							local ang = k * 2.35
 							local rad = 8 + (k * 5) % 18
-							local pPos = topCenter + Vector3.new(math.cos(ang) * rad, 0.01, math.sin(ang) * rad)
-							local paver = decor(model, "RootIslandFlagstone", Vector3.new(8 + (k % 3) * 2.5, 0.16, 6.5 + ((k + 1) % 3) * 2), pPos, if k % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
+							local pPos = topCenter + Vector3.new(math.cos(ang) * rad, 0.04 + k * 0.035, math.sin(ang) * rad)
+							local paver = decor(model, "RootIslandFlagstone", Vector3.new(8 + (k % 3) * 2.5, 0.14, 6.5 + ((k + 1) % 3) * 2), pPos, if k % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
 							paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, ang * 0.7, 0)
 						end
 					end
-				elseif layout.Authored == "verdant:4" then
-					-- Floor 4 fortress terraces: solid weathered limestone masonry plinth down into moat bed (-11)
-					-- dressed with irregular flagstone inlays, verdigris belt, moss cushions & hanging vines (no bare smooth cube).
+				elseif isFortressStone then
+					-- Floors 4-5 limestone terraces: solid weathered masonry plinth down into moat/cenote bed
+					-- dressed with irregular flagstone inlays, verdigris belt & moss cushions (plus sun-disc medallions on F5).
 					local deepBottom = origin.Y + layout.Bottom - 7
 					local wallH = (origin.Y + terrace.Y) - deepBottom
 					slab.Size = Vector3.new(terrace.Width, wallH, terrace.Depth)
 					slab.Position = Vector3.new(topCenter.X, topCenter.Y - wallH / 2, topCenter.Z)
 					slab.Color = solmereLimestone
 					slab.Material = Enum.Material.Limestone
-					-- Verdigris ashlar collar & corner battered stone piers
+					-- Verdigris ashlar collar (X strips trimmed cleanly inside Z strips so corners never z-fight)
 					for _, sz in { -1, 1 } do
-						decor(model, "BastionVerdigrisTrim", Vector3.new(terrace.Width + 0.8, 1.4, 1.2), topCenter + Vector3.new(0, -1.8, sz * (terrace.Depth / 2)), theme.AccentColor, Enum.Material.Slate)
+						decor(model, "BastionVerdigrisTrim", Vector3.new(terrace.Width + 1.3, 1.4, 1.25), topCenter + Vector3.new(0, -1.8, sz * (terrace.Depth / 2 + 0.05)), theme.AccentColor, Enum.Material.Slate)
 					end
 					for _, sx in { -1, 1 } do
-						decor(model, "BastionVerdigrisTrim", Vector3.new(1.2, 1.4, terrace.Depth + 0.8), topCenter + Vector3.new(sx * (terrace.Width / 2), -1.8, 0), theme.AccentColor, Enum.Material.Slate)
+						decor(model, "BastionVerdigrisTrim", Vector3.new(1.25, 1.4, math.max(1, terrace.Depth - 1.3)), topCenter + Vector3.new(sx * (terrace.Width / 2 + 0.05), -1.8, 0), theme.AccentColor, Enum.Material.Slate)
 						for _, sz in { -1, 1 } do
-							local cp = Vector3.new(topCenter.X + sx * (terrace.Width / 2 - 2), topCenter.Y - wallH / 2 - 0.1, topCenter.Z + sz * (terrace.Depth / 2 - 2))
-							local cornerPier = part(model, "BastionCornerPier", Vector3.new(7, wallH, 7), cp, flagstoneDark, Enum.Material.Limestone, true)
+							local cp = Vector3.new(topCenter.X + sx * (terrace.Width / 2 - 2.3), topCenter.Y - wallH / 2 - 0.16, topCenter.Z + sz * (terrace.Depth / 2 - 2.3))
+							local cornerPier = part(model, "BastionCornerPier", Vector3.new(6.4, wallH - 0.16, 6.4), cp, flagstoneDark, Enum.Material.Limestone, true)
 							cornerPier.CanQuery = true
 							cornerPier.CanTouch = false
 						end
 					end
-					-- Scattered weathered flagstones & moss edge beds flush on terrace deck (above TraversalLanding +0.02)
+					if layout.Authored == "verdant:5" then
+						-- Carved Solmere sun-disc medallions inset cleanly above TraversalLanding layers (top +0.16 / +0.22 / +0.28)
+						local sunDia = math.min(terrace.Width, terrace.Depth) * (if name == "Apex" then 0.40 else 0.32)
+						flatDisc("CenoteSunMedallion", topCenter + Vector3.new(0, 0.14, 0), sunDia, 0.10, Color3.fromRGB(204, 166, 82), Enum.Material.Cobblestone)
+						flatDisc("CenoteSunInlay", topCenter + Vector3.new(0, 0.20, 0), sunDia * 0.72, 0.10, theme.AccentColor, Enum.Material.Slate)
+						flatDisc("CenoteSunCore", topCenter + Vector3.new(0, 0.26, 0), sunDia * 0.24, 0.10, rootSapColor, Enum.Material.Neon)
+					end
+					-- Scattered weathered flagstones & moss edge beds spaced out cleanly around the medallion and above landings
 					for k = 1, 6 do
 						local ang = k * 2.1 + terrace.X * 0.02
-						local rx = math.cos(ang) * (terrace.Width * 0.28)
-						local rz = math.sin(ang) * (terrace.Depth * 0.26)
-						local pPos = topCenter + Vector3.new(rx, 0.10, rz)
-						local paver = decor(model, "BastionFlagstone", Vector3.new(9 + (k % 3) * 3, 0.14, 7 + ((k + 1) % 3) * 2), pPos, if k % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
+						local rx = math.cos(ang) * (terrace.Width * 0.33)
+						local rz = math.sin(ang) * (terrace.Depth * 0.31)
+						local pPos = topCenter + Vector3.new(rx, 0.16 + k * 0.04, rz)
+						local paver = decor(model, "BastionFlagstone", Vector3.new(8 + (k % 3) * 2.4, 0.10, 6.5 + ((k + 1) % 3) * 1.6), pPos, if k % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
 						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
 						if k % 2 == 1 then
-							local mPos = topCenter + Vector3.new(rx * 1.32, 0.11, rz * 1.32)
-							decor(model, "BastionMossPatch", Vector3.new(10, 0.14, 8), mPos, moss, Enum.Material.LeafyGrass)
+							local mPos = topCenter + Vector3.new(rx * 1.18, 0.24 + k * 0.04, rz * 1.18)
+							decor(model, "BastionMossPatch", Vector3.new(8.5, 0.10, 6.8), mPos, moss, Enum.Material.LeafyGrass)
 						end
 					end
 				else
@@ -699,6 +725,7 @@ function Builder.Build(id: number, generation: number): any
 	-- limestone, and the landings take the terrace's own ground so they don't read as tiles laid on the grass.
 	local solmere = natural and layout.PathStyle == "SOLMERE"
 	local grassyPaths = natural and isDirectTerrainLayout(layout)
+	local landingLayerByTerrace: { [string]: number } = {}
 	local function landing(pad: any, id: string, terraceName: string?)
 		local a=origin+Vector3.new(pad.AX,pad.AY,pad.AZ)
 		local b=origin+Vector3.new(pad.BX,pad.BY,pad.BZ)
@@ -714,12 +741,16 @@ function Builder.Build(id: number, generation: number): any
 			else
 				p.Color = solmereLimestone
 				p.Material = Enum.Material.Limestone
-				if layout.Authored == "verdant:4" then
-					-- Keep every Floor 4 landing solid & visible (diagonal ramps leave 5-15 stud gaps outside terrace corners
-					-- bridged solely by LandingB); rest top at +0.02 under +0.10 flagstones and give underside stonework.
-					p.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -0.98, 0)
-					local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.2, 2.2, (b - a).Magnitude - 0.6), (a + b) / 2, flagstoneDark, Enum.Material.Limestone)
-					under.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -2.08, 0)
+				if isFortressStone then
+					-- Stack multiple landings on the same terrace by +0.03 so overlapping landings never z-fight,
+					-- and start at +0.05 above TraversalRamp (+0.01) and Slab (0.00) and below medallions/flagstones (+0.14+).
+					local tKey = terraceName or ""
+					local layer = landingLayerByTerrace[tKey] or 0
+					landingLayerByTerrace[tKey] = layer + 1
+					local topOff = -0.95 + layer * 0.03 -- height 2: top = +0.05, +0.08, +0.11...
+					p.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff, 0)
+					local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.6, 1.4, math.max(1, (b - a).Magnitude - 1.0)), (a + b) / 2, flagstoneDark, Enum.Material.Limestone)
+					under.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff - 1.75, 0)
 				end
 			end
 		elseif natural then
@@ -749,7 +780,8 @@ function Builder.Build(id: number, generation: number): any
 				local t = (step - 0.5) / steps
 				local top = a.Y + delta.Y * step / steps
 				local center = a + flat * t
-				local treadW = if rootStair then link.Width * (0.84 + 0.14 * math.sin(step * 1.15)) else link.Width
+				local baseTreadW = if rootStair then link.Width * (0.84 + 0.14 * math.sin(step * 1.15)) else link.Width
+				local treadW = baseTreadW - (step % 2) * 0.08
 				local tread = part(
 					model,
 					"GrandStairTread",
@@ -790,38 +822,38 @@ function Builder.Build(id: number, generation: number): any
 			end
 		else
 			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
-			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -0.96, 0)
+			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, if isFortressStone then -0.99 else -0.96, 0)
 			structure(ramp,link.Id)
-			if isSuspendedLink(layout, link.Id) and layout.Authored == "verdant:4" then
-				-- Floor 4 Solmere mossy limestone fortress bridges & wall-walks across the moat/courtyard:
+			if isSuspendedLink(layout, link.Id) and isFortressStone then
+				-- Floors 4-5 Solmere mossy limestone bridges across the moat/cenote:
 				-- solid weathered stone deck continuing cleanly onto both landings, with bank abutments, flagstones & hanging vines.
 				ramp.Color = solmereLimestone
 				ramp.Material = Enum.Material.Limestone
 				local landA = origin + Vector3.new(link.LandingA.AX, link.LandingA.AY, link.LandingA.AZ)
-				local landB = origin + Vector3.new(link.LandingB.BX, link.LandingB.BY, link.LandingB.BZ)
-				-- Anchor moat bridges leaving the grassy Outer Ward bank (From == "Basin") on a solid battered stone abutment down into the moat bed
+				-- Anchor moat bridges leaving the grassy Outer Ward / Cenote Rim bank (From == "Basin") on a solid battered stone abutment down into the moat/cenote bed
 				if link.From == "Basin" then
 					local deepBottom = origin.Y + layout.Bottom - 7
-					local abutH = math.max(6, a.Y - deepBottom)
-					local abutAt = a:Lerp(landA, 0.25)
-					local abut = part(model, "BridgeBankAbutment", Vector3.new(link.Width + 4, abutH, 12), Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.04, abutAt.Z), flagstoneDark, Enum.Material.Limestone)
-					abut.CFrame = CFrame.lookAt(Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.04, abutAt.Z), Vector3.new(b.X, a.Y - abutH / 2 - 0.04, b.Z))
+					local abutH = math.max(6, a.Y - deepBottom - 0.2)
+					local abutAt = a:Lerp(landA, 0.28)
+					local abut = part(model, "BridgeBankAbutment", Vector3.new(link.Width + 3.2, abutH, 10), Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), flagstoneDark, Enum.Material.Limestone)
+					abut.CFrame = CFrame.lookAt(Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), Vector3.new(b.X, a.Y - abutH / 2 - 0.25, b.Z))
 					abut.CanQuery = true
 					abut.CanTouch = false
 				end
-				local underRamp = decor(model, "BridgeStoneUnderside", Vector3.new(link.Width - 1.4, 2.2, delta.Magnitude + 1.0), mid, flagstoneDark, Enum.Material.Limestone)
-				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.06, 0)
-				local stoneA = a:Lerp(landA, 0.45)
-				local stoneB = b:Lerp(landB, 0.65)
+				local underRamp = decor(model, "BridgeStoneUnderside", Vector3.new(link.Width - 2.4, 1.3, math.max(1, delta.Magnitude - 1.2)), mid, flagstoneDark, Enum.Material.Limestone)
+				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.68, 0)
+				-- Place bridge flagstones strictly along the inclined deck [0.08..0.92] well above TraversalRamp & Landing layers (+0.20)
+				local stoneA = a:Lerp(b, 0.08)
+				local stoneB = a:Lerp(b, 0.92)
 				local fullStoneLen = (stoneB - stoneA).Magnitude
 				local stones = math.max(3, math.floor((fullStoneLen - 2) / 4.2))
 				for i = 1, stones do
 					local t = (i - 0.5) / stones
 					local stagger = math.sin(i * 1.7) * 1.4
 					local at = stoneA:Lerp(stoneB, t) + right * stagger
-					local stoneW = link.Width * (0.48 + ((i * 5) % 4) * 0.05)
-					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.22, 3.2), at, if i % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
-					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.08, 0) * CFrame.Angles(0, math.rad(((i * 17) % 12) - 6), 0)
+					local stoneW = link.Width * (0.46 + ((i * 5) % 4) * 0.05)
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.14, 3.0), at, if i % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
+					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.21 + (i % 2) * 0.03, 0) * CFrame.Angles(0, math.rad(((i * 17) % 12) - 6), 0)
 				end
 				-- Coiling strangler vine cables & hanging tendrils along bridge shoulders
 				local segs = math.clamp(math.floor(delta.Magnitude / 18), 2, 5)
@@ -896,9 +928,9 @@ function Builder.Build(id: number, generation: number): any
 					rootCylinder("RootBridgeSapVein", prevSap, nextSap, 0.72, rootSapColor, Enum.Material.Neon)
 					prevSap = nextSap
 				end
-				-- Irregular weathered Solmere flagstones continuing cleanly from inside LandingA through LandingB
-				local stoneA = a:Lerp(landA, 0.78)
-				local stoneB = b:Lerp(landB, 0.78)
+				-- Irregular weathered Solmere flagstones staying strictly along the root bridge deck above stump/island rims
+				local stoneA = a:Lerp(b, 0.08)
+				local stoneB = a:Lerp(b, 0.92)
 				local fullStoneLen = (stoneB - stoneA).Magnitude
 				local stones = math.max(3, math.floor((fullStoneLen - 2) / 4.2))
 				for i = 1, stones do
@@ -906,8 +938,8 @@ function Builder.Build(id: number, generation: number): any
 					local stagger = math.sin(i * 1.9) * 1.5
 					local at = stoneA:Lerp(stoneB, t) + right * stagger
 					local stoneW = link.Width * (0.36 + ((i * 7) % 4) * 0.05)
-					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.24, 3.1), at, if i % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
-					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.04, 0) * CFrame.Angles(0, math.rad(((i * 23) % 18) - 9), 0)
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.16, 3.0), at, if i % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
+					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.15 + (i % 2) * 0.03, 0) * CFrame.Angles(0, math.rad(((i * 23) % 18) - 9), 0)
 				end
 			elseif grassyPaths then
 				ramp.Color = naturalGrassColor
@@ -951,16 +983,16 @@ function Builder.Build(id: number, generation: number): any
 		-- invisible, so heroes keep the same railing they always had. Floor 3 bridges dress curbless with organic root rails.
 		if natural then
 			local visibleCurb = solmere and (isSuspendedLink(layout, link.Id) or not grassyPaths)
-			local curbLen = if isSuspendedLink(layout, link.Id) and layout.Authored == "verdant:4" then math.max(1, delta.Magnitude + 4) else math.max(1, delta.Magnitude - 4)
+			local curbLen = math.max(1, delta.Magnitude - 4)
 			for _, side in { -1, 1 } do
-				local curbOffset = right * (side * (link.Width / 2 - 1.1))
+				local curbOffset = right * (side * (link.Width / 2 - 1.02))
 				local curbGroup = propGroup(model, "BridgeCurb")
-				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, curbLen), mid + curbOffset, if visibleCurb then flagstoneDark else theme.TrimColor, if visibleCurb then Enum.Material.Limestone else theme.TrimMaterial, if visibleCurb then nil else 1)
-				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
+				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, if visibleCurb then flagstoneDark else theme.TrimColor, if visibleCurb then Enum.Material.Limestone else theme.TrimMaterial, if visibleCurb then nil else 1)
+				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.35, 0)
 				if visibleCurb then
-					-- A visible Solmere kerb: limestone with a cushion of moss on top.
-					local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.6, 0.5, math.max(1, curbLen - 1)), mid + curbOffset, moss, Enum.Material.Grass)
-					cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.05, 0)
+					-- A visible Solmere kerb: limestone with a cushion of moss sitting proudly atop the kerb.
+					local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.5, 0.5, math.max(1, curbLen - 1)), mid + curbOffset, moss, Enum.Material.Grass)
+					cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.25, 0)
 				end
 			end
 			continue
@@ -1094,8 +1126,9 @@ function Builder.Build(id: number, generation: number): any
 	-- Sanctuary can be found from anywhere on the floor.
 	for _, sx in { -1, 1 } do
 		for _, sz in { -1, 1 } do
-			local at = Vector3.new(sx * halfW, safe.Y, safe.Z + sz * halfD)
-			decor(model, "SanctuaryBeaconPylon", Vector3.new(3, 4, 3), origin + at + Vector3.new(0, 2, 0), theme.TrimColor, theme.TrimMaterial)
+			local frontOffset = if sz < 0 then Vector3.new(sx * 1.6, 0, -1.6) else Vector3.zero
+			local at = Vector3.new(sx * halfW, safe.Y, safe.Z + sz * halfD) + frontOffset
+			decor(model, "SanctuaryBeaconPylon", Vector3.new(2.8, 3.9, 2.8), origin + at + Vector3.new(0, 1.95, 0), theme.TrimColor, theme.TrimMaterial)
 			local crystal = decor(model, "SanctuaryBeaconCrystal", Vector3.new(1.8, 2.6, 1.8), origin + at + Vector3.new(0, 5.3, 0), glowColor, Enum.Material.Neon, 0.05)
 			crystal.CFrame *= CFrame.Angles(0, math.rad(45), 0)
 			local light = Instance.new("PointLight")

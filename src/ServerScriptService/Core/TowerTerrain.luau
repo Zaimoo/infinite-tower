@@ -114,12 +114,21 @@ local DECK_PLATFORMS: { [string]: { [string]: boolean } } = {
 		EastBastion = true,
 		Apex = true,
 	},
+	["verdant:5"] = {
+		Crossing = true,
+		WestGallery = true,
+		EastGallery = true,
+		WestBastion = true,
+		EastBastion = true,
+		Apex = true,
+	},
 }
 
 -- Suspended gorge platforms/links stay open above chasm/water (never raised into earthen Terrain walls).
 local SUSPENDED_PLATFORMS: { [string]: { [string]: boolean } } = {
 	["verdant:3"] = { Crossing = true, WestGallery = true, EastGallery = true },
 	["verdant:4"] = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
+	["verdant:5"] = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
 }
 local SUSPENDED_LINKS: { [string]: { [string]: boolean } } = {
 	["verdant:3"] = {
@@ -133,10 +142,16 @@ local SUSPENDED_LINKS: { [string]: { [string]: boolean } } = {
 		WestBastion_Apex = true, EastBastion_Apex = true,
 		Crossing_Apex = true,
 	},
+	["verdant:5"] = {
+		Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
+		WestGallery_WestBastion = true, EastGallery_EastBastion = true,
+		WestBastion_Apex = true, EastBastion_Apex = true,
+		Crossing_Apex = true,
+	},
 }
 
 local function isDirectTerrain(authored: string?): boolean
-	return authored == "verdant:1" or authored == "verdant:2" or authored == "verdant:3" or authored == "verdant:4"
+	return authored == "verdant:1" or authored == "verdant:2" or authored == "verdant:3" or authored == "verdant:4" or authored == "verdant:5"
 end
 
 -- Walkway shapes in local coordinates: terrace rectangles and ramp/landing strips.
@@ -183,8 +198,8 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	local seed = floorId * 17.37
 	local rects, strips = walkways(layout)
 	local apex = layout.Platforms.Apex
-	-- Floor 2 fills reed ponds; Floor 3 carves the E-W river gorge; Floor 4 fills the green marsh moat in front of the curtain wall.
-	local liquidLevel = if layout.Authored == "verdant:2" then bottom + 2.6 elseif layout.Authored == "verdant:3" or layout.Authored == "verdant:4" then bottom + 3.2 else bottom - 0.3
+	-- Floor 2 fills reed ponds; Floor 3 carves the E-W river gorge; Floor 4 fills the green marsh moat; Floor 5 carves the deep cenote sinkhole.
+	local liquidLevel = if layout.Authored == "verdant:2" then bottom + 2.6 elseif layout.Authored == "verdant:3" or layout.Authored == "verdant:4" or layout.Authored == "verdant:5" then bottom + 3.2 else bottom - 0.3
 	local reach = 0
 	for _, r in rects do
 		reach = math.max(reach, (r.Y - bottom + 12) / APRON)
@@ -253,10 +268,16 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				if f4Moat < 1.0 then
 					wet = math.max(wet, 0.28 + (1.0 - f4Moat) * 0.30)
 				end
+			elseif layout.Authored == "verdant:5" then
+				-- Deep sunken cenote lagoon filling the central amphitheatre basin between Cenote Rim and Mossbound Dais
+				local cenoteDist = math.sqrt((x / 172) ^ 2 + ((z + 28) / 146) ^ 2) + 0.08 * fbm(x / 60, z / 60, seed + 83, 2)
+				if cenoteDist < 1.0 then
+					wet = math.max(wet, 0.30 + (1.0 - cenoteDist) * 0.34)
+				end
 			end
 			if wet > 0.28 then
 				local depth = math.clamp((wet - 0.28) / 0.12, 0, 1)
-				local floorDip = if layout.Authored == "verdant:2" then 1.8 elseif layout.Authored == "verdant:3" or layout.Authored == "verdant:4" then 1.6 else 2.6
+				local floorDip = if layout.Authored == "verdant:2" then 1.8 elseif layout.Authored == "verdant:3" or layout.Authored == "verdant:4" or layout.Authored == "verdant:5" then 1.6 else 2.6
 				base = if palette.LiquidSolid then math.min(base, liquidLevel + 0.05) else base - (base - (bottom - floorDip)) * depth
 				kind = "POOL"
 			end

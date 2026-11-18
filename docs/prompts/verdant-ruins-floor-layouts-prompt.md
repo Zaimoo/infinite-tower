@@ -2,7 +2,7 @@
 
 Copy everything below the line into a Claude Code session opened at the repo root.
 
-> **Status (2026-11-18).** **Floors 1, 2, 3, and 4 are built.** Several parts of the original brief evolved once `main` gained per-floor variation (PR #327), natural voxel terrain (`TowerTerrain.luau`), and sculpted mesh kits (`TowerBiomeKit.luau`):
+> **Status (2026-11-18).** **All five Verdant Ruins floors (Floors 1–5) are built.** Several parts of the original brief evolved once `main` gained per-floor variation (PR #327), natural voxel terrain (`TowerTerrain.luau`), and sculpted mesh kits (`TowerBiomeKit.luau`):
 > - Part 4.1–4.2 is mostly done already: `TowerLayout.Get(index, floorId)` / `ForFloor` give every floor its own layout, every consumer passes the floor id, graphs are cached per floor and portal spots follow the Apex.
 > - Authored floors (`AUTHORED` in `TowerLayout`) keep core role ids (`Sanctuary`, `Basin`, `WestGallery`, `EastGallery`, `Crossing`, `WestBastion`, `EastBastion`, `Apex`), carry in-world titles in `Names`, can add extra platforms (`ExtraPlatforms`, e.g. Floor 2's `AqueductNorth`), set `Stairs = { [linkId] = true }` to force `Kind = "STAIRS"`, and supply custom `Paths`. Set pieces key on `layout.Authored`, and per-floor lighting presets live in `HubLighting.FloorGrades[floorId]` (applied by `HubLightingController.client.luau`), not a separate `TowerFloorEnvironments` module.
 > - Sculpted Blender kits (`TowerBiomeKit.ExtraTemplates` + `TowerKitProps.Has` with native-part fallbacks) and sculpted `Terrain` walkways/water (instead of floating water parts or boxy green colliders) are now part of the pipeline; see §4.3 below before building Floors 3–5.
@@ -284,29 +284,29 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
 
 | Platform | Role | Centre (X, Y, Z) | Size | Character |
 | --- | --- | --- | --- | --- |
-| `CenoteRim` | ENTRY | 0, 0, 176 | 480 × 108 | Mossy rim terrace looking down into the sinkhole |
-| `Sunbridge` | CROSSING | 0, 5, 40 | 74 × 60 | Island pillar in the cenote with a sun-disc mosaic floor |
-| `WestTerrace` | WING | −176, 6, 36 | 86 × 80 | First spiral tier; glow-lily beds |
-| `EastTerrace` | WING | 176, 8, 26 | 86 × 80 | First spiral tier; sunbell garden |
-| `NorthwestTier` | UPPER_WING | −160, 14, −118 | 86 × 80 | Colonnade tier with roots through every column |
-| `NortheastTier` | UPPER_WING | 162, 16, −126 | 86 × 80 | Colonnade tier with a hanging moss curtain |
-| `MossboundDais` | APEX | 0, 28, −222 | 140 × 110 | The boss arena: open dais, broken dome above, Heartroot heart behind |
+| `CenoteRim` (`Basin`) | ENTRY | 0, 0, 176 | 480 × 108 | Mossy rim terrace on direct `Terrain` overlooking the sunken cenote |
+| `Sunbridge` (`Crossing`) | CROSSING | 0, 5, 40 | 74 × 60 | Island pillar in the cenote with a carved sun-disc medallion floor |
+| `WestTerrace` (`WestGallery`) | WING | −176, 6, 12 | 86 × 80 | First spiral tier; flanked by two-tier `SolmereColonnadeWing` |
+| `EastTerrace` (`EastGallery`) | WING | 176, 8, 6 | 86 × 80 | First spiral tier; asymmetric elevation (+8 vs +6) |
+| `NorthwestTier` (`WestBastion`) | UPPER_WING | −160, 14, −126 | 86 × 80 | Colonnade tier overlooking upper cenote cascades |
+| `NortheastTier` (`EastBastion`) | UPPER_WING | 162, 16, −134 | 86 × 80 | Colonnade tier overlooking upper cenote cascades |
+| `MossboundDais` (`Apex`) | APEX | 0, 28, −222 | 140 × 110 | The boss arena: open dais, `CenoteColonnadeDome` above, `HeartrootMotherHeart` behind |
 
-**Links:** Sanctuary→Rim; Rim→Sunbridge; Rim→WestTerrace; Rim→EastTerrace; WestTerrace→NorthwestTier; EastTerrace→NortheastTier; NorthwestTier→Dais; NortheastTier→Dais; Sunbridge→Dais (**STAIRS**, the long exposed climb). Two return ramps from the cenote floor to the Rim.
+**Links:** Sanctuary→CenoteRim (`Terrain` ramp); CenoteRim→Sunbridge; CenoteRim→WestTerrace; CenoteRim→EastTerrace; WestTerrace→NorthwestTier; EastTerrace→NortheastTier; NorthwestTier→MossboundDais; NortheastTier→MossboundDais; Sunbridge→MossboundDais (**STAIRS**, the long root-hugged processional climb). Two `Terrain` return ramps (`ChasmWest` / `ChasmEast`, `Z = 78..121`) climb from the cenote shore back up to the Rim.
 
-**Camps (35 + Boss, 4 Elites):** `RIM_WEST` 5, `RIM_EAST` 5, `SUNBRIDGE` 5, `WEST_TERRACE` 5, `EAST_TERRACE` 5, `NW_TIER` 5 (Elite), `NE_TIER` 5 (Elite), plus the Boss summon on the Dais (95-stud leash; the dais must fit the leash and the boss's `Frontal Cleave`, `Quake` and `Root Bloom` telegraphs without them spilling onto a ramp). Elite flags on two other camps of your choice to reach 4.
+**Camps (35 + Boss, 4 Elites):** `BASIN_WEST` 5, `BASIN_EAST` 5, `CENTRAL_CROSSING` 5, `WEST_GALLERY` 5 (Elite), `EAST_GALLERY` 5 (Elite), `UPPER_WEST` 5 (Elite), `UPPER_EAST` 5 (Elite), plus the `APEX_SANCTUM` Boss summon on the `140 × 110` `Mossbound Dais` (`95`-stud leash).
 
-**Patrols:** `ENTRY_LOOP` (the Rim's cenote edge), `SPIRAL_WEST` and `SPIRAL_EAST` (terrace → tier), `CROWN_RING` (NW Tier → Dais edge → NE Tier).
+**Patrols:** `BASIN_LOOP`, `GALLERY_WEST`, `GALLERY_EAST`, and `BASTION_RING` (`TowerLayout.PatrolRoutes`).
 
-**Set pieces:** the cenote with four falls pouring in from the court edges and mist rising from its floor; the **Heartroot heart**: the trunk rising behind the dais, with root buttresses converging on it and a slow sap pulse (a cheap Neon beat, not particles); the broken dome as a ring of arches with the canopy growing through; a light shaft onto the dais that turns gold, then emerald as dusk falls; sun-disc mosaics on every tier floor.
+**Set pieces:** sunken cenote lagoon (`Water` at `Bottom + 3.2`) with four `CenoteCascadeSpillway` waterfalls pouring in from amphitheatre court walls; four flanking two-tier `SolmereColonnadeWing`s; `CenoteColonnadeDome` open vaulted colonnade and towering `HeartrootMotherHeart` with glowing emerald sap heart & dusk light shafts behind the dais; open `GlowLilyCluster`s on `Cenote Rim` and cenote shoreline; sculpted `AqueductBrokenSpan` ruins and `SolmereBalustrade`s; plus optional Blender meshes in `assets-source/tower/verdant_f5_kit/VerdantF5Kit.fbx`.
 
-**Ecosystem weight:** everything at once, at its most alive. This is the postcard floor.
+**Ecosystem weight:** everything at once, at its most alive (`HubLighting.FloorGrades[5]` golden hour fading to dusk). This is the postcard floor.
 
 ---
 
 ## Part 3: Environment and lighting per floor
 
-Per-floor lighting overrides live in **`src/ReplicatedStorage/Shared/Config/HubLighting.luau`** under **`FloorGrades[floorId]`**, layered over the biome lighting preset by `HubLightingController.client.luau` and respecting the player's Graphics quality setting. Floors 1–4 are populated; Floor 5 adds `FloorGrades[5]` without adding a new controller or remote.
+Per-floor lighting overrides live in **`src/ReplicatedStorage/Shared/Config/HubLighting.luau`** under **`FloorGrades[floorId]`**, layered over the biome lighting preset by `HubLightingController.client.luau` and respecting the player's Graphics quality setting. Floors 1–5 are all populated.
 
 | Floor | Time of day | Light | Atmosphere | Accents |
 | --- | --- | --- | --- | --- |
@@ -415,7 +415,7 @@ Then run `tests/studio-tower-prop-audit.luau` in Studio for affected/all floors 
 
 Don't run the playtest yourself. End with a **How to test** checklist the user can follow in Studio, covering at least:
 
-1. Floors 1–5: arrive, check you land out of aggro with feet grounded on Terrain (no cratering or invisible floating colliders), and walk to the Apex by every route (plus optional `VerdantF2Kit.fbx` / `VerdantF3Kit.fbx` / `VerdantF4Kit.fbx` import via `tests/studio-tower-biome-kit-import.luau` when testing sculpted meshes).
+1. Floors 1–5: arrive, check you land out of aggro with feet grounded on Terrain (no cratering or invisible floating colliders), and walk to the Apex by every route (plus optional `VerdantF2Kit.fbx` / `VerdantF3Kit.fbx` / `VerdantF4Kit.fbx` / `VerdantF5Kit.fbx` import via `tests/studio-tower-biome-kit-import.luau` when testing sculpted meshes).
 2. Floor 2: confirm the aqueduct gap has no link and the Mill detour works.
 3. Floors 3–5: jump into the chasm, and climb out by a return ramp.
 4. Squad follow, recall (`E`) and assigned-squad routing on ramps, stairs and wall-walks.

@@ -179,6 +179,32 @@ local AUTHORED: {[number]: any} = {
 			WestBastion = "West Tower", EastBastion = "East Tower", Apex = "Inner Keep",
 		},
 	},
+	-- Floor 5, Mossbound Court (Verdant Ruins Boss Arena): sunken amphitheatre cenote ringed by tiered Solmere
+	-- colonnade galleries, cascading falls, and a central sunbridge causeway rising to the 140x110 Mossbound Dais.
+	[5] = {
+		Key = "verdant:5",
+		Name = "Mossbound Court",
+		PathStyle = "SOLMERE",
+		Basin = {X = 0, Y = 0, Z = 176, Width = 480, Depth = 108},
+		Crossing = {X = 0, Y = 5, Z = 40, Width = 74, Depth = 60},
+		WestGallery = {X = -176, Y = 6, Z = 12, Width = 86, Depth = 80},
+		EastGallery = {X = 176, Y = 8, Z = 6, Width = 86, Depth = 80},
+		WestBastion = {X = -160, Y = 14, Z = -126, Width = 86, Depth = 80},
+		EastBastion = {X = 162, Y = 16, Z = -134, Width = 86, Depth = 80},
+		Apex = {X = 0, Y = 28, Z = -222, Width = 140, Depth = 110},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "Crossing"}, {"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"WestGallery", "WestBastion"}, {"EastGallery", "EastBastion"},
+			{"WestBastion", "Apex"}, {"EastBastion", "Apex"},
+			{"Crossing", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Fallen Gate", Basin = "Cenote Rim", Crossing = "Sunbridge",
+			WestGallery = "West Terrace", EastGallery = "East Terrace",
+			WestBastion = "Northwest Tier", EastBastion = "Northeast Tier", Apex = "Mossbound Dais",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

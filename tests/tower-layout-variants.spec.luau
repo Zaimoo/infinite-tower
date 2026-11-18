@@ -84,6 +84,24 @@ test("Floor 4 is the hand-authored Vinebound Bastion: walled compound, moat, wal
 	assert(Layout.PatrolRoutes(4, 4).WALL_WALK ~= nil, "floor 4 includes the WALL_WALK patrol route")
 end)
 
+test("Floor 5 is the hand-authored Mossbound Court: sunken cenote spiral, Sunbridge stair, and 140x110 Boss Dais", function()
+	local room = Layout.ForFloor(5)
+	assert(room.Authored == "verdant:5" and room.Name == "Mossbound Court")
+	assert(same(room, Layout.Get(5, 5)), "the authored floor 5 is not fixed")
+	assert(not same(room, Layout.Get(5)), "floor 5 should not be the canonical layout")
+	assert(room.Bottom == -6 and #room.ReturnLinks == 2, "floor 5 has a deep cenote chasm with two return ramps")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Crossing_Apex == "STAIRS" and paths.WestBastion_Apex == "RAMP" and paths.EastBastion_Apex == "RAMP")
+	assert(room.Platforms.Basin.Name == "Cenote Rim" and room.Platforms.Crossing.Name == "Sunbridge")
+	assert(room.Platforms.WestBastion.Name == "Northwest Tier" and room.Platforms.EastBastion.Name == "Northeast Tier")
+	local apex = room.Platforms.Apex
+	assert(apex.Name == "Mossbound Dais" and apex.Width == 140 and apex.Depth == 110 and apex.Y == 28)
+	assert(room.EliteCount == 4)
+	local routes = Layout.PatrolRoutes(5, 5)
+	assert(routes.BASIN_LOOP and routes.GALLERY_WEST and routes.GALLERY_EAST and routes.BASTION_RING)
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do
