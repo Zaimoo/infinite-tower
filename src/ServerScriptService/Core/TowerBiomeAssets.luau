@@ -2333,6 +2333,15 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 			return if field then math.max(field.Sample(x, z), bottom) else bottom
 		end
+		local function f12MinGroundAt(x: number, z: number, halfSpan: number): number
+			local lo = f12GroundAt(x, z)
+			for _, ox in { -halfSpan, 0, halfSpan } do
+				for _, oz in { -halfSpan, 0, halfSpan } do
+					lo = math.min(lo, f12GroundAt(x + ox, z + oz))
+				end
+			end
+			return lo
+		end
 
 		local f12Override = {
 			TRIM = { Color = vSand, Material = Enum.Material.Sandstone },
@@ -2347,66 +2356,70 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			CORAL = { Color = vCrimson, Material = Enum.Material.Sand },
 		}
 
-		-- 1. Sand-Strider Fossil Ribcage straddling EastGallery -> Crossing ramp (tagged RampArch so WalkwayHitTest exempts it)
+		-- 1. Colossal Sand-Strider Fossil Ribcage straddling EastGallery -> Crossing ramp (tagged RampArch so WalkwayHitTest exempts it)
+		-- Scaled 1.68x and seated deep (ribMid.Y - 13.5) so both banks bury solidly into the sand below while the spine clears the ramp cleanly overhead.
 		local ribMid, ribYaw = spineMid("EastGallery", "Crossing")
-		table.insert(reservedSpots, { ribMid.X, ribMid.Z, 26 })
+		table.insert(reservedSpots, { ribMid.X, ribMid.Z, 38 })
 		group("RampArch", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local ribCf = CFrame.new(ribMid.X, ribMid.Y - 1.6, ribMid.Z) * CFrame.Angles(0, ribYaw, 0)
+			local ribCf = CFrame.new(ribMid.X, ribMid.Y - 13.5, ribMid.Z) * CFrame.Angles(0, ribYaw, 0)
 			if KitProps.Has("SandStriderRibs") then
-				kitAt("SandStriderRibs", ribCf, 1.08 * scale, {
+				kitAt("SandStriderRibs", ribCf, 1.68 * scale, {
 					TRIM = { Color = vBone, Material = Enum.Material.Limestone },
 					STONE = { Color = vBoneDark, Material = Enum.Material.Slate },
 					MOSS = { Color = vDriftSand, Material = Enum.Material.Sand },
 				})
 			else
 				for r = -3, 3 do
-					local offZ = r * 6.5
-					local arcH = 26 - math.abs(r) * 1.1
+					local offZ = r * 9.0
+					local arcH = 44 - math.abs(r) * 1.4
 					local segCf = ribCf * CFrame.new(0, 0, offZ)
 					for _, ps in { -1, 1 } do
-						local foot = segCf * CFrame.new(ps * 17.5, -1, 0)
-						local crown = segCf * CFrame.new(ps * 2.2, arcH, 0)
-						beam("StriderRibArch", foot.Position, crown.Position, 2.2, vBone, Enum.Material.Limestone)
+						local foot = segCf * CFrame.new(ps * 26.0, -1, 0)
+						local crown = segCf * CFrame.new(ps * 2.8, arcH, 0)
+						beam("StriderRibArch", foot.Position, crown.Position, 3.2, vBone, Enum.Material.Limestone)
 					end
 				end
 			end
 		end)
 
-		-- Giant Sand-Strider Skull resting beside Strider's Ribs on the eastern dune shoulder
-		local skX, skZ = 176, 46
-		if footprintClear(skX, skZ, 12, 12) then
-			local skY = f12GroundAt(skX, skZ)
-			table.insert(reservedSpots, { skX, skZ, 22 })
-			group("SandStriderSkull", function()
-				currentParent:SetAttribute("OnTerrain", true)
-				local skCf = CFrame.new(skX, skY - 0.6, skZ) * CFrame.Angles(0, math.rad(-142), 0)
-				if KitProps.Has("SandStriderSkull") then
-					kitAt("SandStriderSkull", skCf, 1.15 * scale, {
-						TRIM = { Color = vBone, Material = Enum.Material.Limestone },
-						STONE = { Color = vBasalt, Material = Enum.Material.Basalt },
-						MOSS = { Color = vDriftSand, Material = Enum.Material.Sand },
-					})
-				else
-					orb("StriderCranium", skCf.Position + V(0, 6, 0), V(16, 12, 22), vBone, Enum.Material.Limestone)
-					orb("StriderSnout", skCf.Position + V(-6, 4, 8), V(9, 7, 14), vBone, Enum.Material.Limestone)
-				end
-			end)
+		-- Colossal Sand-Strider Skull partially buried in the eastern dune flank beside Strider's Ribs
+		for _, sk in { { 142, -58, -142 }, { 108, -56, -138 }, { 48, 36, -38 }, { 184, 38, -148 } } do
+			local skX, skZ, skYaw = sk[1], sk[2], sk[3]
+			if footprintClear(skX, skZ, 14, 14) then
+				local skY = f12MinGroundAt(skX, skZ, 16)
+				table.insert(reservedSpots, { skX, skZ, 30 })
+				group("SandStriderSkull", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local skCf = CFrame.new(skX, skY - 1.8, skZ) * CFrame.Angles(math.rad(5), math.rad(skYaw), math.rad(-4))
+					if KitProps.Has("SandStriderSkull") then
+						kitAt("SandStriderSkull", skCf, 1.85 * scale, {
+							TRIM = { Color = vBone, Material = Enum.Material.Limestone },
+							STONE = { Color = vBasalt, Material = Enum.Material.Basalt },
+							MOSS = { Color = vDriftSand, Material = Enum.Material.Sand },
+						})
+					else
+						orb("StriderCranium", skCf.Position + V(0, 9, 0), V(26, 18, 36), vBone, Enum.Material.Limestone)
+						orb("StriderSnout", skCf.Position + V(-9, 6, 13), V(14, 10, 22), vBone, Enum.Material.Limestone)
+					end
+				end)
+				break
+			end
 		end
 
 		-- 2. Wagon Circle defensive ring of Varrash wagons, awnings, campfire & spilled barrels (Basin)
 		local wagonSpots = {
-			{ -52, 146, 24 }, { 52, 144, -26 },
-			{ -58, 76, 142 }, { -160, 74, 88 },
+			{ -52, 138, 24 }, { 52, 136, -26 },
+			{ -58, 84, 142 }, { -156, 84, 88 },
 		}
 		for _, ws in wagonSpots do
 			local wx, wz, wyaw = ws[1], ws[2], ws[3]
 			if footprintClear(wx, wz, 9, 9) then
-				local wy = f12GroundAt(wx, wz)
+				local wy = f12MinGroundAt(wx, wz, 10)
 				table.insert(reservedSpots, { wx, wz, 16 })
 				group("DesertCaravanWagon", function()
 					currentParent:SetAttribute("OnTerrain", true)
-					local wcf = CFrame.new(wx, wy - 0.2, wz) * CFrame.Angles(0, math.rad(wyaw), 0)
+					local wcf = CFrame.new(wx, wy - 0.6, wz) * CFrame.Angles(0, math.rad(wyaw), 0)
 					if KitProps.Has("DesertCaravanWagon") then
 						kitAt("DesertCaravanWagon", wcf, 1.12 * scale, f12Override)
 					else
@@ -2422,7 +2435,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- Nomad Campfire pit + Ash Raider tarp tent inside west-center Wagon Circle (outside BasinCauseway & BASIN_WEST camp)
 		local cfX, cfZ = -52, 112
 		if footprintClear(cfX, cfZ, 8, 8) then
-			local cfY = f12GroundAt(cfX, cfZ)
+			local cfY = f12MinGroundAt(cfX, cfZ, 3)
 			table.insert(reservedSpots, { cfX, cfZ, 12 })
 			group("WagonCircleCampfire", function()
 				currentParent:SetAttribute("OnTerrain", true)
@@ -2447,13 +2460,17 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- 3. Collapsed Spice Vault & Burst Crimson/Saffron Spice Urns on the western cliff overlook (WestGallery)
 		local svX, svZ = -164, -120
 		if footprintClear(svX, svZ, 16, 12) then
-			local svY = f12GroundAt(svX, svZ)
+			local svY = f12MinGroundAt(svX, svZ, 12)
 			table.insert(reservedSpots, { svX, svZ, 26 })
 			group("SpiceVaultRuins", function()
 				currentParent:SetAttribute("OnTerrain", true)
-				local svCf = CFrame.new(svX, svY - 0.5, svZ) * CFrame.Angles(0, math.rad(36), 0)
+				local svCf = CFrame.new(svX, svY - 0.6, svZ) * CFrame.Angles(0, math.rad(36), 0)
+				-- Battered stone foundation plinth extending below sand/bedrock so sloped cliff edges never hover
+				local plinthH = math.max(4, (svY - bottom) + 3)
+				local plinth = block("SpiceVaultFoundation", V(38, plinthH, 26), V(svX, svY - plinthH * 0.5, svZ), vBasalt, Enum.Material.Basalt)
+				plinth.CFrame = CFrame.new(origin + V(svX, svY - plinthH * 0.5, svZ)) * CFrame.Angles(0, math.rad(36), 0)
 				if KitProps.Has("SpiceVaultRuins") then
-					kitAt("SpiceVaultRuins", svCf, 1.2 * scale, f12Override)
+					kitAt("SpiceVaultRuins", svCf, 1.18 * scale, f12Override)
 				else
 					block("SpiceVaultWall", V(30, 13, 3.5), svCf.Position + V(0, 6.5, 0), vSand, Enum.Material.Sandstone)
 					orb("SpiceSpillCrimson", svCf.Position + V(-4, 0.6, 8), V(9, 1.8, 9), vCrimson, Enum.Material.Sand)
@@ -2463,16 +2480,16 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 
 		-- Additional foreground spice spill clusters flanking WestGallery approach
-		for spIdx, sp in { { -92, -118, true }, { -168, -42, false } } do
+		for spIdx, sp in { { -146, -34, true }, { -168, -42, false } } do
 			local sx, sz, isRed = sp[1], sp[2], sp[3]
 			if footprintClear(sx, sz, 6, 6) then
-				local sy = f12GroundAt(sx, sz)
+				local sy = f12MinGroundAt(sx, sz, 5)
 				table.insert(reservedSpots, { sx, sz, 10 })
 				group("BurstSpiceUrn" .. spIdx, function()
 					currentParent:SetAttribute("OnTerrain", true)
-					local urn = orb("ToppledSpiceAmphora", V(sx, sy + 1.5, sz), V(4.2, 4.2, 6.2), vTerra, Enum.Material.Slate)
-					urn.CFrame = CFrame.new(origin + V(sx, sy + 1.5, sz)) * CFrame.Angles(math.rad(72), math.rad(sx), 0)
-					orb("SpicePowderPile", V(sx + 2.8, sy + 0.45, sz + 3.2), V(8.5, 1.5, 7.5), if isRed then vCrimson else vSaffron, Enum.Material.Sand)
+					local urn = orb("ToppledSpiceAmphora", V(sx, sy + 1.2, sz), V(4.2, 4.2, 6.2), vTerra, Enum.Material.Slate)
+					urn.CFrame = CFrame.new(origin + V(sx, sy + 1.2, sz)) * CFrame.Angles(math.rad(72), math.rad(sx), 0)
+					orb("SpicePowderPile", V(sx + 2.8, sy + 0.1, sz + 3.2), V(8.5, 2.4, 7.5), if isRed then vCrimson else vSaffron, Enum.Material.Sand)
 				end)
 			end
 		end
@@ -2480,11 +2497,11 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- 4. Swirling Desert Dust Devils + Green Saguaro Desert Cacti & Pale Dead Snags
 		for dIdx, dd in { { -88, -16, 1.0 }, { 172, -116, 1.15 } } do
 			local dx, dz, ds = dd[1], dd[2], dd[3]
-			local dy = f12GroundAt(dx, dz)
+			local dy = f12MinGroundAt(dx, dz, 6)
 			table.insert(reservedSpots, { dx, dz, 14 })
 			group("SandstormDustDevil" .. dIdx, function()
 				currentParent:SetAttribute("OnTerrain", true)
-				local funnel = cyl("DustDevilFunnel", V(dx, dy + 24 * ds, dz), 5.5 * ds, 50 * ds, rgb(224, 188, 138), Enum.Material.SmoothPlastic, 0.88)
+				local funnel = cyl("DustDevilFunnel", V(dx, dy + 24 * ds - 2, dz), 5.5 * ds, 54 * ds, rgb(224, 188, 138), Enum.Material.SmoothPlastic, 0.88)
 				local emitter = Instance.new("ParticleEmitter")
 				emitter.Name = "GlasswindSandSwirl"
 				emitter.Color = ColorSequence.new(rgb(232, 194, 142))
@@ -2501,13 +2518,13 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		for _, cac in { { 146, 152, 1.0 }, { 166, 114, 1.15 }, { -162, 142, 0.9 } } do
 			local cx, cz, cs = cac[1], cac[2], cac[3]
 			if footprintClear(cx, cz, 4, 4) then
-				local cy = f12GroundAt(cx, cz)
+				local cy = f12MinGroundAt(cx, cz, 3)
 				table.insert(reservedSpots, { cx, cz, 7 })
 				group("SaguaroCactusCluster", function()
 					currentParent:SetAttribute("OnTerrain", true)
-					cyl("CactusTrunk", V(cx, cy + 4.5 * cs, cz), 1.05 * cs, 9.5 * cs, vCactus, Enum.Material.Grass)
+					cyl("CactusTrunk", V(cx, cy + 4.0 * cs, cz), 1.05 * cs, 10.5 * cs, vCactus, Enum.Material.Grass)
 					for _, ps in { -1, 1 } do
-						local hOff = if ps < 0 then 3.2 * cs else 4.8 * cs
+						local hOff = if ps < 0 then 3.0 * cs else 4.6 * cs
 						local arm = block("CactusArmH", V(3.0 * cs, 1.3 * cs, 1.3 * cs), V(cx + ps * 1.8 * cs, cy + hOff, cz), vCactus, Enum.Material.Grass)
 						arm.CanCollide = false
 						cyl("CactusArmV", V(cx + ps * 3.1 * cs, cy + hOff + 2.0 * cs, cz), 0.72 * cs, 4.2 * cs, vCactus, Enum.Material.Grass)
@@ -2518,14 +2535,14 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 		for _, snag in { { -162, 22, 0.95 }, { 174, -46, 0.9 }, { -122, -162, 0.85 } } do
 			local sx, sz, ss = snag[1], snag[2], snag[3]
-			local sy = f12GroundAt(sx, sz)
+			local sy = f12MinGroundAt(sx, sz, 6)
 			table.insert(reservedSpots, { sx, sz, 12 })
 			group("BleachedDesertSnag", function()
 				currentParent:SetAttribute("OnTerrain", true)
 				if KitProps.Has("DeadTree") then
-					kitAt("DeadTree", CFrame.new(sx, sy - 0.5, sz) * CFrame.Angles(0, math.rad(sx), 0), ss, { WOOD = { Color = vDeadWood, Material = Enum.Material.Wood } })
+					kitAt("DeadTree", CFrame.new(sx, sy - 0.8, sz) * CFrame.Angles(0, math.rad(sx), 0), ss, { WOOD = { Color = vDeadWood, Material = Enum.Material.Wood } })
 				else
-					beam("DeadSnagTrunk", V(sx, sy, sz), V(sx + 2, sy + 20 * ss, sz - 1), 2.8 * ss, vDeadWood, Enum.Material.Wood)
+					beam("DeadSnagTrunk", V(sx, sy - 0.5, sz), V(sx + 2, sy + 20 * ss, sz - 1), 2.8 * ss, vDeadWood, Enum.Material.Wood)
 				end
 			end)
 		end
@@ -2788,8 +2805,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end
 			end)
 		elseif layout.Authored == "ashen:2" then
-			-- Tented Caravan Master's Tomb Pavilion behind Apex PortalSpots (Z = -222, clear of -198 PortalSpots)
-			local tombAt = V(apex.X, apex.Y, apex.Z - apex.Depth / 2 - 14)
+			-- Tented Caravan Master's Tomb Pavilion behind Apex PortalSpots (Z = -220, clear of -198 PortalSpots)
+			local tombAt = V(apex.X, apex.Y - 0.5, apex.Z - apex.Depth / 2 - 10)
 			group("MasterTombPavilion", function()
 				if KitProps.Has("MasterTombPavilion") then
 					local mdl = kitAt("MasterTombPavilion", CFrame.new(tombAt), 1.25 * scale, {
@@ -3199,7 +3216,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 			return y, kind, field.Slope(x, z)
 		end
-		local function search(r: number, accept: (string, number, number) -> boolean, near: Vector3?, spread: number?, laneR: number?): (number?, number, number)
+		local isVarrash = layout.PathStyle == "VARRASH"
+		local function search(r: number, accept: (string, number, number) -> boolean, near: Vector3?, spread: number?, laneR: number?, allowSteep: boolean?): (number?, number, number)
 			for _ = 1, 36 do
 				local x, z
 				if near then
@@ -3210,7 +3228,23 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end
 				if math.abs(x) < w / 2 - 6 and math.abs(z) < d / 2 - 6 then
 					local y, kind, slope = ground(x, z)
-					if accept(kind, slope, y) and free(x, z, r, laneR) then
+					local edgeOk = true
+					if isVarrash and not allowSteep then
+						local span = math.max(r * 1.35, 8)
+						for _, ox in { -span, 0, span } do
+							for _, oz in { -span, 0, span } do
+								if ox ~= 0 or oz ~= 0 then
+									local ey = (ground(x + ox, z + oz))
+									if math.abs(y - ey) > 1.3 then
+										edgeOk = false
+										break
+									end
+								end
+							end
+							if not edgeOk then break end
+						end
+					end
+					if edgeOk and accept(kind, slope, y) and free(x, z, r, laneR) then
 						return x, y, z
 					end
 				end
@@ -3236,13 +3270,13 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			local r = radiusOf(name, s)
 			local x, y, z = search(r, function(kind, slope) return open(kind, slope) end, nil, nil, r * 0.35)
 			if not x then continue end
-			put("Grove", name, x, y, z, s, r)
+			put("Grove", name, x, y, z, s, r, if isVarrash then 1.4 else nil)
 			local centre = V(x, y, z)
 			for _ = 1, rand:NextInteger(1, eco.Companions + 1) do
 				local cs = s * rand:NextNumber(0.5, 0.8)
 				local cr = radiusOf(name, cs)
 				local cx, cy, cz = search(cr, function(kind, slope) return open(kind, slope) end, centre, r * 2.6, cr * 0.35)
-				if cx then put("Grove", name, cx, cy, cz, cs, cr) end
+				if cx then put("Grove", name, cx, cy, cz, cs, cr, if isVarrash then 1.4 else nil) end
 			end
 			for _ = 1, eco.UnderPerGrove do
 				local under = pick(eco.Understory)
@@ -3270,8 +3304,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			for _ = 1, math.floor((t.Width + t.Depth) / 40) do
 				local side = rand:NextInteger(1, 4)
 				local along = rand:NextNumber(-0.45, 0.45)
-				local x = if side <= 2 then t.X + along * t.Width else t.X + (if side == 3 then -1 else 1) * (t.Width / 2 - 5)
-				local z = if side <= 2 then t.Z + (if side == 1 then -1 else 1) * (t.Depth / 2 - 5) else t.Z + along * t.Depth
+				local inset = if isVarrash then 8.5 else 5
+				local x = if side <= 2 then t.X + along * t.Width else t.X + (if side == 3 then -1 else 1) * (t.Width / 2 - inset)
+				local z = if side <= 2 then t.Z + (if side == 1 then -1 else 1) * (t.Depth / 2 - inset) else t.Z + along * t.Depth
 				local name = if rand:NextNumber() < 0.7 then pick(eco.Understory) else "BoulderCluster"
 				local us = rand:NextNumber(0.8, 1.3)
 				local ur = radiusOf(name, us)
@@ -3302,10 +3337,24 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			local name = if i % 2 == 0 then "CliffRockA" else "CliffRockB"
 			local s = rand:NextNumber(0.16, 0.32)
 			local r = radiusOf(name, s) * 0.8
+			local maxSlope = if isVarrash then 1.35 else 2.6
 			local x, y, z = search(r, function(kind, slope)
-				return (kind == "MOUNTAIN" or kind == "APRON") and slope > 0.45 and slope < 2.6
-			end)
-			if x then put("Outcrop", name, x, y, z, s, r, 2.5) end
+				return (kind == "MOUNTAIN" or kind == "APRON") and slope > 0.45 and slope < maxSlope
+			end, nil, nil, nil, true)
+			if x then
+				local sink = 2.5
+				if isVarrash then
+					local span = math.max(r * 0.85, 5)
+					local lowY = y
+					for _, ox in { -span, 0, span } do
+						for _, oz in { -span, 0, span } do
+							lowY = math.min(lowY, (ground(x + ox, z + oz)))
+						end
+					end
+					sink = math.max(2.5, (y - lowY) + 1.5)
+				end
+				put("Outcrop", name, x, y, z, s, r, sink)
+			end
 		end
 		-- Monoliths
 		for _ = 1, eco.MonolithCount do
