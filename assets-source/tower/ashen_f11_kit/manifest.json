@@ -1,0 +1,108 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BuriedWagon": {
+      "Min": [
+        -6.98,
+        -0.387,
+        -10.084
+      ],
+      "Roles": {
+        "FOLIAGE": 768,
+        "METAL": 360,
+        "MOSS": 80,
+        "WOOD": 1198
+      },
+      "Size": [
+        16.375,
+        12.662,
+        18.778
+      ],
+      "Triangles": 2406
+    },
+    "CinderGateArch": {
+      "Min": [
+        -29.16,
+        -0.114,
+        -7.253
+      ],
+      "Roles": {
+        "ACCENT": 397,
+        "ALT": 888,
+        "GLOW": 300,
+        "METAL": 156,
+        "STONE": 967,
+        "TRIM": 2191
+      },
+      "Size": [
+        58.32,
+        51.614,
+        18.924
+      ],
+      "Triangles": 4899
+    },
+    "TollHouseRuins": {
+      "Min": [
+        -18.523,
+        -0.154,
+        -14.0
+      ],
+      "Roles": {
+        "ALT": 875,
+        "GLOW": 80,
+        "METAL": 196,
+        "MOSS": 160,
+        "STONE": 888,
+        "TRIM": 1560
+      },
+      "Size": [
+        39.997,
+        13.554,
+        31.326
+      ],
+      "Triangles": 3759
+    },
+    "VarrashWaystone": {
+      "Min": [
+        -1.9,
+        0.0,
+        -1.9
+      ],
+      "Roles": {
+        "ALT": 44,
+        "GLOW": 80,
+        "METAL": 144,
+        "STONE": 44,
+        "TRIM": 138
+      },
+      "Size": [
+        3.8,
+        10.3,
+        3.8
+      ],
+      "Triangles": 450
+    },
+    "WatchKilnTower": {
+      "Min": [
+        -15.235,
+        0.0,
+        -9.57
+      ],
+      "Roles": {
+        "ALT": 156,
+        "GLOW": 256,
+        "METAL": 450,
+        "MOSS": 80,
+        "STONE": 212,
+        "TRIM": 252
+      },
+      "Size": [
+        26.415,
+        27.947,
+        22.967
+      ],
+      "Triangles": 1406
+    }
+  },
+  "Unit": "studs"
+}

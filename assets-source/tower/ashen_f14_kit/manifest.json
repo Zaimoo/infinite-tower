@@ -1,0 +1,86 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AshmarketStall": {
+      "Min": [
+        -7.4,
+        -0.05,
+        -4.5
+      ],
+      "Roles": {
+        "ALT": 218,
+        "FOLIAGE": 44,
+        "STONE": 44,
+        "TRIM": 204,
+        "WOOD": 324
+      },
+      "Size": [
+        14.8,
+        11.676,
+        9.0
+      ],
+      "Triangles": 834
+    },
+    "KilnTower": {
+      "Min": [
+        -13.8,
+        -0.1,
+        -13.8
+      ],
+      "Roles": {
+        "ALT": 132,
+        "GLOW": 80,
+        "METAL": 498,
+        "STONE": 360,
+        "TRIM": 178
+      },
+      "Size": [
+        27.6,
+        58.85,
+        27.6
+      ],
+      "Triangles": 1248
+    },
+    "PortcullisGate": {
+      "Min": [
+        -34.0,
+        -0.1,
+        -9.0
+      ],
+      "Roles": {
+        "ALT": 236,
+        "GLOW": 160,
+        "METAL": 794,
+        "STONE": 236,
+        "TRIM": 1265
+      },
+      "Size": [
+        68.0,
+        42.3,
+        19.15
+      ],
+      "Triangles": 2691
+    },
+    "SignalLensTower": {
+      "Min": [
+        -12.97,
+        -0.1,
+        -12.97
+      ],
+      "Roles": {
+        "CRYSTAL": 196,
+        "GLOW": 36,
+        "METAL": 340,
+        "STONE": 388,
+        "TRIM": 885
+      },
+      "Size": [
+        25.97,
+        61.15,
+        25.97
+      ],
+      "Triangles": 1845
+    }
+  },
+  "Unit": "studs"
+}

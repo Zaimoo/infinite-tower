@@ -1,0 +1,99 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "FulguriteCluster": {
+      "Min": [
+        -6.93,
+        0.1,
+        -7.211
+      ],
+      "Roles": {
+        "CRYSTAL": 356,
+        "GLOW": 48,
+        "STONE": 180
+      },
+      "Size": [
+        15.046,
+        14.825,
+        14.087
+      ],
+      "Triangles": 584
+    },
+    "GlassArchSpan": {
+      "Min": [
+        -49.908,
+        0.265,
+        -13.299
+      ],
+      "Roles": {
+        "CRYSTAL": 158,
+        "GLOW": 48,
+        "STONE": 764
+      },
+      "Size": [
+        98.271,
+        61.76,
+        25.947
+      ],
+      "Triangles": 970
+    },
+    "GlassCactusCluster": {
+      "Min": [
+        -5.031,
+        0.05,
+        -5.118
+      ],
+      "Roles": {
+        "ALT": 264,
+        "FOLIAGE": 1393,
+        "MOSS": 80,
+        "STONE": 60
+      },
+      "Size": [
+        9.492,
+        8.609,
+        9.825
+      ],
+      "Triangles": 1797
+    },
+    "RavineHorizonSpire": {
+      "Min": [
+        -8.8,
+        -0.1,
+        -8.8
+      ],
+      "Roles": {
+        "ALT": 120,
+        "GLOW": 28,
+        "STONE": 28,
+        "TRIM": 936
+      },
+      "Size": [
+        17.6,
+        60.3,
+        17.6
+      ],
+      "Triangles": 1112
+    },
+    "VarrashLightningRod": {
+      "Min": [
+        -6.027,
+        0.0,
+        -6.356
+      ],
+      "Roles": {
+        "CRYSTAL": 128,
+        "GLOW": 100,
+        "METAL": 470,
+        "STONE": 108
+      },
+      "Size": [
+        11.781,
+        29.7,
+        12.079
+      ],
+      "Triangles": 806
+    }
+  },
+  "Unit": "studs"
+}

@@ -86,6 +86,7 @@ local AUTHORED: {[number]: any} = {
 		-- Ramps and stairs are Solmere flagstone causeways with mossy kerbs (TowerRoomBuilder), and the
 		-- canopy of giant trees replaces the ramp arches (TowerBiomeAssets).
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
 		Crossing = {X = 0, Y = 3, Z = -34, Width = 52, Depth = 96},
 		WestGallery = {X = -116, Y = 4, Z = -30, Width = 84, Depth = 76},
 		EastGallery = {X = 118, Y = 6, Z = -40, Width = 84, Depth = 76},
@@ -107,6 +108,26 @@ local AUTHORED: {[number]: any} = {
 		Key = "verdant:2",
 		Name = "Broken Aqueduct",
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
+		Decks = {
+			Crossing = true,
+			AqueductNorth = true,
+		},
+		Liquid = { LevelOffset = 2.6, FloorDip = 1.8 },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 70, Feather = 28 },
+			{
+				Kind = "POOL_ELLIPSES_SQ",
+				Strength = 0.28,
+				Gain = 0.28,
+				Ellipses = {
+					{ X = -34, Z = 16, RX = 36, RZ = 32 },
+					{ X = 16, Z = -48, RX = 62, RZ = 34 },
+					{ X = -94, Z = -82, RX = 24, RZ = 62 },
+					{ X = 134, Z = 16, RX = 36, RZ = 32 },
+				},
+			},
+		},
 		Basin = {X = 0, Y = 0, Z = 112, Width = 360, Depth = 96},
 		WestGallery = {X = -134, Y = 6, Z = -6, Width = 88, Depth = 76},
 		Crossing = {X = 16, Y = 10, Z = 2, Width = 56, Depth = 64},
@@ -136,6 +157,28 @@ local AUTHORED: {[number]: any} = {
 		Key = "verdant:3",
 		Name = "Rootway Crossing",
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
+		Masonry = "ORGANIC",
+		Decks = {
+			Crossing = true,
+			WestGallery = true,
+			EastGallery = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, WestGallery = true, EastGallery = true },
+			Links = {
+				Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
+				Crossing_Apex = true, WestGallery_Apex = true, EastGallery_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "RIVER_GORGE",
+				BaseZ = -42, Amp = 14, Freq = 95, NoiseScale = 65, NoiseAmp = 10, NoiseSeed = 61, HalfWidth = 44, Gain = 0.34,
+				WestPool = { X = -190, Z = -32, RX = 40, RZ = 40 },
+			},
+		},
 		Basin = {X = 0, Y = 0, Z = 124, Width = 400, Depth = 108},
 		Crossing = {X = 0, Y = 5, Z = 0, Width = 74, Depth = 60},
 		WestGallery = {X = -150, Y = 10, Z = -26, Width = 84, Depth = 76},
@@ -158,6 +201,40 @@ local AUTHORED: {[number]: any} = {
 		Key = "verdant:4",
 		Name = "Vinebound Bastion",
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
+		Masonry = "FORTRESS",
+		Decks = {
+			Crossing = true,
+			WestGallery = true,
+			EastGallery = true,
+			WestBastion = true,
+			EastBastion = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
+			Links = {
+				Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
+				Crossing_WestGallery = true, Crossing_EastGallery = true,
+				WestGallery_WestBastion = true, EastGallery_EastBastion = true,
+				WestBastion_Apex = true, EastBastion_Apex = true,
+				Crossing_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "MOAT_CHANNELS",
+				BaseZ = 78, Amp = 8, Freq = 85, NoiseScale = 55, NoiseAmp = 8, NoiseSeed = 71, HalfWidth = 30, Gain = 0.30,
+				Channels = {
+					{ X = -92, Z = -55, RX = 42, RZ = 85 },
+					{ X = 92, Z = -55, RX = 42, RZ = 85 },
+				},
+			},
+		},
+		Patrols = {
+			WALL_WALK = { "WestGallery", "Crossing", "EastGallery" },
+		},
 		Basin = {X = 0, Y = 0, Z = 160, Width = 440, Depth = 114},
 		Crossing = {X = 0, Y = 5, Z = 48, Width = 74, Depth = 60},
 		WestGallery = {X = -158, Y = 8, Z = 12, Width = 86, Depth = 78},
@@ -185,6 +262,33 @@ local AUTHORED: {[number]: any} = {
 		Key = "verdant:5",
 		Name = "Mossbound Court",
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
+		Masonry = "FORTRESS",
+		SunMedallions = true,
+		Decks = {
+			Crossing = true,
+			WestGallery = true,
+			EastGallery = true,
+			WestBastion = true,
+			EastBastion = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
+			Links = {
+				Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
+				WestGallery_WestBastion = true, EastGallery_EastBastion = true,
+				WestBastion_Apex = true, EastBastion_Apex = true,
+				Crossing_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "CENOTE_LAGOON",
+				Z = -28, RX = 172, RZ = 146, NoiseScale = 60, NoiseAmp = 0.08, NoiseSeed = 83, Base = 0.30, Gain = 0.34,
+			},
+		},
 		Basin = {X = 0, Y = 0, Z = 176, Width = 480, Depth = 108},
 		Crossing = {X = 0, Y = 5, Z = 40, Width = 74, Depth = 60},
 		WestGallery = {X = -176, Y = 6, Z = 12, Width = 86, Depth = 80},
@@ -203,6 +307,241 @@ local AUTHORED: {[number]: any} = {
 			Sanctuary = "Fallen Gate", Basin = "Cenote Rim", Crossing = "Sunbridge",
 			WestGallery = "West Terrace", EastGallery = "East Terrace",
 			WestBastion = "Northwest Tier", EastBastion = "Northeast Tier", Apex = "Mossbound Dais",
+		},
+	},
+	-- Floor 11, Cinder Gate (Ashen Dunes Introduction): wind-rippled black-ash plains swept by the central
+	-- Sleeping Dune (dead-end Dune Crest lookout) with a half-buried Varrash caravan wreck, banded Toll House
+	-- ruins, a cylindrical Watch Kiln tower, waystone-lined tracks, and the towering Cinder Gate in the basalt wall.
+	[11] = {
+		Key = "ashen:1",
+		Name = "Cinder Gate",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "DUNE", X = -8, Z = -64, Width = 148, Length = 132, Height = 19, Yaw = -16, CrestSway = 0.22, SlipSteep = 0.92, RippleAmp = 0.22 },
+			{ Kind = "DUNE", X = -84, Z = 26, Width = 54, Length = 60, Height = 5.5, Yaw = 25, CrestSway = 0.14, SlipSteep = 0.92 },
+			{ Kind = "DUNE", X = 86, Z = 18, Width = 56, Length = 62, Height = 6.0, Yaw = -22, CrestSway = 0.14, SlipSteep = 0.92 },
+		},
+		Basin = {X = 0, Y = 0, Z = 82, Width = 330, Depth = 88},
+		Crossing = {X = 0, Y = 10, Z = -20, Width = 48, Depth = 44},
+		WestGallery = {X = -116, Y = 4, Z = -20, Width = 84, Depth = 76},
+		EastGallery = {X = 118, Y = 7, Z = -44, Width = 80, Depth = 72},
+		Apex = {X = 0, Y = 12, Z = -150, Width = 110, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"}, {"Basin", "Crossing"},
+			{"WestGallery", "Apex"}, {"EastGallery", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Sun-Bleached Steps", Basin = "Ash Flats", Crossing = "Dune Crest",
+			WestGallery = "Toll House", EastGallery = "Watch Kiln", Apex = "Cinder Gate",
+		},
+	},
+	-- Floor 12, Buried Caravan (Ashen Dunes Expanded): a single switchback caravan road climbing from the
+	-- Wagon Circle entry through the colossal Sand-Strider Ribcage, across the buried Caravanserai Roof deck
+	-- with flush skylights, past the collapsed Spice Vault with burst saffron & crimson urns, up to the
+	-- tented Caravan Master's Tomb Pavilion off-centre east.
+	[12] = {
+		Key = "ashen:2",
+		Name = "Buried Caravan",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Masonry = "VARRASH_DECK",
+		Decks = {
+			Crossing = true,
+		},
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "DUNE", X = -85, Z = 42, Width = 80, Length = 90, Height = 9.0, Yaw = 24, CrestSway = 0.16, SlipSteep = 0.95 },
+			{ Kind = "DUNE", X = 148, Z = -82, Width = 110, Length = 100, Height = 13.0, Yaw = -28, CrestSway = 0.18, SlipSteep = 0.95 },
+			{ Kind = "DUNE", X = -125, Z = -148, Width = 115, Length = 95, Height = 14.0, Yaw = 18, CrestSway = 0.18, SlipSteep = 0.95 },
+		},
+		Basin = {X = 0, Y = 0, Z = 110, Width = 360, Depth = 96},
+		EastGallery = {X = 130, Y = 5, Z = 10, Width = 88, Depth = 76},
+		Crossing = {X = -10, Y = 9, Z = -30, Width = 70, Depth = 56},
+		WestGallery = {X = -130, Y = 12, Z = -80, Width = 88, Depth = 76},
+		Apex = {X = 40, Y = 14, Z = -170, Width = 104, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "EastGallery"},
+			{"EastGallery", "Crossing"},
+			{"Crossing", "WestGallery"},
+			{"WestGallery", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Caravan Brink", Basin = "Wagon Circle", EastGallery = "Strider's Ribs",
+			Crossing = "Caravanserai Roof", WestGallery = "Spice Vault", Apex = "Caravan Master's Tomb",
+		},
+	},
+	-- Floor 13, Glasswind Ravine (Ashen Dunes Expanded): a deep north-south obsidian canyon splits
+	-- two wall ledges (West Ledge high on the west rim, East Ledge lower on the east rim), joined
+	-- only across a suspended fused-glass Glass Arch (Crossing); east ledge reaches Apex only via the arch.
+	[13] = {
+		Key = "ashen:3",
+		Name = "Glasswind Ravine",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Masonry = "VARRASH_GLASS",
+		Decks = {
+			Crossing = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true },
+			Links = {
+				WestGallery_Crossing = true,
+				EastGallery_Crossing = true,
+				Crossing_Apex = true,
+			},
+		},
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "RAVINE", X = 0, ZStart = -142, ZEnd = 74, HalfWidth = 48, NoiseAmp = 8 },
+			{ Kind = "DUNE", X = -108, Z = 44, Width = 76, Length = 80, Height = 8.0, Yaw = 16, CrestSway = 0.14, SlipSteep = 0.95 },
+		},
+		Basin = {X = 0, Y = 0, Z = 124, Width = 400, Depth = 104},
+		WestGallery = {X = -140, Y = 10, Z = -34, Width = 80, Depth = 110},
+		EastGallery = {X = 140, Y = 6, Z = -56, Width = 80, Depth = 110},
+		Crossing = {X = 0, Y = 5, Z = -78, Width = 64, Depth = 44},
+		Apex = {X = 0, Y = 18, Z = -185, Width = 110, Depth = 84},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"},
+			{"Basin", "EastGallery"},
+			{"WestGallery", "Crossing"},
+			{"EastGallery", "Crossing"},
+			{"Crossing", "Apex"},
+			{"WestGallery", "Apex"},
+		},
+		Patrols = {
+			WEST_LEDGE = { "WestGallery", "Apex" },
+			ARCH_CROSSING = { "WestGallery", "Crossing", "EastGallery" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Ravine Threshold", Basin = "Ravine Mouth", WestGallery = "West Ledge",
+			EastGallery = "East Ledge", Crossing = "Glass Arch", Apex = "Lightning Scar",
+		},
+	},
+	-- Floor 14, Sunscar Fortress (Ashen Dunes Elite Stronghold): Varrash kiln fortress split down the
+	-- middle by the Sunscar lava fissure. Basin (Ashmarket) enters solely through the Kiln Gate chokepoint
+	-- (Crossing), splits to Glassblowers' Row & Cistern Barracks joined across the chasm by the suspended
+	-- Scar Bridge, and climbs West Kiln & Signal Tower to the glass-floored Sunscar Throne.
+	[14] = {
+		Key = "ashen:4",
+		Name = "Sunscar Fortress",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Masonry = "VARRASH_FORTRESS",
+		Decks = {
+			Crossing = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, Apex = true },
+			Links = {
+				Basin_Crossing = true,
+				Crossing_WestGallery = true,
+				Crossing_EastGallery = true,
+				WestGallery_EastGallery = true,
+				WestBastion_Apex = true,
+				EastBastion_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "LAVA_CHANNEL",
+				X = 0, ZStart = -220, ZEnd = 64, HalfWidth = 22, NoiseAmp = 6, Gain = 0.36,
+				GateMoat = { Z = 54, RX = 78, RZ = 28 },
+			},
+		},
+		Patrols = {
+			SCAR_BRIDGE = { "WestGallery", "EastGallery" },
+		},
+		Basin = {X = 0, Y = 0, Z = 150, Width = 440, Depth = 110},
+		Crossing = {X = 0, Y = 5, Z = 52, Width = 74, Depth = 60},
+		WestGallery = {X = -160, Y = 8, Z = 0, Width = 86, Depth = 78},
+		EastGallery = {X = 160, Y = 8, Z = -10, Width = 86, Depth = 78},
+		WestBastion = {X = -160, Y = 14, Z = -150, Width = 84, Depth = 76},
+		EastBastion = {X = 160, Y = 16, Z = -160, Width = 84, Depth = 76},
+		Apex = {X = 0, Y = 22, Z = -205, Width = 110, Depth = 84},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "Crossing"},
+			{"Crossing", "WestGallery"},
+			{"Crossing", "EastGallery"},
+			{"WestGallery", "EastGallery"},
+			{"WestGallery", "WestBastion"},
+			{"EastGallery", "EastBastion"},
+			{"WestBastion", "Apex"},
+			{"EastBastion", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Kiln Threshold", Basin = "Ashmarket", Crossing = "Kiln Gate",
+			WestGallery = "Glassblowers' Row", EastGallery = "Cistern Barracks",
+			WestBastion = "West Kiln", EastBastion = "Signal Tower", Apex = "Sunscar Throne",
+		},
+	},
+	-- Floor 15, Colossus Dais (Ashen Dunes Boss Arena): Cinderhold's caldera around a cracked-lava lake.
+	-- Players cross the fallen Elder Colossus's body (Fallen Hand -> forearm -> Elder's Chest -> upper arm -> Shoulder)
+	-- or climb its Broken Shield & Fallen Crown, or take the exposed trade-road stairs to the 140x110 Colossus Dais.
+	[15] = {
+		Key = "ashen:5",
+		Name = "Colossus Dais",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Masonry = "VARRASH_DAIS",
+		Decks = {
+			Crossing = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, Apex = true },
+			Links = {
+				WestGallery_Crossing = true,
+				Crossing_WestBastion = true,
+				Crossing_Apex = true,
+				WestBastion_Apex = true,
+				EastBastion_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "CENOTE_LAGOON",
+				Z = -28, RX = 220, RZ = 165, NoiseScale = 58, NoiseAmp = 0.09, NoiseSeed = 91, Base = 0.30, Gain = 0.36,
+			},
+		},
+		Basin = { X = 0, Y = 0, Z = 176, Width = 480, Depth = 108 },
+		WestGallery = { X = -180, Y = 6, Z = 30, Width = 88, Depth = 80 },
+		Crossing = { X = -30, Y = 10, Z = -40, Width = 80, Depth = 64 },
+		EastGallery = { X = 180, Y = 8, Z = 20, Width = 88, Depth = 80 },
+		WestBastion = { X = -150, Y = 16, Z = -150, Width = 86, Depth = 80 },
+		EastBastion = { X = 170, Y = 14, Z = -140, Width = 86, Depth = 80 },
+		Apex = { X = 0, Y = 28, Z = -232, Width = 140, Depth = 110 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "WestGallery", "Crossing" },
+			{ "Basin", "EastGallery" },
+			{ "Crossing", "WestBastion" },
+			{ "EastGallery", "EastBastion" },
+			{ "WestBastion", "Apex" },
+			{ "EastBastion", "Apex" },
+			{ "Crossing", "Apex" },
+		},
+		Stairs = { Crossing_Apex = true },
+		Patrols = {
+			FOREARM = { "WestGallery", "Crossing", "WestBastion" },
+			SHIELD_CLIMB = { "EastGallery", "EastBastion" },
+			CROWN_RING = { "WestBastion", "Apex", "EastBastion" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Caldera Brink", Basin = "Caldera Floor", WestGallery = "Fallen Hand",
+			Crossing = "Elder's Chest", EastGallery = "Broken Shield",
+			WestBastion = "Shoulder", EastBastion = "Fallen Crown", Apex = "Colossus Dais",
 		},
 	},
 }
@@ -346,7 +685,16 @@ local function build(index: number, v: any?): any
 	end
 	return {Width=w, Depth=d, Height=heights[index], Bottom=bottom, ReturnLinks=returns,
 		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe, EliteCount=eliteCount, Index=index,
-		Varied=v ~= nil, Authored=v and v.Key or nil, Name=v and v.Name or nil, PathStyle=v and v.PathStyle or nil}
+		Varied=v ~= nil, Authored=v and v.Key or nil, Name=v and v.Name or nil, PathStyle=v and v.PathStyle or nil,
+		DirectTerrain=v ~= nil and v.DirectTerrain == true,
+		Decks=v and v.Decks or nil,
+		Suspended=v and v.Suspended or nil,
+		Masonry=v and v.Masonry or nil,
+		SunMedallions=v ~= nil and v.SunMedallions == true,
+		Liquid=v and v.Liquid or nil,
+		TerrainFeatures=v and v.TerrainFeatures or nil,
+		Patrols=v and v.Patrols or nil,
+		ReplacePatrols=v ~= nil and v.ReplacePatrols == true}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,
@@ -525,7 +873,8 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 			point(room.Width*0.22, basin.Y, backZ),
 		},
 	}
-	if index >= 3 then
+	local replaceGeneric = room.ReplacePatrols == true
+	if index >= 3 and not replaceGeneric then
 		for _, side in {"West", "East"} do
 			local gallery = p[side.."Gallery"]
 			local route = {point(gallery.X, gallery.Y, gallery.Z)}
@@ -536,7 +885,7 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 			routes["GALLERY_"..string.upper(side)] = route
 		end
 	end
-	if index >= 4 then
+	if index >= 4 and not replaceGeneric then
 		local west, east = assert(pathBetween("WestBastion", "Apex")), assert(pathBetween("EastBastion", "Apex"))
 		local ring = {point(p.WestBastion.X, p.WestBastion.Y, p.WestBastion.Z)}
 		for _, link in west do
@@ -551,23 +900,43 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 		table.insert(ring, point(p.EastBastion.X, p.EastBastion.Y, p.EastBastion.Z))
 		routes.BASTION_RING = ring
 	end
-	if room.Authored == "verdant:4" then
-		local ww = pathBetween("Crossing", "WestGallery")
-		local we = pathBetween("Crossing", "EastGallery")
-		if ww and we then
-			local wallWalk = { point(p.WestGallery.X, p.WestGallery.Y, p.WestGallery.Z) }
-			for i = #ww, 1, -1 do
-				local link = ww[i]
-				table.insert(wallWalk, point(link.BX, link.BY, link.BZ))
-				table.insert(wallWalk, point(link.AX, link.AY, link.AZ))
+	if room.Patrols then
+		for routeName, stops in room.Patrols do
+			if #stops >= 2 and p[stops[1]] then
+				local first = p[stops[1]]
+				local route = { point(first.X, first.Y, first.Z) }
+				local ok = true
+				for i = 1, #stops - 1 do
+					local fromId, toId = stops[i], stops[i + 1]
+					local toPlat = p[toId]
+					if not toPlat then
+						ok = false
+						break
+					end
+					local seg = pathBetween(fromId, toId)
+					if seg then
+						for _, link in seg do
+							table.insert(route, point(link.AX, link.AY, link.AZ))
+							table.insert(route, point(link.BX, link.BY, link.BZ))
+						end
+					else
+						local rev = pathBetween(toId, fromId)
+						if not rev then
+							ok = false
+							break
+						end
+						for j = #rev, 1, -1 do
+							local link = rev[j]
+							table.insert(route, point(link.BX, link.BY, link.BZ))
+							table.insert(route, point(link.AX, link.AY, link.AZ))
+						end
+					end
+					table.insert(route, point(toPlat.X, toPlat.Y, toPlat.Z))
+				end
+				if ok then
+					routes[routeName] = route
+				end
 			end
-			table.insert(wallWalk, point(p.Crossing.X, p.Crossing.Y, p.Crossing.Z))
-			for _, link in we do
-				table.insert(wallWalk, point(link.AX, link.AY, link.AZ))
-				table.insert(wallWalk, point(link.BX, link.BY, link.BZ))
-			end
-			table.insert(wallWalk, point(p.EastGallery.X, p.EastGallery.Y, p.EastGallery.Z))
-			routes.WALL_WALK = wallWalk
 		end
 	end
 	return routes

@@ -276,6 +276,41 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 244, 224), Saturation = 0.16, ExposureCompensation = 0.02, BloomIntensity = 0.38,
 		SunRaysIntensity = 0.22, SunRaysSpread = 0.85,
 	},
+	-- Floor 11, Cinder Gate: searing white-hot desert noon, crisp pale mirage haze over dark volcanic ash & ochre sandstone.
+	[11] = {
+		Ambient = c(96, 84, 72), OutdoorAmbient = c(154, 138, 118), ColorShift_Top = c(255, 244, 214), ColorShift_Bottom = c(98, 72, 54),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(242, 224, 198), AtmosphereDecay = c(178, 134, 96), AtmosphereHaze = 0.90,
+		TintColor = c(255, 248, 232), Saturation = 0.06, ExposureCompensation = 0.08, BloomIntensity = 0.34,
+		SunRaysIntensity = 0.14, SunRaysSpread = 0.65,
+	},
+	-- Floor 12, Buried Caravan: afternoon sandstorm. Diffuse amber light & dense ochre dust keeping camps readable at 120 studs.
+	[12] = {
+		Ambient = c(104, 82, 58), OutdoorAmbient = c(150, 118, 86), ColorShift_Top = c(255, 212, 150), ColorShift_Bottom = c(98, 68, 46),
+		AtmosphereDensity = 0.36, AtmosphereColor = c(228, 186, 134), AtmosphereDecay = c(156, 112, 72), AtmosphereHaze = 1.60,
+		TintColor = c(255, 238, 212), Saturation = 0.04, ExposureCompensation = 0.02, BloomIntensity = 0.38,
+		SunRaysIntensity = 0.22, SunRaysSpread = 0.75,
+	},
+	-- Floor 13, Glasswind Ravine: dusk in the ravine. Low orange light from the west, cool violet shade, amber glow through the Glass Arch.
+	[13] = {
+		Ambient = c(86, 72, 92), OutdoorAmbient = c(138, 108, 106), ColorShift_Top = c(255, 174, 96), ColorShift_Bottom = c(74, 62, 96),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(212, 156, 128), AtmosphereDecay = c(142, 96, 84), AtmosphereHaze = 1.05,
+		TintColor = c(255, 232, 210), Saturation = 0.14, ExposureCompensation = 0.04, BloomIntensity = 0.36,
+		SunRaysIntensity = 0.22, SunRaysSpread = 0.78,
+	},
+	-- Floor 14, Sunscar Fortress: readable desert night; dark blue ambient lit by smoky orange-amber kiln & lava bloom.
+	[14] = {
+		Ambient = c(66, 72, 104), OutdoorAmbient = c(102, 108, 138), ColorShift_Top = c(128, 148, 212), ColorShift_Bottom = c(148, 70, 34),
+		AtmosphereDensity = 0.26, AtmosphereColor = c(122, 114, 146), AtmosphereDecay = c(82, 68, 92), AtmosphereHaze = 1.15,
+		TintColor = c(236, 232, 248), Saturation = 0.10, ExposureCompensation = 0.05, BloomIntensity = 0.44,
+		SunRaysIntensity = 0.08, SunRaysSpread = 0.50,
+	},
+	-- Floor 15, Colossus Dais: volcanic eruption at Cinderhold's vent. Crimson sky, molten underglow from below, thick ash haze & strong vent bloom.
+	[15] = {
+		Ambient = c(86, 56, 58), OutdoorAmbient = c(124, 82, 74), ColorShift_Top = c(242, 114, 84), ColorShift_Bottom = c(255, 112, 38),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(178, 98, 86), AtmosphereDecay = c(122, 56, 46), AtmosphereHaze = 1.45,
+		TintColor = c(255, 230, 220), Saturation = 0.14, ExposureCompensation = 0.04, BloomIntensity = 0.48,
+		SunRaysIntensity = 0.14, SunRaysSpread = 0.65,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

@@ -14,7 +14,10 @@
 -- (2026-11) brings the kit in at 1:1 scale but turned 180 degrees; the script measures and undoes that.
 return function(keepImported: boolean?): string
 	local ServerStorage = game:GetService("ServerStorage")
-	local Kit = require(game.ReplicatedStorage.Shared.Config.TowerBiomeKit)
+	-- Clone before requiring so Studio's Edit-mode module cache reflects freshly Rojo-synced templates.
+	local kitClone = game.ReplicatedStorage.Shared.Config.TowerBiomeKit:Clone()
+	local Kit = require(kitClone) :: any
+	kitClone:Destroy()
 
 	local function templateSpec(name: string)
 		return Kit.Templates[name] or Kit.ExtraTemplates[name]

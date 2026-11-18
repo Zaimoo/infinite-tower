@@ -62,6 +62,9 @@ TowerTerrain.MaterialColors = table.freeze({
 	[M.Mud] = Color3.fromRGB(70, 56, 46),
 	[M.Ground] = Color3.fromRGB(96, 80, 62),
 	[M.Rock] = Color3.fromRGB(104, 106, 100),
+	[M.Sand] = Color3.fromRGB(154, 136, 108),
+	[M.Sandstone] = Color3.fromRGB(182, 148, 108),
+	[M.Basalt] = Color3.fromRGB(58, 52, 54),
 })
 local colorsApplied = false
 local function applyColors()
@@ -96,70 +99,13 @@ local function fbm(x: number, z: number, seed: number, octaves: number): number
 	return total / norm
 end
 
-local DECK_PLATFORMS: { [string]: { [string]: boolean } } = {
-	["verdant:2"] = {
-		Crossing = true,
-		AqueductNorth = true,
-	},
-	["verdant:3"] = {
-		Crossing = true,
-		WestGallery = true,
-		EastGallery = true,
-	},
-	["verdant:4"] = {
-		Crossing = true,
-		WestGallery = true,
-		EastGallery = true,
-		WestBastion = true,
-		EastBastion = true,
-		Apex = true,
-	},
-	["verdant:5"] = {
-		Crossing = true,
-		WestGallery = true,
-		EastGallery = true,
-		WestBastion = true,
-		EastBastion = true,
-		Apex = true,
-	},
-}
-
--- Suspended gorge platforms/links stay open above chasm/water (never raised into earthen Terrain walls).
-local SUSPENDED_PLATFORMS: { [string]: { [string]: boolean } } = {
-	["verdant:3"] = { Crossing = true, WestGallery = true, EastGallery = true },
-	["verdant:4"] = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
-	["verdant:5"] = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
-}
-local SUSPENDED_LINKS: { [string]: { [string]: boolean } } = {
-	["verdant:3"] = {
-		Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
-		Crossing_Apex = true, WestGallery_Apex = true, EastGallery_Apex = true,
-	},
-	["verdant:4"] = {
-		Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
-		Crossing_WestGallery = true, Crossing_EastGallery = true,
-		WestGallery_WestBastion = true, EastGallery_EastBastion = true,
-		WestBastion_Apex = true, EastBastion_Apex = true,
-		Crossing_Apex = true,
-	},
-	["verdant:5"] = {
-		Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
-		WestGallery_WestBastion = true, EastGallery_EastBastion = true,
-		WestBastion_Apex = true, EastBastion_Apex = true,
-		Crossing_Apex = true,
-	},
-}
-
-local function isDirectTerrain(authored: string?): boolean
-	return authored == "verdant:1" or authored == "verdant:2" or authored == "verdant:3" or authored == "verdant:4" or authored == "verdant:5"
-end
-
 -- Walkway shapes in local coordinates: terrace rectangles and ramp/landing strips.
 local function walkways(layout: any): ({ any }, { any })
 	local rects, strips = {}, {}
-	local deckMap = layout.Authored and DECK_PLATFORMS[layout.Authored]
-	local suspPlatMap = layout.Authored and SUSPENDED_PLATFORMS[layout.Authored]
-	local suspLinkMap = layout.Authored and SUSPENDED_LINKS[layout.Authored]
+	local deckMap = layout.Decks
+	local susp = layout.Suspended
+	local suspPlatMap = susp and susp.Platforms
+	local suspLinkMap = susp and susp.Links
 	for id, p in layout.Platforms do
 		if suspPlatMap and suspPlatMap[id] then
 			continue
@@ -198,25 +144,32 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	local seed = floorId * 17.37
 	local rects, strips = walkways(layout)
 	local apex = layout.Platforms.Apex
-	-- Floor 2 fills reed ponds; Floor 3 carves the E-W river gorge; Floor 4 fills the green marsh moat; Floor 5 carves the deep cenote sinkhole.
-	local liquidLevel = if layout.Authored == "verdant:2" then bottom + 2.6 elseif layout.Authored == "verdant:3" or layout.Authored == "verdant:4" or layout.Authored == "verdant:5" then bottom + 3.2 else bottom - 0.3
+	local directTerrain = layout.DirectTerrain == true
+	local liquidCfg = layout.Liquid
+	local features = layout.TerrainFeatures
+	local dryPools = liquidCfg ~= nil and liquidCfg.Dry == true
+	local liquidLevel = if liquidCfg and liquidCfg.LevelOffset then bottom + liquidCfg.LevelOffset else bottom - 0.3
 	local reach = 0
 	for _, r in rects do
 		reach = math.max(reach, (r.Y - bottom + 12) / APRON)
 	end
 
-	-- Ground before walkways: chasm, pools and mountains.
+	-- Ground before walkways: chasm, pools, dunes and mountains.
 	local function natural(x: number, z: number): (number, string)
 		local base = bottom + 1.6 * fbm(x / 70, z / 70, seed, 3) + 0.7 * fbm(x / 23, z / 23, seed + 3, 2)
 		local kind = "CHASM"
 		-- Mountains: a noisy band along every wall, terraced into ledges, rising past the ceiling.
 		local edge = math.min(w / 2 - math.abs(x), d / 2 - math.abs(z))
 		local band = 58 + 26 * fbm(x / 95, z / 95, seed + 7, 2)
-		if isDirectTerrain(layout.Authored) then
+		if directTerrain then
 			band = 34 + 14 * fbm(x / 95, z / 95, seed + 7, 2)
-			if layout.Authored == "verdant:2" and z < apex.Z then
-				local alcove = math.clamp((math.abs(x - apex.X) - 70) / 28, 0, 1)
-				band *= alcove
+			if features and z < apex.Z then
+				for _, feat in features do
+					if feat.Kind == "APEX_ALCOVE" then
+						local alcove = math.clamp((math.abs(x - apex.X) - feat.Width) / feat.Feather, 0, 1)
+						band *= alcove
+					end
+				end
 			end
 		end
 		if edge < band then
@@ -236,48 +189,103 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		if kind == "CHASM" then
 			base = math.max(base, bottom)
 		end
+		-- Authored wind-carved sand dunes in open desert basins (walkway caps still protect terraces/ramps).
+		if kind == "CHASM" and features then
+			for _, feat in features do
+				if feat.Kind == "DUNE" then
+					local dx = x - feat.X
+					local dz = z - feat.Z
+					local yaw = math.rad(feat.Yaw or 0)
+					local c, s = math.cos(-yaw), math.sin(-yaw)
+					local lx = dx * c - dz * s
+					local lz = dx * s + dz * c
+					local u = lx / (feat.Width * 0.5)
+					local v = lz / (feat.Length * 0.5)
+					local d2 = u * u + v * v
+					if d2 < 1 then
+						local env = (1 - d2) ^ 1.45
+						local crestCurve = (feat.CrestSway or 0.18) * math.sin(v * math.pi * 1.15)
+						local off = u - crestCurve
+						-- Windward slope (west/negative) rises gradually; slip-face (east/positive) falls sharper for a crisp S-crest.
+						local flank = if off > 0 then math.abs(off) * (feat.SlipSteep or 1.45) else math.abs(off) * 0.95
+						local ridge = math.max(0, 1 - flank)
+						local peak = feat.Height * env * (0.45 + 0.55 * ridge)
+						local ripple = (feat.RippleAmp or 0.22) * math.sin((lx + lz * 0.35) * 0.45) * env
+						base = math.max(base, bottom + peak + ripple)
+					end
+				elseif feat.Kind == "RAVINE" then
+					if z >= feat.ZStart and z <= feat.ZEnd then
+						local meander = (feat.NoiseAmp or 8) * fbm(z / 55, 0, seed + 51, 2)
+						local dist = math.abs(x - (feat.X or 0) - meander)
+						if dist < feat.HalfWidth then
+							-- Deep wind-scoured obsidian canyon trench along the ravine spine
+							base = bottom
+						end
+					end
+				end
+			end
+		end
 		-- Pools in the open chasm.
-		if kind == "CHASM" then
+		if kind == "CHASM" and not dryPools then
 			local wet = fbm(x / 75 + 40, z / 75 - 40, seed + 21, 2)
-			-- Floor 2 (Broken Aqueduct): a sunken reed pond beneath the snapped span, a stream from the
-			-- wellhead past the cistern, and a mill-race pool under the east waterwheel.
-			if layout.Authored == "verdant:2" then
-				local swPond = ((x + 34) / 36) ^ 2 + ((z - 16) / 32) ^ 2
-				local gapPond = ((x - 16) / 62) ^ 2 + ((z + 48) / 34) ^ 2
-				local streamDist = ((x + 94) / 24) ^ 2 + ((z + 82) / 62) ^ 2
-				local millDist = ((x - 134) / 36) ^ 2 + ((z - 16) / 32) ^ 2
-				local f2Pool = math.min(swPond, gapPond, streamDist, millDist)
-				if f2Pool < 1.0 then
-					wet = math.max(wet, 0.28 + (1.0 - f2Pool) * 0.28)
-				end
-			elseif layout.Authored == "verdant:3" then
-				local riverZ = -42 + 14 * math.sin(x / 95) + 10 * fbm(x / 65, z / 65, seed + 61, 2)
-				local riverBand = math.abs(z - riverZ) / 44
-				local westPool = math.sqrt(((x + 190) / 40) ^ 2 + ((z + 32) / 40) ^ 2)
-				local f3River = math.min(riverBand, westPool)
-				if f3River < 1.0 then
-					wet = math.max(wet, 0.28 + (1.0 - f3River) * 0.34)
-				end
-			elseif layout.Authored == "verdant:4" then
-				-- Moat in front of Gatehouse/Curtain Wall (Z ~ 54..102) plus still marsh channels flanking the inner ward
-				local moatZ = 78 + 8 * math.sin(x / 85) + 8 * fbm(x / 55, z / 55, seed + 71, 2)
-				local moatBand = math.abs(z - moatZ) / 30
-				local marshWest = math.sqrt(((x + 92) / 42) ^ 2 + ((z + 55) / 85) ^ 2)
-				local marshEast = math.sqrt(((x - 92) / 42) ^ 2 + ((z + 55) / 85) ^ 2)
-				local f4Moat = math.min(moatBand, marshWest, marshEast)
-				if f4Moat < 1.0 then
-					wet = math.max(wet, 0.28 + (1.0 - f4Moat) * 0.30)
-				end
-			elseif layout.Authored == "verdant:5" then
-				-- Deep sunken cenote lagoon filling the central amphitheatre basin between Cenote Rim and Mossbound Dais
-				local cenoteDist = math.sqrt((x / 172) ^ 2 + ((z + 28) / 146) ^ 2) + 0.08 * fbm(x / 60, z / 60, seed + 83, 2)
-				if cenoteDist < 1.0 then
-					wet = math.max(wet, 0.30 + (1.0 - cenoteDist) * 0.34)
+			if features then
+				for _, feat in features do
+					if feat.Kind == "POOL_ELLIPSES_SQ" then
+						local best = math.huge
+						for _, e in feat.Ellipses do
+							local dSq = ((x - e.X) / e.RX) ^ 2 + ((z - e.Z) / e.RZ) ^ 2
+							if dSq < best then best = dSq end
+						end
+						if best < 1.0 then
+							wet = math.max(wet, feat.Strength + (1.0 - best) * feat.Gain)
+						end
+					elseif feat.Kind == "RIVER_GORGE" then
+						local riverZ = feat.BaseZ + feat.Amp * math.sin(x / feat.Freq) + feat.NoiseAmp * fbm(x / feat.NoiseScale, z / feat.NoiseScale, seed + feat.NoiseSeed, 2)
+						local riverBand = math.abs(z - riverZ) / feat.HalfWidth
+						local dist = riverBand
+						if feat.WestPool then
+							local wp = feat.WestPool
+							local wDist = math.sqrt(((x - wp.X) / wp.RX) ^ 2 + ((z - wp.Z) / wp.RZ) ^ 2)
+							dist = math.min(dist, wDist)
+						end
+						if dist < 1.0 then
+							wet = math.max(wet, 0.28 + (1.0 - dist) * feat.Gain)
+						end
+					elseif feat.Kind == "MOAT_CHANNELS" then
+						local moatZ = feat.BaseZ + feat.Amp * math.sin(x / feat.Freq) + feat.NoiseAmp * fbm(x / feat.NoiseScale, z / feat.NoiseScale, seed + feat.NoiseSeed, 2)
+						local dist = math.abs(z - moatZ) / feat.HalfWidth
+						for _, ch in feat.Channels or {} do
+							local cDist = math.sqrt(((x - ch.X) / ch.RX) ^ 2 + ((z - ch.Z) / ch.RZ) ^ 2)
+							if cDist < dist then dist = cDist end
+						end
+						if dist < 1.0 then
+							wet = math.max(wet, 0.28 + (1.0 - dist) * feat.Gain)
+						end
+					elseif feat.Kind == "CENOTE_LAGOON" then
+						local cDist = math.sqrt((x / feat.RX) ^ 2 + ((z - feat.Z) / feat.RZ) ^ 2) + feat.NoiseAmp * fbm(x / feat.NoiseScale, z / feat.NoiseScale, seed + feat.NoiseSeed, 2)
+						if cDist < 1.0 then
+							wet = math.max(wet, feat.Base + (1.0 - cDist) * feat.Gain)
+						end
+					elseif feat.Kind == "LAVA_CHANNEL" then
+						local meander = (feat.NoiseAmp or 6) * fbm(z / 48, 0, seed + 63, 2)
+						local dist = math.huge
+						if z >= feat.ZStart and z <= feat.ZEnd then
+							dist = math.abs(x - (feat.X or 0) - meander) / feat.HalfWidth
+						end
+						if feat.GateMoat then
+							local gm = feat.GateMoat
+							local gDist = math.sqrt((x / gm.RX) ^ 2 + ((z - gm.Z) / gm.RZ) ^ 2)
+							if gDist < dist then dist = gDist end
+						end
+						if dist < 1.0 then
+							wet = math.max(wet, 0.28 + (1.0 - dist) * (feat.Gain or 0.36))
+						end
+					end
 				end
 			end
 			if wet > 0.28 then
 				local depth = math.clamp((wet - 0.28) / 0.12, 0, 1)
-				local floorDip = if layout.Authored == "verdant:2" then 1.8 elseif layout.Authored == "verdant:3" or layout.Authored == "verdant:4" or layout.Authored == "verdant:5" then 1.6 else 2.6
+				local floorDip = if liquidCfg and liquidCfg.FloorDip then liquidCfg.FloorDip else 2.6
 				base = if palette.LiquidSolid then math.min(base, liquidLevel + 0.05) else base - (base - (bottom - floorDip)) * depth
 				kind = "POOL"
 			end
@@ -286,7 +294,7 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	end
 
 	-- Walkways: aprons and embankments raise the ground toward them; caps keep it below them.
-	local directGrassLayout = isDirectTerrain(layout.Authored)
+	local directGrassLayout = directTerrain
 	local function shaped(x: number, z: number): (number, string)
 		local y, kind = natural(x, z)
 		local wild, wildKind = y, kind
@@ -419,29 +427,30 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	}
 end
 
-local function materialFor(field: Field, palette: Palette, kind: string, y: number, slopeValue: number, x: number, z: number, seed: number, authored: string?): Enum.Material
-	if isDirectTerrain(authored) then
+local function materialFor(field: Field, palette: Palette, kind: string, y: number, slopeValue: number, x: number, z: number, seed: number, directTerrain: boolean?): Enum.Material
+	if directTerrain then
 		local tuft = math.noise(x / 17, z / 17, seed + 5)
 		local patch = math.noise(x / 29, z / 29, seed + 13)
+		local trailMat = if palette.Ground == M.Grass then M.Ground else palette.Slope
 		if kind == "TRAIL" then
-			return if tuft > 0.28 then M.Grass else M.Ground
+			return if tuft > 0.28 then palette.Ground else trailMat
 		elseif kind == "BRIDGE" or kind == "WALK" then
 			if patch > 0.34 then
-				return M.Ground
+				return trailMat
 			elseif tuft > 0.16 then
-				return M.LeafyGrass
+				return palette.Slope
 			end
-			return M.Grass
+			return palette.Ground
 		elseif kind == "POOL" then
-			return M.Ground
+			return if palette.LiquidSolid then palette.Liquid else M.Ground
 		elseif slopeValue > 1.25 then
 			return palette.Cliff
 		elseif slopeValue > 0.85 then
-			return if tuft > 0 then M.LeafyGrass else M.Grass
+			return if tuft > 0 then palette.Slope else palette.Ground
 		elseif kind == "MOUNTAIN" and y - field.Bottom > 34 then
 			return palette.Peak
 		end
-		return if patch > 0.22 then palette.Lush else M.Grass
+		return if patch > 0.22 then palette.Lush else palette.Ground
 	end
 	if kind == "BRIDGE" or kind == "WALK" or kind == "TRAIL" then
 		return palette.Slope
@@ -504,7 +513,7 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 			local gz = (heights[i][math.min(k + 1, nz)] - heights[i][math.max(k - 1, 1)]) / (2 * RES)
 			local x = x0 + (i - 0.5) * RES
 			local z = z0 + (k - 0.5) * RES
-			mats[i][k] = materialFor(field, palette, kinds[i][k], y, math.sqrt(gx * gx + gz * gz), x, z, seed, layout.Authored)
+			mats[i][k] = materialFor(field, palette, kinds[i][k], y, math.sqrt(gx * gx + gz * gz), x, z, seed, layout.DirectTerrain == true)
 		end
 	end
 
