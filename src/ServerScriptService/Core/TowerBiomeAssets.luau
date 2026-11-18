@@ -3045,34 +3045,37 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 
-		-- Outer deck-rim bastion ramparts crowning West/East Galleries and Bastions
-		local deckParapets = {
-			{ -198, layout.Platforms.WestGallery.Y, 0, 66 },
-			{ 198, layout.Platforms.EastGallery.Y, -10, 66 },
-			{ -197, layout.Platforms.WestBastion.Y, -150, 64 },
-			{ 197, layout.Platforms.EastBastion.Y, -160, 64 },
+		-- Outer plateau & mid-flank CurtainWallRuins replacing boxy block walls along the West/East perimeter
+		local flankRuins = {
+			{ -194, -78, math.pi * 0.5, 9.0, 0.92 },
+			{ 194, -84, -math.pi * 0.5, 9.0, 0.92 },
+			{ -198, -150, math.pi * 0.5, 13.5, 1.32 },
+			{ 198, -160, -math.pi * 0.5, 15.5, 1.32 },
 		}
-		for _, dp in deckParapets do
-			local px, py, pz, plen = dp[1], dp[2], dp[3], dp[4]
-			group("VarrashDeckParapet", function()
+		for _, cw in flankRuins do
+			local wx, wz, wyaw, minY, mult = cw[1], cw[2], cw[3], cw[4], cw[5]
+			local ws = mult * scale
+			local cwW = 32.1 * ws
+			local cwD = 7.673 * ws
+			local wy = math.max(f14GroundAt(wx, wz) - 0.6, minY)
+			table.insert(reservedSpots, { wx, wz, 14 })
+			group("VarrashCurtainWall", function()
 				currentParent:SetAttribute("OnTerrain", true)
-				block("DeckParapetWall", V(5.5, 16, plen), V(px, py + 7.5, pz), fSand, Enum.Material.Sandstone)
-				block("DeckParapetCoping", V(6.4, 2.0, plen + 1.0), V(px, py + 16.0, pz), fTerra, Enum.Material.Slate)
-				for _, mz in { -plen * 0.3, plen * 0.3 } do
-					block("DeckParapetMerlon", V(5.8, 3.2, 8.5), V(px, py + 18.6, pz + mz), fSand, Enum.Material.Sandstone)
+				local plinthH = (wy - bottom) + 2.2
+				local plinth = block(
+					"CurtainWallPlinth",
+					V(cwW * 0.96, plinthH, cwD * 1.08),
+					V(wx, wy - plinthH * 0.5 + 0.8, wz),
+					fBasalt,
+					Enum.Material.Basalt
+				)
+				plinth.CFrame = CFrame.new(origin + V(wx, wy - plinthH * 0.5 + 0.8, wz)) * CFrame.Angles(0, wyaw, 0)
+				if KitProps.Has("CurtainWallRuins") then
+					kitAt("CurtainWallRuins", CFrame.new(wx, wy, wz) * CFrame.Angles(0, wyaw, 0), ws, f14WallOverride)
+				else
+					local wallBlk = block("CurtainWallCore", V(cwW * 0.9, 26, cwD * 0.8), V(wx, wy + 13, wz), fSand, Enum.Material.Sandstone)
+					wallBlk.CFrame = CFrame.new(origin + V(wx, wy + 13, wz)) * CFrame.Angles(0, wyaw, 0)
 				end
-			end)
-		end
-
-		-- Connecting curtain walls spanning between each pair of mid-flank watchtowers
-		for _, fw in { { -194, -78, 9.5 }, { 194, -84, 9.5 } } do
-			local fx, fz, fy = fw[1], fw[2], fw[3]
-			group("VarrashFlankWall", function()
-				currentParent:SetAttribute("OnTerrain", true)
-				local plinthH = (fy - bottom) + 2.0
-				block("FlankWallPlinth", V(9.0, plinthH, 34), V(fx, fy - plinthH * 0.5 + 0.8, fz), fBasalt, Enum.Material.Basalt)
-				block("FlankWallBody", V(6.8, 22, 32), V(fx, fy + 11.5, fz), fSand, Enum.Material.Sandstone)
-				block("FlankWallCoping", V(7.8, 2.2, 33), V(fx, fy + 23.2, fz), fTerra, Enum.Material.Slate)
 			end)
 		end
 

@@ -435,21 +435,15 @@ local AUTHORED: {[number]: any} = {
 		Masonry = "VARRASH_FORTRESS",
 		Decks = {
 			Crossing = true,
-			WestGallery = true,
-			EastGallery = true,
-			WestBastion = true,
-			EastBastion = true,
 			Apex = true,
 		},
 		Suspended = {
-			Platforms = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
+			Platforms = { Crossing = true, Apex = true },
 			Links = {
 				Basin_Crossing = true,
 				Crossing_WestGallery = true,
 				Crossing_EastGallery = true,
 				WestGallery_EastGallery = true,
-				WestGallery_WestBastion = true,
-				EastGallery_EastBastion = true,
 				WestBastion_Apex = true,
 				EastBastion_Apex = true,
 			},

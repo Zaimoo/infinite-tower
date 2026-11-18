@@ -657,76 +657,65 @@ function Builder.Build(id: number, generation: number): any
 						decor(model, "GlassDeckInlay", Vector3.new(terrace.Width * 0.68, 0.10, 1.1), topCenter + Vector3.new(0, 0.16, gIdx * 10), amberGlass, Enum.Material.Glass, 0.2)
 					end
 				elseif layout.Masonry == "VARRASH_FORTRESS" then
-					-- Sunscar Fortress (Floor 14): sandstone-and-basalt bastions; Crossing & Apex straddle the central
-					-- Sunscar lava fissure on flanking piers, with Apex's central glass floor revealing the vein tap below.
+					-- Sunscar Fortress (Floor 14): Crossing & Apex bridge the central Sunscar lava fissure atop flanking
+					-- basalt cliff piers, with natural rock bolsters & weathered sandstone outcrops softening their rims.
 					local deepBottom = origin.Y + layout.Bottom - 7
 					local wallH = (origin.Y + terrace.Y) - deepBottom
-					local straddlesScar = (name == "Crossing" or name == "Apex")
-					local fortTerra = Color3.fromRGB(168, 92, 62)
 					local fortBasalt = Color3.fromRGB(48, 42, 46)
-					if straddlesScar then
-						local deckThick = 3.2
-						if name == "Apex" then
-							-- Leave a central 22x22 viewport cut out of the sandstone floor, bridged by solid dark glass over the Ember Vein tap.
-							slab.Transparency = 1
-							slab.Size = Vector3.new(terrace.Width, deckThick, terrace.Depth)
-							slab.Position = Vector3.new(topCenter.X, topCenter.Y - deckThick / 2, topCenter.Z)
-							local win = 22
-							local sideW = (terrace.Width - win) * 0.5
-							local wingZ = (terrace.Depth - win) * 0.5
-							for _, sx in { -1, 1 } do
-								decor(model, "VarrashThroneDeckSide", Vector3.new(sideW, deckThick, terrace.Depth), topCenter + Vector3.new(sx * (win * 0.5 + sideW * 0.5), -deckThick / 2, 0), varrashSandstone, Enum.Material.Sandstone)
-							end
-							for _, sz in { -1, 1 } do
-								decor(model, "VarrashThroneDeckSpan", Vector3.new(win, deckThick, wingZ), topCenter + Vector3.new(0, -deckThick / 2, sz * (win * 0.5 + wingZ * 0.5)), varrashSandstone, Enum.Material.Sandstone)
-							end
-							local glassWell = decor(model, "SunscarThroneGlassFloor", Vector3.new(win, 0.45, win), topCenter + Vector3.new(0, -0.25, 0), Color3.fromRGB(218, 128, 42), Enum.Material.Glass, 0.35)
-							glassWell.CanCollide = false
-							-- Vein tap core glowing beneath the glass floor well inside the basalt vault arch
-							decor(model, "EmberVeinTapCore", Vector3.new(10, 1.4, 10), topCenter + Vector3.new(0, -3.2, 0), Color3.fromRGB(255, 118, 32), Enum.Material.Neon)
-							decor(model, "EmberVeinTapFrame", Vector3.new(win + 2.0, 0.3, 1.4), topCenter + Vector3.new(0, -0.02, win / 2 + 0.5), fortBasalt, Enum.Material.Basalt)
-							decor(model, "EmberVeinTapFrame", Vector3.new(win + 2.0, 0.3, 1.4), topCenter + Vector3.new(0, -0.02, -(win / 2 + 0.5)), fortBasalt, Enum.Material.Basalt)
-						else
-							slab.Size = Vector3.new(terrace.Width, deckThick, terrace.Depth)
-							slab.Position = Vector3.new(topCenter.X, topCenter.Y - deckThick / 2, topCenter.Z)
-							slab.Color = varrashSandstone
-							slab.Material = Enum.Material.Sandstone
-						end
-						-- Flanking basalt vault piers outside the central X = [-22..+22] Sunscar fissure
-						local pierXOff = if name == "Apex" then 40 else 27
-						local pierW = if name == "Apex" then 24 else 18
+					local sandStoneDark = Color3.fromRGB(154, 128, 96)
+					local deckThick = 3.2
+					if name == "Apex" then
+						-- Leave a central 22x22 viewport cut out of the sandstone floor, bridged by solid dark glass over the Ember Vein tap.
+						slab.Transparency = 1
+						slab.Size = Vector3.new(terrace.Width, deckThick, terrace.Depth)
+						slab.Position = Vector3.new(topCenter.X, topCenter.Y - deckThick / 2, topCenter.Z)
+						local win = 22
+						local sideW = (terrace.Width - win) * 0.5
+						local wingZ = (terrace.Depth - win) * 0.5
 						for _, sx in { -1, 1 } do
-							local cp = Vector3.new(topCenter.X + sx * pierXOff, topCenter.Y - wallH / 2 - 0.16, topCenter.Z)
-							local pier = part(model, "SunscarVaultPier", Vector3.new(pierW, wallH - 0.16, terrace.Depth - 4), cp, fortBasalt, Enum.Material.Basalt, true)
-							pier.CanQuery = true
-							pier.CanTouch = false
+							decor(model, "VarrashThroneDeckSide", Vector3.new(sideW, deckThick, terrace.Depth), topCenter + Vector3.new(sx * (win * 0.5 + sideW * 0.5), -deckThick / 2, 0), varrashSandstone, Enum.Material.Sandstone)
 						end
+						for _, sz in { -1, 1 } do
+							decor(model, "VarrashThroneDeckSpan", Vector3.new(win, deckThick, wingZ), topCenter + Vector3.new(0, -deckThick / 2, sz * (win * 0.5 + wingZ * 0.5)), varrashSandstone, Enum.Material.Sandstone)
+						end
+						local glassWell = decor(model, "SunscarThroneGlassFloor", Vector3.new(win, 0.45, win), topCenter + Vector3.new(0, -0.25, 0), Color3.fromRGB(218, 128, 42), Enum.Material.Glass, 0.35)
+						glassWell.CanCollide = false
+						-- Vein tap core glowing beneath the glass floor well inside the basalt vault arch
+						decor(model, "EmberVeinTapCore", Vector3.new(10, 1.4, 10), topCenter + Vector3.new(0, -3.2, 0), Color3.fromRGB(255, 118, 32), Enum.Material.Neon)
+						decor(model, "EmberVeinTapFrame", Vector3.new(win + 2.0, 0.3, 1.4), topCenter + Vector3.new(0, -0.02, win / 2 + 0.5), fortBasalt, Enum.Material.Basalt)
+						decor(model, "EmberVeinTapFrame", Vector3.new(win + 2.0, 0.3, 1.4), topCenter + Vector3.new(0, -0.02, -(win / 2 + 0.5)), fortBasalt, Enum.Material.Basalt)
 					else
-						slab.Size = Vector3.new(terrace.Width, wallH, terrace.Depth)
-						slab.Position = Vector3.new(topCenter.X, topCenter.Y - wallH / 2, topCenter.Z)
+						slab.Size = Vector3.new(terrace.Width, deckThick, terrace.Depth)
+						slab.Position = Vector3.new(topCenter.X, topCenter.Y - deckThick / 2, topCenter.Z)
 						slab.Color = varrashSandstone
 						slab.Material = Enum.Material.Sandstone
-						for _, sx in { -1, 1 } do
-							for _, sz in { -1, 1 } do
-								local cp = Vector3.new(topCenter.X + sx * (terrace.Width / 2 - 2.3), topCenter.Y - wallH / 2 - 0.16, topCenter.Z + sz * (terrace.Depth / 2 - 2.3))
-								local cornerPier = part(model, "BastionCornerPier", Vector3.new(6.4, wallH - 0.16, 6.4), cp, fortBasalt, Enum.Material.Basalt, true)
-								cornerPier.CanQuery = true
-								cornerPier.CanTouch = false
-							end
+					end
+					-- Flanking basalt vault piers outside the central X = [-22..+22] Sunscar fissure
+					local pierXOff = if name == "Apex" then 40 else 27
+					local pierW = if name == "Apex" then 24 else 18
+					for _, sx in { -1, 1 } do
+						local cp = Vector3.new(topCenter.X + sx * pierXOff, topCenter.Y - wallH / 2 - 0.16, topCenter.Z)
+						local pier = part(model, "SunscarVaultPier", Vector3.new(pierW, wallH - 0.16, terrace.Depth - 4), cp, fortBasalt, Enum.Material.Basalt, true)
+						pier.CanQuery = true
+						pier.CanTouch = false
+					end
+					-- Organic battered basalt rock outcrops hugging corners so bridge decks read as cliff-carved masonry
+					for _, sx in { -1, 1 } do
+						for _, sz in { -1, 1 } do
+							local outPos = Vector3.new(topCenter.X + sx * (terrace.Width * 0.48), topCenter.Y - wallH * 0.48 - 1.2, topCenter.Z + sz * (terrace.Depth * 0.44))
+							local boulder = decor(model, "BastionCliffOutcrop", Vector3.new(12, wallH * 0.92, 13), outPos, fortBasalt, Enum.Material.Basalt)
+							boulder.CFrame = CFrame.new(outPos) * CFrame.Angles(math.rad(sx * 4), math.rad((sx * 17 + sz * 23)), math.rad(sz * 4))
+							local capPos = topCenter + Vector3.new(sx * (terrace.Width * 0.46), -0.45, sz * (terrace.Depth * 0.45))
+							local capStone = decor(model, "BastionRimStone", Vector3.new(11, 2.2, 11), capPos, sandStoneDark, Enum.Material.Sandstone)
+							capStone.CFrame = CFrame.new(capPos) * CFrame.Angles(0, math.rad(sx * 22 + sz * 15), 0)
 						end
 					end
-					for _, sz in { -1, 1 } do
-						decor(model, "BastionTerracottaTrim", Vector3.new(terrace.Width + 1.4, 1.5, 1.3), topCenter + Vector3.new(0, -1.8, sz * (terrace.Depth / 2 + 0.05)), fortTerra, Enum.Material.Slate)
-					end
-					for _, sx in { -1, 1 } do
-						decor(model, "BastionTerracottaTrim", Vector3.new(1.3, 1.5, math.max(1, terrace.Depth - 1.3)), topCenter + Vector3.new(sx * (terrace.Width / 2 + 0.05), -1.8, 0), fortTerra, Enum.Material.Slate)
-					end
-					for k = 1, 5 do
-						local ang = k * 2.1 + terrace.X * 0.02
+					for k = 1, 7 do
+						local ang = k * 1.9 + terrace.X * 0.02
 						local rx = math.cos(ang) * (terrace.Width * 0.34)
 						local rz = math.sin(ang) * (terrace.Depth * 0.32)
-						local pPos = topCenter + Vector3.new(rx, 0.16 + k * 0.035, rz)
-						local paver = decor(model, "VarrashFortressFlagstone", Vector3.new(8 + (k % 3) * 2.2, 0.10, 6.5 + ((k + 1) % 3) * 1.5), pPos, if k % 2 == 0 then varrashSandstone else fortBasalt, if k % 2 == 0 then Enum.Material.Sandstone else Enum.Material.Slate)
+						local pPos = topCenter + Vector3.new(rx, 0.16 + k * 0.03, rz)
+						local paver = decor(model, "VarrashFortressFlagstone", Vector3.new(8.5 + (k % 3) * 2.2, 0.10, 6.5 + ((k + 1) % 3) * 1.6), pPos, if k % 2 == 0 then varrashSandstone else sandStoneDark, Enum.Material.Sandstone)
 						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
 					end
 				else
@@ -988,12 +977,17 @@ function Builder.Build(id: number, generation: number): any
 				if link.From == "Basin" then
 					local deepBottom = origin.Y + layout.Bottom - 7
 					local abutH = math.max(6, a.Y - deepBottom - 0.15)
-					local landA = origin + Vector3.new(link.LandingA.AX, link.LandingA.AY, link.LandingA.AZ)
-					local abutAt = a:Lerp(landA, 0.22)
-					local abut = part(model, "BridgeBankAbutment", Vector3.new(link.Width + 1.4, abutH, 18), Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), fortBasalt, Enum.Material.Basalt)
-					abut.CFrame = CFrame.lookAt(Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), Vector3.new(b.X, a.Y - abutH / 2 - 0.25, b.Z))
+					local abutAt = a:Lerp(b, 0.45)
+					local abut = part(model, "BridgeBankAbutment", Vector3.new(link.Width - 1.5, abutH, 11), Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.35, abutAt.Z), fortBasalt, Enum.Material.Basalt)
+					abut.CFrame = CFrame.lookAt(Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.35, abutAt.Z), Vector3.new(b.X, a.Y - abutH / 2 - 0.35, b.Z))
 					abut.CanQuery = true
 					abut.CanTouch = false
+					-- Angled basalt outcrop boulders blending the south abutment shoulders into Ashmarket sand
+					for _, side in { -1, 1 } do
+						local shoulderPos = a:Lerp(b, 0.22) + right * (side * (link.Width * 0.54)) + Vector3.new(0, -1.6, 0)
+						local boulder = decor(model, "BridgeMouthBoulder", Vector3.new(6.2, 4.4, 8.5), shoulderPos, fortBasalt, Enum.Material.Basalt)
+						boulder.CFrame = CFrame.lookAt(shoulderPos, shoulderPos + flat) * CFrame.Angles(math.rad(-8), math.rad(side * 22), math.rad(side * -14))
+					end
 				end
 				if link.Id == "WestGallery_EastGallery" then
 					-- Scar Bridge piers: rise from chasm bedrock outside the X = [-22..+22] Sunscar lava channel (around X = +-46 & +-86).
