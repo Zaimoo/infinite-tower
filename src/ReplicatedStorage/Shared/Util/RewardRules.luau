@@ -97,13 +97,18 @@ function RewardRules.EnsureState(profile: any): State
 	return raw
 end
 
+-- Resets playtime progress (on UTC day rollover or when leaving/rejoining a server).
+function RewardRules.ResetPlaytime(state: State, now: number?)
+	state.Playtime.Day = if now then RewardRules.DayOf(now) else 0
+	state.Playtime.Seconds = 0
+	for i = 1, #Config.Playtime do state.Playtime.Claimed[i] = false end
+end
+
 -- Starts a new playtime day when the UTC day has changed. Returns true when it reset.
 function RewardRules.Touch(state: State, now: number): boolean
 	local day = RewardRules.DayOf(now)
 	if state.Playtime.Day == day then return false end
-	state.Playtime.Day = day
-	state.Playtime.Seconds = 0
-	for i = 1, #Config.Playtime do state.Playtime.Claimed[i] = false end
+	RewardRules.ResetPlaytime(state, now)
 	return true
 end
 
@@ -143,15 +148,22 @@ function RewardRules.ClaimWeekly(state: State, now: number): (Reward?, string?)
 	return Config.Weekly, nil
 end
 
-function RewardRules.ClaimPlaytime(state: State, now: number, index: any): (Reward?, string?)
+function RewardRules.ClaimPlaytime(state: State, now: number, index: any): (Reward?, string?, number?)
 	RewardRules.Touch(state, now)
-	if type(index) ~= "number" or index ~= index or index % 1 ~= 0 then return nil, "Unknown reward." end
+	if type(index) ~= "number" or index ~= index or index % 1 ~= 0 then return nil, "Unknown reward.", nil end
 	local tier = Config.Playtime[index]
-	if not tier then return nil, "Unknown reward." end
-	if state.Playtime.Claimed[index] then return nil, "Already claimed today." end
-	if state.Playtime.Seconds < tier.Minutes * 60 then return nil, "Keep playing to unlock this reward." end
-	state.Playtime.Claimed[index] = true
-	return tier.Reward, nil
+	if not tier then return nil, "Unknown reward.", nil end
+	if state.Playtime.Claimed[index] then return nil, "Already claimed today.", nil end
+	if state.Playtime.Seconds < tier.Minutes * 60 then return nil, "Keep playing to unlock this reward.", nil end
+	local claimed: { Reward } = {}
+	for i, entry in Config.Playtime do
+		if not state.Playtime.Claimed[i] and state.Playtime.Seconds >= entry.Minutes * 60 then
+			state.Playtime.Claimed[i] = true
+			table.insert(claimed, entry.Reward)
+		end
+	end
+	local reward = if #claimed == 1 then claimed[1] else RewardRules.Merge(claimed)
+	return reward, nil, #claimed
 end
 
 -- Uppercase letters and digits only; nil when the input cannot be a code.

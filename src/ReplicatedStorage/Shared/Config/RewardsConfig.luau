@@ -27,8 +27,8 @@ RewardsConfig.Daily = table.freeze({
 -- Weekly chest. One claim per UTC week (Monday to Sunday).
 RewardsConfig.Weekly = table.freeze({ Gold = 30000, Gems = 500, PromotionStones = 5 } :: Reward)
 
--- Playtime rewards. Time played today (UTC) unlocks each tier once; everything resets at 00:00 UTC.
--- At most 7 tiers, and the last one is at most 60 minutes (checked below).
+-- Playtime rewards. Time played in the current session unlocks each tier once; resets on leave/rejoin
+-- and at 00:00 UTC. At most 7 tiers, and the last one is at most 60 minutes (checked below).
 RewardsConfig.Playtime = table.freeze({
 	table.freeze({ Minutes = 5, Reward = table.freeze({ Gold = 1000 }) }),
 	table.freeze({ Minutes = 10, Reward = table.freeze({ Gems = 25 }) }),

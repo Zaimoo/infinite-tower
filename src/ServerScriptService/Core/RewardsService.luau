@@ -24,7 +24,7 @@ export type Dependencies = {
 	GetProfile: (Player) -> any,
 	SendToast: (Player, string, string?) -> (),
 	SyncProfile: (Player) -> (), -- progression-only sync: balances changed, the squad did not
-	OnClaim: ((Player, string) -> ())?, -- after a paid claim, with its action (Battle Pass XP)
+	OnClaim: ((Player, string, number?) -> ())?, -- after a paid claim, with its action and tier count (Battle Pass XP)
 }
 
 local RewardsService = {}
@@ -170,7 +170,7 @@ local function handle(player: Player, action: any, arg: any): any
 	RewardRules.Touch(state, now)
 	if action == "GET" then return reply(player, profile, true, nil) end
 
-	local reward: RewardRules.Reward?, problem: string?, title: string
+	local reward: RewardRules.Reward?, problem: string?, title: string, count: number?
 	if action == "CLAIM_DAILY" then
 		reward, problem = RewardRules.ClaimDaily(state, now)
 		title = "Daily reward"
@@ -178,7 +178,7 @@ local function handle(player: Player, action: any, arg: any): any
 		reward, problem = RewardRules.ClaimWeekly(state, now)
 		title = "Weekly chest"
 	elseif action == "CLAIM_PLAYTIME" then
-		reward, problem = RewardRules.ClaimPlaytime(state, now, arg)
+		reward, problem, count = RewardRules.ClaimPlaytime(state, now, arg)
 		title = "Playtime reward"
 	elseif action == "REDEEM_CODE" then
 		local clock = os.clock()
@@ -198,7 +198,7 @@ local function handle(player: Player, action: any, arg: any): any
 	RewardRules.Grant(profile, reward)
 	local text = RewardRules.Describe(reward)
 	d.SendToast(player, title .. "|" .. text, "SUCCESS")
-	if d.OnClaim then d.OnClaim(player, action) end
+	if d.OnClaim then d.OnClaim(player, action, count) end
 	d.SyncProfile(player)
 	return reply(player, profile, true, text)
 end
@@ -210,6 +210,12 @@ end
 -- Old saves gain profile.Rewards here too (ProfileMigrations v8 also adds it).
 function RewardsService.EnsureState(profile: any)
 	RewardRules.EnsureState(profile)
+end
+
+-- Resets playtime progress and claimed tiers when a player joins or leaves the server.
+function RewardsService.ResetPlaytime(profile: any)
+	local state = RewardRules.EnsureState(profile)
+	RewardRules.ResetPlaytime(state, os.time())
 end
 
 function RewardsService.Init(dependencies: Dependencies)
