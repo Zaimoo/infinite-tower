@@ -3978,12 +3978,27 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local cGlacierDeep = rgb(64, 108, 148)
 		local cRimeGlow = rgb(142, 224, 255)
 
+		local function minFootY(x: number, z: number, reach: number, fallbackY: number): number
+			if not field then return fallbackY end
+			local h = field.Height(x, z)
+			if reach > 0 then
+				h = math.min(
+					h,
+					field.Height(x + reach, z),
+					field.Height(x - reach, z),
+					field.Height(x, z + reach),
+					field.Height(x, z - reach)
+				)
+			end
+			return h + 0.9
+		end
+
 		-- 1. CrevasseCartPillar: Frozen Moment supply coach pitched mid-fall off Crossing's SW lip into the West Crevasse
-		local cartPos = V(-48, bottom, 26)
+		local cartPos = V(-48, math.min(bottom, minFootY(-48, 26, 3.5, bottom - 1.0)), 26)
 		group("CrevasseCartPillar", function()
 			currentParent:SetAttribute("OnTerrain", true)
 			if KitProps.Has("CrevasseCartPillar") then
-				local mdl = kitAt("CrevasseCartPillar", CFrame.new(cartPos) * CFrame.Angles(0, math.rad(34), 0), 1.22 * scale, {
+				local mdl = kitAt("CrevasseCartPillar", CFrame.new(cartPos) * CFrame.Angles(0, math.rad(34), 0), 1.28 * scale, {
 					CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.1 },
 					WOOD = { Color = cTimber, Material = Enum.Material.Wood },
 					METAL = { Color = cIron, Material = Enum.Material.Metal },
@@ -4012,19 +4027,26 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end)
 
-		-- 2. Towering forward-leaning Glacier Serac Clusters (grounded on actual terrain height along East Moraine, crevasses, and ascending toward Icefall Gate)
+		-- 2. Towering forward-leaning Glacier Serac Clusters (multi-point grounded so zero spikes float on slopes; normal to colossal sizes)
 		local seracSpots = {
-			{ x = 186, y = 4, z = -34, yaw = math.rad(-22), s = 1.32 * scale, light = true },
-			{ x = 184, y = 4, z = -104, yaw = math.rad(-30), s = 1.24 * scale, light = false },
-			{ x = 104, y = 12, z = -158, yaw = math.rad(-38), s = 1.38 * scale, light = false },
-			{ x = 76, y = bottom, z = -126, yaw = math.rad(-28), s = 1.22 * scale, light = false },
-			{ x = -112, y = 12, z = -168, yaw = math.rad(38), s = 1.34 * scale, light = false },
-			{ x = -92, y = bottom, z = 32, yaw = math.rad(24), s = 1.15 * scale, light = false },
-			{ x = 96, y = bottom, z = 22, yaw = math.rad(-24), s = 1.18 * scale, light = false },
-			{ x = 58, y = 0, z = 44, yaw = math.rad(-32), s = 1.02 * scale, light = false },
+			-- Colossal (56..66 studs tall) framing East Moraine & the Icefall Gate valley
+			{ x = 186, y = 4, z = -34, yaw = math.rad(-22), s = 1.92 * scale, light = true },
+			{ x = 182, y = 4, z = -104, yaw = math.rad(-30), s = 2.15 * scale, light = false },
+			{ x = 104, y = 0, z = -160, yaw = math.rad(-38), s = 2.02 * scale, light = false },
+			{ x = -124, y = 0, z = -170, yaw = math.rad(42), s = 2.08 * scale, light = false },
+			-- Medium / tall (35..46 studs) framing crevasse walls & upper spine
+			{ x = 96, y = bottom, z = 22, yaw = math.rad(-24), s = 1.24 * scale, light = false },
+			{ x = -92, y = bottom, z = 32, yaw = math.rad(24), s = 1.18 * scale, light = false },
+			{ x = 76, y = bottom, z = -126, yaw = math.rad(-28), s = 1.32 * scale, light = false },
+			{ x = -104, y = 0, z = -152, yaw = math.rad(36), s = 1.26 * scale, light = false },
+			-- Normal (20..28 studs) jagged ice teeth along moraine rims & foreground chasm lips
+			{ x = 62, y = 0, z = 44, yaw = math.rad(-32), s = 0.74 * scale, light = false },
+			{ x = -62, y = 0, z = 48, yaw = math.rad(26), s = 0.68 * scale, light = false },
+			{ x = -182, y = 8, z = -14, yaw = math.rad(20), s = 0.86 * scale, light = false },
+			{ x = 138, y = 4, z = -114, yaw = math.rad(-40), s = 0.78 * scale, light = false },
 		}
 		for _, sc in seracSpots do
-			local sy = if field then math.max(sc.y, field.Height(sc.x, sc.z) + 1.5) else sc.y
+			local sy = minFootY(sc.x, sc.z, 5.5 * sc.s, sc.y)
 			local leanSign = if sc.x >= 0 then 1 else -1
 			group("SeracCluster", function()
 				currentParent:SetAttribute("OnTerrain", true)
@@ -4050,19 +4072,35 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 		-- 2b. Wind-blasted leafless FrozenBareTree snags framing Moraine Foot, outer moraines, and north approaches
 		local bareTreeSpots = {
-			{ x = -142, z = 178, yaw = 0.4, s = 1.08 * scale },
-			{ x = -156, z = 148, yaw = 1.7, s = 0.92 * scale },
-			{ x = -158, z = 96, yaw = 2.6, s = 0.96 * scale },
-			{ x = 142, z = 178, yaw = -0.7, s = 1.06 * scale },
-			{ x = 156, z = 148, yaw = -2.1, s = 0.90 * scale },
-			{ x = 158, z = 96, yaw = 1.1, s = 0.95 * scale },
-			{ x = -188, z = -76, yaw = 0.9, s = 0.92 * scale },
-			{ x = 188, z = -118, yaw = -1.2, s = 0.90 * scale },
-			{ x = -86, z = -194, yaw = 0.5, s = 1.08 * scale },
-			{ x = 86, z = -194, yaw = -0.8, s = 1.06 * scale },
+			-- Moraine Foot outer west snowbanks
+			{ x = -142, z = 178, yaw = 0.4, s = 1.16 * scale },
+			{ x = -168, z = 162, yaw = 1.3, s = 1.34 * scale },
+			{ x = -156, z = 142, yaw = 2.2, s = 0.92 * scale },
+			{ x = -174, z = 108, yaw = -0.6, s = 1.20 * scale },
+			{ x = -154, z = 88, yaw = 2.8, s = 0.80 * scale },
+			-- Moraine Foot outer east snowbanks
+			{ x = 142, z = 178, yaw = -0.7, s = 1.14 * scale },
+			{ x = 168, z = 164, yaw = -1.5, s = 1.32 * scale },
+			{ x = 156, z = 142, yaw = -2.4, s = 0.90 * scale },
+			{ x = 174, z = 108, yaw = 0.9, s = 1.18 * scale },
+			{ x = 154, z = 88, yaw = 1.5, s = 0.82 * scale },
+			-- West Moraine cliffs & north-west gate approaches
+			{ x = -194, z = -72, yaw = 0.9, s = 1.06 * scale },
+			{ x = -188, z = -104, yaw = 2.1, s = 0.84 * scale },
+			{ x = -164, z = -140, yaw = -0.8, s = 1.22 * scale },
+			{ x = -134, z = -150, yaw = 1.4, s = 0.88 * scale },
+			{ x = -86, z = -194, yaw = 0.5, s = 1.12 * scale },
+			{ x = -96, z = -214, yaw = 1.9, s = 0.90 * scale },
+			-- East Moraine cliffs & north-east gate approaches
+			{ x = 192, z = -74, yaw = -1.1, s = 1.04 * scale },
+			{ x = 188, z = -118, yaw = -1.8, s = 0.92 * scale },
+			{ x = 158, z = -142, yaw = 0.7, s = 1.26 * scale },
+			{ x = 128, z = -172, yaw = -2.5, s = 0.86 * scale },
+			{ x = 86, z = -194, yaw = -0.8, s = 1.10 * scale },
+			{ x = 98, z = -214, yaw = -1.6, s = 0.88 * scale },
 		}
 		for _, bt in bareTreeSpots do
-			local ty = if field then field.Height(bt.x, bt.z) + 1.4 else 0
+			local ty = minFootY(bt.x, bt.z, 3.2 * bt.s, 0)
 			group("FrozenBareTree", function()
 				currentParent:SetAttribute("OnTerrain", true)
 				if KitProps.Has("FrozenBareTree") then
