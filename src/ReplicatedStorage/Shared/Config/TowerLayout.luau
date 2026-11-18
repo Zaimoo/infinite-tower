@@ -732,6 +732,68 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Icefall Gate",
 		},
 	},
+	-- Floor 19, Whiteguard Keep (Frozen Citadel Elite Stronghold): two separated routes under twilight aurora —
+	-- west glacier caves glowing with rimelight crystals, east elevated battlement viaduct, East Bailey trebuchet,
+	-- and Whiteguard Tower converging solely at the Keep Hall.
+	[19] = {
+		Key = "frozen:4",
+		Name = "Whiteguard Keep",
+		PathStyle = "WHITEGUARD",
+		DirectTerrain = true,
+		Masonry = "WHITEGUARD_FORTRESS",
+		Decks = {
+			Crossing = true,
+			EastGallery = true,
+			EastBastion = true,
+			Apex = true,
+		},
+		Suspended = {
+			Links = {
+				Basin_Crossing = true,
+				Crossing_EastGallery = true,
+				EastGallery_EastBastion = true,
+				EastBastion_Apex = true,
+			},
+		},
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 124, Feather = 32 },
+			{ Kind = "RAVINE", X = 48, ZStart = -165, ZEnd = 92, HalfWidth = 48, NoiseAmp = 8, IceFloor = true },
+			{ Kind = "ICEFALL", X = -22, Z = -255, Width = 160, Depth = 44, Height = 58 },
+			{ Kind = "DUNE", X = -176, Z = 176, Width = 52, Length = 80, Height = 5.5, Yaw = 14, CrestSway = 0.14, SlipSteep = 1.2 },
+			{ Kind = "DUNE", X = 176, Z = 176, Width = 52, Length = 80, Height = 5.5, Yaw = -14, CrestSway = 0.14, SlipSteep = 1.2 },
+		},
+		Patrols = {
+			VIADUCT = { "Crossing", "EastGallery" },
+		},
+		Basin = { X = 0, Y = 0, Z = 160, Width = 440, Depth = 110 },
+		Crossing = { X = 40, Y = 8, Z = 10, Width = 74, Depth = 60 },
+		EastGallery = { X = 165, Y = 10, Z = -30, Width = 86, Depth = 78 },
+		EastBastion = { X = 160, Y = 16, Z = -160, Width = 84, Depth = 76 },
+		WestGallery = { X = -165, Y = 4, Z = -10, Width = 86, Depth = 78 },
+		WestBastion = { X = -160, Y = 12, Z = -150, Width = 84, Depth = 76 },
+		Apex = { X = 0, Y = 22, Z = -210, Width = 110, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "Crossing" },
+			{ "Crossing", "EastGallery" },
+			{ "EastGallery", "EastBastion" },
+			{ "EastBastion", "Apex" },
+			{ "Basin", "WestGallery" },
+			{ "WestGallery", "WestBastion" },
+			{ "WestBastion", "Apex" },
+		},
+		Names = {
+			Sanctuary = "Siege Threshold",
+			Basin = "Siege Camp",
+			Crossing = "Viaduct Gate",
+			EastGallery = "East Bailey",
+			EastBastion = "Whiteguard Tower",
+			WestGallery = "Ice Cave Mouth",
+			WestBastion = "Crystal Grotto",
+			Apex = "Keep Hall",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

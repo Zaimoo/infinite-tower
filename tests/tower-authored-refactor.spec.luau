@@ -105,7 +105,7 @@ local EXPECTED = {
 
 test("data-driven refactor preserves exact room, lane and patrol snapshots for floors 1-5 and unauthored 6-50", function()
 	for floorId, exp in EXPECTED do
-		if (floorId >= 11 and floorId <= 18) then
+		if (floorId >= 11 and floorId <= 19) then
 			continue
 		end
 		local idx = (floorId - 1) % 5 + 1
@@ -138,6 +138,7 @@ test("Verdant 1-5 expose DirectTerrain, Decks, Suspended, Masonry, Liquid, Terra
 	assert(Layout.ForFloor(16).Authored == "frozen:1" and Layout.ForFloor(16).DirectTerrain == true and Layout.ForFloor(16).Masonry == "GLACIER_SLAB" and Layout.ForFloor(16).Decks.Crossing)
 	assert(Layout.ForFloor(17).Authored == "frozen:2" and Layout.ForFloor(17).DirectTerrain == true and Layout.ForFloor(17).Masonry == "WHITEGUARD" and Layout.ForFloor(17).Liquid.Dry == true)
 	assert(Layout.ForFloor(18).Authored == "frozen:3" and Layout.ForFloor(18).DirectTerrain == true and Layout.ForFloor(18).Masonry == "GLACIER_SLAB" and Layout.ForFloor(18).Decks.UpperIceway and Layout.ForFloor(18).Patrols.ICEWAY_CROSS ~= nil)
+	assert(Layout.ForFloor(19).Authored == "frozen:4" and Layout.ForFloor(19).DirectTerrain == true and Layout.ForFloor(19).Masonry == "WHITEGUARD_FORTRESS" and Layout.ForFloor(19).Decks.EastBastion and Layout.ForFloor(19).Patrols.VIADUCT ~= nil)
 	assert(Layout.ForFloor(6).DirectTerrain == false)
 end)
 

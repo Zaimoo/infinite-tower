@@ -1,0 +1,105 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "FrozenSiegeLadder": {
+      "Min": [
+        -3.176,
+        -0.591,
+        -10.815
+      ],
+      "Roles": {
+        "CRYSTAL": 60,
+        "METAL": 64,
+        "MOSS": 80,
+        "WOOD": 156
+      },
+      "Size": [
+        5.948,
+        25.91,
+        13.083
+      ],
+      "Triangles": 360
+    },
+    "FrozenTrebuchet": {
+      "Min": [
+        -6.09,
+        -0.2,
+        -11.635
+      ],
+      "Roles": {
+        "CRYSTAL": 32,
+        "METAL": 60,
+        "MOSS": 80,
+        "STONE": 80,
+        "WOOD": 204
+      },
+      "Size": [
+        12.15,
+        21.454,
+        19.835
+      ],
+      "Triangles": 456
+    },
+    "IceCaveOverhang": {
+      "Min": [
+        -8.952,
+        -0.43,
+        -14.878
+      ],
+      "Roles": {
+        "CRYSTAL": 168,
+        "GLOW": 64,
+        "MOSS": 80,
+        "STONE": 480
+      },
+      "Size": [
+        17.529,
+        29.691,
+        30.654
+      ],
+      "Triangles": 792
+    },
+    "RimelightCrystalCluster": {
+      "Min": [
+        -5.472,
+        0.104,
+        -5.148
+      ],
+      "Roles": {
+        "CRYSTAL": 48,
+        "GLOW": 100,
+        "MOSS": 80,
+        "STONE": 80
+      },
+      "Size": [
+        10.747,
+        14.706,
+        10.21
+      ],
+      "Triangles": 308
+    },
+    "WhiteguardTower": {
+      "Min": [
+        -10.334,
+        -1.2,
+        -10.6
+      ],
+      "Roles": {
+        "ALT": 48,
+        "CRYSTAL": 160,
+        "GLOW": 48,
+        "METAL": 196,
+        "MOSS": 80,
+        "STONE": 200,
+        "TRIM": 148
+      },
+      "Size": [
+        20.668,
+        62.7,
+        26.662
+      ],
+      "Triangles": 880
+    }
+  },
+  "Unit": "studs"
+}

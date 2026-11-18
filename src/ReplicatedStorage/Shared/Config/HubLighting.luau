@@ -332,6 +332,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(232, 242, 255), Saturation = -0.06, Contrast = 0.14, ExposureCompensation = 0.08, BloomIntensity = 0.32,
 		SunRaysIntensity = 0.04, SunRaysSpread = 0.40,
 	},
+	-- Floor 19 (Whiteguard Keep): twilight with aurora — deep blue-indigo ambient, emerald-violet horizon haze, rimelight crystal bloom.
+	[19] = {
+		Ambient = c(72, 92, 138), OutdoorAmbient = c(116, 140, 186), ColorShift_Top = c(138, 206, 198), ColorShift_Bottom = c(88, 92, 156),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(144, 174, 208), AtmosphereDecay = c(102, 114, 168), AtmosphereHaze = 1.25,
+		TintColor = c(226, 242, 255), Saturation = 0.08, Contrast = 0.12, ExposureCompensation = 0.14, BloomIntensity = 0.46,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.45,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

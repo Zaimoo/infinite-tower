@@ -4214,6 +4214,281 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("GlacierStrataIce", V(4.0, cs.h * 0.42, cs.l - 1.5), V(cs.x, cs.y + cs.h * 0.72, cs.z), cGlacier, Enum.Material.Glacier)
 			end)
 		end
+	elseif biome == "frozen_citadel" and layout.Authored == "frozen:4" then
+		-- Floor 19 (Whiteguard Keep): Relief army Siege Camp & Battering Ram, Viaduct Gate & Siege Ladder,
+		-- East Bailey Trebuchet, great Whiteguard Tower with frozen banner, West Glacier Caves + Rimelight Crystals,
+		-- and central Keep Cliff Icefall beneath Keep Hall.
+		local cGranite = rgb(104, 118, 134)
+		local cGraniteDark = rgb(66, 76, 90)
+		local cTimber = rgb(88, 68, 50)
+		local cIron = rgb(44, 48, 56)
+		local cSnow = rgb(236, 244, 254)
+		local cGlacier = rgb(146, 206, 238)
+		local cRimelight = rgb(78, 236, 255)
+		local cCanvas = rgb(188, 194, 202)
+		local cBanner = rgb(44, 88, 136)
+
+		local function minFootY(x: number, z: number, reach: number, fallbackY: number): number
+			if not field then return fallbackY end
+			local h = field.Height(x, z)
+			if reach > 0 then
+				h = math.min(
+					h,
+					field.Height(x + reach, z),
+					field.Height(x - reach, z),
+					field.Height(x, z + reach),
+					field.Height(x, z - reach)
+				)
+			end
+			return h + 0.9
+		end
+
+		-- 1. Relief Army Siege Camp tents, pickets & Battering Ram at the Viaduct foot
+		local tentSpots = {
+			{ x = -178, z = 178, yaw = math.rad(16) },
+			{ x = -172, z = 134, yaw = math.rad(-12) },
+			{ x = -56, z = 188, yaw = math.rad(22) },
+			{ x = 176, z = 178, yaw = math.rad(-18) },
+			{ x = 174, z = 132, yaw = math.rad(14) },
+		}
+		for _, ts in tentSpots do
+			local ty = math.max(0, minFootY(ts.x, ts.z, 5.0, 0))
+			group("SiegeTent", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				for _, side in { -1, 1 } do
+					local roof = block("SiegeTentWall", V(8.4, 0.55, 13.0), V(ts.x, ty + 3.4, ts.z), cCanvas, Enum.Material.Fabric)
+					roof.CFrame = CFrame.new(origin + V(ts.x, ty + 3.4, ts.z)) * CFrame.Angles(0, ts.yaw, 0) * CFrame.new(side * 2.5, 0, 0) * CFrame.Angles(0, 0, -side * math.rad(48))
+				end
+				local pole = cyl("SiegeTentRidge", V(ts.x, ty + 6.4, ts.z), 0.35, 14.2, cTimber, Enum.Material.Wood)
+				pole.CFrame = CFrame.new(origin + V(ts.x, ty + 6.4, ts.z)) * CFrame.Angles(0, ts.yaw + math.pi * 0.5, 0)
+				block("SiegeTentSnowCap", V(4.2, 0.65, 11.4), V(ts.x, ty + 6.3, ts.z), cSnow, Enum.Material.Snow)
+					.CFrame = CFrame.new(origin + V(ts.x, ty + 6.3, ts.z)) * CFrame.Angles(0, ts.yaw, 0)
+			end)
+		end
+
+		for _, fs in {
+			{ x = -66, z = 178, yaw = 0.25 },
+			{ x = -54, z = 168, yaw = 0.12 },
+			{ x = 44, z = 112, yaw = -0.25 },
+			{ x = 58, z = 108, yaw = -0.32 },
+		} do
+			local sy = math.max(0, minFootY(fs.x, fs.z, 1.5, 0))
+			group("FrozenSoldier", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				if KitProps.Has("FrozenSoldier") then
+					kitAt("FrozenSoldier", CFrame.new(fs.x, sy, fs.z) * CFrame.Angles(0, fs.yaw, 0), 1.05 * scale, {
+						CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.16 },
+						METAL = { Color = cIron, Material = Enum.Material.Metal },
+						STONE = { Color = cGraniteDark, Material = Enum.Material.Slate },
+					})
+				else
+					block("FrozenSoldierBlock", V(3.4, 8.2, 2.8), V(fs.x, sy + 4.1, fs.z), cGlacier, Enum.Material.Ice, nil, 0.18)
+				end
+			end)
+		end
+
+		-- Frozen wheeled Battering Ram halted beside the Viaduct entrance approach
+		group("FrozenBatteringRam", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local rx, ry, rz = 44, 0, 126
+			local ramCF = CFrame.new(origin + V(rx, ry, rz)) * CFrame.Angles(0, math.rad(-14), 0)
+			for _, sx in { -4.2, 4.2 } do
+				local beam = block("RamFrameBeam", V(1.1, 1.2, 17.5), V(rx, ry + 0.6, rz), cTimber, Enum.Material.Wood)
+				beam.CFrame = ramCF * CFrame.new(sx, 0.8, 0)
+				for _, sz in { -5.0, 5.0 } do
+					local post = block("RamAFramePost", V(1.0, 9.2, 1.0), V(rx, ry + 4.8, rz), cTimber, Enum.Material.Wood)
+					post.CFrame = ramCF * CFrame.new(sx * 0.65, 4.8, sz) * CFrame.Angles(0, 0, if sx > 0 then math.rad(22) else math.rad(-22))
+					local wh = cyl("RamWheel", V(rx, ry + 2.0, rz), 2.1, 0.8, cIron, Enum.Material.Metal)
+					wh.CFrame = ramCF * CFrame.new(sx * 1.15, 2.0, sz) * CFrame.Angles(0, math.pi * 0.5, 0)
+				end
+			end
+			local log = cyl("RamTimberLog", V(rx, ry + 4.6, rz), 1.75, 19.0, cTimber, Enum.Material.Wood)
+			log.CFrame = ramCF * CFrame.new(0, 4.6, -0.5) * CFrame.Angles(0, math.pi * 0.5, 0)
+			local head = block("RamIronHead", V(3.8, 3.8, 3.2), V(rx, ry + 4.6, rz), cIron, Enum.Material.Metal)
+			head.CFrame = ramCF * CFrame.new(0, 4.6, -10.5)
+			local iceLock = block("RamFrozenIce", V(6.4, 5.2, 6.2), V(rx, ry + 2.6, rz), cGlacier, Enum.Material.Ice, nil, 0.15)
+			iceLock.CFrame = ramCF * CFrame.new(0, 2.6, -7.5)
+		end)
+
+		-- 2. Viaduct Gatehouse Arch (PortcullisGate camp/lane-exempt arch) & FrozenSiegeLadder leaned against it
+		group("PortcullisGate", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local gx, gy, gz = 31, 8, 40
+			local gateCF = CFrame.new(origin + V(gx, gy, gz)) * CFrame.Angles(0, math.rad(-15), 0)
+			for _, side in { -1, 1 } do
+				local pier = block("ViaductGatePier", V(8.5, 28, 12.0), V(gx, gy + 14, gz), cGranite, Enum.Material.Slate)
+				pier.CFrame = gateCF * CFrame.new(side * 25, 14, 0)
+				pier:SetAttribute("SolidScenery", false)
+				local snow = block("ViaductGatePierSnow", V(9.0, 2.2, 12.4), V(gx, gy + 28.8, gz), cSnow, Enum.Material.Snow)
+				snow.CFrame = gateCF * CFrame.new(side * 25, 28.8, 0)
+				snow:SetAttribute("SolidScenery", false)
+			end
+			local lintel = block("ViaductGateLintel", V(58, 9.5, 11.5), V(gx, gy + 24.5, gz), cGranite, Enum.Material.Slate)
+			lintel.CFrame = gateCF * CFrame.new(0, 24.5, 0)
+			lintel:SetAttribute("SolidScenery", false)
+			for m = -20, 20, 10 do
+				local mer = block("ViaductGateMerlon", V(5.2, 3.8, 11.8), V(gx, gy + 31.2, gz), cGraniteDark, Enum.Material.Slate)
+				mer.CFrame = gateCF * CFrame.new(m, 31.2, 0)
+				mer:SetAttribute("SolidScenery", false)
+			end
+			for pbx = -10, 10, 5 do
+				local bar = block("ViaductPortcullisSpike", V(0.7, 7.2, 0.7), V(gx, gy + 18.0, gz), cIron, Enum.Material.Metal)
+				bar.CFrame = gateCF * CFrame.new(pbx, 18.0, 4.2)
+				bar:SetAttribute("SolidScenery", false)
+			end
+		end)
+
+		group("FrozenSiegeLadder", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local lx, ly, lz = 6, 8, 42
+			if KitProps.Has("FrozenSiegeLadder") then
+				kitAt("FrozenSiegeLadder", CFrame.new(lx, ly, lz) * CFrame.Angles(0, math.rad(-15), 0), 1.05 * scale, {
+					WOOD = { Color = cTimber, Material = Enum.Material.Wood },
+					METAL = { Color = cIron, Material = Enum.Material.Metal },
+					MOSS = { Color = cSnow, Material = Enum.Material.Snow },
+					CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.1 },
+				})
+			else
+				local ladCF = CFrame.new(origin + V(lx, ly, lz)) * CFrame.Angles(0, math.rad(-15), 0) * CFrame.Angles(math.rad(-20), 0, 0)
+				for _, sx in { -2.1, 2.1 } do
+					local rail = block("SiegeLadderRail", V(0.7, 26, 0.7), V(lx, ly + 12, lz), cTimber, Enum.Material.Wood)
+					rail.CFrame = ladCF * CFrame.new(sx, 12.5, 0)
+					rail:SetAttribute("SolidScenery", false)
+				end
+				for rz = 3, 23, 3.2 do
+					local rung = block("SiegeLadderRung", V(4.6, 0.5, 0.5), V(lx, ly + rz, lz), cTimber, Enum.Material.Wood)
+					rung.CFrame = ladCF * CFrame.new(0, rz, 0)
+					rung:SetAttribute("SolidScenery", false)
+				end
+			end
+		end)
+
+		-- 3. East Bailey FrozenTrebuchet perched on an outer east granite siege spur (clear of EAST_GALLERY camp)
+		group("FrozenTrebuchet", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local tx, ty, tz = 204, 10, -16
+			local plinthH = ty - bottom + 6
+			block("TrebuchetStoneSpur", V(26, plinthH, 28), V(tx, ty - plinthH * 0.5, tz), cGraniteDark, Enum.Material.Slate)
+			if KitProps.Has("FrozenTrebuchet") then
+				kitAt("FrozenTrebuchet", CFrame.new(tx, ty, tz) * CFrame.Angles(0, math.rad(115), 0), 1.15 * scale, {
+					WOOD = { Color = cTimber, Material = Enum.Material.Wood },
+					STONE = { Color = cGraniteDark, Material = Enum.Material.Slate },
+					METAL = { Color = cIron, Material = Enum.Material.Metal },
+					MOSS = { Color = cSnow, Material = Enum.Material.Snow },
+					CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.12 },
+				})
+			else
+				for _, sx in { -5.2, 5.2 } do
+					block("TrebuchetFrameBase", V(1.2, 1.2, 16), V(tx + sx, ty + 0.6, tz), cTimber, Enum.Material.Wood)
+				end
+				local arm = block("TrebuchetArm", V(1.1, 20, 1.1), V(tx, ty + 10, tz), cTimber, Enum.Material.Wood)
+				arm.CFrame = CFrame.new(origin + V(tx, ty + 11, tz)) * CFrame.Angles(math.rad(-35), math.rad(115), 0)
+			end
+		end)
+
+		-- 4. WhiteguardTower standing on NE corner bastion plinth of EastBastion (clear of UPPER_EAST camp)
+		group("WhiteguardTower", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local wx, wy, wz = 198, 16, -196
+			local plinthH = wy - bottom + 6
+			block("WhiteguardTowerPlinth", V(28, plinthH, 28), V(wx, wy - plinthH * 0.5, wz), cGraniteDark, Enum.Material.Slate)
+			if KitProps.Has("WhiteguardTower") then
+				local mdl = kitAt("WhiteguardTower", CFrame.new(wx, wy, wz) * CFrame.Angles(0, math.rad(65), 0), 1.18 * scale, {
+					STONE = { Color = cGranite, Material = Enum.Material.Slate },
+					TRIM = { Color = rgb(134, 148, 164), Material = Enum.Material.Granite },
+					MOSS = { Color = cSnow, Material = Enum.Material.Snow },
+					CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.1 },
+					METAL = { Color = cIron, Material = Enum.Material.Metal },
+					ALT = { Color = cBanner, Material = Enum.Material.Fabric },
+					GLOW = { Color = cRimelight, Material = Enum.Material.Neon },
+				})
+				local gp = mdl and mdl:FindFirstChildWhichIsA("BasePart")
+				if gp then pointLight(gp, cRimelight, 1.1, 48) end
+			else
+				local tw = cyl("WhiteguardTowerShaft", V(wx, wy + 28, wz), 10.5, 58, cGranite, Enum.Material.Slate)
+				pointLight(tw, cRimelight, 1.1, 48)
+				cyl("WhiteguardTowerCrown", V(wx, wy + 57, wz), 12.2, 4.5, cGraniteDark, Enum.Material.Slate)
+				block("WhiteguardTowerFrozenBanner", V(1.2, 7.5, 11.0), V(wx - 12, wy + 48, wz), cBanner, Enum.Material.Fabric)
+			end
+		end)
+
+		-- 5. West Glacier Caves: outer cliff IceCaveOverhang arches, >=20-stud translucent cave roof ribs, & Rimelight Crystals
+		local caveSides = {
+			{ name = "IceCaveMouth", x = -212, y = 4, z = -10, roofX = -198, len = 48 },
+			{ name = "CrystalGrotto", x = -208, y = 12, z = -150, roofX = -194, len = 46 },
+		}
+		for _, cv in caveSides do
+			local cy = math.min(cv.y, minFootY(cv.x, cv.z, 6.0, cv.y))
+			group("IceCaveOverhang", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				if KitProps.Has("IceCaveOverhang") then
+					kitAt("IceCaveOverhang", CFrame.new(cv.x, cy, cv.z) * CFrame.Angles(0, math.rad(90), 0), 1.05 * scale, {
+						STONE = { Color = cGraniteDark, Material = Enum.Material.Slate },
+						MOSS = { Color = cSnow, Material = Enum.Material.Snow },
+						CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.1 },
+						GLOW = { Color = cRimelight, Material = Enum.Material.Neon },
+					})
+				else
+					local pS = block("CaveOuterPillarS", V(12, 24, 9), V(cv.x, cv.y + 12, cv.z + 12), cGraniteDark, Enum.Material.Slate)
+					pS:SetAttribute("SolidScenery", false)
+					local pN = block("CaveOuterPillarN", V(12, 24, 9), V(cv.x, cv.y + 12, cv.z - 12), cGraniteDark, Enum.Material.Slate)
+					pN:SetAttribute("SolidScenery", false)
+					local brow = block("CaveHighBrow", V(20, 4.5, 32), V(cv.x + 8, cv.y + 24, cv.z), cGraniteDark, Enum.Material.Slate)
+					brow:SetAttribute("SolidScenery", false)
+				end
+				-- Translucent ice cave roof covering at most outer ~26% of terrace, >=23 studs above walk surface
+				local roof = block("CaveTranslucentIceRoof", V(22, 1.6, cv.len), V(cv.roofX, cv.y + 25.2, cv.z), cGlacier, Enum.Material.Ice, nil, 0.48)
+				roof:SetAttribute("SolidScenery", false)
+				for iz = -cv.len * 0.4, cv.len * 0.4, 12 do
+					local ic = block("CaveRoofIcicle", V(1.3, 3.0, 1.3), V(cv.roofX + 9.5, cv.y + 23.6, cv.z + iz), cGlacier, Enum.Material.Ice, nil, 0.15)
+					ic:SetAttribute("SolidScenery", false)
+				end
+			end)
+		end
+
+		local crystalSpots = {
+			{ x = -128, y = 0, z = 74, s = 0.95 * scale, light = true },
+			{ x = -202, y = 4, z = 24, s = 1.08 * scale, light = false },
+			{ x = -204, y = 4, z = -26, s = 1.15 * scale, light = true },
+			{ x = -204, y = 4, z = 6, s = 0.90 * scale, light = false },
+			{ x = -200, y = 12, z = -132, s = 1.24 * scale, light = true },
+			{ x = -200, y = 12, z = -168, s = 1.18 * scale, light = false },
+			{ x = -146, y = 12, z = -190, s = 1.30 * scale, light = false },
+			{ x = -118, y = 12, z = -118, s = 1.02 * scale, light = false },
+		}
+		for _, cr in crystalSpots do
+			local cy = minFootY(cr.x, cr.z, 3.2 * cr.s, cr.y)
+			group("RimelightCrystalCluster", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				if KitProps.Has("RimelightCrystalCluster") then
+					local mdl = kitAt("RimelightCrystalCluster", CFrame.new(cr.x, cy, cr.z) * CFrame.Angles(0, cr.x * 0.1 + cr.z * 0.05, 0), cr.s, {
+						STONE = { Color = cGraniteDark, Material = Enum.Material.Slate },
+						MOSS = { Color = cSnow, Material = Enum.Material.Snow },
+						CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.08 },
+						GLOW = { Color = cRimelight, Material = Enum.Material.Neon },
+					})
+					local gp = cr.light and mdl and mdl:FindFirstChildWhichIsA("BasePart")
+					if gp then pointLight(gp, cRimelight, 1.3, 46) end
+				else
+					local sp = block("RimelightCrystalCore", V(3.6 * cr.s, 14 * cr.s, 3.6 * cr.s), V(cr.x, cy + 6.5 * cr.s, cr.z), cRimelight, Enum.Material.Neon)
+					sp.CFrame = CFrame.new(origin + V(cr.x, cy + 6.5 * cr.s, cr.z)) * CFrame.Angles(0.14, cr.x * 0.1, -0.18)
+					if cr.light then pointLight(sp, cRimelight, 1.3, 46) end
+				end
+			end)
+		end
+
+		-- 6. Keep Cliff Icefall cascading down Keep Hall's front-west cliff drop between Crystal Grotto and Viaduct
+		group("KeepMidCliffIcefall", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local ix, iz = -42, -138
+			local core = block("KeepIcefallCliffCore", V(30, 36, 18), V(ix, 14, iz - 6), cGraniteDark, Enum.Material.Slate)
+			core:SetAttribute("SolidScenery", false)
+			for ci, col in { { -10, 34, 9 }, { 0, 40, 11 }, { 10, 32, 9 } } do
+				local ic = block("KeepMidCascadeColumn", V(col[3], col[2], 8), V(ix + col[1], col[2] * 0.5 - 4, iz + 4), if ci == 2 then rgb(172, 224, 250) else cGlacier, Enum.Material.Ice, nil, 0.1)
+				ic:SetAttribute("SolidScenery", false)
+				if ci == 2 then pointLight(ic, cRimelight, 1.0, 52) end
+			end
+		end)
 	end
 
 	-- =========================================================================
@@ -4253,8 +4528,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
-	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" then
-		-- Floor 16 owns its horizon via RimefallIcefall; Floor 17 via CommanderKeepBackdrop; Floor 18 via IcefallGateBackdrop.
+	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" then
+		-- Floors 16-19 own their north horizon backdrops directly.
 	else
 		for _, s in { -1, 1 } do
 			local wingX = s * (apex.Width * 0.5 + 38)
@@ -4784,6 +5059,39 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					if idx == 3 then pointLight(iceCol, cRimeBlue, 1.4, 72) end
 				end
 			end)
+		elseif layout.Authored == "frozen:4" then
+			-- Floor 19 Whiteguard Keep Hall north facade: soaring keep buttresses, frozen waterfall arch portal,
+			-- snow-crusted towers, and twilight Emerald Aurora Borealis sky ribbons.
+			local cGranite = rgb(118, 132, 148)
+			local cGraniteDark = rgb(68, 78, 92)
+			local cSnow = rgb(236, 244, 254)
+			local cGlacier = rgb(148, 214, 246)
+			local cRimelight = rgb(78, 236, 255)
+			local wallZ = apexBack - 6
+			group("WhiteguardKeepBackdrop", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				block("KeepHallCentralWall", V(88, 56, 16), V(0, apex.Y + 28, wallZ - 4), cGranite, Enum.Material.Slate)
+				for _, s in { -1, 1 } do
+					local tx = s * 46
+					cyl("KeepHallTurret", V(tx, apex.Y + 38, wallZ), 13.5, 78, cGranite, Enum.Material.Slate)
+					cyl("KeepHallTurretCap", V(tx, apex.Y + 78, wallZ), 15.0, 4.0, cGraniteDark, Enum.Material.Slate)
+					block("KeepHallWindow", V(2.4, 10, 1.8), V(tx, apex.Y + 54, wallZ + 13.0), cRimelight, Enum.Material.Neon)
+					block("KeepHallButtress", V(6.5, 48, 18), V(s * 20, apex.Y + 24, wallZ - 2), cGraniteDark, Enum.Material.Slate)
+					block("KeepHallWingWall", V(48, 28, 12), V(s * 76, apex.Y + 14, wallZ - 4), cGranite, Enum.Material.Slate)
+					block("KeepHallWingSnow", V(46, 3.0, 12.6), V(s * 76, apex.Y + 29, wallZ - 4), cSnow, Enum.Material.Snow)
+				end
+				-- Pointed Keep arch recess sealed behind icefall cascade curtains
+				block("KeepHallIceArchBacking", V(30, 38, 10), V(0, apex.Y + 20, wallZ + 3), rgb(30, 42, 56), Enum.Material.Slate)
+				for _, icOff in { -8, 0, 8 } do
+					block("KeepHallGateIcefall", V(8.5, 36, 5.5), V(icOff, apex.Y + 19, wallZ + 7), cGlacier, Enum.Material.Ice, nil, 0.1)
+				end
+				block("KeepHallIceCrest", V(92, 3.5, 16), V(0, apex.Y + 57.5, wallZ - 4), cSnow, Enum.Material.Snow)
+			end)
+			for aIdx = -1, 2 do
+				local ay = h - 14 + math.abs(aIdx) * 4
+				local az = -170 + aIdx * 42
+				beam("AuroraBorealisRibbon", V(-w * 0.34, ay, az + 24), V(w * 0.34, ay + 8, az - 28), 6.5, if aIdx % 2 == 0 then rgb(84, 255, 198) else rgb(148, 178, 255), Enum.Material.Neon, 0.72)
+			end
 		else
 			group("CitadelKeep", function()
 				block("CitadelKeepHall", V(102 * scale, 58 * scale, 36 * scale), backdrop + V(0, 29 * scale, -4), theme.CliffColor, Enum.Material.Brick)
@@ -5201,8 +5509,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local function pick(list: { string }): string
 			return list[rand:NextInteger(1, #list)]
 		end
-		-- Groves (skipped on Floor 17 barracks courtyard & Floor 18 winter-blasted terrain where FrozenBareTree stands instead)
-		local groveCount = if layout.Authored == "frozen:2" or layout.Authored == "frozen:3" then 0 else math.round(eco.Groves * 1.5 * density)
+		-- Groves (skipped on Floor 17 barracks, Floor 18 bare-tree glacier, and Floor 19 siege fortress)
+		local groveCount = if layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" then 0 else math.round(eco.Groves * 1.5 * density)
 		for _ = 1, groveCount do
 			local name = pick(eco.Trees)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2])
@@ -5252,8 +5560,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				if free(x, z, ur) then put("TerraceEdge", name, x, t.Y, z, us, ur, if isVarrash then 1.1 else 0.2) end
 			end
 		end
-		-- Trees climbing the mountain slopes (skipped on Floor 18 winter-blasted slopes which use FrozenBareTree)
-		local slopeTreeCount = if layout.Authored == "frozen:3" then 0 else math.round(eco.SlopeForestCount * 1.5 * density)
+		-- Trees climbing the mountain slopes (skipped on Floor 18 & 19)
+		local slopeTreeCount = if layout.Authored == "frozen:3" or layout.Authored == "frozen:4" then 0 else math.round(eco.SlopeForestCount * 1.5 * density)
 		for _ = 1, slopeTreeCount do
 			local name = pick(eco.SlopeForest)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2]) * 0.85

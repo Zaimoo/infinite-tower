@@ -519,6 +519,18 @@ function Builder.Build(id: number, generation: number): any
 			StairMatA = Enum.Material.Slate,
 			StairMatB = Enum.Material.Ice,
 		},
+		WHITEGUARD_FORTRESS = {
+			DeckKind = "WHITEGUARD_FORTRESS",
+			LandingProxy = true,
+			BridgeKind = "WHITEGUARD_VIADUCT",
+			CurbColor = whiteguardGranite,
+			CurbMaterial = Enum.Material.Slate,
+			CurbMode = "WHITEGUARD_MERLON",
+			StairColorA = whiteguardGranite,
+			StairColorB = Color3.fromRGB(168, 212, 238),
+			StairMatA = Enum.Material.Slate,
+			StairMatB = Enum.Material.Ice,
+		},
 	}
 
 	local PATH_STYLES: { [string]: { [string]: any } } = {
@@ -970,6 +982,34 @@ function Builder.Build(id: number, generation: number): any
 						local paver = decor(model, "VarrashFortressFlagstone", Vector3.new(8.5 + (k % 3) * 2.2, 0.10, 6.5 + ((k + 1) % 3) * 1.6), pPos, if k % 2 == 0 then varrashSandstone else sandStoneDark, Enum.Material.Sandstone)
 						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
 					end
+				elseif deckKind == "WHITEGUARD_FORTRESS" then
+					-- Floor 19 Whiteguard Keep bastions & courtyard: blue-grey granite courses extending into chasm + corner piers + flagstones
+					local deepBottom = origin.Y + layout.Bottom - 7
+					local wallH = math.max(4, (origin.Y + terrace.Y) - deepBottom)
+					slab.Size = Vector3.new(terrace.Width, wallH, terrace.Depth)
+					slab.Position = Vector3.new(topCenter.X, topCenter.Y - wallH / 2, topCenter.Z)
+					slab.Color = whiteguardGranite
+					slab.Material = Enum.Material.Slate
+					for _, sz in { -1, 1 } do
+						decor(model, "WhiteguardCorniceZ", Vector3.new(terrace.Width + 1.8, 2.0, 1.8), topCenter + Vector3.new(0, -1.6, sz * (terrace.Depth / 2 + 0.15)), whiteguardIron, Enum.Material.Metal)
+					end
+					for _, sx in { -1, 1 } do
+						decor(model, "WhiteguardCorniceX", Vector3.new(1.8, 2.0, math.max(1, terrace.Depth - 1.4)), topCenter + Vector3.new(sx * (terrace.Width / 2 + 0.15), -1.6, 0), whiteguardIron, Enum.Material.Metal)
+						for _, sz in { -1, 1 } do
+							local cp = Vector3.new(topCenter.X + sx * (terrace.Width / 2 - 2.4), topCenter.Y - wallH / 2 - 0.16, topCenter.Z + sz * (terrace.Depth / 2 - 2.4))
+							local cornerPier = part(model, "WhiteguardCornerPier", Vector3.new(6.8, wallH - 0.16, 6.8), cp, whiteguardGraniteDark, Enum.Material.Slate, true)
+							cornerPier.CanQuery = true
+							cornerPier.CanTouch = false
+						end
+					end
+					for k = 1, 7 do
+						local ang = k * 2.0 + terrace.X * 0.02
+						local rx = math.cos(ang) * (terrace.Width * 0.34)
+						local rz = math.sin(ang) * (terrace.Depth * 0.32)
+						local pPos = topCenter + Vector3.new(rx, 0.12 + k * 0.025, rz)
+						local paver = decor(model, "WhiteguardFlagstone", Vector3.new(8.5 + (k % 3) * 2.0, 0.10, 6.5 + ((k + 1) % 3) * 1.5), pPos, if k % 2 == 0 then whiteguardGranite else whiteguardGraniteDark, Enum.Material.Slate)
+						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
+					end
 				elseif deckKind == "GLACIER_SLAB" then
 					-- Jagged lake ice floe slabs (Floor 16 & Frozen Iceway): snow-packed walking cap over translucent glacier keel
 					local deepBottom = origin.Y + layout.Bottom - 5
@@ -1303,6 +1343,33 @@ function Builder.Build(id: number, generation: number): any
 					local band = decor(model, "RampStepLip", Vector3.new(link.Width * 0.58, 0.10, 0.65), at, if i % 2 == 0 then amberGlass else varrashBasalt, if i % 2 == 0 then Enum.Material.Glass else Enum.Material.Slate, if i % 2 == 0 then 0.2 else nil)
 					band.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.08 + (i % 2) * 0.03, 0)
 				end
+			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "WHITEGUARD_VIADUCT" then
+				-- Floor 19 arched stone viaduct & elevated fortress ramparts over the chasm
+				ramp.Color = whiteguardGranite
+				ramp.Material = Enum.Material.Slate
+				local deepBottom = origin.Y + layout.Bottom - 7
+				local underRamp = decor(model, "BridgeStoneUnderside", Vector3.new(link.Width - 1.6, 2.8, math.max(1, delta.Magnitude - 1.0)), mid, whiteguardGraniteDark, Enum.Material.Slate)
+				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -3.15, 0)
+				local pierFracs = if delta.Magnitude > 58 then { 0.22, 0.50, 0.78 } else { 0.28, 0.72 }
+				for _, frac in pierFracs do
+					local pAt = a:Lerp(b, frac)
+					local pH = math.max(6, pAt.Y - deepBottom - 1.4)
+					local pier = part(model, "ViaductStonePier", Vector3.new(link.Width - 1.8, pH, 9.0), Vector3.new(pAt.X, pAt.Y - pH / 2 - 1.6, pAt.Z), whiteguardGraniteDark, Enum.Material.Slate)
+					pier.CFrame = CFrame.lookAt(pier.Position, pier.Position + flat)
+					pier.CanQuery = true
+					pier.CanTouch = false
+				end
+				local stoneA = a:Lerp(b, 0.06)
+				local stoneB = a:Lerp(b, 0.94)
+				local stones = math.max(3, math.floor(((stoneB - stoneA).Magnitude - 2) / 5.4))
+				for i = 1, stones do
+					local t = (i - 0.5) / stones
+					local stagger = math.sin(i * 1.9 + delta.X * 0.03) * 2.0
+					local at = stoneA:Lerp(stoneB, t) + right * stagger
+					local stoneW = link.Width * (0.34 + ((i * 5) % 4) * 0.04)
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.12, 3.4), at, if i % 2 == 0 then whiteguardGranite else whiteguardGraniteDark, Enum.Material.Slate)
+					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.09 + (i % 3) * 0.02, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
+				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "GLACIER_SLAB" then
 				-- Alpine timber-and-granite frost bridge over the frozen lake (plank deck, stone girders, lake piers, flush pad approaches)
 				local bridgeWoodA = Color3.fromRGB(102, 80, 62)
@@ -1501,6 +1568,16 @@ function Builder.Build(id: number, generation: number): any
 							local pt = a:Lerp(b, pIdx / (posts + 1)) + curbOffset
 							local merlon = decor(curbGroup, "BridgeFortressMerlon", Vector3.new(2.7, 1.8, 3.6), pt, Color3.fromRGB(168, 138, 100), Enum.Material.Sandstone)
 							merlon.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.4, 0)
+						end
+					elseif curbMode == "WHITEGUARD_MERLON" then
+						-- Snow-capped Whiteguard granite viaduct parapet & spaced battlement merlons
+						local cap = decor(curbGroup, "BridgeSnowCap", Vector3.new(2.5, 0.45, math.max(1, curbLen - 1)), mid + curbOffset, glacierSnowCol, Enum.Material.Snow)
+						cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.15, 0)
+						local posts = math.max(2, math.floor(curbLen / 22))
+						for pIdx = 1, posts do
+							local pt = a:Lerp(b, pIdx / (posts + 1)) + curbOffset
+							local merlon = decor(curbGroup, "BridgeFortressMerlon", Vector3.new(2.7, 1.9, 3.6), pt, whiteguardGraniteDark, Enum.Material.Slate)
+							merlon.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.45, 0)
 						end
 					elseif curbMode == "WHITEGUARD_BRIDGE" then
 						-- Granite parapet curb extending across both approaches with carved newel bollards at pad entries
