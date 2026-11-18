@@ -134,6 +134,23 @@ test("rewards: claiming one playtime tier auto-claims all other unlocked, unclai
 	for i = 1, #Config.Playtime do assert(locked.Playtime.Claimed[i] == false, "no tiers mutated on locked claim") end
 end)
 
+test("rewards: ResetPlaytime clears session time and claims for leave/rejoin resets", function()
+	local now = MONDAY + 200
+	local state = Rules.NewState()
+	Rules.AddPlaytime(state, now, 20 * 60)
+	assert(Rules.ClaimPlaytime(state, now, 1) ~= nil, "initial session tiers claimed")
+	Rules.ResetPlaytime(state, now + 60)
+	assert(state.Playtime.Seconds == 0, "playtime seconds reset to 0")
+	assert(state.Playtime.Day == Rules.DayOf(now + 60), "playtime day set to current UTC day")
+	for i = 1, #Config.Playtime do
+		assert(state.Playtime.Claimed[i] == false, "tier " .. i .. " unclaimed after reset")
+	end
+	assert(Rules.ClaimPlaytime(state, now + 60, 1) == nil, "tier 1 locked again after reset")
+	assert(Rules.ClaimableCount(Rules.View(state, now + 60)) == 2, "only daily and weekly remain claimable")
+	Rules.AddPlaytime(state, now + 60, 300)
+	assert(Rules.ClaimPlaytime(state, now + 60, 1) == Config.Playtime[1].Reward, "tier 1 can be earned and claimed again same UTC day")
+end)
+
 test("rewards: codes are case-insensitive, one use per profile, and can expire", function()
 	local codes = { HELLO = { Reward = { Gems = 5 } }, OLD = { Reward = { Gold = 1 }, Expires = MONDAY } }
 	local state = Rules.NewState()

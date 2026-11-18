@@ -97,13 +97,18 @@ function RewardRules.EnsureState(profile: any): State
 	return raw
 end
 
+-- Resets playtime progress (on UTC day rollover or when leaving/rejoining a server).
+function RewardRules.ResetPlaytime(state: State, now: number?)
+	state.Playtime.Day = if now then RewardRules.DayOf(now) else 0
+	state.Playtime.Seconds = 0
+	for i = 1, #Config.Playtime do state.Playtime.Claimed[i] = false end
+end
+
 -- Starts a new playtime day when the UTC day has changed. Returns true when it reset.
 function RewardRules.Touch(state: State, now: number): boolean
 	local day = RewardRules.DayOf(now)
 	if state.Playtime.Day == day then return false end
-	state.Playtime.Day = day
-	state.Playtime.Seconds = 0
-	for i = 1, #Config.Playtime do state.Playtime.Claimed[i] = false end
+	RewardRules.ResetPlaytime(state, now)
 	return true
 end
 

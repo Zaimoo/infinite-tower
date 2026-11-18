@@ -212,6 +212,12 @@ function RewardsService.EnsureState(profile: any)
 	RewardRules.EnsureState(profile)
 end
 
+-- Resets playtime progress and claimed tiers when a player joins or leaves the server.
+function RewardsService.ResetPlaytime(profile: any)
+	local state = RewardRules.EnsureState(profile)
+	RewardRules.ResetPlaytime(state, os.time())
+end
+
 function RewardsService.Init(dependencies: Dependencies)
 	deps = dependencies
 

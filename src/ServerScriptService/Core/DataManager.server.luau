@@ -2435,6 +2435,7 @@ local function onPlayerAdded(player: Player)
 	OnboardingService.EnsureState(profile)
 	FortressTreeService.ApplyLevels(profile)
 	RewardsService.EnsureState(profile)
+	RewardsService.ResetPlaytime(profile)
 	PotionService.EnsureState(profile)
 	BattlePassService.EnsureState(profile)
 	ReforgeService.EnsureState(profile)
@@ -2473,6 +2474,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	local profile = ActiveProfiles[player]
 	if profile then
 		OfflineRewardService.RecordLogout(player, profile)
+		RewardsService.ResetPlaytime(profile)
 	end
 	NotorietyService.Forget(player)
 	releaseProfile(player)
@@ -2508,6 +2510,7 @@ game:BindToClose(function()
 	for player, profile in ActiveProfiles do
 		if persistentPlayers[player] and not releasedPlayers[player] then
 			OfflineRewardService.RecordLogout(player, profile)
+			RewardsService.ResetPlaytime(profile)
 			task.spawn(releaseProfile, player)
 		end
 	end

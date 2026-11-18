@@ -4,7 +4,7 @@
 --   * Friend boost strip: friends in this server and the Gold bonus they give.
 --   * Daily login: the 7-day calendar; today's entry has the CLAIM button.
 --   * Weekly chest: one claim per UTC week.
---   * Playtime: up to 7 tiers within the first hour played today, each with a countdown.
+--   * Playtime: up to 7 tiers within the first hour played this session, each with a countdown.
 --   * Codes: a text box; the server holds the code list and answers valid / used / expired.
 -- Everything shown comes from RewardsStore (the server's State). Buttons only send requests.
 
@@ -195,7 +195,7 @@ local function RewardsPanel(props: { Width: number, OnClose: () -> () })
 
 		-- Playtime -------------------------------------------------------------------------------
 		rows.PlayHeader = sectionHeader(5, "EventHourglass", "PLAYTIME REWARDS",
-			string.format("Played today: %s of %d min · resets in %s", RewardRules.FormatDuration(played), lastTier.Minutes, RewardRules.FormatDuration(dayLeft)))
+			string.format("Played this session: %s of %d min · resets on leave or in %s", RewardRules.FormatDuration(played), lastTier.Minutes, RewardRules.FormatDuration(dayLeft)))
 		local playtime: { [string]: any } = {}
 		for i, tier in RewardsConfig.Playtime do
 			local left = tier.Minutes * 60 - played

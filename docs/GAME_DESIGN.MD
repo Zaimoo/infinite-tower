@@ -903,7 +903,7 @@ Opened from the **Rewards** button on the Right Rail, which shows a badge with t
 | --- | --- | --- |
 | **Daily login** | One claim per day. Claiming on consecutive days walks a 7-day calendar and then loops; a missed day restarts it at Day 1. | 2,000 Gold · 50 Gems · 5,000 Gold · 2 Promotion Stones · 100 Gems · 10,000 Gold · 300 Gems + 3 Promotion Stones |
 | **Weekly chest** | One claim per week. | 30,000 Gold, 500 Gems, 5 Promotion Stones |
-| **Playtime** | 7 tiers by time played today, each claimed once; time and claims reset daily. The counter stops at the last tier (60 minutes). Time is counted on the server from the moment the save loads, in any zone, and carries across rejoins the same day. | 5 min 1,000 Gold · 10 min 25 Gems · 15 min 2,500 Gold · 20 min 40 Gems · 30 min 2 Promotion Stones · 45 min 5,000 Gold · 60 min 100 Gems |
+| **Playtime** | 7 tiers by session time played, each claimed once; claiming any unlocked tier also claims all other unlocked, unclaimed tiers. Time and claims reset when a player leaves/rejoins and daily at 00:00 UTC. The counter stops at the last tier (60 minutes). Time is counted on the server from the moment the save loads, in any zone. | 5 min 1,000 Gold · 10 min 25 Gems · 15 min 2,500 Gold · 20 min 40 Gems · 30 min 2 Promotion Stones · 45 min 5,000 Gold · 60 min 100 Gems |
 | **Codes** | Typed into the Rewards window. Each code pays once per profile and may have an expiry time. Case, spaces and dashes are ignored. | Per code |
 
 - **Playtime limits:** at most 7 tiers, the last at most 60 minutes (asserted in `RewardsConfig`).
