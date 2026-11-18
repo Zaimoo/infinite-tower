@@ -68,7 +68,8 @@ test("rewards: playtime tiers unlock by time played, pay once and reset daily", 
 	local early, problem = Rules.ClaimPlaytime(state, now, 1)
 	assert(early == nil and problem ~= nil, "5 minute tier is locked at 4:59")
 	Rules.AddPlaytime(state, now, 1)
-	assert(Rules.ClaimPlaytime(state, now, 1) == Config.Playtime[1].Reward, "unlocks at 5:00")
+	local first, _, firstCount = Rules.ClaimPlaytime(state, now, 1)
+	assert(first == Config.Playtime[1].Reward and firstCount == 1, "unlocks at 5:00")
 	assert(Rules.ClaimPlaytime(state, now, 1) == nil, "pays once")
 	for _, bad in { 0, 8, 1.5, -1, 0 / 0, "1", {} } do
 		assert(Rules.ClaimPlaytime(state, now, bad :: any) == nil, "bad index is refused")
@@ -76,12 +77,61 @@ test("rewards: playtime tiers unlock by time played, pay once and reset daily", 
 	Rules.AddPlaytime(state, now, 10 * 3600)
 	assert(state.Playtime.Seconds == 3600, "counter stops at the last tier")
 	assert(Rules.ClaimableCount(Rules.View(state, now)) == #Config.Playtime - 1 + 2, "six tiers plus daily and weekly are ready")
-	for i = 2, #Config.Playtime do assert(Rules.ClaimPlaytime(state, now, i), "tier " .. i) end
+	local batch, _, batchCount = Rules.ClaimPlaytime(state, now, 2)
+	assert(batch ~= nil and batchCount == #Config.Playtime - 1, "claiming one unlocked tier claims all remaining unlocked tiers")
+	local expectedRest = {}
+	for i = 2, #Config.Playtime do table.insert(expectedRest, Config.Playtime[i].Reward) end
+	local mergedRest = Rules.Merge(expectedRest)
+	assert((batch :: any).Gold == mergedRest.Gold and (batch :: any).Gems == mergedRest.Gems and (batch :: any).PromotionStones == mergedRest.PromotionStones, "merged payout matches remaining tiers")
+	assert(Rules.ClaimableCount(Rules.View(state, now)) == 2, "no playtime tiers remain ready after batch claim")
+	for i = 1, #Config.Playtime do
+		assert(state.Playtime.Claimed[i] == true, "tier " .. i .. " marked claimed")
+		assert(Rules.ClaimPlaytime(state, now, i) == nil, "tier " .. i .. " cannot pay again")
+	end
 	-- Next UTC day: time and claims start over.
 	local tomorrow = now + DAY
 	assert(Rules.View(state, tomorrow).Playtime.Seconds == 0, "view shows a fresh day before the first tick")
 	Rules.AddPlaytime(state, tomorrow, 300)
 	assert(state.Playtime.Seconds == 300 and Rules.ClaimPlaytime(state, tomorrow, 1), "tier 1 pays again the next day")
+end)
+
+test("rewards: claiming one playtime tier auto-claims all other unlocked, unclaimed tiers", function()
+	local now = MONDAY + 200
+
+	-- 20 minutes played, click 5 min (tier 1) -> claims tiers 1..4 (5, 10, 15, 20 min).
+	local fromFirst = Rules.NewState()
+	Rules.AddPlaytime(fromFirst, now, 20 * 60)
+	local r1, err1, c1 = Rules.ClaimPlaytime(fromFirst, now, 1)
+	assert(r1 ~= nil and err1 == nil and c1 == 4, "claiming tier 1 at 20 min claims 4 tiers")
+	assert(r1.Gold == 3500 and r1.Gems == 65 and r1.PromotionStones == nil, "payout equals 5+10+15+20 min rewards")
+	for i = 1, 4 do assert(fromFirst.Playtime.Claimed[i] == true, "tier " .. i .. " claimed") end
+	for i = 5, #Config.Playtime do assert(fromFirst.Playtime.Claimed[i] == false, "locked tier " .. i .. " untouched") end
+	assert(Rules.ClaimPlaytime(fromFirst, now, 5) == nil, "locked tier still refused")
+
+	-- 20 minutes played, click 15 min (tier 3) -> claims tiers 1..4 (earlier and later unlocked tiers).
+	local fromMiddle = Rules.NewState()
+	Rules.AddPlaytime(fromMiddle, now, 20 * 60)
+	local r3, err3, c3 = Rules.ClaimPlaytime(fromMiddle, now, 3)
+	assert(r3 ~= nil and err3 == nil and c3 == 4, "claiming tier 3 at 20 min claims 4 tiers")
+	assert(r3.Gold == 3500 and r3.Gems == 65 and r3.PromotionStones == nil, "merged payout matches all 4 tiers")
+	for i = 1, 4 do assert(fromMiddle.Playtime.Claimed[i] == true, "tier " .. i .. " claimed") end
+	for i = 5, #Config.Playtime do assert(fromMiddle.Playtime.Claimed[i] == false, "locked tier " .. i .. " untouched") end
+
+	-- Tier 1 already claimed earlier; at 20 min clicking tier 3 claims only tiers 2..4 without double-paying tier 1.
+	local partial = Rules.NewState()
+	Rules.AddPlaytime(partial, now, 5 * 60)
+	assert(Rules.ClaimPlaytime(partial, now, 1) == Config.Playtime[1].Reward, "tier 1 claimed at 5 min")
+	Rules.AddPlaytime(partial, now, 15 * 60)
+	local rp, errp, cp = Rules.ClaimPlaytime(partial, now, 3)
+	assert(rp ~= nil and errp == nil and cp == 3, "only the 3 remaining unlocked tiers are claimed")
+	assert(rp.Gold == 2500 and rp.Gems == 65 and rp.PromotionStones == nil, "already-claimed tier 1 is not paid again")
+
+	-- Clicking a locked tier refuses cleanly without claiming earlier unlocked tiers.
+	local locked = Rules.NewState()
+	Rules.AddPlaytime(locked, now, 20 * 60)
+	local rl, errl, cl = Rules.ClaimPlaytime(locked, now, 5)
+	assert(rl == nil and errl ~= nil and cl == nil, "locked tier refuses")
+	for i = 1, #Config.Playtime do assert(locked.Playtime.Claimed[i] == false, "no tiers mutated on locked claim") end
 end)
 
 test("rewards: codes are case-insensitive, one use per profile, and can expire", function()
