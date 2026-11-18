@@ -4501,7 +4501,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end)
 
-		-- 5. West Glacier Caves: grand IceCaveOverhang arches, >=28-stud translucent cave roofs & stalactites, Rimelight Crystals
+		-- 5. West Glacier Caves: sculpted IceCaveOverhang arches facing +X from the west cliff & Rimelight Crystals
 		local caveSides = {
 			{ name = "IceCaveMouth", x = -218, y = 4, z = -10, roofX = -202, len = 60 },
 			{ name = "CrystalGrotto", x = -214, y = 12, z = -150, roofX = -198, len = 58 },
@@ -4511,7 +4511,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			group("IceCaveOverhang", function()
 				currentParent:SetAttribute("OnTerrain", true)
 				if KitProps.Has("IceCaveOverhang") then
-					kitAt("IceCaveOverhang", CFrame.new(cv.x, cy, cv.z) * CFrame.Angles(0, math.rad(90), 0), 1.34 * scale, {
+					-- Kit mesh back rests at -X and projects its overhanging brow/icicles toward +X (into the terrace)
+					kitAt("IceCaveOverhang", CFrame.new(cv.x, cy, cv.z), 1.34 * scale, {
 						STONE = { Color = cGraniteDark, Material = Enum.Material.Slate },
 						MOSS = { Color = cSnow, Material = Enum.Material.Snow },
 						CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.1 },
@@ -4524,13 +4525,12 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					pN:SetAttribute("SolidScenery", false)
 					local brow = block("CaveHighBrow", V(24, 5.5, 42), V(cv.x + 10, cv.y + 32, cv.z), cGraniteDark, Enum.Material.Slate)
 					brow:SetAttribute("SolidScenery", false)
-				end
-				-- Translucent ice cave roof covering at most outer ~26% of terrace, >=29 studs above walk surface
-				local roof = block("CaveTranslucentIceRoof", V(28, 2.2, cv.len), V(cv.roofX, cv.y + 30.5, cv.z), cGlacier, Enum.Material.Ice, nil, 0.45)
-				roof:SetAttribute("SolidScenery", false)
-				for iz = -cv.len * 0.42, cv.len * 0.42, 10 do
-					local ic = block("CaveRoofIcicle", V(1.8, 5.2, 1.8), V(cv.roofX + 12.5, cv.y + 27.6, cv.z + iz), cGlacier, Enum.Material.Ice, nil, 0.14)
-					ic:SetAttribute("SolidScenery", false)
+					local roof = block("CaveTranslucentIceRoof", V(28, 2.2, cv.len), V(cv.roofX, cv.y + 30.5, cv.z), cGlacier, Enum.Material.Ice, nil, 0.45)
+					roof:SetAttribute("SolidScenery", false)
+					for iz = -cv.len * 0.42, cv.len * 0.42, 10 do
+						local ic = block("CaveRoofIcicle", V(1.8, 5.2, 1.8), V(cv.roofX + 12.5, cv.y + 27.6, cv.z + iz), cGlacier, Enum.Material.Ice, nil, 0.14)
+						ic:SetAttribute("SolidScenery", false)
+					end
 				end
 			end)
 		end
