@@ -231,9 +231,12 @@ end
 
 local function decor(parent: Instance, name: string, size: Vector3, pos: Vector3, color: Color3, mat: Enum.Material?, transparency: number?): Part
 	local solid = name == "BridgeCurb" or name == "SanctuarySideWall"
-  or name == "TerraceRockOutcrop" or name == "TerraceCornerPedestal"
-  or name == "TerraceMasonryBand" or name == "TerraceSideBand"
-  or name == "TerracePlinthX" or name == "TerracePlinthZ" or name == "ViaductPier"
+		or name == "TerraceRockOutcrop" or name == "TerraceCornerPedestal"
+		or name == "TerraceMasonryBand" or name == "TerraceSideBand"
+		or name == "TerracePlinthX" or name == "TerracePlinthZ" or name == "ViaductPier"
+		or name == "BridgeHandrail" or name == "BridgeMidRail" or name == "BridgeNewelPost"
+		or name == "BridgeNewelCap" or name == "BridgeRailPost" or name == "BridgeSideGirder"
+		or name == "BridgeLakePier"
  local p = part(parent, name, size, pos, color, mat, solid)
  p.CanQuery = solid
  p:SetAttribute("SolidScenery", solid)

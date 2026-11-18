@@ -126,18 +126,29 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		p.Size = size
 		p.Position = origin + pos
 		p.Anchored = true
-		-- Structural scenery participates in both physics and navigation probes.
-  local solid = name:find("Cliff") or name:find("Wall") or name:find("Island")
-   or name:find("Crag") or name:find("Bastion") or name:find("Massif")
-   or name:find("HorizonPeak") or name:find("HorizonFoothill") or name:find("SkyPeak")
-   or name:find("ArchPier") or name:find("Monolith") or name:find("Obelisk")
-   or name:find("TempleTier") or name:find("CitadelKeep") or name:find("AltarDais")
-   or name:find("Throne") or name == "SpirePlinth" or name == "SpireShaft"
-   or name == "SpireUpperTier" or name == "LibraryPilaster"
-  p.CanCollide = solid ~= nil
-  p.CanTouch = false
-  p.CanQuery = p.CanCollide
-  p:SetAttribute("SolidScenery", p.CanCollide)
+		-- Structural scenery and physical props participate in collision & queries; liquids, flush ground markings, and misty VFX stay non-solid.
+		local solid = name:find("Cliff") or name:find("Wall") or name:find("Island")
+			or name:find("Crag") or name:find("Bastion") or name:find("Massif")
+			or name:find("HorizonPeak") or name:find("HorizonFoothill") or name:find("SkyPeak")
+			or name:find("ArchPier") or name:find("Monolith") or name:find("Obelisk")
+			or name:find("TempleTier") or name:find("CitadelKeep") or name:find("AltarDais")
+			or name:find("Throne") or name == "SpirePlinth" or name == "SpireShaft"
+			or name == "SpireUpperTier" or name == "LibraryPilaster"
+		local isLiquid = name:find("Liquid") or name:find("Water")
+			or name:find("Lava") or name:find("Sea") or name:find("Pool")
+			or name:find("River") or name:find("Stream") or name:find("CrucibleLava")
+			or name:find("Shoal") or name:find("BubbleGlow") or name:find("CraterMagma")
+			or (not name:find("Rimefall") and (name:find("Fall") or name:find("Cascade")))
+		local isNonSolidFx = name:find("Track") or name:find("Rut")
+			or name:find("HoleRing") or name:find("HoleWater")
+			or name:find("Aurora") or name:find("LightShaft") or name:find("Sunbeam")
+			or name:find("Foam") or name:find("Mist") or name:find("GlowSeam")
+			or name:find("Vein") or name:find("Silhouette")
+			or (trans ~= nil and trans >= 0.45)
+		p.CanCollide = (not isLiquid) and (not isNonSolidFx)
+		p.CanTouch = false
+		p.CanQuery = p.CanCollide
+		p:SetAttribute("SolidScenery", solid ~= nil)
 		p.CastShadow = false
 		p.Color = color or theme.TrimColor
 		p.Material = material or theme.TrimMaterial
@@ -147,11 +158,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		if trans then p.Transparency = trans end
 		-- Bloom safeguard for liquid blocks: liquid surfaces (water, lava, falls, pools, rivers, mist)
 		-- must NEVER have Neon material so bloom does NOT trigger on liquid blocks.
-		local isLiquid = name:find("Liquid") or name:find("Water") or name:find("Fall")
-			or name:find("Lava") or name:find("Sea") or name:find("Pool") or name:find("Cascade")
-			or name:find("River") or name:find("Stream") or name:find("CrucibleLava")
-			or name:find("Shoal") or name:find("BubbleGlow") or name:find("CraterMagma")
-		if isLiquid then
+		if isLiquid and not name:find("Rimefall") then
 			if p.Material == Enum.Material.Neon then
 				p.Material = Enum.Material.SmoothPlastic
 			end
@@ -179,9 +186,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		p.Size = size
 		p.CFrame = CFrame.new(origin) * cf
 		p.Anchored = true
-		p.CanCollide = false
+		p.CanCollide = (trans == nil or trans < 0.45)
 		p.CanTouch = false
-		p.CanQuery = false
+		p.CanQuery = p.CanCollide
 		p.CastShadow = false
 		p.Color = color or cliffColor
 		p.Material = material or cliffMat
@@ -3510,6 +3517,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 		table.insert(reservedSpots, { 24, -198, 42 })
 		table.insert(reservedSpots, { -30, -194, 34 })
+		-- Keep the middle-right snowfield corridor clear of trees blocking BASIN_EAST (right side of Sanctuary spawn)
+		table.insert(reservedSpots, { 54, 92, 46 })
+		table.insert(reservedSpots, { 86, 86, 34 })
 		local f16Override = {
 			STONE = { Color = cGranite, Material = Enum.Material.Slate },
 			MOSS = { Color = cSnow, Material = Enum.Material.Snow },
