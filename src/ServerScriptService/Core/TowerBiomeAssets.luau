@@ -768,10 +768,12 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			arch(V(mid.X, bottom, mid.Z), span, rise + (mid.Y - 2 - bottom), depthSize, color, theme.TrimMaterial, yaw)
 		end)
 	end
-	-- A hand-authored floor can arch its paths with something of its own (Floor 1: a canopy of giant trees).
-	if not layout.Authored then
-		rampArch(ramp1Mid, ramp1Yaw, 42, 28 * scale, 8, theme.TrimColor)
-		rampArch(ramp2Mid, ramp2Yaw, 38, 30 * scale, 8, theme.TrimColor)
+	-- A hand-authored floor can arch its paths with something of its own (Floor 1: a canopy of giant trees;
+	-- Floor 4: ruined Solmere fortress arches spanning the Outer Ward entry, moat bridge, and Inner Keep stairs).
+	if not layout.Authored or layout.Authored == "verdant:4" then
+		local archMatColor = if layout.Authored == "verdant:4" then rgb(196, 190, 168) else theme.TrimColor
+		rampArch(ramp1Mid, ramp1Yaw, 40, 28 * scale, 8, archMatColor)
+		rampArch(ramp2Mid, ramp2Yaw, 38, 30 * scale, 8, archMatColor)
 		rampArch(stairMid, stairYaw, 42, 34 * scale, 9, gold)
 	end
 
@@ -905,8 +907,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- 4. BIOME-SPECIFIC FOREGROUND / MIDGROUND ICONIC GUARDIANS & MONUMENTS
 	-- =========================================================================
 	if biome == "verdant_ruins" then
-		-- Floor 2 (Broken Aqueduct) replaces the generic foreground head/lion with its own pond & mill pieces.
-		if layout.Authored ~= "verdant:2" then
+		-- Floor 2 (Broken Aqueduct) and Floor 4 (Vinebound Bastion) replace the generic foreground head/lion with their own pieces.
+		if layout.Authored ~= "verdant:2" and layout.Authored ~= "verdant:4" then
 			-- Left foreground: Giant Ancient Carved Stone Deity Head nestled in banyan roots (from Verdant Ruins.png)
 			local headPos = V(-basin.Width * 0.36, basin.Y, basin.Z - 6)
 			group("CarvedHead", function()
@@ -923,8 +925,10 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			-- Right foreground: Seated Stone Lion Guardian on mossy plinth (from Verdant Ruins.png)
 			statue(V(basin.Width * 0.36, basin.Y, basin.Z - 6), 1.3 * scale, "LionGuardian", 1)
 		end
-		for _, s in { -1, 1 } do
-			statue(V(apex.X + s * (apex.Width * 0.5 + 18), apex.Y - 2, apex.Z + 18), 1.25 * scale, "LionGuardian", s)
+		if layout.Authored ~= "verdant:4" then
+			for _, s in { -1, 1 } do
+				statue(V(apex.X + s * (apex.Width * 0.5 + 18), apex.Y - 2, apex.Z + 18), 1.25 * scale, "LionGuardian", s)
+			end
 		end
 
 	elseif biome == "sunken_sanctuary" then
@@ -1573,12 +1577,11 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			WOOD = { Color = bark, Material = Enum.Material.Wood },
 		}
 
-		-- 1. Breached Gatehouse Arch astride Crossing's north stair exit (tagged RampArch so WalkwayHitTest exempts
-		-- the overhead lintel while players walk right through the 34-stud open doorway; clears GATEHOUSE camp at Z=48).
+		-- 1. Breached Gatehouse Arch astride Crossing's north stair exit plus fortress bridge arches across the wings & wall-walks.
 		local gateAt = V(crossing.X, crossing.Y, crossing.Z - crossing.Depth / 2 - 10)
 		group("RampArch", function()
 			if KitProps.Has("GatehouseArch") then
-				kitAt("GatehouseArch", CFrame.new(gateAt), 1.0, f4Override)
+				kitAt("GatehouseArch", CFrame.new(gateAt), 1.08, f4Override)
 			else
 				for _, s in { -1, 1 } do
 					block("GatehousePier", V(12, 26, 12), gateAt + V(s * 23, 13, 0), limestone, Enum.Material.Limestone)
@@ -1588,14 +1591,25 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				limb("GatehouseStranglerFig", gateAt + V(19, 0, 5), gateAt + V(14, 26, 4), 2.8, bark)
 			end
 		end)
+		for _, pair in {
+			{ "Crossing", "WestGallery", 38, 24 },
+			{ "Crossing", "EastGallery", 38, 24 },
+			{ "WestGallery", "WestBastion", 38, 24 },
+			{ "EastGallery", "EastBastion", 38, 24 },
+		} do
+			local wMid, wYaw = spineMid(pair[1], pair[2])
+			if wMid.Magnitude > 0 then
+				rampArch(wMid, wYaw, pair[3], pair[4] * scale, 7.5, limestone)
+			end
+		end
 
-		-- Twin crouching Vinebound Guardian statues flanking the front corner piers of the Gatehouse.
+		-- Twin crouching Vinebound Guardian statues flanking the front corner piers of the Gatehouse & Keep perimeter.
 		for _, sx in { -1, 1 } do
 			local gAt = V(sx * 30, crossing.Y, crossing.Z + 24)
 			if footprintClear(gAt.X, gAt.Z, 4.5, 4.5) then
 				group("VineboundGuardian", function()
 					if KitProps.Has("VineboundGuardian") then
-						kitAt("VineboundGuardian", CFrame.new(gAt) * CFrame.Angles(0, math.rad(-sx * 16), 0), 1.0, f4Override)
+						kitAt("VineboundGuardian", CFrame.new(gAt) * CFrame.Angles(0, math.rad(-sx * 16), 0), 1.05, f4Override)
 					else
 						block("GuardianPlinth", V(9, 1.8, 9), gAt + V(0, 0.9, 0), limestone, Enum.Material.Limestone)
 						block("GuardianBody", V(7, 9, 6), gAt + V(0, 6.2, 0), limestone, Enum.Material.Limestone)
@@ -1603,63 +1617,87 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					end
 				end)
 			end
-		end
-
-		-- 2. Crenellated Curtain Wall stretching east and west from the Gatehouse behind the wall-walks with collapsed breaches.
-		for _, spot in {
-			{ -70, -6, 0.14 }, { -104, -24, -0.22 },
-			{ 70, -6, -0.14 }, { 104, -24, 0.22 },
-		} do
-			if footprintClear(spot[1], spot[2], 15, 4) then
-				table.insert(reservedSpots, { spot[1], spot[2], 18 })
-				group("CurtainWallRuins", function()
-					if natural then currentParent:SetAttribute("OnTerrain", true) end
-					-- Stone moat plinth anchoring wall segment down into bottom (-8)
-					local plinth = block("CurtainWallPlinth", V(30, crossing.Y - bottom + 1, 7), V(spot[1], (crossing.Y + bottom) / 2, spot[2]), limestone, Enum.Material.Limestone)
-					plinth.CFrame = CFrame.new(origin + V(spot[1], (crossing.Y + bottom) / 2, spot[2])) * CFrame.Angles(0, spot[3], 0)
-					if KitProps.Has("CurtainWallRuins") then
-						kitAt("CurtainWallRuins", CFrame.new(V(spot[1], crossing.Y, spot[2])) * CFrame.Angles(0, spot[3], 0), 1.0, f4Override)
-					else
-						local wallBody = block("CurtainWallBody", V(28, 14, 5.5), V(spot[1], crossing.Y + 7, spot[2]), limestone, Enum.Material.Limestone)
-						wallBody.CFrame = CFrame.new(origin + V(spot[1], crossing.Y + 7, spot[2])) * CFrame.Angles(0, spot[3], 0)
+			local keepGuardAt = V(sx * 82, apex.Y - 2, apex.Z - 24)
+			if footprintClear(keepGuardAt.X, keepGuardAt.Z, 5, 5) then
+				group("VineboundGuardian", function()
+					if KitProps.Has("VineboundGuardian") then
+						kitAt("VineboundGuardian", CFrame.new(keepGuardAt) * CFrame.Angles(0, math.rad(-sx * 24), 0), 1.25, f4Override)
 					end
 				end)
 			end
 		end
 
-		-- 3. Vinebound Bastion Towers beside West Tower (upright) & East Tower (leaning under strangler vines).
+		-- 2. Grand multi-tier Castle Curtain Walls surrounding the Gatehouse, Inner Ward, Keep flanks & perimeter.
+		for _, wall in {
+			{ x = -70, y = crossing.Y + 4, z = -10, yaw = 0.14, sx = 1.65, sy = 1.85 },
+			{ x = -106, y = crossing.Y + 5, z = -32, yaw = -0.18, sx = 1.65, sy = 1.85 },
+			{ x = 70, y = crossing.Y + 4, z = -20, yaw = -0.14, sx = 1.65, sy = 1.85 },
+			{ x = 106, y = crossing.Y + 5, z = -32, yaw = 0.18, sx = 1.65, sy = 1.85 },
+			{ x = -88, y = bastionW.Y, z = -98, yaw = 0.28, sx = 1.60, sy = 1.75 },
+			{ x = 88, y = bastionE.Y, z = -106, yaw = -0.28, sx = 1.60, sy = 1.75 },
+			{ x = -96, y = apex.Y - 4, z = -228, yaw = -0.18, sx = 1.65, sy = 1.75 },
+			{ x = 96, y = apex.Y - 4, z = -228, yaw = 0.18, sx = 1.65, sy = 1.75 },
+			{ x = -228, y = westGal.Y + 2, z = -68, yaw = math.pi / 2, sx = 1.75, sy = 1.95 },
+			{ x = 228, y = eastGal.Y + 2, z = -76, yaw = -math.pi / 2, sx = 1.75, sy = 1.95 },
+		} do
+			local checkHalfX = if math.abs(wall.yaw) > 1.0 then 6 else 22
+			local checkHalfZ = if math.abs(wall.yaw) > 1.0 then 22 else 6
+			if footprintClear(wall.x, wall.z, checkHalfX, checkHalfZ) then
+				table.insert(reservedSpots, { wall.x, wall.z, 26 })
+				group("CurtainWallRuins", function()
+					if natural then currentParent:SetAttribute("OnTerrain", true) end
+					-- Tall battered limestone castle foundation plinth descending solidly into moat bed (bottom = -8)
+					local plinthH = wall.y - bottom + 1.5
+					local plinth = block("CurtainWallPlinth", V(31 * wall.sx, plinthH, 9.5), V(wall.x, (wall.y + bottom) / 2, wall.z), limestone, Enum.Material.Limestone)
+					plinth.CFrame = CFrame.new(origin + V(wall.x, (wall.y + bottom) / 2, wall.z)) * CFrame.Angles(0, wall.yaw, 0)
+					if KitProps.Has("CurtainWallRuins") then
+						kitAt("CurtainWallRuins", CFrame.new(V(wall.x, wall.y, wall.z)) * CFrame.Angles(0, wall.yaw, 0), V(wall.sx, wall.sy, 1.45), f4Override)
+					else
+						local wallBody = block("CurtainWallBody", V(30 * wall.sx, 16 * wall.sy, 6.5), V(wall.x, wall.y + 8 * wall.sy, wall.z), limestone, Enum.Material.Limestone)
+						wallBody.CFrame = CFrame.new(origin + V(wall.x, wall.y + 8 * wall.sy, wall.z)) * CFrame.Angles(0, wall.yaw, 0)
+					end
+				end)
+			end
+		end
+
+		-- 3. Grander Vinebound Bastion Towers beside West & East Towers plus flanking northern corner turrets.
 		local wTowerAt = V(bastionW.X - bastionW.Width / 2 - 12, bottom, bastionW.Z - 6)
 		local eTowerAt = V(bastionE.X + bastionE.Width / 2 + 12, bottom, bastionE.Z - 6)
-		table.insert(reservedSpots, { wTowerAt.X, wTowerAt.Z, 18 })
-		table.insert(reservedSpots, { eTowerAt.X, eTowerAt.Z, 18 })
+		table.insert(reservedSpots, { wTowerAt.X, wTowerAt.Z, 22 })
+		table.insert(reservedSpots, { eTowerAt.X, eTowerAt.Z, 22 })
 		for idxT, specT in {
-			{ at = wTowerAt, lean = 0, scaleY = 1.48 },
-			{ at = eTowerAt, lean = math.rad(-5.5), scaleY = 1.42 },
+			{ at = wTowerAt, lean = 0, scaleXZ = 1.45, scaleY = 1.75 },
+			{ at = eTowerAt, lean = math.rad(-5.5), scaleXZ = 1.45, scaleY = 1.70 },
+			{ at = V(-222, bottom, -188), lean = 0.02, scaleXZ = 1.05, scaleY = 1.32 },
+			{ at = V(222, bottom, -194), lean = -0.04, scaleXZ = 1.05, scaleY = 1.28 },
 		} do
-			group("VineboundTower", function()
-				if natural then currentParent:SetAttribute("OnTerrain", true) end
-				if KitProps.Has("VineboundTower") then
-					kitAt("VineboundTower", CFrame.new(specT.at) * CFrame.Angles(0, idxT * 1.1, specT.lean), V(1.25, specT.scaleY, 1.25), f4Override)
-				else
-					local towerBody = cyl("BastionWatchtower", specT.at + V(0, 34, 0), 12, 68, limestone, Enum.Material.Limestone)
-					towerBody.CFrame = CFrame.new(origin + specT.at + V(0, 34, 0)) * CFrame.Angles(0, 0, math.pi / 2 + specT.lean)
-				end
-			end)
+			if footprintClear(specT.at.X, specT.at.Z, 12, 12) then
+				table.insert(reservedSpots, { specT.at.X, specT.at.Z, 18 })
+				group("VineboundTower", function()
+					if natural then currentParent:SetAttribute("OnTerrain", true) end
+					if KitProps.Has("VineboundTower") then
+						kitAt("VineboundTower", CFrame.new(specT.at) * CFrame.Angles(0, idxT * 1.1, specT.lean), V(specT.scaleXZ, specT.scaleY, specT.scaleXZ), f4Override)
+					else
+						local towerBody = cyl("BastionWatchtower", specT.at + V(0, 34, 0), 12, 68, limestone, Enum.Material.Limestone)
+						towerBody.CFrame = CFrame.new(origin + specT.at + V(0, 34, 0)) * CFrame.Angles(0, 0, math.pi / 2 + specT.lean)
+					end
+				end)
+			end
 		end
 		-- Overhead vine cables slung high between the towers and the Inner Keep (above Y + 34, never blocking cams/lanes).
 		for _, cable in {
-			{ wTowerAt + V(12, 62, 0), V(-24, apex.Y + 40, apex.Z - apex.Depth / 2 - 10) },
-			{ eTowerAt + V(-12, 58, 0), V(24, apex.Y + 40, apex.Z - apex.Depth / 2 - 10) },
+			{ wTowerAt + V(12, 72, 0), V(-24, apex.Y + 46, apex.Z - apex.Depth / 2 - 10) },
+			{ eTowerAt + V(-12, 68, 0), V(24, apex.Y + 46, apex.Z - apex.Depth / 2 - 10) },
 		} do
 			group("AirborneVineCable", function()
 				currentParent:SetAttribute("OnTerrain", true)
 				local midCable = (cable[1] + cable[2]) * 0.5 - V(0, 6, 0)
-				limb("HighVineCable", cable[1], midCable, 1.6, bark)
-				limb("HighVineCable", midCable, cable[2], 1.6, barkDark)
+				limb("HighVineCable", cable[1], midCable, 1.8, bark)
+				limb("HighVineCable", midCable, cable[2], 1.8, barkDark)
 			end)
 		end
 
-		-- 4. Roofless Barracks spear racks & ruin gables (WestGallery outer flank) & Sun Shrine Altar + gable (EastGallery).
+		-- 4. Sculpted Solmere Ruins: Barracks spear rack & broken colonnade, Sun Shrine sculpted SunDiscShrine, broken inner marsh arches & balustrades.
 		local rackAt = V(westGal.X - 36, westGal.Y, westGal.Z - 32)
 		if footprintClear(rackAt.X, rackAt.Z, 2.5, 5) then
 			group("BarracksSpearRack", function()
@@ -1669,31 +1707,67 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end
 			end)
 		end
-		local wGableAt = V(westGal.X - 38, westGal.Y, westGal.Z - 14)
-		if footprintClear(wGableAt.X, wGableAt.Z, 3, 8) then
-			group("BarracksGableWall", function()
-				block("BarracksGableBase", V(4, 14, 15), wGableAt + V(0, 7, 0), limestone, Enum.Material.Limestone)
-				block("BarracksGablePeak", V(3.6, 6, 8), wGableAt + V(0, 17, 0), limestone, Enum.Material.Limestone)
-				block("GableMossCap", V(4.6, 1.4, 15.6), wGableAt + V(0, 14.5, 0), mossCol, Enum.Material.Grass)
+		local wRuinsAt = V(westGal.X - 36, westGal.Y, westGal.Z - 16)
+		if footprintClear(wRuinsAt.X, wRuinsAt.Z, 6, 9) then
+			group("BarracksRuinedSpan", function()
+				if KitProps.Has("AqueductBrokenSpan") then
+					kitAt("AqueductBrokenSpan", CFrame.new(wRuinsAt) * CFrame.Angles(0, math.pi / 2, 0), 0.85, f4Override)
+				elseif KitProps.Has("RuinRubble") then
+					kitAt("RuinRubble", CFrame.new(wRuinsAt), 1.1, f4Override)
+				end
 			end)
 		end
-		local altarAt = V(eastGal.X + 36, eastGal.Y, eastGal.Z - 32)
-		if footprintClear(altarAt.X, altarAt.Z, 3.5, 4) then
-			group("SunShrineAltar", function()
-				block("AltarPlinth", V(5.5, 3.2, 6.5), altarAt + V(0, 1.6, 0), limestone, Enum.Material.Limestone)
-				sunDisc("CrackedAltarSun", altarAt + V(0, 6.2, 0), 2.1, CFrame.Angles(0, -math.pi / 2, math.rad(12)), true)
+		local shrineAt = V(eastGal.X + 36, eastGal.Y, eastGal.Z - 26)
+		if footprintClear(shrineAt.X, shrineAt.Z, 5, 5) then
+			group("SunDiscShrine", function()
+				if KitProps.Has("SunDiscShrine") then
+					kitAt("SunDiscShrine", CFrame.new(shrineAt) * CFrame.Angles(0, -math.pi / 2, 0), 0.62, f4Override)
+				else
+					block("AltarPlinth", V(5.5, 3.2, 6.5), shrineAt + V(0, 1.6, 0), limestone, Enum.Material.Limestone)
+					sunDisc("CrackedAltarSun", shrineAt + V(0, 6.2, 0), 2.1, CFrame.Angles(0, -math.pi / 2, math.rad(12)), true)
+				end
 			end)
 		end
-		local eGableAt = V(eastGal.X + 38, eastGal.Y, eastGal.Z - 14)
-		if footprintClear(eGableAt.X, eGableAt.Z, 3, 8) then
-			group("SunShrineGableWall", function()
-				block("ShrineGableBase", V(4, 13, 15), eGableAt + V(0, 6.5, 0), limestone, Enum.Material.Limestone)
-				block("ShrineGablePeak", V(3.6, 5.5, 8), eGableAt + V(0, 15.7, 0), limestone, Enum.Material.Limestone)
-				block("GableMossCap", V(4.6, 1.4, 15.6), eGableAt + V(0, 13.5, 0), mossCol, Enum.Material.Grass)
+		local eRuinsAt = V(eastGal.X + 36, eastGal.Y, eastGal.Z - 4)
+		if footprintClear(eRuinsAt.X, eRuinsAt.Z, 6, 8) then
+			group("SunShrineRuinedSpan", function()
+				if KitProps.Has("AqueductBrokenSpan") then
+					kitAt("AqueductBrokenSpan", CFrame.new(eRuinsAt) * CFrame.Angles(0, -math.pi / 2, 0), 0.82, f4Override)
+				end
 			end)
 		end
 
-		-- 5. Marsh reeds, lily pads & toppled ashlar rubble in the Outer Ward green moat.
+		-- Crumbling vaulted Solmere ruin arches standing in the Inner Marsh & Outer Ward edges
+		for _, span in {
+			{ x = -68, y = bottom, z = -56, yaw = 0.35, s = 1.35 },
+			{ x = 68, y = bottom, z = -62, yaw = -0.35, s = 1.35 },
+			{ x = -74, y = basin.Y, z = 152, yaw = 0.22, s = 1.05 },
+			{ x = 74, y = basin.Y, z = 152, yaw = -0.22, s = 1.05 },
+		} do
+			if footprintClear(span.x, span.z, 12, 8) then
+				table.insert(reservedSpots, { span.x, span.z, 16 })
+				group("RuinedCastleVault", function()
+					if natural then currentParent:SetAttribute("OnTerrain", true) end
+					if KitProps.Has("AqueductBrokenSpan") then
+						kitAt("AqueductBrokenSpan", CFrame.new(V(span.x, span.y, span.z)) * CFrame.Angles(0, span.yaw, 0), span.s, f4Override)
+					end
+				end)
+			end
+		end
+
+		-- Carved Solmere balustrades along clear Outer Ward marsh edges
+		for _, bal in {
+			{ -144, basin.Y, 110, 0 }, { 144, basin.Y, 110, 0 },
+			{ -54, basin.Y, 200, 0 }, { 54, basin.Y, 200, 0 },
+		} do
+			if footprintClear(bal[1], bal[3], 8, 2) and KitProps.Has("SolmereBalustrade") then
+				group("SolmereBalustrade", function()
+					kitAt("SolmereBalustrade", CFrame.new(V(bal[1], bal[2], bal[3])) * CFrame.Angles(0, bal[4], 0), 1.0, f4Override)
+				end)
+			end
+		end
+
+		-- 5. Marsh reeds, lily pads & sculpted ruin rubble / stone urn / fern clusters in the Outer Ward green moat.
 		for _, spot in {
 			{ -48, bottom + 3.2, 72 }, { 48, bottom + 3.2, 72 }, { -138, bottom + 3.2, 72 },
 			{ 138, bottom + 3.2, 72 }, { -88, bottom + 3.2, -50 }, { 88, bottom + 3.2, -50 },
@@ -1702,21 +1776,32 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				group("MoatReedRaft", function()
 					if natural then currentParent:SetAttribute("OnTerrain", true) end
 					if KitProps.Has("ReedPondCluster") then
-						kitAt("ReedPondCluster", CFrame.new(V(spot[1], spot[2] - 0.4, spot[3])) * CFrame.Angles(0, spot[1], 0), 1.1, f4Override)
+						kitAt("ReedPondCluster", CFrame.new(V(spot[1], spot[2] - 0.4, spot[3])) * CFrame.Angles(0, spot[1], 0), 1.15, f4Override)
 					else
 						lilies(V(spot[1], spot[2], spot[3]), 4)
 					end
 				end)
 			end
 		end
-		for _, spot in {
-			{ -50, basin.Y, basin.Z + 8, 0.4 }, { 52, basin.Y, basin.Z + 8, -0.5 },
-			{ -158, basin.Y, basin.Z + 24, 0.8 }, { 158, basin.Y, basin.Z + 24, -0.7 },
+		for idxR, spot in {
+			{ -52, basin.Y, 174, 0.4 }, { 52, basin.Y, 174, -0.5 },
+			{ -162, basin.Y, 192, 0.8 }, { 162, basin.Y, 192, -0.7 },
 		} do
-			if footprintClear(spot[1], spot[3], 5, 4) then
+			if footprintClear(spot[1], spot[3], 5, 5) then
 				group("ToppledWallRubble", function()
-					local p = block("MoatFallenBlock", V(8, 3.5, 5), V(spot[1], spot[2] + 1.5, spot[3]), limestone, Enum.Material.Limestone)
-					p.CFrame = CFrame.new(origin + V(spot[1], spot[2] + 1.5, spot[3])) * CFrame.Angles(0.1, spot[4], 0.14)
+					local rAt = V(spot[1], spot[2], spot[3])
+					if KitProps.Has("RuinRubble") then
+						kitAt("RuinRubble", CFrame.new(rAt) * CFrame.Angles(0, spot[4], 0), 1.25, f4Override)
+						if KitProps.Has("StoneUrn") and idxR % 2 == 1 then
+							kitAt("StoneUrn", CFrame.new(rAt + V(4.2, 0, 1.8)), 0.85, f4Override)
+						end
+						if KitProps.Has("FernCluster") then
+							kitAt("FernCluster", CFrame.new(rAt + V(-3.5, 0, -2.5)), 0.9, f4Override)
+						end
+					else
+						local p = block("MoatFallenBlock", V(8, 3.5, 5), rAt + V(0, 1.5, 0), limestone, Enum.Material.Limestone)
+						p.CFrame = CFrame.new(origin + rAt + V(0, 1.5, 0)) * CFrame.Angles(0.1, spot[4], 0.14)
+					end
 				end)
 			end
 		end
