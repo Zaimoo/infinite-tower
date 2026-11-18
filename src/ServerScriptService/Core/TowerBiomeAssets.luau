@@ -1642,7 +1642,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					kitAt("VineboundTower", CFrame.new(specT.at) * CFrame.Angles(0, idxT * 1.1, specT.lean), V(1.25, specT.scaleY, 1.25), f4Override)
 				else
 					local towerBody = cyl("BastionWatchtower", specT.at + V(0, 34, 0), 12, 68, limestone, Enum.Material.Limestone)
-					towerBody.CFrame = CFrame.new(origin + specT.at + V(0, 34, 0)) * CFrame.Angles(0, 0, specT.lean)
+					towerBody.CFrame = CFrame.new(origin + specT.at + V(0, 34, 0)) * CFrame.Angles(0, 0, math.pi / 2 + specT.lean)
 				end
 			end)
 		end
@@ -1674,7 +1674,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			group("BarracksGableWall", function()
 				block("BarracksGableBase", V(4, 14, 15), wGableAt + V(0, 7, 0), limestone, Enum.Material.Limestone)
 				block("BarracksGablePeak", V(3.6, 6, 8), wGableAt + V(0, 17, 0), limestone, Enum.Material.Limestone)
-				mossTuft(wGableAt + V(0, 14.5, 0), V(4.6, 1.4, 15.6))
+				block("GableMossCap", V(4.6, 1.4, 15.6), wGableAt + V(0, 14.5, 0), mossCol, Enum.Material.Grass)
 			end)
 		end
 		local altarAt = V(eastGal.X + 36, eastGal.Y, eastGal.Z - 32)
@@ -1689,7 +1689,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			group("SunShrineGableWall", function()
 				block("ShrineGableBase", V(4, 13, 15), eGableAt + V(0, 6.5, 0), limestone, Enum.Material.Limestone)
 				block("ShrineGablePeak", V(3.6, 5.5, 8), eGableAt + V(0, 15.7, 0), limestone, Enum.Material.Limestone)
-				mossTuft(eGableAt + V(0, 13.5, 0), V(4.6, 1.4, 15.6))
+				block("GableMossCap", V(4.6, 1.4, 15.6), eGableAt + V(0, 13.5, 0), mossCol, Enum.Material.Grass)
 			end)
 		end
 
