@@ -16,13 +16,17 @@ return function(keepImported: boolean?): string
 	local ServerStorage = game:GetService("ServerStorage")
 	local Kit = require(game.ReplicatedStorage.Shared.Config.TowerBiomeKit)
 
+	local function templateSpec(name: string)
+		return Kit.Templates[name] or Kit.ExtraTemplates[name]
+	end
+
 	-- 1. Collect the imported parts by template and role.
 	local byTemplate: { [string]: { [string]: MeshPart } } = {}
 	local roots: { [Instance]: boolean } = {}
 	for _, d in workspace:GetDescendants() do
 		if d:IsA("MeshPart") then
 			local template, role = string.match(d.Name, "^(.-)__(%u+)$")
-			if template and role and Kit.Templates[template] then
+			if template and role and templateSpec(template) then
 				byTemplate[template] = byTemplate[template] or {}
 				byTemplate[template][role] = d
 				local root: Instance = d
@@ -63,8 +67,9 @@ return function(keepImported: boolean?): string
 	local ratios = {}
 	for name, parts in byTemplate do
 		local lo, hi = bounds(listOf(parts))
-		if hi.Y - lo.Y > 1e-3 then
-			table.insert(ratios, Kit.Templates[name].Size.Y / (hi.Y - lo.Y))
+		local spec = templateSpec(name)
+		if spec and hi.Y - lo.Y > 1e-3 then
+			table.insert(ratios, spec.Size.Y / (hi.Y - lo.Y))
 		end
 	end
 	if #ratios == 0 then
@@ -73,26 +78,36 @@ return function(keepImported: boolean?): string
 	table.sort(ratios)
 	local scale = ratios[math.ceil(#ratios / 2)]
 
-	-- 3. Yaw: the turn about Y that maps imported bounds onto authored bounds (Min and Size, from the shared
-	-- origin). The origin itself is found from ArchPierBase, which is centred on it and stands on it.
-	local pierParts = byTemplate.ArchPierBase
-	assert(pierParts, "ArchPierBase is missing from the import")
-	local pLo, pHi = bounds(listOf(pierParts))
-	local origin = Vector3.new((pLo.X + pHi.X) / 2, pLo.Y, (pLo.Z + pHi.Z) / 2)
+	-- 3. Yaw & origin: try each 90-degree turn and solve origin from bounds so standalone ExtraTemplate
+	-- imports (without ArchPierBase) handle Studio's 180-degree importer flip identically.
+	local origin = Vector3.zero
 	local bestYaw, bestErr = 0, math.huge
 	for _, yaw in { 0, 90, 180, 270 } do
 		local turn = CFrame.Angles(0, math.rad(yaw), 0)
+		local sampleOrigin = Vector3.zero
+		if byTemplate.ArchPierBase then
+			local pLo, pHi = bounds(listOf(byTemplate.ArchPierBase))
+			sampleOrigin = Vector3.new((pLo.X + pHi.X) / 2, pLo.Y, (pLo.Z + pHi.Z) / 2)
+		else
+			for name, parts in byTemplate do
+				local want = assert(templateSpec(name))
+				local pLo, pHi = bounds(listOf(parts))
+				local rLo = turn:VectorToWorldSpace(pLo):Min(turn:VectorToWorldSpace(pHi))
+				sampleOrigin = turn:PointToObjectSpace((rLo * scale - want.Min) / scale)
+				break
+			end
+		end
 		local err = 0
 		for name, parts in byTemplate do
 			local lo, hi = bounds(listOf(parts))
-			local a = turn:VectorToWorldSpace((lo - origin) * scale)
-			local b = turn:VectorToWorldSpace((hi - origin) * scale)
+			local a = turn:VectorToWorldSpace((lo - sampleOrigin) * scale)
+			local b = turn:VectorToWorldSpace((hi - sampleOrigin) * scale)
 			local tMin = a:Min(b)
-			local want = Kit.Templates[name]
+			local want = assert(templateSpec(name))
 			err += (tMin - want.Min).Magnitude
 		end
 		if err < bestErr then
-			bestYaw, bestErr = yaw, err
+			bestYaw, bestErr, origin = yaw, err, sampleOrigin
 		end
 	end
 	local turn = CFrame.Angles(0, math.rad(bestYaw), 0)
@@ -103,11 +118,13 @@ return function(keepImported: boolean?): string
 	folder.Parent = ServerStorage
 	local report = { string.format("scale %.4f, yaw %d, bounds error %.2f studs", scale, bestYaw, bestErr) }
 	local missing = {}
-	for name, spec in Kit.Templates do
+	local function fileTemplate(name: string, spec: Kit.Template, required: boolean)
 		local parts = byTemplate[name]
 		if not parts then
-			table.insert(missing, name)
-			continue
+			if required then
+				table.insert(missing, name)
+			end
+			return
 		end
 		local old = folder:FindFirstChild(name)
 		if old then
@@ -154,6 +171,13 @@ return function(keepImported: boolean?): string
 		local lo, hi = bounds(model:GetChildren() :: any)
 		local drift = (lo - spec.Min).Magnitude + ((hi - lo) - spec.Size).Magnitude
 		table.insert(report, string.format("%s: %d roles, size %.1f x %.1f x %.1f, drift %.2f%s", name, #model:GetChildren(), hi.X - lo.X, hi.Y - lo.Y, hi.Z - lo.Z, drift, if rotated > 0 then string.format(", %d SKEWED parts (re-export)", rotated) else ""))
+	end
+	local requireCore = byTemplate.ArchPierBase ~= nil
+	for name, spec in Kit.Templates do
+		fileTemplate(name, spec, requireCore)
+	end
+	for name, spec in Kit.ExtraTemplates do
+		fileTemplate(name, spec, false)
 	end
 	table.sort(report)
 	if #missing > 0 then

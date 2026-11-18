@@ -249,6 +249,26 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.3, AtmosphereColor = c(214, 190, 156), AtmosphereDecay = c(118, 132, 116), AtmosphereHaze = 1.25,
 		TintColor = c(255, 244, 226), Saturation = 0.14, ExposureCompensation = -0.05, BloomIntensity = 0.32,
 	},
+	-- Floor 2, Broken Aqueduct: bright morning. Crisp daylight, cool teal water bounce, clear air with light spray haze.
+	[2] = {
+		Ambient = c(66, 78, 74), OutdoorAmbient = c(118, 128, 118), ColorShift_Top = c(248, 250, 232), ColorShift_Bottom = c(74, 114, 106),
+		AtmosphereDensity = 0.22, AtmosphereColor = c(186, 222, 214), AtmosphereDecay = c(110, 146, 134), AtmosphereHaze = 0.78,
+		TintColor = c(248, 255, 250), Saturation = 0.16, ExposureCompensation = 0.02, BloomIntensity = 0.26,
+	},
+	-- Floor 3, Rootway Crossing: high noon. Hard sunlit canopy shafts over the Knot, lush emerald gorge mist below.
+	[3] = {
+		Ambient = c(72, 82, 70), OutdoorAmbient = c(128, 134, 116), ColorShift_Top = c(255, 252, 220), ColorShift_Bottom = c(68, 104, 88),
+		AtmosphereDensity = 0.25, AtmosphereColor = c(194, 228, 206), AtmosphereDecay = c(102, 138, 118), AtmosphereHaze = 0.95,
+		TintColor = c(252, 255, 244), Saturation = 0.18, ExposureCompensation = 0.04, BloomIntensity = 0.28,
+		SunRaysIntensity = 0.18, SunRaysSpread = 0.72,
+	},
+	-- Floor 4, Vinebound Bastion: overcast humid afternoon. Soft grey-green sky, dense low marsh mist over the moat.
+	[4] = {
+		Ambient = c(60, 68, 60), OutdoorAmbient = c(98, 108, 96), ColorShift_Top = c(206, 214, 192), ColorShift_Bottom = c(66, 86, 72),
+		AtmosphereDensity = 0.42, AtmosphereColor = c(154, 174, 152), AtmosphereDecay = c(86, 108, 90), AtmosphereHaze = 1.65,
+		TintColor = c(236, 244, 232), Saturation = -0.04, ExposureCompensation = -0.04, BloomIntensity = 0.24,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.4,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

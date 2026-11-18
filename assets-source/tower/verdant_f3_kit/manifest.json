@@ -1,0 +1,102 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "FernCluster": {
+      "Min": [
+        -4.642,
+        0.0,
+        -5.13
+      ],
+      "Roles": {
+        "FOLIAGE": 528,
+        "MOSS": 20,
+        "WOOD": 24
+      },
+      "Size": [
+        9.888,
+        3.741,
+        10.323
+      ],
+      "Triangles": 572
+    },
+    "HollowStumpRim": {
+      "Min": [
+        -43.706,
+        -1.036,
+        -42.875
+      ],
+      "Roles": {
+        "FOLIAGE": 80,
+        "MOSS": 400,
+        "WOOD": 1868
+      },
+      "Size": [
+        86.521,
+        29.645,
+        60.122
+      ],
+      "Triangles": 2348
+    },
+    "RootBridgeArch": {
+      "Min": [
+        -27.434,
+        -0.208,
+        -3.727
+      ],
+      "Roles": {
+        "GLOW": 68,
+        "MOSS": 240,
+        "TRIM": 234,
+        "WOOD": 330
+      },
+      "Size": [
+        54.835,
+        23.185,
+        7.634
+      ],
+      "Triangles": 872
+    },
+    "RootKnotLantern": {
+      "Min": [
+        -1.6,
+        -0.161,
+        -1.6
+      ],
+      "Roles": {
+        "GLOW": 80,
+        "GOLD": 300,
+        "MOSS": 20,
+        "TRIM": 248,
+        "WOOD": 46
+      },
+      "Size": [
+        3.727,
+        9.471,
+        3.2
+      ],
+      "Triangles": 694
+    },
+    "RootThrone": {
+      "Min": [
+        -15.731,
+        -0.652,
+        -20.0
+      ],
+      "Roles": {
+        "ACCENT": 250,
+        "GLOW": 156,
+        "GOLD": 592,
+        "MOSS": 240,
+        "TRIM": 723,
+        "WOOD": 284
+      },
+      "Size": [
+        31.462,
+        34.652,
+        31.541
+      ],
+      "Triangles": 2245
+    }
+  },
+  "Unit": "studs"
+}

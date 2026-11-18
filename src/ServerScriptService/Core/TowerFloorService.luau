@@ -96,8 +96,8 @@ function Service.GetSafety(context: any,position: Vector3): any
 end
 function Service.GroundDrop(context: any,position: Vector3,halfHeight: number): Vector3
 	local r=assert(rooms[context.FloorId],"Drop room absent")
-	local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances=r.Model and {r.Model} or {workspace.BaseOverhaulGeometry,workspace.WaitingRoomPlots}
+	local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Include;params.IgnoreWater=true
+	params.FilterDescendantsInstances=r.Model and {r.Model,workspace.Terrain} or {workspace.BaseOverhaulGeometry,workspace.WaitingRoomPlots}
 	local hit=workspace:Raycast(position+Vector3.new(0,8,0),Vector3.new(0,-64,0),params)
 	if hit and hit.Normal.Y>.65 and Protocol.InBounds(hit.Position,r.Origin,r.Bounds) then return hit.Position+Vector3.new(0,halfHeight+.2,0) end
 	return r.Arrival.Position+Vector3.new(0,halfHeight-3,0)
@@ -169,8 +169,8 @@ local function commit(player: Player)
 	if s.LocationRevision~=p.LocationRevision or s.SquadRevision~=p.SquadRevision then finish(player,"REJECTED","STALE_REVISION");return end
 	local r=p.Room
 	if os.clock()>p.Deadline or r.Status~="READY" or rooms[r.FloorId]~=r then finish(player,"REJECTED","ROOM_NOT_READY");return end
-	local hitParams=RaycastParams.new();hitParams.FilterType=Enum.RaycastFilterType.Include
-	hitParams.FilterDescendantsInstances=r.Model and {r.Model} or {workspace.BaseOverhaulGeometry}
+	local hitParams=RaycastParams.new();hitParams.FilterType=Enum.RaycastFilterType.Include;hitParams.IgnoreWater=true
+	hitParams.FilterDescendantsInstances=r.Model and {r.Model,workspace.Terrain} or {workspace.BaseOverhaulGeometry}
 	local hit=workspace:Raycast(r.Arrival.Position,Vector3.new(0,-12,0),hitParams)
 	if not hit or hit.Normal.Y<.65 or not Protocol.InBounds(r.Arrival.Position,r.Origin,r.Bounds) then finish(player,"REJECTED","UNSAFE_ARRIVAL");return end
 	local combat=adapters.Combat

@@ -2,9 +2,10 @@
 
 Copy everything below the line into a Claude Code session opened at the repo root.
 
-> **Status (2026-11-17).** Floor 1 is built. Two things changed from the plan below, because `main` moved on after it was written (PR #327):
+> **Status (2026-11-18).** **Floors 1, 2, and 3 are built.** Several parts of the original brief evolved once `main` gained per-floor variation (PR #327), natural voxel terrain (`TowerTerrain.luau`), and sculpted mesh kits (`TowerBiomeKit.luau`):
 > - Part 4.1–4.2 is mostly done already: `TowerLayout.Get(index, floorId)` / `ForFloor` give every floor its own layout, every consumer passes the floor id, graphs are cached per floor and portal spots follow the Apex.
-> - Instead of new terrace ids with a `Role` field, authored floors (`AUTHORED` in `TowerLayout`) keep the existing ids as roles (`Basin` = ENTRY, `WestGallery`/`EastGallery` = WING, `Crossing` = CROSSING, `WestBastion`/`EastBastion` = UPPER_WING, `Apex` = APEX) and carry in-world names in `Names`. They can replace the path list (`Paths`). Set pieces key on `layout.Authored`, and lighting on `HubLighting.FloorGrades`. Floors 2–5 need new terraces (Floor 2's AqueductNorth, Floor 4's wall-walk links), so they will need either more role ids or the `Role` field after all.
+> - Authored floors (`AUTHORED` in `TowerLayout`) keep core role ids (`Sanctuary`, `Basin`, `WestGallery`, `EastGallery`, `Crossing`, `WestBastion`, `EastBastion`, `Apex`), carry in-world titles in `Names`, can add extra platforms (`ExtraPlatforms`, e.g. Floor 2's `AqueductNorth`), set `Stairs = { [linkId] = true }` to force `Kind = "STAIRS"`, and supply custom `Paths`. Set pieces key on `layout.Authored`, and per-floor lighting presets live in `HubLighting.FloorGrades[floorId]` (applied by `HubLightingController.client.luau`), not a separate `TowerFloorEnvironments` module.
+> - Sculpted Blender kits (`TowerBiomeKit.ExtraTemplates` + `TowerKitProps.Has` with native-part fallbacks) and sculpted `Terrain` walkways/water (instead of floating water parts or boxy green colliders) are now part of the pipeline; see §4.3 below before building Floors 3–5.
 
 ---
 
@@ -116,20 +117,20 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
 
 | Platform | Role | Centre (X, Y, Z) | Size (W × D) | Character |
 | --- | --- | --- | --- | --- |
-| `Sanctuary` | SANCTUARY | 0, 8, 176 | 128 × 56 | The toppled outer gate, laid flat as a plinth |
-| `PilgrimHollow` | ENTRY | 0, 0, 82 | 320 × 92 | Fern hollow, mossy paving, the first glow-lilies |
-| `ProcessionalAvenue` | CROSSING | 0, 3, −30 | 52 × 96 | Narrow raised causeway lined with sun-disc stelae |
-| `ShrineGladeWest` | WING | −122, 4, −12 | 84 × 76 | Ring of small sun shrines; sunbells |
-| `BanyanWellEast` | WING | 124, 6, −24 | 84 × 76 | A banyan grown over a Solmere well |
-| `DawnGate` | APEX | 0, 12, −140 | 104 × 80 | Stepped plinth under a cracked sun-gate arch |
+| `Sanctuary` | SANCTUARY | 0, 8, 176 | 128 × 56 | Grassy arrival glade & travel portals framed by the toppled outer gate |
+| `PilgrimHollow` | ENTRY | 0, 0, 82 | 320 × 92 | Direct `Terrain` fern hollow (`Grass`, `LeafyGrass`, dirt trails), glow-lilies, fallen stelae |
+| `ProcessionalAvenue` | CROSSING | 0, 3, −30 | 52 × 96 | Low turf-and-dirt processional ridge lined with six sun-disc stelae up to the grand steps |
+| `ShrineGladeWest` | WING | −122, 4, −12 | 84 × 76 | Open grassy glade with three small sun shrines and sunbells |
+| `BanyanWellEast` | WING | 124, 6, −24 | 84 × 76 | Grassy glade around a banyan-rooted Solmere well |
+| `DawnGate` | APEX | 0, 12, −140 | 104 × 80 | Direct `Terrain` summit plateau under a cracked sun-gate arch & Dawn Temple backdrop |
 
-**Links:** Sanctuary→Hollow, Hollow→Avenue, Hollow→West glade, Hollow→East glade, Avenue→DawnGate (**STAIRS**, the grand steps), West glade→DawnGate, East glade→Avenue (a side path that rejoins the spine, unlike the generic layout).
+**Links:** Sanctuary→Hollow, Hollow→Avenue, Hollow→West glade, Hollow→East glade, Avenue→DawnGate (**STAIRS**, solid `Limestone` grand steps), West glade→DawnGate, East glade→Avenue (a side path that rejoins the spine, unlike the generic layout).
 
 **Camps (16, 1 Elite):** `HOLLOW_WEST` 4, `HOLLOW_EAST` 4, `SHRINE_GLADE` 4 (Elite), `BANYAN_WELL` 4. The Avenue stays free: it's the safe "read the room" path.
 
 **Patrol:** `ENTRY_LOOP` along the back third of the Hollow (replaces `BASIN_LOOP`).
 
-**Set pieces:** the cracked **Dawn Gate** (sun-disc keystone with a glowing core, and a light shaft through the crack); the **Carved Deity Head** and **Lion Guardian** already in `TowerBiomeAssets`, moved onto the Hollow flanks; a column of six stelae down the Avenue, two fallen across the fern beds (off the lane).
+**Set pieces & terrain pipeline:** the cracked **Dawn Gate** (sun-disc keystone with a glowing core, and a light shaft through the crack); the **Carved Deity Head** and **Lion Guardian** already in `TowerBiomeAssets`, moved onto the Hollow flanks; a column of six stelae down the Avenue, two fallen directly onto the hollow grass beside glow-lilies. All six grassy terraces, landings, and ramps walk directly on sculpted voxel `Terrain` (`Ground` trails + 3D `Grass` + `LeafyGrass` + staggered `Limestone` stepping stones, grassy `Part` colliders disabled) while only the `Crossing -> Apex` `STAIRS` remain solid `Limestone` treads.
 
 **Ecosystem weight:** forest floor and stone. Light canopy, so the sky is visible.
 
@@ -156,22 +157,23 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
         └───────────────────────────────┘
 ```
 
-| Platform | Role | Centre (X, Y, Z) | Size | Character |
+| Platform | Id | Centre (X, Y, Z) | Size | Character |
 | --- | --- | --- | --- | --- |
-| `MillPond` | ENTRY | 0, 0, 112 | 360 × 100 | Reed pond. The walk surface is stone and packed earth; the cosmetic water sits in recessed beds off the lanes |
-| `CisternPlaza` | WING | −140, 6, 8 | 92 × 80 | Open cistern ruin with dry steps, moss on every ledge |
-| `AqueductSouth` | CROSSING | 64, 10, 10 | 60 × 70 | Top of the aqueduct; the arches below |
-| `AqueductNorth` | WING | 40, 12, −92 | 56 × 64 | The far span. Reached only from the Mill |
-| `MillRuin` | WING | 160, 4, −50 | 84 × 76 | Waterwheel ruin, roots through the wheel |
-| `WellheadShrine` | APEX | −56, 14, −168 | 104 × 80 | The spring: a sun-disc fountain, the source of the stream |
+| `SpringheadGate` | `Sanctuary` | 0, 8, 201 | 128 × 56 | Grassy arrival glade & four travel portals framed by Solmere pillars |
+| `MillPond` | `Basin` | 0, 0, 112 | 360 × 96 | Grass & packed-dirt walk surface bordering real voxel `Water` reed coves with stepping stones |
+| `CisternPlaza` | `WestGallery` | −134, 6, −6 | 88 × 76 | Open grassy cistern ruin with balustrades & fallen fluted column; north stairs (`STAIRS`) climb to the Apex |
+| `AqueductSouth` | `Crossing` | 16, 10, 2 | 56 × 64 | Elevated Solmere limestone viaduct deck on piers & verdigris cornices; snapped north end |
+| `AqueductNorth` | `ExtraPlatforms.AqueductNorth` | 16, 12, −96 | 56 × 56 | Far limestone viaduct span with waterfalls & balustrades. Reached only via `MillRuin` |
+| `MillRuin` | `EastGallery` | 138, 4, −36 | 84 × 76 | Grassy terrace beside the eastern mill-race `Water` pool & giant Heartroot-entangled waterwheel |
+| `WellheadShrine` | `Apex` | −68, 14, −174 | 104 × 76 | Off-centre north-west summit in a carved mountain alcove in front of the 5-tier Sun-Disc temple & gate |
 
-**Links:** Sanctuary→Pond, Pond→Cistern, Pond→AqueductSouth (a ramp up an arch pier), Pond→Mill, Mill→AqueductNorth, AqueductNorth→Wellhead, Cistern→Wellhead. **There is no link between AqueductSouth and AqueductNorth**: the broken span is the floor's signature, and players see the gap from both sides.
+**Links:** `Sanctuary→Basin`, `Basin→WestGallery`, `Basin→Crossing`, `Basin→EastGallery`, `EastGallery→AqueductNorth`, `AqueductNorth→Apex`, and `WestGallery→Apex` (**STAIRS**). **There is no link between `Crossing` and `AqueductNorth`**: the broken viaduct span is the floor's signature, and players see the gap from both sides.
 
-**Camps (22, 2 Elites):** `POND_WEST` 4, `POND_EAST` 4, `CISTERN` 5 (Elite), `AQUEDUCT` 4, `MILL` 5 (Elite).
+**Camps (22 live mobs + Summit Alpha = 26 placements, 2 Elites):** `BASIN_WEST` 4, `BASIN_EAST` 4, `CENTRAL_CROSSING` (`AqueductSouth`) 4, `WEST_GALLERY` (`CisternPlaza`) 5 (Elite), `EAST_GALLERY` (`MillRuin`) 5 (Elite), plus `APEX_SANCTUM` (`WellheadShrine`) 4 (Alpha summon).
 
-**Patrol:** `ENTRY_LOOP` along the north shore of the pond.
+**Patrol:** `ENTRY_LOOP` (`BASIN_LOOP`) along the north shore of `MillPond`.
 
-**Set pieces:** a run of 8–10 aqueduct arches crossing the floor diagonally, with the broken span hanging over a small fall; the stream that leaves the Wellhead, goes under the Cistern and drops into the pond (cosmetic, in a recessed channel that never cuts a lane); feeder roots wrapping two arches and drinking from the channel; the Mill's broken waterwheel.
+**Set pieces & terrain pipeline:** twin snapped `BrokenAqueductSpan`s at the gap (`Z = −41, −57`) with cascading waterfalls and feeder Heartroot trunks/roots; `Waterwheel` + masonry cradle in the real `Terrain` `Water` mill-race pool; `SolmereBalustrade`s along clear viaduct/cistern ledges; `ReedPondCluster`s and `PondSteppingStones` in the recessed voxel reed pond; four `HeartrootGiant` trees on open ground; stepped golden `Temple` topped by `SunDiscShrine` in a carved northern mountain alcove (`TowerTerrain` tapers `band` behind `WellheadShrine`). Sculpted kit templates live in `tools/blender/generate_verdant_f2_kit.py` -> `assets-source/tower/verdant_f2_kit/VerdantF2Kit.fbx` as `ExtraTemplates` with native-part fallbacks. Walkways, landings, and grassy terraces walk directly on voxel `Terrain` (`Ground` trails + 3D `Grass` + staggered stepping stones; grassy `Part` colliders disabled) while `AqueductSouth` / `AqueductNorth` remain solid limestone decks.
 
 **Ecosystem weight:** water and stone, with more birds and dragonflies.
 
@@ -199,21 +201,21 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
 
 | Platform | Role | Centre (X, Y, Z) | Size | Character |
 | --- | --- | --- | --- | --- |
-| `FernBank` | ENTRY | 0, 0, 124 | 400 × 108 | South bank; ferns down to the gorge lip |
-| `TheKnot` | CROSSING | 0, 5, 0 | 74 × 60 | An island where three roots tangle mid-gorge |
-| `RootPerch` | WING | −150, 10, −14 | 84 × 76 | A platform on a root arch above the west fall |
-| `HollowStump` | WING | 152, 6, −34 | 84 × 76 | The cut top of a fallen giant tree, its rings visible |
-| `RootThrone` | APEX | 0, 18, −182 | 104 × 80 | Solmere throne carved into a root buttress |
+| `FernBank` | ENTRY (`Basin`) | 0, 0, 124 | 400 × 108 | Direct `Terrain` south river bank (`Ground` trails, 3D `Grass`, `FernCluster`s, fallen stela) |
+| `TheKnot` | CROSSING (`Crossing`) | 0, 5, 0 | 74 × 60 | Suspended mid-gorge root tangle island (`Limestone` deck, root piers, `RootKnotLantern`s) above river |
+| `RootPerch` | WING (`WestGallery`) | −150, 10, −26 | 84 × 76 | West root-arch crest above the gorge (`RootBridgeArch` spanning west canyon waterfall backdrop) |
+| `HollowStump` | WING (`EastGallery`) | 152, 6, −34 | 84 × 76 | Cut golden heartwood crown of a felled colossus (`Wood` + growth rings, outer `HollowStumpRim`) |
+| `RootThrone` | APEX (`Apex`) | 0, 18, −182 | 104 × 80 | Direct `Terrain` summit in front of monumental Heartroot Mother-Trunk & carved `RootThrone` |
 
-**Links:** Sanctuary→FernBank; FernBank→TheKnot (the **Great Root**: a root-shaped ramp deck); FernBank→RootPerch; FernBank→HollowStump; TheKnot→RootThrone (**STAIRS** cut into the root); RootPerch→RootThrone; HollowStump→RootThrone. Two **return ramps** rise from the gorge floor to FernBank (today's `ChasmWest` / `ChasmEast`, now authored against the `ENTRY` platform, not `Basin`).
+**Links:** Sanctuary→FernBank (direct `Terrain` dirt/grass ramp); FernBank→TheKnot, FernBank→RootPerch, FernBank→HollowStump, RootPerch→RootThrone, HollowStump→RootThrone (suspended woody Heartroot bridge decks with inlaid flagstone steps, woody root rails & glowing underside sap veins); TheKnot→RootThrone (**STAIRS** cut onto the great root); plus two **return ramps** (`ChasmWest_Basin`, `ChasmEast_Basin`, direct `Terrain` climbing from `-8` gorge shore to `FernBank`).
 
-**Camps (25, 3 Elites, at least one above the entry level):** `BANK_WEST` 5, `BANK_EAST` 5, `KNOT` 5 (Elite), `ROOT_PERCH` 5 (Elite), `HOLLOW_STUMP` 5 (Elite).
+**Camps (25 live mobs, 3 Elites above entry):** `BASIN_WEST` 5, `BASIN_EAST` 5, `CENTRAL_CROSSING` (`TheKnot`) 5 (Elite), `WEST_GALLERY` (`RootPerch`) 5 (Elite), `EAST_GALLERY` (`HollowStump`) 5 (Elite), plus `APEX_SANCTUM` (`RootThrone`) Alpha summon.
 
-**Patrols:** `ENTRY_LOOP` on the north half of the Fern Bank; `ROOTWAY_WEST` (RootPerch → its link → RootThrone); `ROOTWAY_EAST` (HollowStump → its link → RootThrone).
+**Patrols:** `BASIN_LOOP` on the back half of `FernBank`; `GALLERY_WEST` (`RootPerch` → `RootThrone`); `GALLERY_EAST` (`HollowStump` → `RootThrone`).
 
-**Set pieces:** the river along the gorge floor with a 40-stud waterfall off the west cliff (facing away from the ramps); the three root bridges as giant curved roots with sap veins that glow on their undersides; Solmere stairs and lanterns built *onto* the roots; light shafts through the canopy gap over the Knot; glow-lily rafts in the river.
+**Set pieces & terrain/blender pipeline:** E–W voxel `Terrain` `Water` river cutting under `TheKnot` & all 6 gorge root bridges (`liquidLevel = -4.8` over `-7.6` riverbed & `-8.0` safety catch); 38-stud west canyon `Waterfall` into the river plunge pool; sculpted `verdant_f3_kit` meshes (`RootThrone`, `HollowStumpRim`, `RootBridgeArch`, `RootKnotLantern`, `FernCluster` from `tools/blender/generate_verdant_f3_kit.py` -> `assets-source/tower/verdant_f3_kit/VerdantF3Kit.fbx`) with native fallbacks; `SUSPENDED_LINKS` + `SUSPENDED_PLATFORMS` keep earthen Terrain from damming the gorge while grounded banks (`Sanctuary`, `FernBank`, `RootThrone`, `Sanctuary_Basin`, `ReturnLinks`) stay direct `Terrain`.
 
-**Ecosystem weight:** canopy and roots. This is the floor where the Heartroot becomes visible.
+**Ecosystem weight:** canopy and roots. Noon sunlight (`HubLighting.FloorGrades[3]`) with strong light shafts onto the Knot & Throne.
 
 ### Floor 4: Vinebound Bastion (`ELITE_STRONGHOLD`)
 
@@ -304,9 +306,7 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
 
 ## Part 3: Environment and lighting per floor
 
-There's no per-floor lighting today. Add a small client-side controller (for example `StarterPlayerScripts/Rendering/TowerFloorEnvironment.luau`) that applies a **preset from shared config** when the local player enters a tower floor and restores the previous `Lighting` state when they leave. Find how the client already knows its current floor (`TowerController` or a player attribute) and reuse that; add no new remote. Tween the change over about 1.5 s. Respect the Graphics quality setting.
-
-Put the presets in a new `--!strict` config module, for example `Shared/Config/TowerFloorEnvironments.luau`, keyed by floor ID, with a fallback for floors that have none.
+Per-floor lighting overrides live in **`src/ReplicatedStorage/Shared/Config/HubLighting.luau`** under **`FloorGrades[floorId]`**, layered over the biome lighting preset by `HubLightingController.client.luau` and respecting the player's Graphics quality setting. Floors 1, 2, and 3 are populated; Floors 4–5 add `FloorGrades[4..5]` without adding a new controller or remote.
 
 | Floor | Time of day | Light | Atmosphere | Accents |
 | --- | --- | --- | --- | --- |
@@ -348,17 +348,25 @@ These call sites read a layout by biome index today. Each must call `ForFloor(fl
 
 Grep again for `Layout.Get(`, `.Platforms.`, `IndexInBiome` and every camp and patrol ID before you call this done. Don't trust this list to be complete.
 
-### 4.3 Scenery
+### 4.3 Scenery, Terrain & Headless Blender Pipeline
 
-- Move the Verdant set pieces out of the generic biome branch into a Verdant builder that places them from the layout's **set-piece anchors** (named points authored with each floor), not from offsets relative to `WestGallery` and `Basin`.
+- Key floor-specific set pieces on `layout.Authored` in `TowerBiomeAssets.luau` (placing pieces relative to the authored `layout.Platforms`, keeping off `TowerLayout.Lanes` and `CampHitTest` radii).
 - Keep every existing scenery rule: **grounded clutter** (nothing floats; compound props are Models tagged `PropKind`), **clear walkways** (`TowerLayout.Lanes` plus a 3-stud shoulder), **camp clearance**, **chasm groves** (Verdant set: canopy trees and ivy-wrapped columns), and **waterfalls facing away from ramps**.
-- Water is cosmetic. Recessed channels and pools sit under or beside walk surfaces and are never part of a lane. Nothing in this change adds a hazard or a swim state.
-- Native parts only, no external asset IDs, matching the existing kits.
+- **Headless Blender Kit Pipeline (`ExtraTemplates`):**
+  - Core ecosystem props come from `ServerStorage.TowerBiomeKit` (`TowerBiomeKit.Templates`, 30 templates). Keep `Templates` intact so `TowerKitProps.Ready()` stays green for all generic floors.
+  - Floor-specific focal props (`Waterwheel`, `AqueductBrokenSpan`, `SunDiscShrine`, `SolmereBalustrade`, `ReedPondCluster` on Floor 2, or root bridges / domes / thrones on Floors 3–5) may be sculpted in headless Blender (`tools/blender/generate_verdant_fN_kit.py` -> `assets-source/tower/verdant_fN_kit/` FBX + manifest + preview renders), registered in `TowerBiomeKit.ExtraTemplates`, added to `tests/studio-tower-biome-kit-import.luau` (`templateSpec`), and placed via `if KitProps.Has(name) then ... else <native fallback> end`. That guarantees floors look crisp before and after running the Studio FBX importer.
+- **Design Philosophy — Walkways, Landings & Ramps (`TowerTerrain.luau` + `TowerRoomBuilder.luau`):**
+  - **What players see is what supports them (no blocky green slabs over dug-out ground):** Grassy terraces, `Sanctuary` glades, landing pads, and earthen ramps must look and collide as sculpted `workspace.Terrain`, never flat green `Part` boxes hovering `4.5` studs above sunken terrain. Keep their `Part`s purely as invisible metadata proxies (`CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 1` via `isDirectTerrainLayout`) so players, heroes, and mobs walk directly on live voxel grass and dirt without hitting floating ledges or boxy colliders. Keep invisible `BridgeCurb`s solid only as lateral shoulder rails for AI navigation.
+  - **Reserve solid `Part` geometry strictly for built masonry (`IsDeck` / `IsStair`):** Only surfaces that intentionally read as suspended or cut stone — elevated viaduct/aqueduct spans over water or chasm (`Crossing` and `AqueductNorth` on Floor 2, via `DECK_PLATFORMS`) and cut `Limestone` staircases (`Crossing -> Apex` on Floor 1, `WestGallery -> Apex` on Floor 2) — stay visible colliding `Part`s with recessed `Terrain` beneath (`UNDER = 4.5` under decks; `2.8` under stair treads). Never mix bare green rectangles with stone viaducts on non-masonry routes.
+  - **Organic shaping & material grammar (`RES / 2` alignment):** Smooth voxel `Terrain` (`RES = 4`) places its 50% occupancy isosurface `RES / 2` (`2.0` studs) above the sampled field value. Subtract `2.0` from grassy target surfaces (`ownSurface - 2.0`), resolve `ownSurface` across terraces and strips (`IsRamp` beating adjacent deck recesses on `stripY == ownSurface` ties so lower plateaus never crater higher terraces or `Sanctuary` and ramps meet elevated stone landings flush), and warp apron/embankment edge falloff with FBM noise (`warpDist`, `warpBeyond`) so glades and ramps blend organically instead of forming extruded rectangles.
+  - **Surface identity (`materialFor` + stepping stones):** Paint packed dirt (`Enum.Material.Ground`) down path spines (`TRAIL`), framed by `Enum.Material.Grass` (growing 3D grass blades under `Terrain.Decoration`) and `Enum.Material.LeafyGrass` moss patches. Embed staggered flush `Limestone` stepping stones (`RampStepLip`) down earthen ramps instead of flat cobblestone strips or blocky curb boxes.
+  - **Arrival & grounding raycast contract:** Whenever `SafeArrival` or `Apex` uses direct `Terrain`, any `Include`-filtered server raycast (`TowerFloorService.commit`, `Service.GroundDrop`, `TowerEncounterRuntime.findGrounded`) **must** include `workspace.Terrain` alongside `r.Model` with `IgnoreWater = true` — otherwise `SafeArrival.CanQuery = false` causes `UNSAFE_ARRIVAL` teleport rejections.
+  - **Pure `Terrain` `Water` for ponds (no floating blue `Part` sheets):** Use `Enum.Material.Water` (`liquidLevel = bottom + 2.6` on pond floors, `WaterTransparency ~ 0.38`, low `WaterReflectance ~ 0.14`, warm `Ground` pond beds, and widened skylight apertures so overhead ceilings don't cast dark reflections). Water remains purely cosmetic (never a hazard or swim state).
 
 ### 4.4 Budgets
 
-- Before changing anything, measure the current Verdant floors in Studio: part count, light count and active particle emitters per floor. Write the baseline into the PR description.
-- Each new floor stays within **+25% parts** of its baseline, **≤ 24 local lights**, and **≤ 12 active particle emitters**, not counting client ambient life.
+- Before changing anything, measure the target floor in Studio: part count, light count and active particle emitters (e.g. Floor 2 baseline was `944` parts, `30` shared room/Sanctuary/waterfall lights, `4` emitters).
+- Each new floor stays within **+25% parts** of its baseline, avoids adding unnecessary local lights beyond baseline/`<= 24` local lights ceiling, and keeps **≤ 12 active particle emitters**, not counting client ambient life.
 - Ambient life is pooled and capped (for example ≤ 40 fireflies and ≤ 6 birds on screen at High quality), and off at the lowest quality.
 - Rooms still fit the 2,400-stud origin spacing; footprints stay as in GDD §3.3.
 
@@ -395,19 +403,19 @@ Never pass `-InstallLuau`. Extend the specs so they loop over **floor IDs** (all
 - `tower-portals.spec.luau`: portal spots on the Apex, inside it, and in the lanes.
 - Add a spec asserting that floors 6–50 produce **byte-for-byte the same layout as before** (snapshot the generic output before the refactor).
 
-Then run `tests/studio-tower-prop-audit.luau` in Studio for all 50 floors: orphaned props, floating props and props on walkways must all be **0**.
+Then run `tests/studio-tower-prop-audit.luau` in Studio for affected/all floors (orphaned props, floating props and props on walkways must all be **0**), and for floors using direct `Terrain` walkways, run Studio raycast + `Blockcast` shoulder checks along every link corridor and `Sanctuary` grid so actors never hit hidden ledges or float above voxel dips.
 
 ### Docs (same PR)
 
-- `docs/GAME_DESIGN.MD` §3.3: say that layouts resolve per floor, describe the five Verdant floors (shape, platforms, camps, patrols, environment) and the Solmere/Heartroot ecosystem, and note that biomes 2–10 still use the generic variants.
-- `docs/TOWER_NAVIGATION.md`: platform roles, `ForFloor`, layout `Key` caching, authored patrols.
+- `docs/GAME_DESIGN.MD` §3.3: document each authored floor's shape, platforms, camps, patrols, environment, and terrain/kit pipeline.
+- `docs/TOWER_NAVIGATION.md`: `AUTHORED` layout extensions (`ExtraPlatforms`, `Stairs`), `ForFloor`, layout `Key` caching, and walkable `Terrain` alignment (`RES / 2` offset, `ownSurface` priority, `IsDeck`/`IsStair`).
 - `reference/infinite_towers_biomes.md` §1: add a short paragraph on the Solmere and the Heartroot.
 
 ### Finish with a Studio checklist for the user
 
 Don't run the playtest yourself. End with a **How to test** checklist the user can follow in Studio, covering at least:
 
-1. Floors 1–5: arrive, check you land out of aggro, and walk to the Apex by every route.
+1. Floors 1–5: arrive, check you land out of aggro with feet grounded on Terrain (no cratering or invisible floating colliders), and walk to the Apex by every route (plus optional `VerdantF2Kit.fbx` / `VerdantF3Kit.fbx` import via `tests/studio-tower-biome-kit-import.luau` when testing sculpted meshes).
 2. Floor 2: confirm the aqueduct gap has no link and the Mill detour works.
 3. Floors 3–5: jump into the chasm, and climb out by a return ramp.
 4. Squad follow, recall (`E`) and assigned-squad routing on ramps, stairs and wall-walks.
@@ -421,5 +429,5 @@ Don't run the playtest yourself. End with a **How to test** checklist the user c
 ## Out of scope
 
 - Biomes 2–10 (they come later, using the same contract).
-- New enemies, new boss mechanics, hazards, swimming or terrain voxels.
+- New enemies, new boss mechanics, hazards or swimming mechanics.
 - Changes to rewards, relic drops, mob stats or camp respawn timing.

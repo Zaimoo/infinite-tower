@@ -1,0 +1,101 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AqueductBrokenSpan": {
+      "Min": [
+        -11.167,
+        -0.284,
+        -7.26
+      ],
+      "Roles": {
+        "ACCENT": 138,
+        "MOSS": 320,
+        "TRIM": 1590,
+        "WOOD": 162
+      },
+      "Size": [
+        23.055,
+        19.059,
+        16.419
+      ],
+      "Triangles": 2210
+    },
+    "ReedPondCluster": {
+      "Min": [
+        -3.494,
+        -0.091,
+        -4.298
+      ],
+      "Roles": {
+        "FOLIAGE": 180,
+        "GLOW": 200,
+        "WOOD": 240
+      },
+      "Size": [
+        7.493,
+        6.128,
+        7.881
+      ],
+      "Triangles": 620
+    },
+    "SolmereBalustrade": {
+      "Min": [
+        -8.3,
+        0.0,
+        -1.5
+      ],
+      "Roles": {
+        "ACCENT": 138,
+        "MOSS": 160,
+        "TRIM": 806
+      },
+      "Size": [
+        16.6,
+        5.55,
+        3.0
+      ],
+      "Triangles": 1104
+    },
+    "SunDiscShrine": {
+      "Min": [
+        -8.435,
+        0.0,
+        -4.205
+      ],
+      "Roles": {
+        "ACCENT": 244,
+        "GLOW": 264,
+        "GOLD": 432,
+        "MOSS": 160,
+        "TRIM": 592
+      },
+      "Size": [
+        17.127,
+        22.698,
+        9.405
+      ],
+      "Triangles": 1692
+    },
+    "Waterwheel": {
+      "Min": [
+        -12.5,
+        -0.417,
+        -5.827
+      ],
+      "Roles": {
+        "FOLIAGE": 100,
+        "METAL": 500,
+        "MOSS": 560,
+        "TRIM": 514,
+        "WOOD": 1792
+      },
+      "Size": [
+        26.255,
+        27.045,
+        12.575
+      ],
+      "Triangles": 3466
+    }
+  },
+  "Unit": "studs"
+}

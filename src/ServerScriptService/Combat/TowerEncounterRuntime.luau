@@ -283,7 +283,8 @@ function Runtime.new(api: any): any
 		local function findGrounded(worldPos: Vector3): Vector3?
 			local params = RaycastParams.new()
 			params.FilterType = Enum.RaycastFilterType.Include
-			params.FilterDescendantsInstances = room.Model and { room.Model } or { workspace }
+			params.IgnoreWater = true
+			params.FilterDescendantsInstances = room.Model and { room.Model, workspace.Terrain } or { workspace }
 			local hit = workspace:Raycast(worldPos + Vector3.new(0, 15, 0), Vector3.new(0, -40, 0), params)
 			if hit and hit.Normal.Y > 0.5 then
 				return hit.Position

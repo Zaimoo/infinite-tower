@@ -905,21 +905,24 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- 4. BIOME-SPECIFIC FOREGROUND / MIDGROUND ICONIC GUARDIANS & MONUMENTS
 	-- =========================================================================
 	if biome == "verdant_ruins" then
-		-- Left foreground: Giant Ancient Carved Stone Deity Head nestled in banyan roots (from Verdant Ruins.png)
-		local headPos = V(-basin.Width * 0.36, basin.Y, basin.Z - 6)
-		group("CarvedHead", function()
-			orb("AncientCarvedHead", headPos + V(0, 17 * scale, 0), V(26 * scale, 34 * scale, 24 * scale), theme.TrimColor, Enum.Material.Slate)
-			cyl("CarvedHeaddressTier1", headPos + V(0, 31 * scale, 0), 12 * scale, 5 * scale, theme.AccentColor, Enum.Material.Cobblestone)
-			cyl("CarvedHeaddressCrown", headPos + V(0, 36 * scale, 0), 7.5 * scale, 6.5 * scale, gold, Enum.Material.Cobblestone)
-			block("CarvedNoseBridge", V(4.2 * scale, 11 * scale, 5.5 * scale), headPos + V(4.5 * scale, 17 * scale, 9.5 * scale), theme.TrimColor, Enum.Material.Slate)
-			for _, s in { -1, 1 } do
-				block("SereneEyeLid", V(5.8 * scale, 1.8 * scale, 3.2 * scale), headPos + V(5.5 * scale, 20 * scale, (2 + s * 4.8) * scale), cliffColor, Enum.Material.Slate)
-			end
-			tree(headPos + V(-14 * scale, 0, -10 * scale), 1.25 * scale, false, false)
-		end)
+		-- Floor 2 (Broken Aqueduct) replaces the generic foreground head/lion with its own pond & mill pieces.
+		if layout.Authored ~= "verdant:2" then
+			-- Left foreground: Giant Ancient Carved Stone Deity Head nestled in banyan roots (from Verdant Ruins.png)
+			local headPos = V(-basin.Width * 0.36, basin.Y, basin.Z - 6)
+			group("CarvedHead", function()
+				orb("AncientCarvedHead", headPos + V(0, 17 * scale, 0), V(26 * scale, 34 * scale, 24 * scale), theme.TrimColor, Enum.Material.Slate)
+				cyl("CarvedHeaddressTier1", headPos + V(0, 31 * scale, 0), 12 * scale, 5 * scale, theme.AccentColor, Enum.Material.Cobblestone)
+				cyl("CarvedHeaddressCrown", headPos + V(0, 36 * scale, 0), 7.5 * scale, 6.5 * scale, gold, Enum.Material.Cobblestone)
+				block("CarvedNoseBridge", V(4.2 * scale, 11 * scale, 5.5 * scale), headPos + V(4.5 * scale, 17 * scale, 9.5 * scale), theme.TrimColor, Enum.Material.Slate)
+				for _, s in { -1, 1 } do
+					block("SereneEyeLid", V(5.8 * scale, 1.8 * scale, 3.2 * scale), headPos + V(5.5 * scale, 20 * scale, (2 + s * 4.8) * scale), cliffColor, Enum.Material.Slate)
+				end
+				tree(headPos + V(-14 * scale, 0, -10 * scale), 1.25 * scale, false, false)
+			end)
 
-		-- Right foreground: Seated Stone Lion Guardian on mossy plinth (from Verdant Ruins.png)
-		statue(V(basin.Width * 0.36, basin.Y, basin.Z - 6), 1.3 * scale, "LionGuardian", 1)
+			-- Right foreground: Seated Stone Lion Guardian on mossy plinth (from Verdant Ruins.png)
+			statue(V(basin.Width * 0.36, basin.Y, basin.Z - 6), 1.3 * scale, "LionGuardian", 1)
+		end
 		for _, s in { -1, 1 } do
 			statue(V(apex.X + s * (apex.Width * 0.5 + 18), apex.Y - 2, apex.Z + 18), 1.25 * scale, "LionGuardian", s)
 		end
@@ -951,10 +954,13 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- Heartroot's sap (emerald-gold) is what still glows. Pieces stand clear of every walkway and camp.
 	-- Ground the authored pieces claim (x, z, radius): the natural ecosystem (section 7) grows around them.
 	local reservedSpots: { { number } } = {}
-	if layout.Authored == "verdant:1" then
+	if layout.Authored == "verdant:1" or layout.Authored == "verdant:2" or layout.Authored == "verdant:3" or layout.Authored == "verdant:4" then
 		local sap = rgb(150, 235, 120)
 		local limestone = rgb(196, 190, 168)
 		local verdigris = rgb(92, 150, 128)
+		local bark = rgb(82, 64, 46)
+		local barkDark = rgb(62, 48, 36)
+		local vine = rgb(54, 122, 60)
 		-- A carved sun disc facing +Z (toward the Sanctuary): rim ring, eight rays and a glowing core.
 		local function sunDisc(name: string, at: Vector3, radius: number, tilt: CFrame?, glow: boolean)
 			local face = CFrame.new(at) * (tilt or CFrame.identity)
@@ -977,6 +983,98 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				orb("GlowLilyBloom", p + V(0, 0.8, 0), V(0.9, 0.9, 0.9), sap, Enum.Material.Neon)
 			end
 		end
+		local function limb(name: string, a: Vector3, b: Vector3, diameter: number, color: Color3): Part
+			local p = block(name, V(math.max(0.1, (b - a).Magnitude), diameter, diameter), (a + b) / 2, color, Enum.Material.Wood, Enum.PartType.Cylinder)
+			p.CFrame = CFrame.lookAt(origin + (a + b) / 2, origin + b) * CFrame.Angles(0, math.pi / 2, 0)
+			return p
+		end
+		local function groundAt(x: number, z: number): number
+			for _, t in layout.Platforms do
+				if math.abs(x - t.X) <= t.Width / 2 and math.abs(z - t.Z) <= t.Depth / 2 then
+					return t.Y
+				end
+			end
+			return if field then math.max(field.Sample(x, z), bottom) else bottom
+		end
+		local LOWEST_HANG = 38
+		local function canopy(at: Vector3, s: number)
+			if kitOn and biomeKit then
+				local crown = kitAt(biomeKit.Tree, CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), s)
+				if not crown then
+					return
+				end
+				local leaves: BasePart? = nil
+				for _, p in crown:GetDescendants() do
+					if p:IsA("BasePart") then
+						if ((p:GetAttribute("Role") :: string?) or p.Name) == "FOLIAGE" and not leaves then
+							leaves = p
+						else
+							p:Destroy()
+						end
+					end
+				end
+				if not leaves then
+					crown:Destroy()
+					return
+				end
+				local target = origin + at
+				local low = leaves.Position.Y - leaves.Size.Y / 2
+				local wantLow = math.max(target.Y - leaves.Size.Y * 0.3, origin.Y + LOWEST_HANG - 4)
+				crown:PivotTo(crown:GetPivot() + V(target.X - leaves.Position.X, wantLow - low, target.Z - leaves.Position.Z))
+				return
+			end
+			local leaf1, leaf2 = rgb(36, 98, 48), rgb(54, 126, 62)
+			local lift = math.max(0, LOWEST_HANG - 4 - (at.Y - 4 * s))
+			orb("CanopyLeaves", at + V(0, 5 * s + lift, 0), V(34 * s, 16 * s, 30 * s), leaf1, Enum.Material.Grass)
+			orb("CanopyLeaves", at + V(9 * s, 10 * s + lift, -6 * s), V(24 * s, 12 * s, 22 * s), leaf2, Enum.Material.Grass)
+			orb("CanopyLeaves", at + V(-8 * s, 9 * s + lift, 7 * s), V(22 * s, 11 * s, 24 * s), leaf2, Enum.Material.Grass)
+		end
+		-- boughs: { yaw in degrees (0 = north/-Z, 90 = east), reach, rise }
+		local function giant(x: number, z: number, height: number, boughs: { { number } })
+			if not footprintClear(x, z, 16, 16) then
+				return
+			end
+			table.insert(reservedSpots, { x, z, 30 })
+			local gy = groundAt(x, z)
+			local base = V(x, gy - 0.5, z)
+			group("HeartrootGiant", function()
+				if natural then
+					currentParent:SetAttribute("OnTerrain", true)
+				end
+				for k = 0, 4 do
+					local a = k * math.pi * 2 / 5 + x * 0.013
+					limb("HeartrootButtress", base + V(math.cos(a) * 3, 13, math.sin(a) * 3), V(x + math.cos(a) * 15, gy, z + math.sin(a) * 15), 4.2, barkDark)
+				end
+				local lean = V(math.sin(x * 0.07) * 3, 0, math.cos(z * 0.05) * 3)
+				local p2 = base + V(0, height * 0.42, 0) + lean * 0.5
+				local p3 = base + V(0, height * 0.78, 0) + lean
+				local top = base + V(0, height, 0) + lean * 1.2
+				limb("HeartrootTrunk", base, p2 + V(0, 1, 0), 15, bark)
+				limb("HeartrootTrunk", p2, p3 + V(0, 1, 0), 12.5, bark)
+				limb("HeartrootTrunk", p3, top, 10, bark)
+				beam("HeartrootSapVein", base + V(0, 3, 7.4), p2 + lean * 0.1 + V(0, 0, 6.2), 0.55, sap, Enum.Material.Neon, 0.25)
+				for _, b in boughs do
+					local yaw = math.rad(b[1])
+					local dir = V(math.sin(yaw), 0, -math.cos(yaw))
+					local from = p3 + dir * 3
+					local elbow = from + dir * (b[2] * 0.55) + V(0, b[3], 0)
+					local tip = from + dir * b[2] + V(0, b[3] - 5, 0)
+					limb("HeartrootBough", from, elbow, 6.5, bark)
+					limb("HeartrootBough", elbow, tip, 4.5, bark)
+					canopy(tip, 0.8 * scale)
+					for j = 1, 2 do
+						local hangTop = from:Lerp(tip, 0.3 + j * 0.25) - V(0, 2, 0)
+						local hangLow = math.max(LOWEST_HANG, hangTop.Y - 10 - j * 4)
+						if hangTop.Y - hangLow > 3 then
+							beam("HeartrootAerialRoot", hangTop, V(hangTop.X, hangLow, hangTop.Z), 0.7, vine, Enum.Material.Grass)
+						end
+					end
+				end
+				canopy(top + V(0, 3, 0), 1.0 * scale)
+			end)
+		end
+
+	if layout.Authored == "verdant:1" then
 
 		-- The Dawn Gate: a cracked sun-gate on the back half of the summit, framing the boss portals and the
 		-- temple behind them. The west half of the lintel still stands with the sun disc hanging askew from it;
@@ -1030,7 +1128,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				group("FallenStela", function()
 					local p = block("SolmereStelaFallen", V(3.6, 2.4, 13 * scale), at + V(0, 1.2, 0), limestone, Enum.Material.Limestone)
 					p.CFrame = CFrame.new(origin + at + V(0, 1.2, 0)) * CFrame.Angles(0, math.rad(s * 28), 0)
-					block("FernBed", V(10, 0.4, 14), at + V(s * 2, 0.2, 1), rgb(52, 110, 54), Enum.Material.Grass)
+					if not natural then
+						block("FernBed", V(10, 0.4, 14), at + V(s * 2, 0.2, 1), rgb(52, 110, 54), Enum.Material.Grass)
+					end
 					lilies(at + V(-s * 5, 0, -4), 4)
 				end)
 			end
@@ -1072,104 +1172,6 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- the Pilgrim Hollow, one either side of the avenue, and a pair framing the Dawn Gate. Boughs leave the
 		-- trunk above every lane (walk surface + 14) and camp band (camp + 22); each tip carries a banyan crown
 		-- (the kit mesh on a natural floor), and aerial roots hang no lower than 38 studs.
-		local bark = rgb(82, 64, 46)
-		local barkDark = rgb(62, 48, 36)
-		local vine = rgb(54, 122, 60)
-		local function limb(name: string, a: Vector3, b: Vector3, diameter: number, color: Color3): Part
-			local p = block(name, V(math.max(0.1, (b - a).Magnitude), diameter, diameter), (a + b) / 2, color, Enum.Material.Wood, Enum.PartType.Cylinder)
-			-- A cylinder's axis is its X: turn it from the look direction onto the a -> b line.
-			p.CFrame = CFrame.lookAt(origin + (a + b) / 2, origin + b) * CFrame.Angles(0, math.pi / 2, 0)
-			return p
-		end
-		local function groundAt(x: number, z: number): number
-			for _, t in layout.Platforms do
-				if math.abs(x - t.X) <= t.Width / 2 and math.abs(z - t.Z) <= t.Depth / 2 then
-					return t.Y
-				end
-			end
-			return if field then (field.Sample(x, z)) else bottom
-		end
-		local LOWEST_HANG = 38
-		-- A crown of leaves wrapped round a bough end (or the trunk's top): only the banyan's foliage, with its
-		-- trunk and roots dropped, sunk so the branch end sits inside the lower third of the leaves. A whole tree
-		-- stood on a branch reads as a tree floating in the air. Never lower than the hanging roots' floor.
-		local function canopy(at: Vector3, s: number)
-			if kitOn and biomeKit then
-				local crown = kitAt(biomeKit.Tree, CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), s)
-				if not crown then
-					return
-				end
-				local leaves: BasePart? = nil
-				for _, p in crown:GetDescendants() do
-					if p:IsA("BasePart") then
-						if ((p:GetAttribute("Role") :: string?) or p.Name) == "FOLIAGE" and not leaves then
-							leaves = p
-						else
-							p:Destroy()
-						end
-					end
-				end
-				if not leaves then
-					crown:Destroy()
-					return
-				end
-				local target = origin + at
-				local low = leaves.Position.Y - leaves.Size.Y / 2
-				local wantLow = math.max(target.Y - leaves.Size.Y * 0.3, origin.Y + LOWEST_HANG - 4)
-				crown:PivotTo(crown:GetPivot() + V(target.X - leaves.Position.X, wantLow - low, target.Z - leaves.Position.Z))
-				return
-			end
-			local leaf1, leaf2 = rgb(36, 98, 48), rgb(54, 126, 62)
-			local lift = math.max(0, LOWEST_HANG - 4 - (at.Y - 4 * s))
-			orb("CanopyLeaves", at + V(0, 5 * s + lift, 0), V(34 * s, 16 * s, 30 * s), leaf1, Enum.Material.Grass)
-			orb("CanopyLeaves", at + V(9 * s, 10 * s + lift, -6 * s), V(24 * s, 12 * s, 22 * s), leaf2, Enum.Material.Grass)
-			orb("CanopyLeaves", at + V(-8 * s, 9 * s + lift, 7 * s), V(22 * s, 11 * s, 24 * s), leaf2, Enum.Material.Grass)
-		end
-		-- boughs: { yaw in degrees (0 = north/-Z, 90 = east), reach, rise }
-		local function giant(x: number, z: number, height: number, boughs: { { number } })
-			if not footprintClear(x, z, 16, 16) then
-				return
-			end
-			table.insert(reservedSpots, { x, z, 30 })
-			local gy = groundAt(x, z)
-			local base = V(x, gy - 1.5, z)
-			group("HeartrootGiant", function()
-				if natural then
-					currentParent:SetAttribute("OnTerrain", true)
-				end
-				for k = 0, 6 do
-					local a = k * math.pi * 2 / 7 + x * 0.013
-					limb("HeartrootButtress", base + V(math.cos(a) * 3, 13, math.sin(a) * 3), V(x + math.cos(a) * 15, gy - 1, z + math.sin(a) * 15), 4.2, barkDark)
-				end
-				local lean = V(math.sin(x * 0.07) * 3, 0, math.cos(z * 0.05) * 3)
-				local p2 = base + V(0, height * 0.42, 0) + lean * 0.5
-				local p3 = base + V(0, height * 0.78, 0) + lean
-				local top = base + V(0, height, 0) + lean * 1.2
-				limb("HeartrootTrunk", base, p2 + V(0, 1, 0), 15, bark)
-				limb("HeartrootTrunk", p2, p3 + V(0, 1, 0), 12.5, bark)
-				limb("HeartrootTrunk", p3, top, 10, bark)
-				-- A vein of sunsap glowing up the bark.
-				beam("HeartrootSapVein", base + V(0, 3, 7.4), p2 + lean * 0.1 + V(0, 0, 6.2), 0.55, sap, Enum.Material.Neon, 0.25)
-				for _, b in boughs do
-					local yaw = math.rad(b[1])
-					local dir = V(math.sin(yaw), 0, -math.cos(yaw))
-					local from = p3 + dir * 3
-					local elbow = from + dir * (b[2] * 0.55) + V(0, b[3], 0)
-					local tip = from + dir * b[2] + V(0, b[3] - 5, 0)
-					limb("HeartrootBough", from, elbow, 6.5, bark)
-					limb("HeartrootBough", elbow, tip, 4.5, bark)
-					canopy(tip, 0.8 * scale)
-					for j = 1, 3 do
-						local hangTop = from:Lerp(tip, 0.25 + j * 0.2) - V(0, 2, 0)
-						local hangLow = math.max(LOWEST_HANG, hangTop.Y - 10 - j * 4)
-						if hangTop.Y - hangLow > 3 then
-							beam("HeartrootAerialRoot", hangTop, V(hangTop.X, hangLow, hangTop.Z), 0.7, vine, Enum.Material.Grass)
-						end
-					end
-				end
-				canopy(top + V(0, 3, 0), 1.0 * scale)
-			end)
-		end
 		-- Over the arrival: boughs reach in over the Hollow, the arrival ramp and the Sanctuary's edge.
 		for _, s in { -1, 1 } do
 			giant(s * 120, 126, 56, { { -s * 90, 78, 10 }, { -s * 58, 80, 14 }, { -s * 128, 66, 6 } })
@@ -1181,6 +1183,531 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		for _, s in { -1, 1 } do
 			giant(s * 100, -128, 64, { { -s * 90, 68, 12 }, { -s * 40, 60, 14 }, { -s * 140, 54, 10 } })
 		end
+	elseif layout.Authored == "verdant:2" then
+		local aqNorth = layout.Platforms.AqueductNorth
+		local eastGal = layout.Platforms.EastGallery
+		local mossCol = rgb(86, 132, 58)
+		local waterCol = rgb(52, 148, 136)
+		local f2Override: KitProps.Override = {
+			TRIM = { Color = limestone, Material = Enum.Material.Limestone },
+			ACCENT = { Color = verdigris, Material = Enum.Material.Slate },
+			GOLD = { Color = gold, Material = Enum.Material.Cobblestone },
+			GLOW = { Color = sap, Material = Enum.Material.Neon },
+			MOSS = { Color = mossCol, Material = Enum.Material.Grass },
+			WOOD = { Color = bark, Material = Enum.Material.Wood },
+			FOLIAGE = { Color = vine, Material = Enum.Material.Grass },
+		}
+
+		local function cascade(at: Vector3, fallWidth: number, fallHeight: number, rotY: number?)
+			group("Waterfall", function()
+				local cf = CFrame.new(at) * CFrame.Angles(0, rotY or 0, 0)
+				local main = block("CascadingFall", V(fallWidth, fallHeight, 2.2), V(0, 0, 0), liquidColor, Enum.Material.SmoothPlastic, nil, 0.42)
+				main.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2, 0)
+				local core = block("FallFoamCore", V(fallWidth * 0.5, fallHeight - 0.4, 1.3), V(0, 0, 0), rgb(225, 240, 248), Enum.Material.SmoothPlastic, nil, 0.6)
+				core.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2 - 0.2, 0.6)
+				orb("FallSplashMist", cf:PointToWorldSpace(V(0, 1.8, 1.6)), V(fallWidth * 0.9, 3.2, 4.5), rgb(220, 238, 246), Enum.Material.SmoothPlastic, 0.86)
+			end)
+		end
+
+		local function balustrade(at: Vector3, rotY: number)
+			if not footprintClear(at.X, at.Z, 8.5, 2) then return end
+			group("Balustrade", function()
+				if natural then currentParent:SetAttribute("OnTerrain", true) end
+				if KitProps.Has("SolmereBalustrade") then
+					kitAt("SolmereBalustrade", CFrame.new(at) * CFrame.Angles(0, rotY, 0), 1, f2Override)
+					return
+				end
+				local cf = CFrame.new(at) * CFrame.Angles(0, rotY, 0)
+				local function bPart(n: string, sz: Vector3, off: Vector3, col: Color3, mat: Enum.Material)
+					local p = block(n, sz, V(0, 0, 0), col, mat)
+					p.CFrame = CFrame.new(origin) * cf * CFrame.new(off)
+					return p
+				end
+				bPart("BalustradeCurb", V(15.6, 0.9, 2.4), V(0, 0.45, 0), limestone, Enum.Material.Limestone)
+				bPart("BalustradeRail", V(15.2, 0.8, 2.2), V(0, 4.15, 0), limestone, Enum.Material.Limestone)
+				for _, bx in { -3.8, 0, 3.8 } do
+					bPart("Baluster", V(1.0, 2.9, 1.0), V(bx, 2.3, 0), limestone, Enum.Material.Limestone)
+				end
+				for _, sx in { -1, 1 } do
+					bPart("BalustradePost", V(2.2, 4.8, 2.6), V(sx * 7.1, 2.4, 0), limestone, Enum.Material.Limestone)
+					bPart("BalustradePostBand", V(2.4, 0.6, 2.8), V(sx * 7.1, 4.1, 0), verdigris, Enum.Material.Slate)
+				end
+			end)
+		end
+
+		local function brokenSpan(at: Vector3, deckY: number, rotY: number)
+			if not footprintClear(at.X, at.Z, 10, 6) then return end
+			table.insert(reservedSpots, { at.X, at.Z, 16 })
+			group("BrokenAqueductSpan", function()
+				if natural then currentParent:SetAttribute("OnTerrain", true) end
+				if KitProps.Has("AqueductBrokenSpan") then
+					local scaleY = (deckY - bottom) / 14
+					kitAt("AqueductBrokenSpan", CFrame.new(at) * CFrame.Angles(0, rotY, 0), V(1.25, scaleY, 1.05), f2Override)
+					return
+				end
+				local cf = CFrame.new(at) * CFrame.Angles(0, rotY, 0)
+				local hSpan = deckY - bottom
+				local function sPart(n: string, sz: Vector3, off: Vector3, col: Color3, mat: Enum.Material)
+					local p = block(n, sz, V(0, 0, 0), col, mat)
+					p.CFrame = CFrame.new(origin) * cf * CFrame.new(off)
+					return p
+				end
+				for _, sx in { -1, 1 } do
+					sPart("AqueductSpanPier", V(5.2, hSpan, 5.4), V(sx * 11.2, hSpan / 2, 2.0), limestone, Enum.Material.Limestone)
+					sPart("AqueductChannelWall", V(2.4, 3.6, 12.0), V(sx * 12.2, hSpan + 1.8, 0.0), limestone, Enum.Material.Limestone)
+					sPart("AqueductFrieze", V(3.0, 1.4, 12.2), V(sx * 12.2, hSpan - 0.3, 0.0), verdigris, Enum.Material.Slate)
+				end
+				sPart("AqueductChannelDeck", V(26.4, 2.0, 11.0), V(0, hSpan - 1.0, 0.5), limestone, Enum.Material.Limestone)
+				sPart("AqueductJaggedTip", V(14.0, 1.8, 5.0), V(-4.2, hSpan - 1.1, -5.2), limestone, Enum.Material.Limestone)
+				sPart("AqueductMossCap", V(9.0, 0.9, 4.0), V(-3.8, hSpan + 0.1, -4.8), mossCol, Enum.Material.Grass)
+			end)
+		end
+
+		-- 1. Broken Aqueduct viaduct: piers below camp clearance under AqueductSouth and AqueductNorth,
+		-- snapped spans overhanging the gap, waterfalls pouring into the Reed Pond, and SE arches.
+		for _, deck in { crossing, aqNorth } do
+			for _, sx in { -1, 1 } do
+				local pierX = deck.X + sx * (deck.Width / 2 + 1.2)
+				local pierH = (deck.Y - 2.2) - bottom
+				for _, sz in { -1, 1 } do
+					local pierZ = deck.Z + sz * (deck.Depth * 0.28)
+					if footprintClear(pierX, pierZ, 3, 4) then
+						group("AqueductCornice", function()
+							if natural then currentParent:SetAttribute("OnTerrain", true) end
+							block("AqueductSubPier", V(5.4, pierH, 7), V(pierX, bottom + pierH / 2, pierZ), limestone, Enum.Material.Limestone)
+							block("AqueductVerdigrisFrieze", V(2.6, 1.6, 12), V(pierX, deck.Y - 2.6, pierZ), verdigris, Enum.Material.Slate)
+						end)
+					end
+				end
+			end
+		end
+		-- Balustrades along clear edges of AqueductSouth and AqueductNorth.
+		balustrade(V(crossing.X - crossing.Width / 2 + 2.2, crossing.Y, crossing.Z - 4), math.pi / 2)
+		balustrade(V(crossing.X + crossing.Width / 2 - 2.2, crossing.Y, crossing.Z - 4), -math.pi / 2)
+		balustrade(V(aqNorth.X - aqNorth.Width / 2 + 2.2, aqNorth.Y, aqNorth.Z + 4), math.pi / 2)
+
+		-- The snapped gap between AqueductSouth (Z = -30) and AqueductNorth (Z = -68): clear of Crossing's 34-stud camp.
+		brokenSpan(V(crossing.X, bottom, -41), crossing.Y, math.pi)
+		brokenSpan(V(aqNorth.X, bottom, -57), aqNorth.Y, 0)
+		cascade(V(aqNorth.X, bottom, -51), 14, aqNorth.Y - bottom + 0.5, 0)
+		cascade(V(crossing.X - 4, bottom, -46), 8, crossing.Y - bottom + 0.5, math.pi)
+
+		-- SE approach aqueduct arches continuing the diagonal toward the south-east cliff.
+		for _, pt in { { 56, 38 }, { 80, 64 } } do
+			if footprintClear(pt[1], pt[2], 14, 10) then
+				table.insert(reservedSpots, { pt[1], pt[2], 16 })
+				arch(V(pt[1], bottom, pt[2]), 24, 14, 7.5, limestone, Enum.Material.Limestone, math.rad(-42))
+			end
+		end
+
+		-- 2. The Mill Ruin & Giant Waterwheel in the open mill-race pool south of MillRuin.
+		local wheelAt = V(144, bottom, 16)
+		if footprintClear(wheelAt.X, wheelAt.Z, 10, 10) then
+			table.insert(reservedSpots, { wheelAt.X, wheelAt.Z, 22 })
+			group("Waterwheel", function()
+				if natural then currentParent:SetAttribute("OnTerrain", true) end
+				if KitProps.Has("Waterwheel") then
+					kitAt("Waterwheel", CFrame.new(wheelAt) * CFrame.Angles(0, math.rad(-128), 0), 1.12, f2Override)
+				else
+					local cf = CFrame.new(wheelAt) * CFrame.Angles(0, math.rad(-128), 0)
+					local wCenter = cf:PointToWorldSpace(V(0, 14, 0))
+					ring("WaterwheelRimOuter", wCenter, 12.5, 1.3, bark, Enum.Material.Wood, CFrame.Angles(0, math.rad(-128), 0), 0, math.pi * 2, 12)
+					ring("WaterwheelRimInner", wCenter, 9.6, 0.9, barkDark, Enum.Material.Wood, CFrame.Angles(0, math.rad(-128), 0), 0, math.pi * 2, 12)
+					for k = 1, 4 do
+						local a = k * math.pi / 4
+						local dSpoke = cf:VectorToWorldSpace(V(math.cos(a) * 12, math.sin(a) * 12, 0))
+						limb("WaterwheelSpoke", wCenter - dSpoke, wCenter + dSpoke, 1.2, bark)
+					end
+					local wall = block("MillCradleWall", V(18, 16, 4.5), V(0, 0, 0), limestone, Enum.Material.Limestone)
+					wall.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 8, 4.5)
+				end
+			end)
+		end
+		balustrade(V(eastGal.X + eastGal.Width / 2 - 2.2, eastGal.Y, eastGal.Z + 12), -math.pi / 2)
+
+		-- 3. Cistern Plaza balustrades and fallen fluted column.
+		balustrade(V(westGal.X - westGal.Width / 2 + 2.2, westGal.Y, westGal.Z - 12), math.pi / 2)
+		balustrade(V(westGal.X - westGal.Width / 2 + 2.2, westGal.Y, westGal.Z + 14), math.pi / 2)
+		local colAt = V(westGal.X - westGal.Width / 2 + 12, westGal.Y, westGal.Z + westGal.Depth / 2 - 8)
+		if footprintClear(colAt.X, colAt.Z, 6, 4) then
+			group("FallenStela", function()
+				local p = block("FallenCisternColumn", V(3.2, 3.2, 12), colAt + V(0, 1.6, 0), limestone, Enum.Material.Limestone, Enum.PartType.Cylinder)
+				p.CFrame = CFrame.new(origin + colAt + V(0, 1.6, 0)) * CFrame.Angles(0, math.rad(34), math.pi / 2)
+				lilies(colAt + V(-4, 0, -4), 3)
+			end)
+		end
+
+		-- 4. Reed Pond clusters, water-lilies, stepping stones, and Mill Pond shore grazing scars.
+		local function reedCluster(at: Vector3, s: number)
+			if not footprintClear(at.X, at.Z, 4 * s, 4 * s) then return end
+			group("ReedCluster", function()
+				if natural then currentParent:SetAttribute("OnTerrain", true) end
+				if KitProps.Has("ReedPondCluster") then
+					kitAt("ReedPondCluster", CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), s, f2Override)
+					return
+				end
+				for k = 1, 3 do
+					local a = k * 2.1 + yawAt(at)
+					local base = at + V(math.cos(a) * 1.2 * s, 0, math.sin(a) * 1.2 * s)
+					beam("PondReed", base, base + V(math.cos(a) * 0.7 * s, (4.4 + (k % 2)) * s, math.sin(a) * 0.7 * s), 0.26 * s, vine, Enum.Material.Grass)
+				end
+				cyl("PondLilyPad", at + V(1.4 * s, 0.2, 1.0 * s), 1.6 * s, 0.25, rgb(46, 112, 58), Enum.Material.Grass)
+				orb("PondLilyBloom", at + V(1.4 * s, 0.7, 1.0 * s), V(0.9 * s, 0.8 * s, 0.9 * s), sap, Enum.Material.Neon)
+			end)
+		end
+		for _, spot in {
+			{ -42, 34, 1.1 }, { -14, 42, 1.05 }, { 32, 34, 1.0 }, { -52, 4, 1.2 },
+			{ -38, -24, 1.1 }, { -8, -46, 1.2 }, { 34, -46, 1.1 }, { -90, -76, 1.0 },
+			{ 132, 22, 1.1 }, { 160, -4, 1.05 },
+		} do
+			reedCluster(V(spot[1], bottom + 2.6, spot[2]), spot[3])
+		end
+		-- Stepping stones across the shallow west reed pond cove (cosmetic, off-lane).
+		group("PondSteppingStones", function()
+			if natural then currentParent:SetAttribute("OnTerrain", true) end
+			for i = 0, 5 do
+				local t = i / 5
+				local sx = -48 + t * 34
+				local sz = 16 + math.sin(t * math.pi) * 8
+				if footprintClear(sx, sz, 2.5, 2.5) then
+					cyl("PondSteppingStone", V(sx, bottom + 2.4, sz), 2.1 + (i % 2) * 0.4, 3.8, limestone, Enum.Material.Limestone)
+				end
+			end
+		end)
+		-- Moss Crawler grazing scars & glow-lily beds on the Mill Pond off-lane margins.
+		for _, sx in { -1, 1 } do
+			local bed = V(sx * 144, basin.Y, basin.Z + 22)
+			if footprintClear(bed.X, bed.Z, 6, 6) then
+				group("ShoreLilyBed", function()
+					block("GrazingScarStone", V(7, 0.16, 3.2), bed + V(-sx * 8, 0.08, -6), limestone, Enum.Material.Limestone)
+					lilies(bed, 4)
+				end)
+			end
+		end
+
+		-- 5. Heartroot feeder giants on open chasm ground wrapping the broken aqueduct gap and framing the pond & mill.
+		giant(-28, -50, 56, { { 85, 58, 12 }, { 30, 54, 14 }, { 160, 48, 8 } })
+		giant(66, -70, 56, { { -95, 56, 12 }, { -145, 50, 10 }, { 40, 46, 10 } })
+		giant(-128, 60, 52, { { 55, 56, 12 }, { 10, 50, 12 }, { 115, 52, 8 } })
+		giant(116, 72, 52, { { -55, 54, 12 }, { -115, 52, 10 }, { 10, 46, 10 } })
+		-- Visible Heartroot feeder roots coiling into the pond beside the snapped aqueduct pier.
+		group("AqueductFeederRoots", function()
+			if natural then currentParent:SetAttribute("OnTerrain", true) end
+			for _, pair in {
+				{ V(-22, bottom + 1, -46), V(4, aqNorth.Y - 1, -68) },
+				{ V(-20, bottom + 0.5, -42), V(4, crossing.Y - 1, -30) },
+				{ V(58, bottom + 1, -68), V(28, aqNorth.Y - 2, -68) },
+			} do
+				if footprintClear((pair[1].X + pair[2].X) / 2, (pair[1].Z + pair[2].Z) / 2, 4, 4) then
+					limb("HeartrootFeederRoot", pair[1], pair[2], 2.2, barkDark)
+				end
+			end
+		end)
+	elseif layout.Authored == "verdant:3" then
+		local westGal = layout.Platforms.WestGallery
+		local eastGal = layout.Platforms.EastGallery
+		local mossCol = rgb(86, 132, 58)
+		local f3Override: KitProps.Override = {
+			TRIM = { Color = limestone, Material = Enum.Material.Limestone },
+			ACCENT = { Color = verdigris, Material = Enum.Material.Slate },
+			GOLD = { Color = gold, Material = Enum.Material.Cobblestone },
+			GLOW = { Color = sap, Material = Enum.Material.Neon },
+			MOSS = { Color = mossCol, Material = Enum.Material.Grass },
+			WOOD = { Color = bark, Material = Enum.Material.Wood },
+			FOLIAGE = { Color = vine, Material = Enum.Material.Grass },
+		}
+
+		local function canyonWaterfall(at: Vector3, fallWidth: number, fallHeight: number, rotY: number)
+			group("Waterfall", function()
+				local cf = CFrame.new(at) * CFrame.Angles(0, rotY, 0)
+				local main = block("CascadingFall", V(fallWidth, fallHeight, 2.6), V(0, 0, 0), liquidColor, Enum.Material.SmoothPlastic, nil, 0.36)
+				main.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2, 0)
+				local core = block("FallFoamCore", V(fallWidth * 0.52, fallHeight - 0.6, 1.5), V(0, 0, 0), rgb(225, 240, 248), Enum.Material.SmoothPlastic, nil, 0.54)
+				core.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2 - 0.2, 0.8)
+				local mist = block("FallPoolFoam", V(fallWidth * 1.25, 1.4, 9.5), V(0, 0, 0), rgb(225, 242, 246), Enum.Material.SmoothPlastic, nil, 0.55)
+				mist.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 2.2, 4.2)
+			end)
+		end
+
+		local function fernAt(at: Vector3, s: number)
+			if not footprintClear(at.X, at.Z, 4.5 * s, 4.5 * s) then return end
+			group("FernCluster", function()
+				if natural then currentParent:SetAttribute("OnTerrain", true) end
+				if KitProps.Has("FernCluster") then
+					kitAt("FernCluster", CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), s, f3Override)
+					return
+				end
+				for k = 1, 5 do
+					local a = k * (math.pi * 2 / 5) + yawAt(at)
+					local tip = at + V(math.cos(a) * 4.4 * s, 2.1 * s, math.sin(a) * 4.4 * s)
+					limb("FernFrond", at + V(0, 0.5, 0), tip, 0.9 * s, vine)
+				end
+			end)
+		end
+
+		local function lanternAt(at: Vector3, rotY: number, emitLight: boolean)
+			if not footprintClear(at.X, at.Z, 2.4, 2.4) then return end
+			group("RootKnotLantern", function()
+				if KitProps.Has("RootKnotLantern") then
+					kitAt("RootKnotLantern", CFrame.new(at) * CFrame.Angles(0, rotY, 0), 0.9, f3Override)
+				else
+					block("LanternPlinth", V(2.8, 1.0, 2.8), at + V(0, 0.5, 0), limestone, Enum.Material.Limestone)
+					block("LanternPost", V(1.6, 4.4, 1.6), at + V(0, 3.2, 0), limestone, Enum.Material.Limestone)
+					local bulb = orb("LanternGlow", at + V(0, 6.2, 0), V(1.4, 1.6, 1.4), sap, Enum.Material.Neon)
+					if emitLight then pointLight(bulb, sap, 0.75, 22) end
+				end
+			end)
+		end
+
+		-- 1. West Gorge Waterfall (40-stud wide canyon cascade facing east/south away from every ramp).
+		canyonWaterfall(V(-192, bottom, -78), 38, 48, math.rad(118))
+
+		-- 2. Sweeping West Root Arch in the upper-west gorge in front of the cliff waterfall (matches left art).
+		local archAt = V(-156, bottom + 2, -82)
+		table.insert(reservedSpots, { archAt.X, archAt.Z, 24 })
+		group("RootBridgeArch", function()
+			if natural then currentParent:SetAttribute("OnTerrain", true) end
+			if KitProps.Has("RootBridgeArch") then
+				kitAt("RootBridgeArch", CFrame.new(archAt) * CFrame.Angles(0, math.rad(16), 0), V(1.32, 1.38, 1.25), f3Override)
+			else
+				arch(archAt, 56, 28, 7.5, bark, Enum.Material.Wood, math.rad(16))
+			end
+		end)
+		-- 3. Gorge-cliff root tendrils & Solmere bridge trail lanterns. (Pad under-roots are anchored directly
+		-- inside each solid island/stump core in TowerRoomBuilder so nothing disconnects or floats.)
+		for _, curve in {
+			{ V(-44, apex.Y - 3, apex.Z + 22), V(-64, 5, -92), V(-78, bottom - 3, -54) },
+			{ V(44, apex.Y - 3, apex.Z + 22), V(66, 5, -90), V(82, bottom - 3, -50) },
+			{ V(-46, basin.Y - 2, basin.Z - 40), V(-58, -3, 38), V(-72, bottom - 3, 12) },
+			{ V(46, basin.Y - 2, basin.Z - 40), V(58, -3, 36), V(74, bottom - 3, 10) },
+			{ V(-124, basin.Y - 2, basin.Z - 38), V(-132, -2, 34), V(-120, bottom - 3, 4) },
+			{ V(124, basin.Y - 2, basin.Z - 38), V(134, -2, 32), V(122, bottom - 3, 2) },
+		} do
+			group("GorgeRootTendril", function()
+				if natural then currentParent:SetAttribute("OnTerrain", true) end
+				limb("GorgeRootArc", curve[1], curve[2], 3.8, bark)
+				limb("GorgeRootArc", curve[2], curve[3], 4.6, barkDark)
+				beam("GorgeRootSap", curve[2], curve[3] + V(0, 2, 0), 0.5, sap, Enum.Material.Neon, 0.25)
+			end)
+		end
+		-- Iconic RootKnotLanterns framing The Knot's outer stair corners (>34 from camp) & Fern Bank root bridge entry.
+		for _, spot in {
+			{ crossing.X - 28, crossing.Y, crossing.Z + 24, 0.2, true },
+			{ crossing.X + 28, crossing.Y, crossing.Z + 24, -0.2, false },
+			{ crossing.X - 28, crossing.Y, crossing.Z - 24, 2.9, true },
+			{ crossing.X + 28, crossing.Y, crossing.Z - 24, -2.9, false },
+			{ -24, basin.Y, basin.Z - basin.Depth / 2 + 6, 0.1, false },
+			{ 24, basin.Y, basin.Z - basin.Depth / 2 + 6, -0.1, false },
+		} do
+			lanternAt(V(spot[1], spot[2], spot[3]), spot[4], spot[5])
+		end
+
+		-- 4. Hollow Stump (EastGallery): outer crescent jagged bark rim (solid trunk & buttresses live in TowerRoomBuilder).
+		local stumpRimAt = V(eastGal.X + 34, eastGal.Y - 11, eastGal.Z - 14)
+		table.insert(reservedSpots, { stumpRimAt.X, stumpRimAt.Z, 26 })
+		group("HollowStumpRim", function()
+			if natural then currentParent:SetAttribute("OnTerrain", true) end
+			if KitProps.Has("HollowStumpRim") then
+				kitAt("HollowStumpRim", CFrame.new(stumpRimAt) * CFrame.Angles(0, math.rad(-122), 0), 0.78, f3Override)
+			else
+				for k = -3, 3 do
+					local a = math.rad(k * 20 - 25)
+					local px = eastGal.X + math.cos(a) * 46
+					local pz = eastGal.Z + math.sin(a) * 40
+					local sh = 14 + (3 - math.abs(k)) * 3.5
+					block("HollowStumpBarkStave", V(8, sh, 7), V(px, eastGal.Y + sh / 2 - 4, pz), barkDark, Enum.Material.Wood)
+				end
+			end
+		end)
+
+		-- 5. Weathered Solmere stela & lush FernCluster carpet along Fern Bank and riverbanks.
+		for _, spot in {
+			{ -58, basin.Y, basin.Z - 26, 1.35 }, { 58, basin.Y, basin.Z - 26, 1.3 },
+			{ -92, basin.Y, basin.Z - 38, 1.2 }, { 92, basin.Y, basin.Z - 38, 1.25 },
+			{ -40, basin.Y, basin.Z - 46, 1.25 }, { 40, basin.Y, basin.Z - 46, 1.25 },
+			{ -155, basin.Y, basin.Z + 18, 1.4 }, { 155, basin.Y, basin.Z + 18, 1.35 },
+			{ -46, apex.Y, apex.Z - 14, 1.3 }, { 46, apex.Y, apex.Z - 14, 1.3 },
+			{ -44, apex.Y, apex.Z + 26, 1.15 }, { 44, apex.Y, apex.Z + 26, 1.15 },
+		} do
+			fernAt(V(spot[1], spot[2], spot[3]), spot[4])
+		end
+		-- Fallen weathered sun-disc stela on Fern Bank's south-west edge (seen left foreground in Floor 3 art).
+		if footprintClear(-34, basin.Z + 32, 6, 5) then
+			group("FallenStela", function()
+				local at = V(-34, basin.Y, basin.Z + 32)
+				local p = block("SolmereStelaFallen", V(3.4, 2.2, 11 * scale), at + V(0, 1.0, 0), limestone, Enum.Material.Limestone)
+				p.CFrame = CFrame.new(origin + at + V(0, 1.0, 0)) * CFrame.Angles(math.rad(-12), math.rad(38), 0)
+				lilies(at + V(6, 0, -4), 3)
+			end)
+		end
+
+		-- 6. Glow-lily rafts drifting along the gorge river (y = bottom + 3.2 water surface).
+		for _, spot in {
+			{ -68, -44 }, { -42, -32 }, { 38, -48 }, { 64, -30 }, { -126, -64 }, { 96, -54 },
+		} do
+			if footprintClear(spot[1], spot[2], 5, 5) then
+				group("RiverLilyRaft", function()
+					if natural then currentParent:SetAttribute("OnTerrain", true) end
+					lilies(V(spot[1], bottom + 3.1, spot[2]), 3)
+				end)
+			end
+		end
+
+		-- 7. Flank Heartroot canyon giants framing the gorge without crowding walkways or river middle.
+		giant(-196, 48, 62, { { 65, 64, 14 }, { 15, 56, 12 }, { 125, 48, 8 } })
+		giant(198, 44, 60, { { -65, 62, 14 }, { -15, 54, 12 }, { -120, 48, 8 } })
+		giant(-120, -172, 66, { { 75, 64, 14 }, { 125, 56, 12 }, { 25, 52, 10 } })
+		giant(120, -172, 66, { { -75, 64, 14 }, { -125, 56, 12 }, { -25, 52, 10 } })
+	elseif layout.Authored == "verdant:4" then
+		local westGal = layout.Platforms.WestGallery
+		local eastGal = layout.Platforms.EastGallery
+		local bastionW = layout.Platforms.WestBastion
+		local bastionE = layout.Platforms.EastBastion
+		local mossCol = rgb(86, 132, 58)
+		local f4Override: KitProps.Override = {
+			TRIM = { Color = limestone, Material = Enum.Material.Limestone },
+			ACCENT = { Color = verdigris, Material = Enum.Material.Slate },
+			GOLD = { Color = gold, Material = Enum.Material.Cobblestone },
+			GLOW = { Color = sap, Material = Enum.Material.Neon },
+			MOSS = { Color = mossCol, Material = Enum.Material.Grass },
+			WOOD = { Color = bark, Material = Enum.Material.Wood },
+		}
+
+		-- 1. Breached Gatehouse Arch astride Crossing's north stair exit (tagged RampArch so WalkwayHitTest exempts
+		-- the overhead lintel while players walk right through the 34-stud open doorway; clears GATEHOUSE camp at Z=48).
+		local gateAt = V(crossing.X, crossing.Y, crossing.Z - crossing.Depth / 2 - 10)
+		group("RampArch", function()
+			if KitProps.Has("GatehouseArch") then
+				kitAt("GatehouseArch", CFrame.new(gateAt), 1.0, f4Override)
+			else
+				for _, s in { -1, 1 } do
+					block("GatehousePier", V(12, 26, 12), gateAt + V(s * 23, 13, 0), limestone, Enum.Material.Limestone)
+					sunDisc("GatehouseSunDisc", gateAt + V(s * 23, 14.5, 6.4), 2.6, nil, false)
+				end
+				block("GatehouseLintel", V(56, 5.5, 11), gateAt + V(0, 24.5, 0), limestone, Enum.Material.Limestone)
+				limb("GatehouseStranglerFig", gateAt + V(19, 0, 5), gateAt + V(14, 26, 4), 2.8, bark)
+			end
+		end)
+
+		-- Twin crouching Vinebound Guardian statues flanking the front Gatehouse moat bridge approach.
+		for _, sx in { -1, 1 } do
+			local gAt = V(sx * 34, crossing.Y, crossing.Z + 12)
+			if footprintClear(gAt.X, gAt.Z, 5, 5) then
+				group("VineboundGuardian", function()
+					if KitProps.Has("VineboundGuardian") then
+						kitAt("VineboundGuardian", CFrame.new(gAt) * CFrame.Angles(0, math.rad(-sx * 16), 0), 1.0, f4Override)
+					else
+						block("GuardianPlinth", V(9, 1.8, 9), gAt + V(0, 0.9, 0), limestone, Enum.Material.Limestone)
+						block("GuardianBody", V(7, 9, 6), gAt + V(0, 6.2, 0), limestone, Enum.Material.Limestone)
+						orb("GuardianCore", gAt + V(0, 8, 3.1), V(1.6, 1.6, 0.8), sap, Enum.Material.Neon)
+					end
+				end)
+			end
+		end
+
+		-- 2. Crenellated Curtain Wall stretching east and west from the Gatehouse with collapsed breaches.
+		for _, spot in {
+			{ -68, 42, 0.08 }, { -104, 34, -0.06 },
+			{ 68, 42, -0.08 }, { 104, 30, 0.06 },
+		} do
+			if footprintClear(spot[1], spot[2], 16, 5) then
+				table.insert(reservedSpots, { spot[1], spot[2], 18 })
+				group("CurtainWallRuins", function()
+					if natural then currentParent:SetAttribute("OnTerrain", true) end
+					-- Stone moat plinth anchoring wall segment down into bottom (-8)
+					block("CurtainWallPlinth", V(32, crossing.Y - bottom + 1, 8), V(spot[1], (crossing.Y + bottom) / 2, spot[2]), limestone, Enum.Material.Limestone)
+					if KitProps.Has("CurtainWallRuins") then
+						kitAt("CurtainWallRuins", CFrame.new(V(spot[1], crossing.Y, spot[2])) * CFrame.Angles(0, spot[3], 0), 1.0, f4Override)
+					else
+						block("CurtainWallBody", V(30, 14, 5.5), V(spot[1], crossing.Y + 7, spot[2]), limestone, Enum.Material.Limestone)
+					end
+				end)
+			end
+		end
+
+		-- 3. Vinebound Bastion Towers beside West Tower (upright) & East Tower (leaning under strangler vines).
+		local wTowerAt = V(bastionW.X - bastionW.Width / 2 - 12, bottom, bastionW.Z - 6)
+		local eTowerAt = V(bastionE.X + bastionE.Width / 2 + 12, bottom, bastionE.Z - 6)
+		table.insert(reservedSpots, { wTowerAt.X, wTowerAt.Z, 18 })
+		table.insert(reservedSpots, { eTowerAt.X, eTowerAt.Z, 18 })
+		for idxT, specT in {
+			{ at = wTowerAt, lean = 0, scaleY = 1.48 },
+			{ at = eTowerAt, lean = math.rad(-5.5), scaleY = 1.42 },
+		} do
+			group("VineboundTower", function()
+				if natural then currentParent:SetAttribute("OnTerrain", true) end
+				if KitProps.Has("VineboundTower") then
+					kitAt("VineboundTower", CFrame.new(specT.at) * CFrame.Angles(0, idxT * 1.1, specT.lean), V(1.25, specT.scaleY, 1.25), f4Override)
+				else
+					local towerBody = cyl("BastionWatchtower", specT.at + V(0, 34, 0), 12, 68, limestone, Enum.Material.Limestone)
+					towerBody.CFrame = CFrame.new(origin + specT.at + V(0, 34, 0)) * CFrame.Angles(0, 0, specT.lean)
+				end
+			end)
+		end
+		-- Overhead vine cables slung high between the towers and the Inner Keep (above Y + 34, never blocking cams/lanes).
+		for _, cable in {
+			{ wTowerAt + V(12, 62, 0), V(-24, apex.Y + 40, apex.Z - apex.Depth / 2 - 10) },
+			{ eTowerAt + V(-12, 58, 0), V(24, apex.Y + 40, apex.Z - apex.Depth / 2 - 10) },
+		} do
+			group("AirborneVineCable", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local midCable = (cable[1] + cable[2]) * 0.5 - V(0, 6, 0)
+				limb("HighVineCable", cable[1], midCable, 1.6, bark)
+				limb("HighVineCable", midCable, cable[2], 1.6, barkDark)
+			end)
+		end
+
+		-- 4. Roofless Barracks spear racks (WestGallery outer flank) & Sun Shrine Altar (EastGallery outer flank).
+		local rackAt = V(westGal.X - westGal.Width / 2 + 5, westGal.Y, westGal.Z)
+		if footprintClear(rackAt.X, rackAt.Z, 3, 6) then
+			group("BarracksSpearRack", function()
+				block("SpearRackFrame", V(2.4, 5.5, 10), rackAt + V(0, 2.75, 0), barkDark, Enum.Material.Wood)
+				for sIdx = -1, 1 do
+					limb("MossyStoneSpear", rackAt + V(1.6, 0.2, sIdx * 3), rackAt + V(-0.4, 7.2, sIdx * 3), 0.55, limestone)
+				end
+			end)
+		end
+		local altarAt = V(eastGal.X + eastGal.Width / 2 - 6, eastGal.Y, eastGal.Z)
+		if footprintClear(altarAt.X, altarAt.Z, 4, 4) then
+			group("SunShrineAltar", function()
+				block("AltarPlinth", V(5.5, 3.2, 6.5), altarAt + V(0, 1.6, 0), limestone, Enum.Material.Limestone)
+				sunDisc("CrackedAltarSun", altarAt + V(0, 6.2, 0), 2.1, CFrame.Angles(0, -math.pi / 2, math.rad(12)), true)
+			end)
+		end
+
+		-- 5. Marsh reeds, lily pads & toppled ashlar rubble in the Outer Ward green moat.
+		for _, spot in {
+			{ -46, bottom + 3.2, 74 }, { 48, bottom + 3.2, 76 }, { -108, bottom + 3.2, 82 },
+			{ 112, bottom + 3.2, 78 }, { -86, bottom + 3.2, -46 }, { 88, bottom + 3.2, -48 },
+		} do
+			if footprintClear(spot[1], spot[3], 4, 4) then
+				group("MoatReedRaft", function()
+					if natural then currentParent:SetAttribute("OnTerrain", true) end
+					if KitProps.Has("ReedPondCluster") then
+						kitAt("ReedPondCluster", CFrame.new(V(spot[1], spot[2] - 0.4, spot[3])) * CFrame.Angles(0, spot[1], 0), 1.1, f4Override)
+					else
+						lilies(V(spot[1], spot[2], spot[3]), 4)
+					end
+				end)
+			end
+		end
+		for _, spot in {
+			{ -52, basin.Y, basin.Z - 36, 0.4 }, { 54, basin.Y, basin.Z - 34, -0.5 },
+			{ -122, basin.Y, basin.Z + 12, 0.8 }, { 122, basin.Y, basin.Z + 12, -0.7 },
+		} do
+			if footprintClear(spot[1], spot[3], 5, 4) then
+				group("ToppledWallRubble", function()
+					local p = block("MoatFallenBlock", V(8, 3.5, 5), V(spot[1], spot[2] + 1.5, spot[3]), limestone, Enum.Material.Limestone)
+					p.CFrame = CFrame.new(origin + V(spot[1], spot[2] + 1.5, spot[3])) * CFrame.Angles(0.1, spot[4], 0.14)
+				end)
+			end
+		end
+
+		-- 6. Perimeter vine-draped Heartroot giants & colossal background tree looming behind Inner Keep.
+		giant(-204, 96, 60, { { 60, 56, 12 }, { 10, 50, 10 } })
+		giant(204, 96, 60, { { -60, 56, 12 }, { -10, 50, 10 } })
+		giant(-54, -242, 78, { { 70, 68, 16 }, { 125, 58, 12 }, { 25, 56, 14 } })
+	end
 	end
 
 	-- =========================================================================
@@ -1206,25 +1733,108 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	if biome == "verdant_ruins" then
+		if layout.Authored == "verdant:3" then
+			-- Monumental Heartroot Mother-Trunk & carved Solmere Root-Throne perched behind Apex (Root-Throne),
+			-- staying north of Apex PortalSpots (Z = -210) and APEX_SANCTUM camp radius.
+			local throneAt = V(apex.X, apex.Y, apex.Z - apex.Depth / 2 - 14)
+			group("RootThrone", function()
+				if KitProps.Has("RootThrone") then
+					kitAt("RootThrone", CFrame.new(throneAt), 1.45 * scale, {
+						TRIM = { Color = rgb(196, 190, 168), Material = Enum.Material.Limestone },
+						ACCENT = { Color = rgb(92, 150, 128), Material = Enum.Material.Slate },
+						GOLD = { Color = gold, Material = Enum.Material.Cobblestone },
+						GLOW = { Color = rgb(150, 235, 120), Material = Enum.Material.Neon },
+						MOSS = { Color = rgb(86, 132, 58), Material = Enum.Material.Grass },
+						WOOD = { Color = rgb(82, 64, 46), Material = Enum.Material.Wood },
+					})
+				else
+					-- Native fallback: colossal Heartroot trunk + flared buttress roots framing a Sun-Disc throne
+					cyl("MotherTrunk", throneAt + V(0, 0, -4), 16 * scale, 90 * scale, rgb(82, 64, 46), Enum.Material.Wood)
+					for _, s in { -1, 1 } do
+						block("ThroneRootButtress", V(8, 34, 14), throneAt + V(s * 16, 16, 2), rgb(62, 48, 36), Enum.Material.Wood)
+					end
+					block("RootThroneBack", V(14, 24, 5), throneAt + V(0, 12, 4), rgb(196, 190, 168), Enum.Material.Limestone)
+					block("RootThroneSeat", V(9, 5, 6), throneAt + V(0, 2.5, 7), rgb(196, 190, 168), Enum.Material.Limestone)
+					ring("RootThroneSunRim", throneAt + V(0, 24, 6.5), 5.5, 0.9, gold, Enum.Material.Cobblestone, nil, 0, math.pi * 2, 14)
+					orb("RootThroneSunCore", throneAt + V(0, 24, 6.8), V(2.4, 2.4, 0.9), rgb(150, 235, 120), Enum.Material.Neon)
+				end
+				-- Upper canopy trunk shaft continuing up into the noon skylight opening
+				cyl("MotherTrunkCanopy", throneAt + V(0, 38 * scale, -4), 11 * scale, math.max(24, h - apex.Y - 26), rgb(74, 58, 42), Enum.Material.Wood)
+			end)
+			-- Strong diagonal noon light shafts illuminating The Knot and Root-Throne
+			for bIdx = -1, 2 do
+				beam("JungleSunbeam", V(bIdx * 42 - 30, h - 4, -d * 0.24 + bIdx * 24), V(bIdx * 36 + 22, 4, -d * 0.04 + bIdx * 32), 11, rgb(252, 234, 172), Enum.Material.SmoothPlastic, 0.90)
+			end
+		elseif layout.Authored == "verdant:4" then
+			-- Monumental roofless Vinebound Keep rising behind Inner Keep (Apex), keeping north of PortalSpots.
+			local keepAt = V(apex.X, apex.Y, apex.Z - apex.Depth / 2 - 14)
+			group("VineboundKeep", function()
+				if KitProps.Has("VineboundKeep") then
+					kitAt("VineboundKeep", CFrame.new(keepAt), 1.35 * scale, {
+						TRIM = { Color = rgb(196, 190, 168), Material = Enum.Material.Limestone },
+						ACCENT = { Color = rgb(92, 150, 128), Material = Enum.Material.Slate },
+						GOLD = { Color = gold, Material = Enum.Material.Cobblestone },
+						MOSS = { Color = rgb(86, 132, 58), Material = Enum.Material.Grass },
+						WOOD = { Color = rgb(82, 64, 46), Material = Enum.Material.Wood },
+					})
+				else
+					for _, s in { -1, 1 } do
+						block("KeepTurret", V(15, 52 * scale, 16), keepAt + V(s * 22, 26 * scale, 0), rgb(196, 190, 168), Enum.Material.Limestone)
+					end
+					block("KeepSanctumWall", V(30, 34 * scale, 12), keepAt + V(0, 17 * scale, 2), rgb(196, 190, 168), Enum.Material.Limestone)
+					ring("KeepSunDisc", keepAt + V(0, 30 * scale, 8.5), 4.8, 0.7, gold, Enum.Material.Cobblestone, nil, 0, math.pi * 2, 12)
+				end
+			end)
+		else
+		local templeOrigin = if layout.Authored == "verdant:2" then V(apex.X, apex.Y, -d / 2 + 10) else backdrop
+		local templeDepth = if layout.Authored == "verdant:2" then 24 * scale else 38 * scale
 		group("Temple", function()
 			for step = 1, 5 do
 				local tierW = (156 - step * 22) * scale
 				local tierH = 13 * scale
 				local tierY = (step - 0.5) * tierH
-				block("GoldenTempleTier", V(tierW, tierH, 38 * scale), backdrop + V(0, tierY, -4), if step >= 4 then gold else theme.TrimColor, theme.TrimMaterial)
-				block("TempleTierCornice", V(tierW + 6, 2.4, 41 * scale), backdrop + V(0, step * tierH, -4), gold, Enum.Material.Cobblestone)
+				block("GoldenTempleTier", V(tierW, tierH, templeDepth), templeOrigin + V(0, tierY, -2), if step >= 4 then gold else theme.TrimColor, theme.TrimMaterial)
+				block("TempleTierCornice", V(tierW + 6, 2.4, templeDepth + 3), templeOrigin + V(0, step * tierH, -2), gold, Enum.Material.Cobblestone)
 			end
-			spire(backdrop + V(0, 62 * scale, -4), 46 * scale, 18 * scale, gold, accent, false)
+			if layout.Authored == "verdant:2" then
+				local shrineAt = templeOrigin + V(0, 65 * scale, 2)
+				if KitProps.Has("SunDiscShrine") then
+					kitAt("SunDiscShrine", CFrame.new(shrineAt), 1.65 * scale, {
+						TRIM = { Color = rgb(196, 190, 168), Material = Enum.Material.Limestone },
+						ACCENT = { Color = rgb(92, 150, 128), Material = Enum.Material.Slate },
+						GOLD = { Color = gold, Material = Enum.Material.Cobblestone },
+						GLOW = { Color = rgb(150, 235, 120), Material = Enum.Material.Neon },
+						MOSS = { Color = rgb(86, 132, 58), Material = Enum.Material.Grass },
+					})
+				else
+					local sunPos = shrineAt + V(0, 14, 2)
+					ring("WellheadSunDiscRim", sunPos, 10 * scale, 1.6, gold, Enum.Material.Cobblestone, nil, 0, math.pi * 2, 12)
+					for k = 0, 7 do
+						local a = k * math.pi / 4
+						beam("WellheadSunRay", sunPos + V(math.cos(a) * 10.5 * scale, math.sin(a) * 10.5 * scale, 0),
+							sunPos + V(math.cos(a) * 15.5 * scale, math.sin(a) * 15.5 * scale, 0), 1.4, rgb(92, 150, 128), Enum.Material.Slate)
+					end
+					orb("WellheadSunCore", sunPos, V(6.5 * scale, 6.5 * scale, 2.5), rgb(150, 235, 120), Enum.Material.Neon)
+				end
+			else
+				spire(templeOrigin + V(0, 62 * scale, -4), 46 * scale, 18 * scale, gold, accent, false)
+			end
 			for _, s in { -1, 1 } do
-				spire(backdrop + V(s * 48 * scale, 36 * scale, 0), 36 * scale, 13 * scale, theme.TrimColor, accent, false)
+				spire(templeOrigin + V(s * 48 * scale, 36 * scale, 0), 36 * scale, 13 * scale, theme.TrimColor, accent, false)
 			end
 		end)
 		group("TemplePortal", function()
-			arch(backdrop + V(0, 0, 18), 40 * scale, 34 * scale, 10, gold, Enum.Material.Cobblestone, 0)
-			orb("SunlitTemplePortal", backdrop + V(0, 24 * scale, 16), V(28 * scale, 38 * scale, 3), rgb(225, 195, 115), Enum.Material.SmoothPlastic, 0.45)
+			if layout.Authored == "verdant:2" then
+				-- Wide sun-gate behind the off-centre Wellhead Shrine portals, clear of both PortalAscend and PortalRerun.
+				arch(templeOrigin + V(0, 0, 12), 62, 34 * scale, 8, gold, Enum.Material.Cobblestone, 0)
+			else
+				arch(backdrop + V(0, 0, 18), 40 * scale, 34 * scale, 10, gold, Enum.Material.Cobblestone, 0)
+				orb("SunlitTemplePortal", backdrop + V(0, 24 * scale, 16), V(28 * scale, 38 * scale, 3), rgb(225, 195, 115), Enum.Material.SmoothPlastic, 0.45)
+			end
 		end)
 		for bIdx = -2, 2 do
 			beam("JungleSunbeam", V(bIdx * 55 - 35, h - 4, -d * 0.25 + bIdx * 30), V(bIdx * 45 + 25, 4, -d * 0.08 + bIdx * 35), 10, rgb(240, 220, 150), Enum.Material.SmoothPlastic, 0.92)
+		end
 		end
 
 	elseif biome == "fungal_hollow" then
@@ -1617,7 +2227,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- a bend terrace or a ramp).
 		local function ground(x: number, z: number): (number, string, number)
 			local y, kind = field.Sample(x, z)
-			if kind == "WALK" then
+			if kind == "WALK" or kind == "TRAIL" then
 				for id, t in layout.Platforms do
 					if math.abs(x - t.X) < t.Width / 2 - 4 and math.abs(z - t.Z) < t.Depth / 2 - 4 then
 						local lawn = id ~= "Sanctuary" and not t.Bend and t.Width >= 60
@@ -1677,7 +2287,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				local us = rand:NextNumber(0.8, 1.35)
 				local ur = radiusOf(under, us)
 				local ux, uy, uz = search(ur, function(kind, slope)
-					return kind ~= "WALK" and kind ~= "BRIDGE" and kind ~= "POOL" and slope < 0.8
+					return kind ~= "WALK" and kind ~= "BRIDGE" and kind ~= "TRAIL" and kind ~= "POOL" and slope < 0.8
 				end, centre, r * 2.2)
 				if ux then put("Understory", under, ux, uy, uz, us, ur) end
 			end
@@ -1721,7 +2331,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			local s = rand:NextNumber(0.9, 2.2)
 			local r = radiusOf("BoulderCluster", s)
 			local x, y, z = search(r, function(kind, slope)
-				return kind ~= "WALK" and kind ~= "BRIDGE" and kind ~= "POOL" and slope < 1.1
+				return kind ~= "WALK" and kind ~= "BRIDGE" and kind ~= "TRAIL" and kind ~= "POOL" and slope < 1.1
 			end)
 			if x then put("Boulders", "BoulderCluster", x, y, z, s, r, 0.6) end
 		end
