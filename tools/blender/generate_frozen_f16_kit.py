@@ -176,40 +176,124 @@ def hunters_lodge(t):
     tapered_limb(wood, (rx, -4.0, 5.7), (rx, 4.0, 5.7), 0.25, 0.25, segs=5)
 
 
-@template("FisherHut", STONE=450, WOOD=1200, ALT=350, MOSS=700, GLOW=90)
+def build_skiff(wood, alt, cx, cy, cz, yaw, length=10.5, width=3.2, depth=1.35):
+    """Pointed double-ended wooden skiff hull with gunwale sheer, thwart benches, and oars."""
+    rot = Matrix.Translation((cx, cy, cz)) @ Matrix.Rotation(yaw, 4, "Z")
+    hl = length * 0.5
+    hw = width * 0.5
+    # 5 longitudinal stations along local Y (-hl stern to +hl bow)
+    stations = [
+        (-hl, 0.06, 0.14, depth * 1.18),
+        (-hl * 0.62, hw * 0.66, hw * 0.42, depth * 1.02),
+        (0.0, hw, hw * 0.68, depth),
+        (hl * 0.62, hw * 0.68, hw * 0.44, depth * 1.05),
+        (hl, 0.06, 0.14, depth * 1.24),
+    ]
+    rings = []
+    for y_pos, tw, bw, hh in stations:
+        # Outer starboard-top, starboard-bot, port-bot, port-top (CW looking +Y)
+        pts = [
+            Vector((tw, y_pos, hh)),
+            Vector((bw, y_pos, 0.0)),
+            Vector((-bw, y_pos, 0.0)),
+            Vector((-tw, y_pos, hh)),
+        ]
+        rings.append([wood.verts.new(rot @ p) for p in pts])
+    for i in range(len(rings) - 1):
+        a, b = rings[i], rings[i + 1]
+        for s in range(3):
+            wood.faces.new((a[s], a[s + 1], b[s + 1], b[s]))
+        # Deck/gunwale rim bridging port-top & starboard-top at bow/stern tips and floor thickness look
+        wood.faces.new((a[3], a[0], b[0], b[3]))
+    # Stem / stern caps
+    wood.faces.new((rings[0][0], rings[0][1], rings[0][2], rings[0][3]))
+    wood.faces.new((rings[-1][3], rings[-1][2], rings[-1][1], rings[-1][0]))
+
+    # Gunwale rails along starboard & port sides + 2 thwart benches + oar
+    for sx in (-1, 1):
+        tapered_limb(
+            wood,
+            rot @ Vector((sx * hw * 0.96, -hl * 0.65, depth * 1.06)),
+            rot @ Vector((sx * hw * 0.96, hl * 0.65, depth * 1.08)),
+            0.16, 0.16, segs=5,
+        )
+    for ty in (-hl * 0.28, hl * 0.24):
+        box(alt, (width * 0.76, 0.85, 0.24), rot @ Matrix.Translation((0, ty, depth * 0.82)))
+    tapered_limb(wood, rot @ Vector((-0.3, -hl * 0.42, depth * 1.02)), rot @ Vector((0.55, hl * 0.46, depth * 1.12)), 0.11, 0.09, segs=5)
+
+
+@template("FisherHut", STONE=550, WOOD=2200, ALT=600, MOSS=950, GLOW=150)
 def fisher_hut(t):
-    """Compact lakeside Ice-Fisher's Hut with snow roof, net drying frame, and beached wooden skiffs."""
+    """Substantial lakeside Ice-Fisher's Hut with timber jetty pilings, gable cabin, A-frame net racks, stove flue, crates, and two pointed skiffs."""
     stone, wood, alt, moss, glow = t.bm("STONE"), t.bm("WOOD"), t.bm("ALT"), t.bm("MOSS"), t.bm("GLOW")
 
-    # Timber shack on stone pilings
-    for sx in (-4.8, 4.8):
-        for sy in (-3.8, 3.8):
-            box(stone, (1.4, 1.4, 2.2), Matrix.Translation((sx, sy, 1.1)))
-    box(wood, (11.2, 9.2, 0.8), Matrix.Translation((0, 0, 2.4)))
-    box(wood, (10.4, 8.4, 5.8), Matrix.Translation((0, 0, 5.5)))
-    box(wood, (2.4, 0.4, 4.8), Matrix.Translation((-2.0, -4.3, 4.8)))
-    box(glow, (1.8, 0.4, 1.8), Matrix.Translation((2.4, -4.3, 5.4)))
+    # 1. Stone pier pilings + timber dock platform + entry steps & mooring bollards
+    for sx in (-6.4, 0.0, 6.4):
+        for sy in (-5.2, 0.2, 5.6):
+            box(stone, (1.5, 1.5, 2.8), Matrix.Translation((sx, sy, 1.4)))
+    box(wood, (15.6, 13.0, 0.75), Matrix.Translation((0, 0.2, 2.75)))
+    # Front porch steps (-Y) & timber mooring bollards
+    box(wood, (4.6, 1.8, 0.65), Matrix.Translation((-2.2, -6.9, 1.8)))
+    box(wood, (4.6, 1.8, 0.65), Matrix.Translation((-2.2, -8.1, 0.9)))
+    for bx, by in ((-6.8, -5.6), (6.8, -5.6)):
+        tapered_limb(wood, (bx, by, 2.8), (bx, by, 4.9), 0.36, 0.30, segs=6)
 
-    # Gable roof (^+ A-frame) + drifted snow
-    pitch = math.radians(32)
+    # 2. Weathered timber cabin body + vertical corner/batten posts + door & framed warm windows
+    box(wood, (13.4, 10.6, 7.2), Matrix.Translation((0, 0.8, 6.6)))
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            box(wood, (0.95, 0.95, 7.6), Matrix.Translation((sx * 6.6, 0.8 + sy * 5.2, 6.7)))
+        box(wood, (0.65, 0.65, 7.2), Matrix.Translation((sx * 6.75, 0.8, 6.6)))
+    # Heavy plank doorway (-Y front left)
+    box(wood, (3.2, 0.55, 5.6), Matrix.Translation((-2.3, -4.6, 5.9)))
+    box(wood, (3.8, 0.75, 0.65), Matrix.Translation((-2.3, -4.65, 8.85)))
+    box(stone, (0.55, 0.3, 1.1), Matrix.Translation((-1.2, -4.9, 5.7)))
+    # Glowing frosted windows (front right + left shore wall) + timber frames & sills
+    for wf in (
+        Matrix.Translation((2.8, -4.6, 6.8)),
+        Matrix.Translation((-6.85, 0.8, 6.8)) @ Matrix.Rotation(math.radians(90), 4, "Z"),
+    ):
+        box(glow, (2.4, 0.35, 2.4), wf)
+        box(wood, (2.9, 0.55, 0.4), wf @ Matrix.Translation((0, -0.05, -1.35)))
+        box(wood, (2.9, 0.55, 0.35), wf @ Matrix.Translation((0, -0.05, 1.35)))
+        box(wood, (0.3, 0.55, 2.5), wf @ Matrix.Translation((0, -0.05, 0)))
+        box(wood, (2.5, 0.55, 0.25), wf @ Matrix.Translation((0, -0.05, 0)))
+
+    # Stacked supply crate & fish barrel on front-right porch
+    box(wood, (2.0, 1.9, 1.8), Matrix.Translation((4.6, -5.0, 4.0)))
+    tapered_limb(wood, (5.5, -3.5, 3.1), (5.5, -3.5, 5.3), 0.75, 0.72, segs=7)
+
+    # 3. Gable triangle infill, timber eaves/rafters, stove flue chimney, and drifted snow roof
+    for sy in (-4.4, 6.0):
+        for step in range(4):
+            gw = 12.2 - step * 2.5
+            gz = 10.5 + step * 1.05
+            box(wood, (gw, 0.55, 1.2), Matrix.Translation((0, sy, gz)))
+    pitch = math.radians(34)
     for sx in (-1, 1):
         tilt = pitch * sx
-        box(wood, (7.6, 10.6, 0.7), Matrix.Translation((sx * 3.0, 0, 9.9)) @ Matrix.Rotation(tilt, 4, "Y"))
-        box(moss, (7.3, 10.5, 0.9), Matrix.Translation((sx * 3.0, 0, 10.6)) @ Matrix.Rotation(tilt, 4, "Y"))
-    box(moss, (1.8, 10.5, 0.9), Matrix.Translation((0, 0, 12.6)))
+        box(wood, (9.4, 13.6, 0.8), Matrix.Translation((sx * 3.7, 0.8, 12.4)) @ Matrix.Rotation(tilt, 4, "Y"))
+        box(moss, (9.1, 13.4, 1.05), Matrix.Translation((sx * 3.7, 0.8, 13.25)) @ Matrix.Rotation(tilt, 4, "Y"))
+        # Roof eave trim beam
+        box(wood, (0.7, 13.8, 0.8), Matrix.Translation((sx * 7.5, 0.8, 9.8)))
+    box(moss, (2.2, 13.4, 1.1), Matrix.Translation((0, 0.8, 15.6)))
+    # Iron/stone stove flue pipe poking out back-right roof
+    tapered_limb(stone, (3.2, 3.2, 11.5), (3.2, 3.2, 17.6), 0.72, 0.62, segs=7)
+    box(moss, (1.8, 1.8, 0.55), Matrix.Translation((3.2, 3.2, 17.8)))
 
-    # Frozen net drying rack on left shore
-    for sy in (-3.2, 3.2):
-        tapered_limb(wood, (-9.0, sy, 0.0), (-9.0, sy, 5.6), 0.25, 0.2, segs=5)
-    tapered_limb(wood, (-9.0, -3.6, 5.4), (-9.0, 3.6, 5.4), 0.22, 0.22, segs=5)
-    box(alt, (0.25, 5.6, 3.4), Matrix.Translation((-9.0, 0, 3.6)))
+    # 4. Twin A-frame fishing-net drying racks framing left & back-right sides
+    for rx, ry, ryaw in ((-11.2, -0.4, 0.14), (10.6, 4.2, -0.22)):
+        rmat = Matrix.Translation((rx, ry, 0.0)) @ Matrix.Rotation(ryaw, 4, "Z")
+        for sy in (-3.6, 3.6):
+            tapered_limb(wood, rmat @ Vector((-1.5, sy, 0.2)), rmat @ Vector((0.0, sy, 7.4)), 0.28, 0.20, segs=5)
+            tapered_limb(wood, rmat @ Vector((1.5, sy, 0.2)), rmat @ Vector((0.0, sy, 7.4)), 0.28, 0.20, segs=5)
+        tapered_limb(wood, rmat @ Vector((0, -4.3, 7.0)), rmat @ Vector((0, 4.3, 7.0)), 0.25, 0.25, segs=5)
+        box(alt, (0.28, 6.4, 4.4), rmat @ Matrix.Translation((0.15, 0, 4.6)) @ Matrix.Rotation(math.radians(6), 4, "Y"))
+        box(alt, (0.24, 5.2, 2.0), rmat @ Matrix.Translation((-0.2, 0, 3.2)) @ Matrix.Rotation(math.radians(-8), 4, "Y"))
 
-    # Beached wooden rowboat resting beside the hut (+X shore)
-    bx = 9.4
-    box(wood, (3.2, 8.8, 1.1), Matrix.Translation((bx, -1.0, 0.7)) @ Matrix.Rotation(math.radians(-14), 4, "Z"))
-    for sx in (-1, 1):
-        box(wood, (0.4, 8.4, 1.3), Matrix.Translation((bx + sx * 1.45, -1.0, 1.3)) @ Matrix.Rotation(math.radians(sx * 16), 4, "Y") @ Matrix.Rotation(math.radians(-14), 4, "Z"))
-    box(alt, (2.6, 0.7, 0.35), Matrix.Translation((bx, -1.0, 1.55)) @ Matrix.Rotation(math.radians(-14), 4, "Z"))
+    # 5. Twin pointed wooden skiffs beached beside the hut (+X shore)
+    build_skiff(wood, alt, 11.4, -2.8, 0.05, math.radians(-16), length=10.6, width=3.2, depth=1.35)
+    build_skiff(wood, alt, 15.2, -1.6, 0.05, math.radians(-28), length=9.6, width=2.9, depth=1.25)
 
 
 @template("IceFloeSlab", CRYSTAL=1100, MOSS=900, STONE=500)

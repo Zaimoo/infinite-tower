@@ -98,7 +98,7 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	ElderShieldRim = table.freeze({ Size = Vector3.new(49.389, 40.108, 28.791), Min = Vector3.new(-24.689, -0.456, -15.781), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	ElderShoulderPauldron = table.freeze({ Size = Vector3.new(43.139, 53.423, 25.68), Min = Vector3.new(-20.944, -1.523, -14.6), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	FernCluster = table.freeze({ Size = Vector3.new(9.888, 3.741, 10.323), Min = Vector3.new(-4.642, 0.0, -5.13), Roles = table.freeze({ "FOLIAGE", "MOSS", "WOOD" }) }),
-	FisherHut = table.freeze({ Size = Vector3.new(21.43, 13.05, 10.956), Min = Vector3.new(-9.238, 0.0, -5.3), Roles = table.freeze({ "ALT", "GLOW", "MOSS", "STONE", "WOOD" }) }),
+	FisherHut = table.freeze({ Size = Vector3.new(31.487, 18.075, 17.448), Min = Vector3.new(-13.459, 0.0, -8.448), Roles = table.freeze({ "ALT", "GLOW", "MOSS", "STONE", "WOOD" }) }),
 	FulguriteCluster = table.freeze({ Size = Vector3.new(15.046, 14.825, 14.087), Min = Vector3.new(-6.93, 0.1, -7.211), Roles = table.freeze({ "CRYSTAL", "GLOW", "STONE" }) }),
 	GatehouseArch = table.freeze({ Size = Vector3.new(77.0, 30.357, 14.304), Min = Vector3.new(-38.5, -0.657, -6.205), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
 	GlassArchSpan = table.freeze({ Size = Vector3.new(98.271, 61.76, 25.947), Min = Vector3.new(-49.908, 0.265, -13.299), Roles = table.freeze({ "CRYSTAL", "GLOW", "STONE" }) }),

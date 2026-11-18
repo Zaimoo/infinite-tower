@@ -3,23 +3,23 @@
   "Templates": {
     "FisherHut": {
       "Min": [
-        -9.238,
+        -13.459,
         0.0,
-        -5.3
+        -8.448
       ],
       "Roles": {
-        "ALT": 24,
-        "GLOW": 12,
-        "MOSS": 36,
-        "STONE": 48,
-        "WOOD": 144
+        "ALT": 96,
+        "GLOW": 24,
+        "MOSS": 48,
+        "STONE": 144,
+        "WOOD": 788
       },
       "Size": [
-        21.43,
-        13.05,
-        10.956
+        31.487,
+        18.075,
+        17.448
       ],
-      "Triangles": 264
+      "Triangles": 1100
     },
     "HuntersLodge": {
       "Min": [
