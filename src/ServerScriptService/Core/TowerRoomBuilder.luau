@@ -255,7 +255,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, GlassArchSpan = true, KitCaravanseraiSkylight = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -656,6 +656,79 @@ function Builder.Build(id: number, generation: number): any
 					for gIdx = -1, 1, 2 do
 						decor(model, "GlassDeckInlay", Vector3.new(terrace.Width * 0.68, 0.10, 1.1), topCenter + Vector3.new(0, 0.16, gIdx * 10), amberGlass, Enum.Material.Glass, 0.2)
 					end
+				elseif layout.Masonry == "VARRASH_FORTRESS" then
+					-- Sunscar Fortress (Floor 14): sandstone-and-basalt bastions; Crossing & Apex straddle the central
+					-- Sunscar lava fissure on flanking piers, with Apex's central glass floor revealing the vein tap below.
+					local deepBottom = origin.Y + layout.Bottom - 7
+					local wallH = (origin.Y + terrace.Y) - deepBottom
+					local straddlesScar = (name == "Crossing" or name == "Apex")
+					local fortTerra = Color3.fromRGB(168, 92, 62)
+					local fortBasalt = Color3.fromRGB(48, 42, 46)
+					if straddlesScar then
+						local deckThick = 3.2
+						if name == "Apex" then
+							-- Leave a central 22x22 viewport cut out of the sandstone floor, bridged by solid dark glass over the Ember Vein tap.
+							slab.Transparency = 1
+							slab.Size = Vector3.new(terrace.Width, deckThick, terrace.Depth)
+							slab.Position = Vector3.new(topCenter.X, topCenter.Y - deckThick / 2, topCenter.Z)
+							local win = 22
+							local sideW = (terrace.Width - win) * 0.5
+							local wingZ = (terrace.Depth - win) * 0.5
+							for _, sx in { -1, 1 } do
+								decor(model, "VarrashThroneDeckSide", Vector3.new(sideW, deckThick, terrace.Depth), topCenter + Vector3.new(sx * (win * 0.5 + sideW * 0.5), -deckThick / 2, 0), varrashSandstone, Enum.Material.Sandstone)
+							end
+							for _, sz in { -1, 1 } do
+								decor(model, "VarrashThroneDeckSpan", Vector3.new(win, deckThick, wingZ), topCenter + Vector3.new(0, -deckThick / 2, sz * (win * 0.5 + wingZ * 0.5)), varrashSandstone, Enum.Material.Sandstone)
+							end
+							local glassWell = decor(model, "SunscarThroneGlassFloor", Vector3.new(win, 0.45, win), topCenter + Vector3.new(0, -0.25, 0), Color3.fromRGB(218, 128, 42), Enum.Material.Glass, 0.35)
+							glassWell.CanCollide = false
+							-- Vein tap core glowing beneath the glass floor well inside the basalt vault arch
+							decor(model, "EmberVeinTapCore", Vector3.new(10, 1.4, 10), topCenter + Vector3.new(0, -3.2, 0), Color3.fromRGB(255, 118, 32), Enum.Material.Neon)
+							decor(model, "EmberVeinTapFrame", Vector3.new(win + 2.0, 0.3, 1.4), topCenter + Vector3.new(0, -0.02, win / 2 + 0.5), fortBasalt, Enum.Material.Basalt)
+							decor(model, "EmberVeinTapFrame", Vector3.new(win + 2.0, 0.3, 1.4), topCenter + Vector3.new(0, -0.02, -(win / 2 + 0.5)), fortBasalt, Enum.Material.Basalt)
+						else
+							slab.Size = Vector3.new(terrace.Width, deckThick, terrace.Depth)
+							slab.Position = Vector3.new(topCenter.X, topCenter.Y - deckThick / 2, topCenter.Z)
+							slab.Color = varrashSandstone
+							slab.Material = Enum.Material.Sandstone
+						end
+						-- Flanking basalt vault piers outside the central X = [-22..+22] Sunscar fissure
+						local pierXOff = if name == "Apex" then 40 else 27
+						local pierW = if name == "Apex" then 24 else 18
+						for _, sx in { -1, 1 } do
+							local cp = Vector3.new(topCenter.X + sx * pierXOff, topCenter.Y - wallH / 2 - 0.16, topCenter.Z)
+							local pier = part(model, "SunscarVaultPier", Vector3.new(pierW, wallH - 0.16, terrace.Depth - 4), cp, fortBasalt, Enum.Material.Basalt, true)
+							pier.CanQuery = true
+							pier.CanTouch = false
+						end
+					else
+						slab.Size = Vector3.new(terrace.Width, wallH, terrace.Depth)
+						slab.Position = Vector3.new(topCenter.X, topCenter.Y - wallH / 2, topCenter.Z)
+						slab.Color = varrashSandstone
+						slab.Material = Enum.Material.Sandstone
+						for _, sx in { -1, 1 } do
+							for _, sz in { -1, 1 } do
+								local cp = Vector3.new(topCenter.X + sx * (terrace.Width / 2 - 2.3), topCenter.Y - wallH / 2 - 0.16, topCenter.Z + sz * (terrace.Depth / 2 - 2.3))
+								local cornerPier = part(model, "BastionCornerPier", Vector3.new(6.4, wallH - 0.16, 6.4), cp, fortBasalt, Enum.Material.Basalt, true)
+								cornerPier.CanQuery = true
+								cornerPier.CanTouch = false
+							end
+						end
+					end
+					for _, sz in { -1, 1 } do
+						decor(model, "BastionTerracottaTrim", Vector3.new(terrace.Width + 1.4, 1.5, 1.3), topCenter + Vector3.new(0, -1.8, sz * (terrace.Depth / 2 + 0.05)), fortTerra, Enum.Material.Slate)
+					end
+					for _, sx in { -1, 1 } do
+						decor(model, "BastionTerracottaTrim", Vector3.new(1.3, 1.5, math.max(1, terrace.Depth - 1.3)), topCenter + Vector3.new(sx * (terrace.Width / 2 + 0.05), -1.8, 0), fortTerra, Enum.Material.Slate)
+					end
+					for k = 1, 5 do
+						local ang = k * 2.1 + terrace.X * 0.02
+						local rx = math.cos(ang) * (terrace.Width * 0.34)
+						local rz = math.sin(ang) * (terrace.Depth * 0.32)
+						local pPos = topCenter + Vector3.new(rx, 0.16 + k * 0.035, rz)
+						local paver = decor(model, "VarrashFortressFlagstone", Vector3.new(8 + (k % 3) * 2.2, 0.10, 6.5 + ((k + 1) % 3) * 1.5), pPos, if k % 2 == 0 then varrashSandstone else fortBasalt, if k % 2 == 0 then Enum.Material.Sandstone else Enum.Material.Slate)
+						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
+					end
 				else
 					slab.Color = solmereLimestone
 					slab.Material = Enum.Material.Limestone
@@ -746,9 +819,10 @@ function Builder.Build(id: number, generation: number): any
 				p.CanQuery = true
 			else
 				local glassMasonry = layout.Masonry == "VARRASH_GLASS"
+				local fortVarrash = layout.Masonry == "VARRASH_FORTRESS"
 				p.Color = if glassMasonry then Color3.fromRGB(28, 24, 30) elseif varrash then varrashSandstone else solmereLimestone
 				p.Material = if glassMasonry then Enum.Material.Slate elseif varrash then Enum.Material.Sandstone else Enum.Material.Limestone
-				if isFortressStone or layout.Masonry == "VARRASH_DECK" or glassMasonry then
+				if isFortressStone or layout.Masonry == "VARRASH_DECK" or glassMasonry or fortVarrash then
 					-- Stack multiple landings on the same terrace by +0.03 so overlapping landings never z-fight,
 					-- and start at +0.05 above TraversalRamp (+0.01) and Slab (0.00) and below medallions/flagstones (+0.14+).
 					local tKey = terraceName or ""
@@ -756,8 +830,10 @@ function Builder.Build(id: number, generation: number): any
 					landingLayerByTerrace[tKey] = layer + 1
 					local topOff = -0.95 + layer * 0.03 -- height 2: top = +0.05, +0.08, +0.11...
 					p.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff, 0)
-					if isFortressStone then
-						local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.6, 1.4, math.max(1, (b - a).Magnitude - 1.0)), (a + b) / 2, flagstoneDark, Enum.Material.Limestone)
+					if isFortressStone or fortVarrash then
+						local underCol = if fortVarrash then Color3.fromRGB(48, 42, 46) else flagstoneDark
+						local underMat = if fortVarrash then Enum.Material.Basalt else Enum.Material.Limestone
+						local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.6, 1.4, math.max(1, (b - a).Magnitude - 1.0)), (a + b) / 2, underCol, underMat)
 						under.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff - 1.75, 0)
 					end
 				end
@@ -902,6 +978,46 @@ function Builder.Build(id: number, generation: number): any
 						end
 						prevPt = nextPt
 					end
+				end
+			elseif isSuspendedLink(layout, link.Id) and varrash and layout.Masonry == "VARRASH_FORTRESS" then
+				-- Floor 14 Sunscar Fortress bridges: weathered sandstone arch decks on basalt piers beside the lava, never in it.
+				local fortBasalt = Color3.fromRGB(48, 42, 46)
+				ramp.Color = varrashSandstone
+				ramp.Material = Enum.Material.Sandstone
+				if link.From == "Basin" then
+					local deepBottom = origin.Y + layout.Bottom - 7
+					local abutH = math.max(6, a.Y - deepBottom - 0.2)
+					local landA = origin + Vector3.new(link.LandingA.AX, link.LandingA.AY, link.LandingA.AZ)
+					local abutAt = a:Lerp(landA, 0.28)
+					local abut = part(model, "BridgeBankAbutment", Vector3.new(link.Width + 3.2, abutH, 10), Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), fortBasalt, Enum.Material.Basalt)
+					abut.CFrame = CFrame.lookAt(Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), Vector3.new(b.X, a.Y - abutH / 2 - 0.25, b.Z))
+					abut.CanQuery = true
+					abut.CanTouch = false
+				end
+				if link.Id == "WestGallery_EastGallery" then
+					-- Scar Bridge piers: rise from chasm bedrock outside the X = [-22..+22] Sunscar lava channel (around X = +-46 & +-86).
+					local deepBottom = origin.Y + layout.Bottom - 7
+					for _, frac in { 0.16, 0.31, 0.69, 0.84 } do
+						local pAt = a:Lerp(b, frac)
+						local pH = math.max(6, pAt.Y - deepBottom - 1.5)
+						local pier = part(model, "ScarBridgeBasaltPier", Vector3.new(link.Width - 2.0, pH, 9.0), Vector3.new(pAt.X, pAt.Y - pH / 2 - 1.6, pAt.Z), fortBasalt, Enum.Material.Basalt)
+						pier.CFrame = CFrame.lookAt(pier.Position, pier.Position + flat)
+						pier.CanQuery = true
+						pier.CanTouch = false
+					end
+				end
+				local underRamp = decor(model, "BridgeStoneUnderside", Vector3.new(link.Width - 2.4, 1.5, math.max(1, delta.Magnitude - 1.2)), mid, fortBasalt, Enum.Material.Basalt)
+				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.65, 0)
+				local stoneA = a:Lerp(b, 0.08)
+				local stoneB = a:Lerp(b, 0.92)
+				local stones = math.max(3, math.floor(((stoneB - stoneA).Magnitude - 2) / 4.4))
+				for i = 1, stones do
+					local t = (i - 0.5) / stones
+					local stagger = math.sin(i * 1.7) * 1.4
+					local at = stoneA:Lerp(stoneB, t) + right * stagger
+					local stoneW = link.Width * (0.46 + ((i * 5) % 4) * 0.05)
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.14, 3.0), at, if i % 2 == 0 then varrashSandstone else varrashBasalt, if i % 2 == 0 then Enum.Material.Sandstone else Enum.Material.Slate)
+					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.21 + (i % 2) * 0.03, 0) * CFrame.Angles(0, math.rad(((i * 17) % 12) - 6), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and varrash then
 				-- Floor 13 ravine-spanning fused black obsidian & amber-glass arch bridge: solid surface over open chasm.

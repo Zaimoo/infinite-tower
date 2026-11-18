@@ -172,6 +172,36 @@ test("Floor 13 is the hand-authored Glasswind Ravine: chasm ledges, suspended Gl
 	assert(totalMobs == 25, "Floor 13 keeps 25 live camp mobs (got " .. totalMobs .. ")")
 end)
 
+test("Floor 14 is the hand-authored Sunscar Fortress: Kiln Gate chokepoint, Scar Bridge, split bastions, Sunscar Throne", function()
+	local room = Layout.ForFloor(14)
+	assert(room.Authored == "ashen:4" and room.Name == "Sunscar Fortress" and room.PathStyle == "VARRASH")
+	assert(room.DirectTerrain == true and room.Masonry == "VARRASH_FORTRESS")
+	assert(room.Suspended and room.Suspended.Platforms.Crossing and room.Suspended.Links.WestGallery_EastGallery)
+	assert(room.Bottom == -4 and #room.ReturnLinks == 2, "Floor 14 keeps chasm floor with two return ramps")
+	assert(same(room, Layout.Get(4, 14)), "the authored floor 14 is not fixed")
+	assert(not same(room, Layout.Get(4)), "floor 14 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_Crossing == "RAMP" and paths.Basin_WestGallery == nil and paths.Basin_EastGallery == nil,
+		"Floor 14 Basin links solely to Kiln Gate")
+	assert(paths.Crossing_WestGallery == "RAMP" and paths.Crossing_EastGallery == "RAMP")
+	assert(paths.WestGallery_EastGallery == "RAMP" and paths.Crossing_Apex == nil)
+	assert(paths.WestGallery_WestBastion == "RAMP" and paths.EastGallery_EastBastion == "RAMP")
+	assert(paths.WestBastion_Apex == "RAMP" and paths.EastBastion_Apex == "RAMP")
+	assert(room.Platforms.Basin.Name == "Ashmarket" and room.Platforms.Crossing.Name == "Kiln Gate")
+	assert(room.Platforms.WestGallery.Name == "Glassblowers' Row" and room.Platforms.EastGallery.Name == "Cistern Barracks")
+	assert(room.Platforms.WestBastion.Name == "West Kiln" and room.Platforms.EastBastion.Name == "Signal Tower")
+	assert(room.Platforms.Apex.Name == "Sunscar Throne" and room.EliteCount == 4)
+	local routes = Layout.PatrolRoutes(4, 14)
+	assert(routes.BASIN_LOOP and routes.GALLERY_WEST and routes.GALLERY_EAST and routes.BASTION_RING and routes.SCAR_BRIDGE,
+		"Floor 14 includes all generic routes plus SCAR_BRIDGE")
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 35, "Floor 14 keeps 35 live camp mobs (got " .. totalMobs .. ")")
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do
@@ -184,7 +214,7 @@ test("Every floor but the authored ones reshapes its own layout, the same way ev
 			if p.Bend then bends += 1 end
 		end
 	end
-	assert(varied >= 42, "only " .. varied .. " of 49 floors are reshaped")
+	assert(varied >= 41, "only " .. varied .. " of 49 floors are reshaped")
 	assert(bends >= 15, "only " .. bends .. " winding paths")
 end)
 

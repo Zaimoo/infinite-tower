@@ -417,9 +417,76 @@ local AUTHORED: {[number]: any} = {
 			WEST_LEDGE = { "WestGallery", "Apex" },
 			ARCH_CROSSING = { "WestGallery", "Crossing", "EastGallery" },
 		},
+		ReplacePatrols = true,
 		Names = {
 			Sanctuary = "Ravine Threshold", Basin = "Ravine Mouth", WestGallery = "West Ledge",
 			EastGallery = "East Ledge", Crossing = "Glass Arch", Apex = "Lightning Scar",
+		},
+	},
+	-- Floor 14, Sunscar Fortress (Ashen Dunes Elite Stronghold): Varrash kiln fortress split down the
+	-- middle by the Sunscar lava fissure. Basin (Ashmarket) enters solely through the Kiln Gate chokepoint
+	-- (Crossing), splits to Glassblowers' Row & Cistern Barracks joined across the chasm by the suspended
+	-- Scar Bridge, and climbs West Kiln & Signal Tower to the glass-floored Sunscar Throne.
+	[14] = {
+		Key = "ashen:4",
+		Name = "Sunscar Fortress",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Masonry = "VARRASH_FORTRESS",
+		Decks = {
+			Crossing = true,
+			WestGallery = true,
+			EastGallery = true,
+			WestBastion = true,
+			EastBastion = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
+			Links = {
+				Basin_Crossing = true,
+				Crossing_WestGallery = true,
+				Crossing_EastGallery = true,
+				WestGallery_EastGallery = true,
+				WestGallery_WestBastion = true,
+				EastGallery_EastBastion = true,
+				WestBastion_Apex = true,
+				EastBastion_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "LAVA_CHANNEL",
+				X = 0, ZStart = -220, ZEnd = 64, HalfWidth = 22, NoiseAmp = 6, Gain = 0.36,
+				GateMoat = { Z = 54, RX = 78, RZ = 28 },
+			},
+		},
+		Patrols = {
+			SCAR_BRIDGE = { "WestGallery", "EastGallery" },
+		},
+		Basin = {X = 0, Y = 0, Z = 150, Width = 440, Depth = 110},
+		Crossing = {X = 0, Y = 5, Z = 52, Width = 74, Depth = 60},
+		WestGallery = {X = -160, Y = 8, Z = 0, Width = 86, Depth = 78},
+		EastGallery = {X = 160, Y = 8, Z = -10, Width = 86, Depth = 78},
+		WestBastion = {X = -160, Y = 14, Z = -150, Width = 84, Depth = 76},
+		EastBastion = {X = 160, Y = 16, Z = -160, Width = 84, Depth = 76},
+		Apex = {X = 0, Y = 22, Z = -205, Width = 110, Depth = 84},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "Crossing"},
+			{"Crossing", "WestGallery"},
+			{"Crossing", "EastGallery"},
+			{"WestGallery", "EastGallery"},
+			{"WestGallery", "WestBastion"},
+			{"EastGallery", "EastBastion"},
+			{"WestBastion", "Apex"},
+			{"EastBastion", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Kiln Threshold", Basin = "Ashmarket", Crossing = "Kiln Gate",
+			WestGallery = "Glassblowers' Row", EastGallery = "Cistern Barracks",
+			WestBastion = "West Kiln", EastBastion = "Signal Tower", Apex = "Sunscar Throne",
 		},
 	},
 }
@@ -571,7 +638,8 @@ local function build(index: number, v: any?): any
 		SunMedallions=v ~= nil and v.SunMedallions == true,
 		Liquid=v and v.Liquid or nil,
 		TerrainFeatures=v and v.TerrainFeatures or nil,
-		Patrols=v and v.Patrols or nil}
+		Patrols=v and v.Patrols or nil,
+		ReplacePatrols=v ~= nil and v.ReplacePatrols == true}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,
@@ -750,7 +818,7 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 			point(room.Width*0.22, basin.Y, backZ),
 		},
 	}
-	local replaceGeneric = room.Patrols ~= nil and room.Authored ~= "verdant:4"
+	local replaceGeneric = room.ReplacePatrols == true
 	if index >= 3 and not replaceGeneric then
 		for _, side in {"West", "East"} do
 			local gallery = p[side.."Gallery"]

@@ -82,6 +82,7 @@ TowerBiomeKit.Templates = table.freeze({
 -- check TowerKitProps.Has(name) and fall back to native parts until the FBX is imported).
 TowerBiomeKit.ExtraTemplates = table.freeze({
 	AqueductBrokenSpan = table.freeze({ Size = Vector3.new(23.055, 19.059, 16.419), Min = Vector3.new(-11.167, -0.284, -7.26), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
+	AshmarketStall = table.freeze({ Size = Vector3.new(14.8, 11.676, 9.0), Min = Vector3.new(-7.4, -0.05, -4.5), Roles = table.freeze({ "ALT", "FOLIAGE", "STONE", "TRIM", "WOOD" }) }),
 	BuriedWagon = table.freeze({ Size = Vector3.new(16.375, 12.662, 18.778), Min = Vector3.new(-6.98, -0.387, -10.084), Roles = table.freeze({ "FOLIAGE", "METAL", "MOSS", "WOOD" }) }),
 	CaravanseraiSkylight = table.freeze({ Size = Vector3.new(11.6, 1.665, 11.6), Min = Vector3.new(-5.8, 0.005, -5.8), Roles = table.freeze({ "GLOW", "METAL", "STONE", "TRIM" }) }),
 	CenoteCascadeSpillway = table.freeze({ Size = Vector3.new(23.0, 30.2, 27.1), Min = Vector3.new(-11.5, 0.0, -13.8), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
@@ -97,7 +98,9 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	GlowLilyCluster = table.freeze({ Size = Vector3.new(10.516, 3.532, 9.0), Min = Vector3.new(-5.453, 0.063, -4.2), Roles = table.freeze({ "FOLIAGE", "GLOW", "GOLD", "MOSS", "WOOD" }) }),
 	HeartrootMotherHeart = table.freeze({ Size = Vector3.new(73.643, 90.59, 48.352), Min = Vector3.new(-37.988, -2.197, -28.69), Roles = table.freeze({ "FOLIAGE", "GLOW", "MOSS", "WOOD" }) }),
 	HollowStumpRim = table.freeze({ Size = Vector3.new(86.521, 29.645, 60.122), Min = Vector3.new(-43.706, -1.036, -42.875), Roles = table.freeze({ "FOLIAGE", "MOSS", "WOOD" }) }),
+	KilnTower = table.freeze({ Size = Vector3.new(27.6, 58.85, 27.6), Min = Vector3.new(-13.8, -0.1, -13.8), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	MasterTombPavilion = table.freeze({ Size = Vector3.new(36.139, 23.802, 24.226), Min = Vector3.new(-18.057, -0.002, -12.026), Roles = table.freeze({ "FOLIAGE", "GLOW", "GOLD", "METAL", "STONE", "TRIM" }) }),
+	PortcullisGate = table.freeze({ Size = Vector3.new(68.0, 42.3, 19.15), Min = Vector3.new(-34.0, -0.1, -9.0), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	RavineHorizonSpire = table.freeze({ Size = Vector3.new(17.6, 60.3, 17.6), Min = Vector3.new(-8.8, -0.1, -8.8), Roles = table.freeze({ "ALT", "GLOW", "STONE", "TRIM" }) }),
 	ReedPondCluster = table.freeze({ Size = Vector3.new(7.493, 6.128, 7.881), Min = Vector3.new(-3.494, -0.091, -4.298), Roles = table.freeze({ "FOLIAGE", "GLOW", "WOOD" }) }),
 	RootBridgeArch = table.freeze({ Size = Vector3.new(54.835, 23.185, 7.634), Min = Vector3.new(-27.434, -0.208, -3.727), Roles = table.freeze({ "GLOW", "MOSS", "TRIM", "WOOD" }) }),
@@ -105,6 +108,7 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	RootThrone = table.freeze({ Size = Vector3.new(31.462, 34.652, 31.541), Min = Vector3.new(-15.731, -0.652, -20.0), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
 	SandStriderRibs = table.freeze({ Size = Vector3.new(39.705, 30.619, 52.166), Min = Vector3.new(-19.871, -0.478, -26.322), Roles = table.freeze({ "MOSS", "STONE", "TRIM" }) }),
 	SandStriderSkull = table.freeze({ Size = Vector3.new(22.758, 16.174, 33.021), Min = Vector3.new(-11.577, -0.419, -15.061), Roles = table.freeze({ "MOSS", "STONE", "TRIM" }) }),
+	SignalLensTower = table.freeze({ Size = Vector3.new(25.97, 61.15, 25.97), Min = Vector3.new(-12.97, -0.1, -12.97), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	SolmereBalustrade = table.freeze({ Size = Vector3.new(16.6, 5.55, 3.0), Min = Vector3.new(-8.3, 0.0, -1.5), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM" }) }),
 	SolmereColonnadeWing = table.freeze({ Size = Vector3.new(55.2, 36.962, 17.079), Min = Vector3.new(-27.6, -0.525, -8.579), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
 	SpiceVaultRuins = table.freeze({ Size = Vector3.new(32.443, 14.864, 22.991), Min = Vector3.new(-16.0, -0.064, -5.9), Roles = table.freeze({ "ALT", "CORAL", "GOLD", "METAL", "STONE", "TRIM" }) }),
@@ -345,6 +349,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	CinderGateArch = true, VarrashWaystone = true, BuriedWagon = true, TollHouseRuins = true, WatchKilnTower = true,
 	SandStriderRibs = true, SandStriderSkull = true, DesertCaravanWagon = true, SpiceVaultRuins = true, MasterTombPavilion = true,
 	GlassArchSpan = true, RavineHorizonSpire = true, VarrashLightningRod = true,
+	KilnTower = true, SignalLensTower = true, PortcullisGate = true, AshmarketStall = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit

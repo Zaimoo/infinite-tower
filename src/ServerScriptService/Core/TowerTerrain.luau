@@ -266,6 +266,20 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 						if cDist < 1.0 then
 							wet = math.max(wet, feat.Base + (1.0 - cDist) * feat.Gain)
 						end
+					elseif feat.Kind == "LAVA_CHANNEL" then
+						local meander = (feat.NoiseAmp or 6) * fbm(z / 48, 0, seed + 63, 2)
+						local dist = math.huge
+						if z >= feat.ZStart and z <= feat.ZEnd then
+							dist = math.abs(x - (feat.X or 0) - meander) / feat.HalfWidth
+						end
+						if feat.GateMoat then
+							local gm = feat.GateMoat
+							local gDist = math.sqrt((x / gm.RX) ^ 2 + ((z - gm.Z) / gm.RZ) ^ 2)
+							if gDist < dist then dist = gDist end
+						end
+						if dist < 1.0 then
+							wet = math.max(wet, 0.28 + (1.0 - dist) * (feat.Gain or 0.36))
+						end
 					end
 				end
 			end

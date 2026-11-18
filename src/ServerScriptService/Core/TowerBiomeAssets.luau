@@ -15,7 +15,7 @@ local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
-local CampExemptKinds = { RampArch = true, GlassArchSpan = true }
+local CampExemptKinds = { RampArch = true, GlassArchSpan = true, PortcullisGate = true }
 
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
@@ -2794,6 +2794,199 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end)
 			end
 		end
+	elseif layout.Authored == "ashen:4" then
+		-- Floor 14, Sunscar Fortress (ashen:4): night kiln stronghold split down the middle by the Sunscar
+		-- lava fissure, entered solely through PortcullisGate at Kiln Gate, flanked by West KilnTower,
+		-- East SignalLensTower, Ashmarket bazaar stalls, dry fountain, and broken amber-glass shards.
+		local fBasalt = rgb(44, 38, 42)
+		local fSand = rgb(182, 152, 112)
+		local fTerra = rgb(166, 92, 62)
+		local fIron = rgb(62, 54, 58)
+		local fAmber = rgb(252, 146, 44)
+		local fMagma = rgb(255, 108, 28)
+		local fAshCloth = rgb(108, 102, 96)
+		local fWood = rgb(86, 64, 48)
+		local fShard = rgb(244, 152, 52)
+
+		local function f14GroundAt(x: number, z: number): number
+			for _, t in layout.Platforms do
+				if (not layout.Suspended or not layout.Suspended.Platforms[t.Id]) and math.abs(x - t.X) <= t.Width / 2 and math.abs(z - t.Z) <= t.Depth / 2 then
+					return t.Y
+				end
+			end
+			return if field then math.max(field.Sample(x, z), bottom) else bottom
+		end
+		local function f14MinGroundAt(x: number, z: number, halfSpan: number): number
+			local lo = f14GroundAt(x, z)
+			for _, ox in { -halfSpan, 0, halfSpan } do
+				for _, oz in { -halfSpan, 0, halfSpan } do
+					lo = math.min(lo, f14GroundAt(x + ox, z + oz))
+				end
+			end
+			return lo
+		end
+
+		local f14Override = {
+			STONE = { Color = fBasalt, Material = Enum.Material.Basalt },
+			TRIM = { Color = fSand, Material = Enum.Material.Sandstone },
+			ALT = { Color = fTerra, Material = Enum.Material.Slate },
+			METAL = { Color = fIron, Material = Enum.Material.Metal },
+			GLOW = { Color = fAmber, Material = Enum.Material.Neon },
+			CRYSTAL = { Color = fShard, Material = Enum.Material.Glass },
+			WOOD = { Color = fWood, Material = Enum.Material.Wood },
+			FOLIAGE = { Color = fAshCloth, Material = Enum.Material.Fabric },
+		}
+
+		-- 1. The Sunscar: glowing Neon lava fissure seams along the X = 0 CrackedLava trench (Neon/Bloom, 0 extra lights)
+		local lavaTopY = (field and field.LiquidLevel or -4.8) + 0.14
+		group("SunscarLavaSeam", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local segs = 12
+			local prevPt = V(0, lavaTopY, -210)
+			for k = 1, segs do
+				local t = k / segs
+				local nz = -210 + t * 268 -- -210 (Throne) to +58 (Kiln Gate moat)
+				local nx = math.sin(nz * 0.045) * 4.5
+				local nextPt = V(nx, lavaTopY, nz)
+				local seam = beam("SunscarMagmaVein", prevPt, nextPt, 2.8, fMagma, Enum.Material.Neon)
+				if k % 4 == 2 then
+					local em = Instance.new("ParticleEmitter")
+					em.Name = "SunscarRisingEmbers"
+					em.Color = ColorSequence.new(rgb(255, 152, 48), rgb(255, 72, 24))
+					em.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0.1) })
+					em.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+					em.Lifetime = NumberRange.new(1.8, 3.2)
+					em.Rate = 5
+					em.Speed = NumberRange.new(6, 12)
+					em.Parent = seam
+				end
+				prevPt = nextPt
+			end
+		end)
+
+		-- 2. Kiln Gate Portcullis Barbican spanning Crossing's southern approach (Walkway & Camp exempt)
+		local cross = layout.Platforms.Crossing
+		table.insert(reservedSpots, { cross.X, cross.Z + 12, 32 })
+		group("PortcullisGate", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local gateCf = CFrame.new(cross.X, cross.Y - 0.5, cross.Z + 16)
+			local gs = 1.05 * scale
+			for _, side in { -1, 1 } do
+				local pierH = (cross.Y - bottom) + 3.0
+				block("PortcullisGatePierBase", V(18, pierH, 22), V(cross.X + side * 28.5 * gs, cross.Y - pierH * 0.5, cross.Z + 16), fBasalt, Enum.Material.Basalt)
+			end
+			if KitProps.Has("PortcullisGate") then
+				kitAt("PortcullisGate", gateCf, gs, f14Override)
+			else
+				for _, side in { -1, 1 } do
+					block("BarbicanTower", V(14 * gs, 40 * gs, 18 * gs), gateCf.Position + V(side * 28 * gs, 20 * gs, 0), fSand, Enum.Material.Sandstone)
+				end
+				block("BarbicanLintel", V(44 * gs, 10 * gs, 14 * gs), gateCf.Position + V(0, 32 * gs, 0), fSand, Enum.Material.Sandstone)
+			end
+		end)
+
+		-- 3. Bottle-shaped West Kiln Tower behind WestBastion & Amber Signal Lens Tower behind EastBastion
+		local wk = layout.Platforms.WestBastion
+		local wkX, wkZ = wk.X - 14, wk.Z - wk.Depth / 2 - 16
+		table.insert(reservedSpots, { wkX, wkZ, 24 })
+		group("KilnTower", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local pierH = (wk.Y - bottom) + 4
+			block("KilnFoundationPier", V(36, pierH, 36), V(wkX, wk.Y - pierH * 0.5, wkZ), fBasalt, Enum.Material.Basalt)
+			local kcf = CFrame.new(wkX, wk.Y - 0.6, wkZ) * CFrame.Angles(0, math.rad(16), 0)
+			if KitProps.Has("KilnTower") then
+				local mdl = kitAt("KilnTower", kcf, 1.32 * scale, f14Override)
+				if mdl then
+					local glowPart = mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart")
+					if glowPart then
+						pointLight(glowPart, fAmber, 1.6, 54)
+						local smoke = Instance.new("ParticleEmitter")
+						smoke.Name = "KilnCrownEmbers"
+						smoke.Color = ColorSequence.new(rgb(255, 142, 46), rgb(82, 68, 64))
+						smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 4), NumberSequenceKeypoint.new(1, 14) })
+						smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 1) })
+						smoke.Lifetime = NumberRange.new(2.2, 3.8)
+						smoke.Rate = 4
+						smoke.Speed = NumberRange.new(6, 12)
+						smoke.Parent = glowPart
+					end
+				end
+			else
+				cyl("BottleKilnBase", V(wkX, wk.Y + 12 * scale, wkZ), 14 * scale, 26 * scale, fBasalt, Enum.Material.Basalt)
+				cyl("BottleKilnNeck", V(wkX, wk.Y + 40 * scale, wkZ), 7 * scale, 34 * scale, fSand, Enum.Material.Sandstone)
+				local mouth = orb("KilnCrownGlow", V(wkX, wk.Y + 58 * scale, wkZ), V(7, 3, 7), fAmber, Enum.Material.Neon)
+				pointLight(mouth, fAmber, 1.6, 54)
+			end
+		end)
+
+		local eb = layout.Platforms.EastBastion
+		local ebX, ebZ = eb.X + 14, eb.Z - eb.Depth / 2 - 16
+		table.insert(reservedSpots, { ebX, ebZ, 24 })
+		group("SignalLensTower", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local pierH = (eb.Y - bottom) + 4
+			block("SignalFoundationPier", V(36, pierH, 36), V(ebX, eb.Y - pierH * 0.5, ebZ), fBasalt, Enum.Material.Basalt)
+			local scf = CFrame.new(ebX, eb.Y - 0.6, ebZ) * CFrame.Angles(0, math.rad(-26), 0)
+			if KitProps.Has("SignalLensTower") then
+				local mdl = kitAt("SignalLensTower", scf, 1.32 * scale, f14Override)
+				if mdl then
+					local anchor = mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart")
+					if anchor then pointLight(anchor, fAmber, 1.6, 58) end
+				end
+			else
+				cyl("SignalBastionShaft", V(ebX, eb.Y + 26 * scale, ebZ), 10 * scale, 52 * scale, fSand, Enum.Material.Sandstone)
+				local lens = orb("SignalLensOrb", V(ebX, eb.Y + 60 * scale, ebZ), V(9, 9, 4), fAmber, Enum.Material.Neon)
+				pointLight(lens, fAmber, 1.6, 58)
+			end
+		end)
+
+		-- 4. Ashmarket lower-town bazaar stalls, dry ash fountain & broken amber-glass shards (Basin + Galleries)
+		for _, st in { { -56, 122, 22 }, { 56, 122, -24 }, { -56, 174, 152 }, { 56, 174, -154 } } do
+			local sx, sz, syaw = st[1], st[2], st[3]
+			if footprintClear(sx, sz, 9, 7) then
+				local sy = f14MinGroundAt(sx, sz, 7)
+				table.insert(reservedSpots, { sx, sz, 12 })
+				group("AshmarketStall", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local stCf = CFrame.new(sx, sy - 0.3, sz) * CFrame.Angles(0, math.rad(syaw), 0)
+					if KitProps.Has("AshmarketStall") then
+						kitAt("AshmarketStall", stCf, 1.15 * scale, f14Override)
+					else
+						block("StallCounter", V(13, 3.2, 4), stCf.Position + V(0, 1.6, 0), fSand, Enum.Material.Sandstone)
+						block("StallAwning", V(15, 0.4, 9), stCf.Position + V(0, 9.5, 0), fAshCloth, Enum.Material.Fabric)
+					end
+				end)
+			end
+		end
+
+		local fnX, fnZ = -56, 148
+		if footprintClear(fnX, fnZ, 9, 9) then
+			local fnY = f14MinGroundAt(fnX, fnZ, 7)
+			table.insert(reservedSpots, { fnX, fnZ, 12 })
+			group("DryAshFountain", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				cyl("DryFountainBasin", V(fnX, fnY + 0.8, fnZ), 7.8, 2.2, fSand, Enum.Material.Sandstone)
+				cyl("DryFountainAshCore", V(fnX, fnY + 1.3, fnZ), 6.0, 1.6, fAshCloth, Enum.Material.Sand)
+				cyl("DryFountainSpire", V(fnX, fnY + 4.2, fnZ), 1.6, 7.2, fBasalt, Enum.Material.Basalt)
+			end)
+		end
+
+		for bIdx, bs in { { 56, 148 }, { -126, 108 }, { 126, 108 }, { -96, -26 }, { 96, -34 }, { -42, 46 } } do
+			local bx, bz = bs[1], bs[2]
+			if footprintClear(bx, bz, 5, 5) then
+				local by = f14MinGroundAt(bx, bz, 4)
+				table.insert(reservedSpots, { bx, bz, 7 })
+				group("BrokenAmberGlassShards", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					for k = 1, 4 do
+						local a = bIdx * 1.4 + k * 1.5
+						local p = V(bx + math.cos(a) * (1.8 + k * 0.7), by + 1.0, bz + math.sin(a) * (1.8 + k * 0.7))
+						local sh = block("AmberGlassShard", V(0.85, 3.0 + (k % 2), 1.4), p, fShard, Enum.Material.Glass, nil, 0.22)
+						sh.CFrame = CFrame.new(origin + p) * CFrame.Angles(math.rad(28), a, math.rad(16))
+					end
+				end)
+			end
+		end
 	end
 
 	-- =========================================================================
@@ -3118,6 +3311,24 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					block("ScarCraterWall", V(27, cragH, 24), V(cx, apex.Y + cragH * 0.5 - 6, cz), scarObsidian, Enum.Material.Basalt)
 				end
 				beam("LightningScarGlassSeam", V(apex.X - 36, apex.Y + 1.5, apexBack - 4), V(apex.X + 36, apex.Y + 1.5, apexBack - 4), 2.4, scarAmber, Enum.Material.Glass, 0.2)
+			end)
+		elseif layout.Authored == "ashen:4" then
+			-- Monumental Sunscar Throne fortress keep framing Apex portals behind the glass-floored Vein Tap
+			local fBasalt = rgb(44, 38, 42)
+			local fSand = rgb(182, 152, 112)
+			local fTerra = rgb(166, 92, 62)
+			local fAmber = rgb(252, 146, 44)
+			local throneZ = apexBack - 14
+			group("SunscarThroneKeep", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				for _, side in { -1, 1 } do
+					block("ThroneBastionWing", V(38, 46 * scale, 26), V(apex.X + side * 44, apex.Y + 23 * scale - 4, throneZ), fBasalt, Enum.Material.Basalt)
+					block("ThroneSandstoneButtress", V(14, 52 * scale, 18), V(apex.X + side * 26, apex.Y + 26 * scale - 4, throneZ + 4), fSand, Enum.Material.Sandstone)
+				end
+				block("ThroneBackKeepWall", V(56, 38 * scale, 16), V(apex.X, apex.Y + 19 * scale - 4, throneZ - 6), fBasalt, Enum.Material.Basalt)
+				block("ThroneCorniceTrim", V(110, 3.0, 22), V(apex.X, apex.Y + 38 * scale - 4, throneZ + 2), fTerra, Enum.Material.Slate)
+				local brazier = orb("ThroneVeinBrazierGlow", V(apex.X, apex.Y + 28 * scale, throneZ + 4), V(5.5, 4.5, 4.5), fAmber, Enum.Material.Neon)
+				pointLight(brazier, fAmber, 1.6, 56)
 			end)
 		else
 			group("Volcano", function()

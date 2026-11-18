@@ -297,6 +297,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 232, 210), Saturation = 0.14, ExposureCompensation = 0.04, BloomIntensity = 0.36,
 		SunRaysIntensity = 0.22, SunRaysSpread = 0.78,
 	},
+	-- Floor 14, Sunscar Fortress: readable desert night; dark blue ambient lit by smoky orange-amber kiln & lava bloom.
+	[14] = {
+		Ambient = c(66, 72, 104), OutdoorAmbient = c(102, 108, 138), ColorShift_Top = c(128, 148, 212), ColorShift_Bottom = c(148, 70, 34),
+		AtmosphereDensity = 0.26, AtmosphereColor = c(122, 114, 146), AtmosphereDecay = c(82, 68, 92), AtmosphereHaze = 1.15,
+		TintColor = c(236, 232, 248), Saturation = 0.10, ExposureCompensation = 0.05, BloomIntensity = 0.44,
+		SunRaysIntensity = 0.08, SunRaysSpread = 0.50,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 
