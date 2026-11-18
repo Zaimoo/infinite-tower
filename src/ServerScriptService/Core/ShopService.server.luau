@@ -122,6 +122,15 @@ MarketplaceService.ProcessReceipt = function(receipt: any): Enum.ProductPurchase
 		while #purchaseIds > MAX_PURCHASE_IDS do
 			table.remove(purchaseIds, 1)
 		end
+		local robuxSpent = if type(receipt.CurrencySpent) == "number" and receipt.CurrencySpent > 0
+			then receipt.CurrencySpent
+			else (offer.RobuxPrice or 0)
+		if robuxSpent > 0 then
+			profile.TotalRobuxDonated = (if type(profile.TotalRobuxDonated) == "number" then profile.TotalRobuxDonated else 0) + robuxSpent
+			if (_G :: any).DonatedLeaderboard and (_G :: any).DonatedLeaderboard.AddDonated then
+				(_G :: any).DonatedLeaderboard.AddDonated(player.UserId, robuxSpent)
+			end
+		end
 		dm.SendToast(player, result :: string, "SUCCESS")
 	end
 

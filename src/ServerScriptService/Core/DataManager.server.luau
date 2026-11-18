@@ -2443,6 +2443,9 @@ local function onPlayerAdded(player: Player)
 	releasedPlayers[player] = nil
 	DataManager.ApplySettingsAttributes(player, profile.Settings)
 	NotorietyService.Refresh(player)
+	if (_G :: any).DonatedLeaderboard and (_G :: any).DonatedLeaderboard.SyncFromProfile then
+		(_G :: any).DonatedLeaderboard.SyncFromProfile(player.UserId, profile.TotalRobuxDonated or 0)
+	end
 	-- Claim the new player's record right away so the first visit survives a crash.
 	if loaded.Persistent and not loaded.Data then task.spawn(DataManager.SaveProfile, player) end
 

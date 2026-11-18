@@ -25,7 +25,7 @@ CloisterBuilder.Config = {
 	WallHeight = 3.5,
 	PathWidth = 16,
 	PlazaRadius = 36,
-	PavilionScale = 1.7, -- Room for the shared boards at SharedLeaderboards.BoardScale
+	PavilionScale = 1.0, -- Open-air leaderboard plaza sized 1:1 for the 3 scaled Blender monuments
 
 	-- Banner colour per plot (Plot_1 .. Plot_8), shown on each gate landing
 	PlotColors = {
@@ -238,6 +238,9 @@ local function gardenPaths(): { { number } }
 		local len = math.sqrt(lx * lx + lz * lz)
 		table.insert(list, { lx, lz, lx / len * DAIS_EDGE, lz / len * DAIS_EDGE, CloisterBuilder.Config.PathWidth })
 	end
+	-- Cobblestone spur connecting Pilgrim's Way directly into the Leaderboard Plaza apron (no grass gap)
+	table.insert(list, { 6, 116, 86, 156, 16 })
+	-- Keep Pilgrim's Way last: buildGround & spawnGardenLanterns treat list[#list] as the terrace-built boulevard.
 	table.insert(list, { 0, HubLayout.HubHalfZ, 0, DAIS_EDGE, HubLayout.BoulevardWidth })
 	return list
 end
@@ -590,7 +593,7 @@ local FEATURES = {
 	RockeryPond = { -52, 234, 22 },
 	StreamPond = { 157, 43, 22 },
 	Gazebo = { -90, 165, 30 },
-	Pavilion = { 90, 165, 50 },
+	Pavilion = { 86, 156, 48 },
 	Overlook = { -150, 280, 52 },
 	BiomeStones = { 150, 275, 30 },
 	OrchardWest = { -192, -75, 54 },
@@ -875,33 +878,32 @@ local function buildPool(model: Model, root: CFrame)
 end
 
 --============================================================================
--- L. LEADERBOARD PAVILION (east wedge)
+-- L. LEADERBOARD PLAZA (east promenade wedge, angled toward HubArrival / Dais)
 --============================================================================
--- Open colonnade with a centre wall: the Playtime board faces the dais, the Power board faces the Loop.
+-- Open-air gothic stone terrace seating the 3 Blender monument boards in a crescent:
+-- Left (viewer): Top Robux Donated, Middle (raised): Top Power, Right: Top Playtime.
 local function buildPavilion(model: Model, root: CFrame)
 	local f = folder("LeaderboardPavilion", model)
 	local p = root
-	local halfW, halfD = 22, 17
-	makePart({ Name = "PavilionFloor", Size = Vector3.new(halfW * 2, 1, halfD * 2), CFrame = p * CFrame.new(0, 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
-	for _, x in { -halfW + 1, halfW - 1 } do
-		for _, z in { -halfD + 1, halfD - 1 } do
-			makePart({ Name = "Column", Size = Vector3.new(2, 14, 2), CFrame = p * CFrame.new(x, 8, z), Color = MARBLE, Material = Enum.Material.Marble, Parent = f })
+
+	-- Low stepped gothic stone apron (no walls or roof blocking sightlines)
+	makePart({ Name = "PlazaApronBase", Size = Vector3.new(78, 0.5, 30), CFrame = p * CFrame.new(0, 0.25, -1), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
+	makePart({ Name = "PlazaApronDeck", Size = Vector3.new(73, 0.4, 25), CFrame = p * CFrame.new(0, 0.65, -1), Color = SLATE, Material = Enum.Material.Cobblestone, Parent = f })
+	-- Raised centerpiece plinth step under Top Power so it stands taller than the wings
+	makePart({ Name = "CenterMonolithStep", Size = Vector3.new(26, 0.6, 12), CFrame = p * CFrame.new(0, 1.15, 0.5), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
+
+	-- Mount points for the 3 world leaderboards (-Z of p faces toward HubArrival / viewers;
+	-- therefore viewer's Left is +X of p and viewer's Right is -X of p).
+	makePart({ Name = "BoardSlot_Donated", Size = Vector3.new(1, 1, 1), CFrame = p * CFrame.new(24.2, 0.85, -3.6) * CFrame.Angles(0, math.rad(18), 0), Transparency = 1, Decorative = true, Parent = f })
+	makePart({ Name = "BoardSlot_Power", Size = Vector3.new(1, 1, 1), CFrame = p * CFrame.new(0, 1.45, 0), Transparency = 1, Decorative = true, Parent = f })
+	makePart({ Name = "BoardSlot_Playtime", Size = Vector3.new(1, 1, 1), CFrame = p * CFrame.new(-24.2, 0.85, -3.6) * CFrame.Angles(0, math.rad(-18), 0), Transparency = 1, Decorative = true, Parent = f })
+
+	-- Flanking gothic lanterns at the front plaza corners
+	for side, nameSuffix in { [-1] = "R", [1] = "L" } do
+		local lanternCF = p * CFrame.new(side * 36.5, 0.85, -11.5)
+		if GothicLanternSpawner.GetTemplate() ~= nil then
+			GothicLanternSpawner.Spawn(f, lanternCF, "PlazaLantern_" .. nameSuffix)
 		end
-	end
-	makePart({ Name = "CentreWall", Size = Vector3.new(halfW * 2 - 4, 14, 1.2), CFrame = p * CFrame.new(0, 8, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
-	makePart({ Name = "RoofTrim", Size = Vector3.new(halfW * 2 + 4.4, 0.6, halfD * 2 + 4.4), CFrame = p * CFrame.new(0, 15.3, 0), Color = CRIMSON, Material = Enum.Material.Granite, Decorative = true, Parent = f })
-	makePart({ Name = "Roof", Size = Vector3.new(halfW * 2 + 4, 1.5, halfD * 2 + 4), CFrame = p * CFrame.new(0, 16.35, 0), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
-	for _, z in { -halfD - 1, halfD + 1 } do
-		for i = 0, 5 do
-			makePart({ Name = "RoofCrenel", Size = Vector3.new(3, 1.6, 2), CFrame = p * CFrame.new(-halfW + 2 + i * 8, 17.9, z), Color = SLATE_DARK, Material = Enum.Material.Slate, Decorative = true, Parent = f })
-		end
-	end
-	-- Mount points for the shared world leaderboards: on the floor, LookVector toward the viewers
-	makePart({ Name = "BoardSlot_Playtime", Size = Vector3.new(1, 1, 1), CFrame = p * CFrame.new(0, 1, -1.4), Transparency = 1, Decorative = true, Parent = f })
-	makePart({ Name = "BoardSlot_Power", Size = Vector3.new(1, 1, 1), CFrame = p * CFrame.new(0, 1, 1.4) * CFrame.Angles(0, math.pi, 0), Transparency = 1, Decorative = true, Parent = f })
-	for _, z in { -10, 10 } do
-		local lamp = makePart({ Name = "PavilionLamp", Size = Vector3.new(1.2, 1.2, 1.2), CFrame = p * CFrame.new(0, 14.4, z), Color = LANTERN, Material = Enum.Material.Neon, Decorative = true, Parent = f })
-		light(lamp, LANTERN, 18, 1.1)
 	end
 end
 
@@ -1045,8 +1047,10 @@ function CloisterBuilder.Build(container: Instance): Model
 		grand(model, poolAnchor, 1.3, buildPool)
 	end
 	grand(model, at(FEATURES.Gazebo), 1.5, buildGazebo)
-	-- Top Playtime faces the dais (north), Top Power faces the South Gate
-	grand(model, at(FEATURES.Pavilion), CloisterBuilder.Config.PavilionScale, buildPavilion)
+	-- Leaderboard plaza angled directly toward HubArrival / Pilgrim's Way promenade
+	local pavPos = (root * CFrame.new(FEATURES.Pavilion[1], 0, FEATURES.Pavilion[2])).Position
+	local pavAnchor = CFrame.lookAt(pavPos, (root * CFrame.new(0, 0, 61)).Position)
+	grand(model, pavAnchor, CloisterBuilder.Config.PavilionScale, buildPavilion)
 
 	-- South corners: the overlook facing the tower and the biome stones. Orchards on the west and east lawns.
 	grand(model, at(FEATURES.Overlook), 1.2, buildOverlook)

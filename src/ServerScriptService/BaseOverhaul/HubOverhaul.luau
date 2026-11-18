@@ -30,7 +30,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 40 -- Bump to force a rebuild of baked geometry (40: remove courtyard benches facing island fountain)
+HubOverhaul.Version = 41 -- Bump to force a rebuild of baked geometry (41: gothic Blender leaderboard monument plaza)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()

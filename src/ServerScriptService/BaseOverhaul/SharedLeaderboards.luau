@@ -13,11 +13,12 @@ local SharedLeaderboards = {}
 
 SharedLeaderboards.BoardScale = 1.6 -- Boards are drawn this much larger than the original art (pavilion is sized for it)
 
-local PLAYTIME = { Name = "AvxsedPlaytimeWS", Screen = "ScreenPlaytime", Slot = "BoardSlot_Playtime" }
-local POWER = { Name = "AvxsedPowerWS", Screen = "ScreenPower", Slot = "BoardSlot_Power" }
-local BOARDS = { PLAYTIME, POWER }
+local DONATED = { Name = "AvxsedDonatedWS", Screen = "ScreenDonated", Slot = "BoardSlot_Donated", Kind = "Donated" :: LeaderboardBoardBuilder.Kind }
+local POWER = { Name = "AvxsedPowerWS", Screen = "ScreenPower", Slot = "BoardSlot_Power", Kind = "Power" :: LeaderboardBoardBuilder.Kind }
+local PLAYTIME = { Name = "AvxsedPlaytimeWS", Screen = "ScreenPlaytime", Slot = "BoardSlot_Playtime", Kind = "Playtime" :: LeaderboardBoardBuilder.Kind }
+local BOARDS = { DONATED, POWER, PLAYTIME }
 
--- The pavilion that hosts the shared boards, or nil before the hub is built.
+-- The plaza/pavilion that hosts the shared boards, or nil before the hub is built.
 function SharedLeaderboards.Host(): Instance?
 	local geometry = Workspace:FindFirstChild("BaseOverhaulGeometry")
 	local commons = geometry and geometry:FindFirstChild("MastersCommons")
@@ -25,7 +26,9 @@ function SharedLeaderboards.Host(): Instance?
 end
 
 local function findScreen(board: Instance): BasePart?
-	local screen = board:FindFirstChild("ScreenPower") or board:FindFirstChild("ScreenPlaytime")
+	local screen = board:FindFirstChild("ScreenDonated")
+		or board:FindFirstChild("ScreenPower")
+		or board:FindFirstChild("ScreenPlaytime")
 	return if screen and screen:IsA("BasePart") then screen else nil
 end
 
@@ -107,9 +110,13 @@ function SharedLeaderboards.Mount(pavilion: Instance, plotsFolder: Instance, res
 				end
 			end
 		end
+		-- Discard any pre-redesign boxy board or stale BoardDesignVersion so the Blender monuments mount cleanly.
+		if board and board:GetAttribute("BoardDesignVersion") ~= LeaderboardBoardBuilder.DesignVersion then
+			board:Destroy()
+			board = nil
+		end
 		if not board then
-			-- No board anywhere: build one in code (LeaderboardBoardBuilder), so the hub can never lose it
-			board = LeaderboardBoardBuilder.Build(if spec == POWER then "Power" else "Playtime")
+			board = LeaderboardBoardBuilder.Build(spec.Kind)
 		end
 		local slot = pavilion:FindFirstChild(spec.Slot)
 		local screen = board and findScreen(board)

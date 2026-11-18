@@ -3,8 +3,9 @@ local Players          = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(script.Parent:WaitForChild("PowerConfig"))
-local Utils  = require(script.Parent:WaitForChild("PowerUtils"))
+local Config           = require(script.Parent:WaitForChild("PowerConfig"))
+local Utils            = require(script.Parent:WaitForChild("PowerUtils"))
+local LeaderboardRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("LeaderboardRules"))
 
 local DataStoreModule = {}
 
@@ -267,7 +268,7 @@ function DataStoreModule.GetSortedTop(count: number): { { UserId: number, Power:
 	end
 
 	table.sort(result, function(a, b) return a.Power > b.Power end)
-	return result
+	return LeaderboardRules.ClampSorted(result, count)
 end
 
 -- Historical profile backfill: reads existing players from Playtime totals and PlayerProfiles_v5

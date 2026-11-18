@@ -199,8 +199,9 @@ function ProfileMigrations.Run(profile: any)
 	ProfileMigrations.ToV10(profile)
 	ProfileMigrations.ToV11(profile)
 	profile.Settings = SettingsConfig.Sanitize(profile.Settings)
-	-- Robux receipts already granted (ShopService). Idempotent, so not tied to a schema version.
+	-- Robux receipts already granted (ShopService) and cumulative Robux donated/spent. Idempotent.
 	if type(profile.PurchaseIds) ~= "table" then profile.PurchaseIds = {} end
+	if type(profile.TotalRobuxDonated) ~= "number" then profile.TotalRobuxDonated = 0 end
 end
 
 return ProfileMigrations
