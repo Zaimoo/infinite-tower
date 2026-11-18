@@ -54,20 +54,48 @@ local Palettes: { [string]: Palette } = {
 }
 TowerTerrain.Palettes = Palettes
 
+-- Surface palettes for hand-authored floors whose terraces and ramps are the terrain itself (TowerLayout
+-- `Terrain.Direct`): what paths, walk surfaces, banks, cliffs and pool beds are made of.
+export type Surface = {
+	Trail: Enum.Material, -- the trodden spine of every ramp and path
+	Walk: Enum.Material, -- terrace and ramp ground
+	WalkAccent: Enum.Material, -- flags and patches broken into the walk ground
+	Bank: Enum.Material, -- slopes and aprons
+	Cliff: Enum.Material,
+	Peak: Enum.Material,
+	PoolBed: Enum.Material,
+	Lush: Enum.Material, -- open chasm ground
+}
+local Surfaces: { [string]: Surface } = {
+	-- Fungal Hollow: violet Velmari cobble trails over an indigo spore-moss carpet, indigo slate cliffs and
+	-- wet teal-black pool beds. Every material here is Fungal-owned (see MaterialColors).
+	FUNGAL = { Trail = M.Cobblestone, Walk = M.Concrete, WalkAccent = M.Pavement, Bank = M.Concrete,
+		Cliff = M.Pavement, Peak = M.Basalt, PoolBed = M.Asphalt, Lush = M.Concrete },
+}
+TowerTerrain.Surfaces = Surfaces
+
 -- Terrain material colours. Only the tower floors use voxel terrain (the hub is built from parts), so these
--- are safe to set place-wide; they replicate with the Terrain.
+-- are safe to set place-wide; they replicate with the Terrain. They are place-wide, so a colour belongs to
+-- one look: Cobblestone, Concrete, Pavement and Asphalt are Fungal-owned (no biome palette uses them), and
+-- tests/tower-layout-variants.spec.luau keeps them that way.
 TowerTerrain.MaterialColors = table.freeze({
 	[M.Grass] = Color3.fromRGB(82, 132, 58),
 	[M.LeafyGrass] = Color3.fromRGB(62, 114, 50),
 	[M.Mud] = Color3.fromRGB(70, 56, 46),
 	[M.Ground] = Color3.fromRGB(96, 80, 62),
 	[M.Rock] = Color3.fromRGB(104, 106, 100),
+	-- Fungal Hollow
+	[M.Cobblestone] = Color3.fromRGB(96, 74, 138), -- violet Velmari cobble
+	[M.Concrete] = Color3.fromRGB(50, 44, 82), -- indigo spore-moss carpet
+	[M.Pavement] = Color3.fromRGB(56, 52, 84), -- indigo slate
+	[M.Asphalt] = Color3.fromRGB(22, 40, 50), -- wet teal-black pool beds
 	[M.Sand] = Color3.fromRGB(154, 136, 108),
 	[M.Sandstone] = Color3.fromRGB(182, 148, 108),
 	[M.Basalt] = Color3.fromRGB(58, 52, 54),
 	[M.Snow] = Color3.fromRGB(240, 246, 254),
 	[M.Ice] = Color3.fromRGB(106, 174, 224),
 })
+TowerTerrain.FungalMaterials = table.freeze({ M.Cobblestone, M.Concrete, M.Pavement, M.Asphalt })
 local colorsApplied = false
 local function applyColors()
 	if colorsApplied then return end
@@ -82,13 +110,23 @@ end
 
 export type Field = {
 	Height: (x: number, z: number) -> number,
-	Kind: (x: number, z: number) -> string, -- "CHASM", "POOL", "MOUNTAIN", "APRON", "BRIDGE", "WALK"
+	-- "CHASM", "POOL", "MOUNTAIN", "APRON", "BRIDGE", "WALK"; direct floors add "TRAIL" (a path's trodden
+	-- spine) and "ISLAND" (an authored rock island in a pool).
+	Kind: (x: number, z: number) -> string,
 	Slope: (x: number, z: number) -> number,
 	Sample: (x: number, z: number) -> (number, string),
 	Bottom: number,
 	LiquidLevel: number,
 	Palette: Palette,
+	Surface: Surface?, -- direct floors only
 }
+
+-- Direct floors (TowerLayout `Terrain.Direct`): smooth voxel terrain renders its surface about RES / 2 above
+-- the requested field height, so the field sits SOFT under a natural terrace or ramp to land flush with its
+-- walking plane (its part stays as an invisible proxy), STAIR_UNDER under stair treads, and UNDER under
+-- built decks (solid, visible masonry).
+local SOFT = 2.0
+local STAIR_UNDER = 2.8
 
 local function fbm(x: number, z: number, seed: number, octaves: number): number
 	local total, amp, freq, norm = 0, 1, 1, 0
@@ -102,7 +140,14 @@ local function fbm(x: number, z: number, seed: number, octaves: number): number
 end
 
 -- Walkway shapes in local coordinates: terrace rectangles and ramp/landing strips.
+-- On a direct floor, rects and strips also say what they are: built decks (IsDeck), bridge decks that raise
+-- no ground under themselves (IsBridge), stairs (IsStair) and ramps (IsRamp); other floors ignore the flags.
 local function walkways(layout: any): ({ any }, { any })
+	local td = layout.Terrain
+	local decks = td and td.Decks or {}
+	local bridges = td and td.DeckThickness or {}
+	local shapes = td and td.Shapes or {}
+	local bridgeLinks = td and td.Bridges or {}
 	local rects, strips = {}, {}
 	local deckMap = layout.Decks
 	local susp = layout.Suspended
@@ -112,13 +157,15 @@ local function walkways(layout: any): ({ any }, { any })
 		if suspPlatMap and suspPlatMap[id] then
 			continue
 		end
-		local isDeck = deckMap ~= nil and deckMap[id] == true
-		table.insert(rects, { X = p.X, Z = p.Z, HX = p.Width / 2, HZ = p.Depth / 2, Y = p.Y, IsDeck = isDeck })
+		local isDeck = decks[id] == true or (deckMap ~= nil and deckMap[id] == true)
+		table.insert(rects, { X = p.X, Z = p.Z, HX = p.Width / 2, HZ = p.Depth / 2, Y = p.Y, IsDeck = isDeck,
+			IsBridge = bridges[id] ~= nil, Round = shapes[id] })
 	end
 	local function addLink(link: any, bridgeSuspended: boolean)
 		local isStair = link.Kind == "STAIRS"
 		if not bridgeSuspended then
-			table.insert(strips, { AX = link.AX, AY = link.AY, AZ = link.AZ, BX = link.BX, BY = link.BY, BZ = link.BZ, Half = link.Width / 2, IsStair = isStair, IsRamp = true })
+			table.insert(strips, { AX = link.AX, AY = link.AY, AZ = link.AZ, BX = link.BX, BY = link.BY, BZ = link.BZ, Half = link.Width / 2, IsStair = isStair, IsRamp = true,
+				IsHung = bridgeLinks[link.Id] == true })
 		end
 		for _, name in { "LandingA", "LandingB" } do
 			local pad = link[name]
@@ -126,8 +173,9 @@ local function walkways(layout: any): ({ any }, { any })
 			if suspPlatMap and suspPlatMap[padPlat] then
 				continue
 			end
-			local padDeck = deckMap ~= nil and deckMap[padPlat] == true
-			table.insert(strips, { AX = pad.AX, AY = pad.AY, AZ = pad.AZ, BX = pad.BX, BY = pad.BY, BZ = pad.BZ, Half = pad.Width / 2, IsDeck = padDeck })
+			local padDeck = decks[padPlat] == true or (deckMap ~= nil and deckMap[padPlat] == true)
+			table.insert(strips, { AX = pad.AX, AY = pad.AY, AZ = pad.AZ, BX = pad.BX, BY = pad.BY, BZ = pad.BZ, Half = pad.Width / 2, IsDeck = padDeck,
+				IsBridge = bridges[padPlat] ~= nil })
 		end
 	end
 	for _, link in layout.Links do
@@ -150,7 +198,22 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	local liquidCfg = layout.Liquid
 	local features = layout.TerrainFeatures
 	local dryPools = liquidCfg ~= nil and liquidCfg.Dry == true
-	local liquidLevel = if liquidCfg and liquidCfg.LevelOffset then bottom + liquidCfg.LevelOffset else bottom - 0.3
+	-- An authored floor can shape its own ground (TowerLayout `Terrain`): direct walkways, its own pools and
+	-- islands, the water level and pool depth, and the width of the mountain band.
+	local td = layout.Terrain
+	local direct = td ~= nil and td.Direct == true
+	local surface = if direct and td.Surface then Surfaces[td.Surface] else nil
+	if surface then
+		palette = table.clone(palette)
+		palette.Cliff, palette.Peak, palette.Shore = surface.Cliff, surface.Peak, surface.PoolBed
+		palette.Ground, palette.Lush, palette.Slope = surface.Walk, surface.Lush, surface.Bank
+	end
+	local liquidLevel = if td and td.LiquidRise then bottom + td.LiquidRise
+		elseif liquidCfg and liquidCfg.LevelOffset then bottom + liquidCfg.LevelOffset
+		else bottom - 0.3
+	local floorDip = if td and td.FloorDip then td.FloorDip elseif liquidCfg and liquidCfg.FloorDip then liquidCfg.FloorDip else 2.6
+	-- An authored floor whose Apex stands in the middle of the room (floor 10) has no shelf behind it.
+	local noShelf = td ~= nil and td.NoApexShelf == true
 	local reach = 0
 	for _, r in rects do
 		reach = math.max(reach, (r.Y - bottom + 12) / APRON)
@@ -162,7 +225,8 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		local kind = "CHASM"
 		-- Mountains: a noisy band along every wall, terraced into ledges, rising past the ceiling.
 		local edge = math.min(w / 2 - math.abs(x), d / 2 - math.abs(z))
-		local band = 58 + 26 * fbm(x / 95, z / 95, seed + 7, 2)
+		local band = if td and td.WallBand then td.WallBand.Base + td.WallBand.Noise * fbm(x / 95, z / 95, seed + 7, 2)
+			else 58 + 26 * fbm(x / 95, z / 95, seed + 7, 2)
 		if directTerrain then
 			band = 34 + 14 * fbm(x / 95, z / 95, seed + 7, 2)
 			if features and z < apex.Z then
@@ -269,7 +333,16 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		end
 		-- Pools in the open chasm.
 		if kind == "CHASM" and not dryPools then
-			local wet = fbm(x / 75 + 40, z / 75 - 40, seed + 21, 2)
+			-- An authored floor has only its own pools (noisy shores), never random ones in its lanes.
+			local wet = if td and td.Pools then -1 else fbm(x / 75 + 40, z / 75 - 40, seed + 21, 2)
+			for _, pool in (td and td.Pools) or {} do
+				local e = ((x - pool.X) / pool.RX) ^ 2 + ((z - pool.Z) / pool.RZ) ^ 2 + 0.18 * fbm(x / 21, z / 21, seed + 29, 2)
+				if e < 1 then
+					-- Steep: most of the ellipse is at full depth, so a pool round an island is open water, not a
+					-- shallow ring.
+					wet = math.max(wet, 0.28 + (1 - e) * 0.6)
+				end
+			end
 			if features then
 				for _, feat in features do
 					if feat.Kind == "POOL_ELLIPSES_SQ" then
@@ -327,7 +400,6 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			end
 			if wet > 0.28 then
 				local depth = math.clamp((wet - 0.28) / 0.12, 0, 1)
-				local floorDip = if liquidCfg and liquidCfg.FloorDip then liquidCfg.FloorDip else 2.6
 				base = if palette.LiquidSolid then math.min(base, liquidLevel + 0.05) else base - (base - (bottom - floorDip)) * depth
 				kind = "POOL"
 				if palette.LiquidSolid and features then
@@ -348,6 +420,18 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 							end
 						end
 					end
+				end
+			end
+		end
+		-- Authored rock islands: a flat crown with steep, noisy shores, rising out of their pool.
+		for _, island in (td and td.Islands) or {} do
+			local dist = math.sqrt((x - island.X) ^ 2 + (z - island.Z) ^ 2) / island.R + 0.12 * fbm(x / 14, z / 14, seed + 33, 2)
+			if dist < 1 then
+				local t = math.clamp((1 - dist) / 0.45, 0, 1)
+				local top = island.Top + 0.8 * fbm(x / 9, z / 9, seed + 37, 2)
+				local y = (bottom - floorDip) + (top - (bottom - floorDip)) * (t * t * (3 - 2 * t))
+				if y > base then
+					base, kind = y, "ISLAND"
 				end
 			end
 		end
@@ -455,7 +539,7 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			y, kind = wild, "MOUNTAIN"
 		end
 		-- The shelf behind the Apex rises to it (the Apex's own cap keeps a lip at its back edge).
-		if z < apex.Z - apex.Depth / 2 - 6 and math.abs(x - apex.X) < w / 2 - 30 then
+		if not noShelf and z < apex.Z - apex.Depth / 2 - 6 and math.abs(x - apex.X) < w / 2 - 30 then
 			y = math.max(y, math.min(apex.Y - RIM, cap))
 		end
 		if nearest == 0 then
@@ -464,6 +548,132 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			kind = "TRAIL"
 		end
 		return y, kind
+	end
+
+	-- Direct floors: natural terraces and ramps ARE the terrain (their parts are invisible proxies), so the
+	-- ground under each walkway lands exactly on its walking plane (SOFT below the field's surface, see
+	-- above), aprons fall away along noise-warped edges instead of straight rectangles, and every path gets
+	-- a trodden TRAIL spine. Built decks keep a voxel under them (UNDER); bridge decks raise no ground at all,
+	-- so their pool runs on underneath; stair treads keep STAIR_UNDER. Where walkways overlap, the highest
+	-- surface wins, and a ramp wins a tie with a deck so it meets the deck's landing flush.
+	local function shapedDirect(x: number, z: number): (number, string)
+		local y, kind = natural(x, z)
+		local wild, wildKind = y, kind
+		local raise, cap = -math.huge, math.huge
+		local nearest = math.huge
+		local surfaceY = -math.huge
+		local own, ownDeck, ownStair, ownBridge = -math.huge, false, false, false
+		local onTrail = false
+		local hungNear = math.huge -- distance to the nearest hung walkway (it shapes no ground, but keeps cliffs off)
+		for _, r in rects do
+			local dx = math.max(0, math.abs(x - r.X) - r.HX)
+			local dz = math.max(0, math.abs(z - r.Z) - r.HZ)
+			if dx < reach and dz < reach then
+				local dist = math.sqrt(dx * dx + dz * dz)
+				local round = r.Round
+				if round then
+					-- A rounded terrace (`Terrain.Shapes`): a superellipse ("squircle") Grow studs past the
+					-- terrace's edges, so a terrain island reads as rock, not a square slab. Its corners fall
+					-- away; its edges' middles, where paths land, stay flat.
+					local ax, az = r.HX + round.Grow, r.HZ + round.Grow
+					local n = round.Round
+					local sq = ((math.abs(x - r.X) / ax) ^ n + (math.abs(z - r.Z) / az) ^ n) ^ (1 / n)
+					dist = math.max(0, (sq - 1) * math.min(ax, az))
+				end
+				nearest = math.min(nearest, dist)
+				local soft = not r.IsDeck
+				if dist == 0 and (r.Y > own or (r.Y == own and ownDeck and soft)) then
+					own, ownDeck, ownStair, ownBridge = r.Y, r.IsDeck, false, r.IsBridge
+				end
+				local rim = r.Y - (if soft then SOFT else RIM)
+				local warp = if soft and dist > 0 then math.max(0, dist - (1.5 + 2 * fbm(x / 18, z / 18, seed + 47, 2))) else dist
+				surfaceY = math.max(surfaceY, r.Y)
+				cap = math.min(cap, if dist == 0 then r.Y - (if soft then SOFT else UNDER) else rim - APRON * warp)
+				if not r.IsBridge then
+					local steep = if soft then APRON * (0.72 + 0.45 * (0.5 + 0.5 * fbm(x / 16, z / 16, seed + 31, 2)))
+						else APRON + 1.2 * (0.5 + 0.5 * fbm(x / 18, z / 18, seed + 31, 2))
+					raise = math.max(raise, rim - steep * warp)
+				end
+			end
+		end
+		for _, s in strips do
+			local dx, dz = s.BX - s.AX, s.BZ - s.AZ
+			local len = math.max(math.sqrt(dx * dx + dz * dz), 1e-3)
+			local ux, uz = dx / len, dz / len
+			local rx, rz = x - s.AX, z - s.AZ
+			local along = rx * ux + rz * uz
+			local perp = math.abs(-uz * rx + ux * rz)
+			local endDist = math.max(0, -along, along - len)
+			local sideDist = math.max(0, perp - s.Half)
+			local beyond = math.sqrt(endDist * endDist + sideDist * sideDist)
+			if s.IsHung then
+				-- A hung walkway (`Terrain.Bridges`, rope and plank over the chasm): a solid part. The ground only
+				-- keeps a voxel under its planks; over a terrace, the terrace's own ground stays as it is.
+				if beyond < reach then
+					local stripY = s.AY + (s.BY - s.AY) * math.clamp(along / len, 0, 1)
+					cap = math.min(cap, stripY - UNDER - APRON * beyond)
+					hungNear = math.min(hungNear, beyond)
+				end
+			elseif beyond < reach then
+				local soft = not s.IsDeck and not s.IsStair
+				local stripY = s.AY + (s.BY - s.AY) * math.clamp(along / len, 0, 1)
+				local deck = stripY - (if soft then SOFT elseif s.IsStair then STAIR_UNDER else UNDER)
+				if beyond == 0 and (stripY > own or (stripY == own and (not s.IsDeck or not ownDeck) and s.IsRamp)) then
+					own, ownDeck, ownStair, ownBridge = stripY, s.IsDeck == true, s.IsStair == true, false
+				end
+				local warp = if soft and beyond > 0 then math.max(0, beyond - (1.5 + 2 * fbm(x / 16, z / 16, seed + 53, 2))) else beyond
+				nearest = math.min(nearest, beyond)
+				surfaceY = math.max(surfaceY, stripY)
+				cap = math.min(cap, deck - APRON * warp)
+				if not s.IsBridge then
+					local side = if soft then APRON * (0.68 + 0.45 * (0.5 + 0.5 * fbm(x / 15, z / 15, seed + 37, 2))) else APRON + 0.8
+					raise = math.max(raise, deck - side * warp)
+				end
+				if beyond == 0 then
+					kind = "BRIDGE"
+					if soft and perp <= (if s.IsRamp then 5.2 else 6.8) + 2.2 * fbm(x / 12, z / 12, seed + 41, 2) then
+						onTrail = true
+					end
+				end
+			end
+		end
+		if raise > y then
+			y = raise
+			if kind ~= "BRIDGE" then
+				kind = "APRON"
+			end
+		end
+		cap = math.max(cap, bottom)
+		if own > -math.huge then
+			-- A walkway directly overhead sets the ground itself; a lower neighbour's cap never craters it.
+			y = if ownDeck then math.min(y, own - UNDER) elseif ownStair then own - STAIR_UNDER else own - SOFT
+		elseif cap < y then
+			y = cap
+		end
+		if wildKind == "MOUNTAIN" and nearest >= MOAT and hungNear >= MOAT and wild >= surfaceY + 8 and wild > y then
+			y, kind = wild, "MOUNTAIN"
+		end
+		if not noShelf and z < apex.Z - apex.Depth / 2 - 6 and math.abs(x - apex.X) < w / 2 - 30 then
+			y = math.max(y, math.min(apex.Y - SOFT, cap))
+		end
+		if ownBridge and (wildKind == "POOL" or wildKind == "CHASM") and y <= wild + 0.01 then
+			-- Under a bridge deck the pool (or open ground) runs on.
+			return y, wildKind
+		end
+		if wildKind == "POOL" and nearest > 0 and y < liquidLevel - 0.3 then
+			-- A walkway's slope running down into a pool is a shore: still under water, so it keeps its water
+			-- (otherwise an island would stand in a dry ring).
+			return y, "POOL"
+		end
+		if nearest == 0 then
+			kind = if onTrail then "TRAIL" else "WALK"
+		elseif onTrail then
+			kind = "TRAIL"
+		end
+		return y, kind
+	end
+	if direct then
+		shaped = shapedDirect
 	end
 
 	local function height(x: number, z: number): number
@@ -485,10 +695,34 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		Bottom = bottom,
 		LiquidLevel = liquidLevel,
 		Palette = palette,
+		Surface = surface,
 	}
 end
 
 local function materialFor(field: Field, palette: Palette, kind: string, y: number, slopeValue: number, x: number, z: number, seed: number, directTerrain: boolean?): Enum.Material
+	local s = field.Surface
+	if s then
+		-- Direct floors: a trodden trail down every path, the walk ground broken by flags and trail patches,
+		-- banks on the steeper ground, cliffs where it can't be walked.
+		local tuft = math.noise(x / 17, z / 17, seed + 5)
+		local patch = math.noise(x / 29, z / 29, seed + 13)
+		if kind == "TRAIL" then
+			return if tuft > 0.3 then s.WalkAccent else s.Trail
+		elseif kind == "BRIDGE" or kind == "WALK" then
+			return if patch > 0.34 then s.Trail elseif tuft > 0.2 then s.WalkAccent else s.Walk
+		elseif kind == "POOL" then
+			return s.PoolBed
+		elseif kind == "ISLAND" then
+			return if slopeValue > 0.9 then s.Cliff else s.Bank
+		elseif slopeValue > 1.25 then
+			return s.Cliff
+		elseif slopeValue > 0.85 then
+			return s.Bank
+		elseif kind == "MOUNTAIN" and y - field.Bottom > 34 then
+			return s.Peak
+		end
+		return if patch > 0.22 then s.WalkAccent else s.Lush
+	end
 	if directTerrain then
 		local tuft = math.noise(x / 17, z / 17, seed + 5)
 		local patch = math.noise(x / 29, z / 29, seed + 13)

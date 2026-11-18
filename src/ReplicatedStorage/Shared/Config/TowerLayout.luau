@@ -309,6 +309,66 @@ local AUTHORED: {[number]: any} = {
 			WestBastion = "Northwest Tier", EastBastion = "Northeast Tier", Apex = "Mossbound Dais",
 		},
 	},
+	-- Floor 6, Sporelit Entry (Fungal Hollow, docs/prompts/fungal-hollow-floor-layouts-prompt.md): the edge of
+	-- the Veinweb, the Velmari lamp-masons' outer quarry. A still teal glowpool fills the middle of the floor
+	-- with the Elder Cap, one colossal mushroom, on an island in it; the cap hides the Apex from the Sanctuary,
+	-- and the cavern skylight's cyan shaft glowing over it is the beacon. Two routes wrap round the pool: west
+	-- up the long Mycelium Ramp from the Chanters' Terrace, east through the Skitter Warren, up the Mason's Stair
+	-- and over the Veinspan bridge. Nothing crosses the pool, so there is no Basin -> Crossing or Basin -> Apex.
+	[6] = {
+		Key = "fungal:6",
+		Name = "Sporelit Entry",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 96, Width = 320, Depth = 80},
+		-- Natural (terrain) terraces stand on multiples of 4 studs, the voxel size: only there does smooth terrain
+		-- render exactly on the walking plane (TowerTerrain). Decks and ramps can be at any height.
+		WestGallery = {X = -112, Y = 8, Z = -6, Width = 84, Depth = 76},
+		EastGallery = {X = 118, Y = 4, Z = 6, Width = 80, Depth = 72},
+		Crossing = {X = 104, Y = 9, Z = -96, Width = 52, Depth = 64},
+		Apex = {X = 0, Y = 12, Z = -150, Width = 104, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"EastGallery", "Crossing"}, {"Crossing", "Apex"}, {"WestGallery", "Apex"},
+		},
+		-- The Mason's Stair: cut slate steps climbing from the warren onto the bridge deck.
+		Stairs = {EastGallery_Crossing = true},
+		Names = {
+			Sanctuary = "Lampwright's Landing", Basin = "Glowpool Shore", WestGallery = "Chanters' Terrace",
+			EastGallery = "Skitter Warren", Crossing = "Veinspan", Apex = "Skylight Dais",
+		},
+		-- Natural ground you walk on (TowerTerrain direct mode). Decks are built Velmari masonry: solid,
+		-- visible slabs with the terrain kept under them; every other terrace and ramp is sculpted terrain.
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			Decks = {Sanctuary = true, Crossing = true},
+			-- Thin deck slabs (studs): the Veinspan is a bridge over the east pool, not a solid block.
+			DeckThickness = {Crossing = 3},
+			LiquidRise = 2.6,
+			FloorDip = 2.2,
+			WallBand = {Base = 36, Noise = 14},
+			-- Ellipses (local X/Z centre and radii) of the cosmetic glowpools, recessed off every walkway.
+			Pools = {
+				{X = 0, Z = -32, RX = 62, RZ = 66},  -- the central glowpool round the Elder Cap island
+				{X = 104, Z = -92, RX = 30, RZ = 46}, -- the east pool under the Veinspan
+				{X = -168, Z = -92, RX = 24, RZ = 34}, -- the north-west fall pool
+				{X = 172, Z = -64, RX = 22, RZ = 24},  -- the north-east fall pool
+			},
+			-- Rock islands rising out of the pools (Top: local Y of the crown).
+			Islands = {
+				{X = 0, Z = -34, R = 26, Top = 4},
+			},
+			-- Ecosystem (TowerBiomeAssets section 7): far fewer giant-mushroom groves (one giant, the Elder Cap,
+			-- not a forest), glowcap turf and spore-moss as the cavern floor's "grass", veins on the cliffs.
+			GroveScale = 0.35,
+			GroundCover = {"GlowcapTuftA", "GlowcapTuftB", "SporeMoss", "GlowcapTuftA"},
+			GroundCoverCount = 150,
+			CliffVeins = 26,
+		},
+		-- A round oculus in a closed cavern vault, over the Apex (TowerRoomBuilder).
+		Skylight = {X = 0, Z = -132, Radius = 46},
+	},
 	-- Floor 11, Cinder Gate (Ashen Dunes Introduction): wind-rippled black-ash plains swept by the central
 	-- Sleeping Dune (dead-end Dune Crest lookout) with a half-buried Varrash caravan wreck, banded Toll House
 	-- ruins, a cylindrical Watch Kiln tower, waystone-lined tracks, and the towering Cinder Gate in the basalt wall.
@@ -920,6 +980,7 @@ local function build(index: number, v: any?): any
 		local connector = {From=a, To=b, AX=p.X+ux*insetA, AZ=p.Z+uz*insetA, AY=p.Y,
 			BX=q.X-ux*insetB, BZ=q.Z-uz*insetB, BY=q.Y, Width=28}
 		landings(connector,ux,uz,math.max(20,2*math.abs(insetA-edgeA)+12),math.max(20,2*math.abs(insetB-edgeB)+12))
+		-- An authored floor can make any of its paths a staircase (Stairs = {[linkId] = true}).
 		if v and v.Stairs and v.Stairs[connector.Id] then
 			connector.Kind = "STAIRS"
 		end
@@ -1014,7 +1075,8 @@ local function build(index: number, v: any?): any
 		Liquid=v and v.Liquid or nil,
 		TerrainFeatures=v and v.TerrainFeatures or nil,
 		Patrols=v and v.Patrols or nil,
-		ReplacePatrols=v ~= nil and v.ReplacePatrols == true}
+		ReplacePatrols=v ~= nil and v.ReplacePatrols == true,
+		Terrain=v and v.Terrain or nil, Skylight=v and v.Skylight or nil, Portals=v and v.Portals or nil}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,
@@ -1198,15 +1260,29 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 		for _, side in {"West", "East"} do
 			local gallery = p[side.."Gallery"]
 			local route = {point(gallery.X, gallery.Y, gallery.Z)}
-			for _, link in assert(pathBetween(side.."Gallery", if index >= 4 then side.."Bastion" else "Apex")) do
-				table.insert(route, point(link.AX, link.AY, link.AZ))
-				table.insert(route, point(link.BX, link.BY, link.BZ))
+			-- A hand-authored floor's gallery may have no path up (floor 8's Violet Cap only reaches the
+			-- aqueduct): its patrol walks the path it has to the Crossing instead.
+			local path = pathBetween(side.."Gallery", if index >= 4 then side.."Bastion" else "Apex")
+				or (if room.Authored then pathBetween(side.."Gallery", "Crossing") else nil)
+			if path then
+				for _, link in path do
+					table.insert(route, point(link.AX, link.AY, link.AZ))
+					table.insert(route, point(link.BX, link.BY, link.BZ))
+				end
+				routes["GALLERY_"..string.upper(side)] = route
+			else
+				assert(room.Authored, side.." gallery has no path up")
 			end
-			routes["GALLERY_"..string.upper(side)] = route
 		end
 	end
 	if index >= 4 and not replaceGeneric then
-		local west, east = assert(pathBetween("WestBastion", "Apex")), assert(pathBetween("EastBastion", "Apex"))
+		-- An authored floor's bastions may meet at the Crossing instead of climbing straight to the Apex
+		-- (Floor 9's "H" with The Keystone): its bastion ring crosses the Crossing between them.
+		local west = pathBetween("WestBastion", "Apex")
+			or (if room.Authored then pathBetween("WestBastion", "Crossing") else nil)
+		local east = pathBetween("EastBastion", "Apex")
+			or (if room.Authored then pathBetween("EastBastion", "Crossing") else nil)
+		assert(west and east, "bastion ring has no path across")
 		local ring = {point(p.WestBastion.X, p.WestBastion.Y, p.WestBastion.Z)}
 		for _, link in west do
 			table.insert(ring, point(link.AX, link.AY, link.AZ))
@@ -1293,11 +1369,15 @@ end
 -- Where the boss portals rise when a floor's boss falls (Phase H): side by side at the back of the
 -- Apex terrace, facing the arena. Ascend leads up (or home from floor 50); Rerun replays the floor.
 function Layout.PortalSpots(index: number, floorId: number?): {[string]: {X: number, Y: number, Z: number}}
-	local apex = Layout.Get(index, floorId).Platforms.Apex
-	local z = apex.Z - apex.Depth/2 + 12
+	local room = Layout.Get(index, floorId)
+	local apex = room.Platforms.Apex
+	-- An authored floor can put them on the Apex's south side (its paths arrive from the north) and spread them.
+	local south = room.Portals and room.Portals.Side == "SOUTH"
+	local spread = (room.Portals and room.Portals.Spread) or 16
+	local z = if south then apex.Z + apex.Depth/2 - 12 else apex.Z - apex.Depth/2 + 12
 	return {
-		Ascend = {X=apex.X+16, Y=apex.Y, Z=z},
-		Rerun = {X=apex.X-16, Y=apex.Y, Z=z},
+		Ascend = {X=apex.X+spread, Y=apex.Y, Z=z},
+		Rerun = {X=apex.X-spread, Y=apex.Y, Z=z},
 	}
 end
 

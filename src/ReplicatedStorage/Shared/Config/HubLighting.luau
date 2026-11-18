@@ -276,6 +276,14 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 244, 224), Saturation = 0.16, ExposureCompensation = 0.02, BloomIntensity = 0.38,
 		SunRaysIntensity = 0.22, SunRaysSpread = 0.85,
 	},
+	-- Floor 6, Sporelit Entry: underground twilight. Indigo ambient, cyan from above (the oculus) and violet
+	-- from below (the glowpool), a violet haze thickening low over the water, and bloom up for the gills.
+	[6] = {
+		Ambient = c(44, 40, 86), OutdoorAmbient = c(60, 56, 112), ColorShift_Top = c(150, 232, 255), ColorShift_Bottom = c(96, 44, 150),
+		AtmosphereDensity = 0.38, AtmosphereColor = c(84, 76, 150), AtmosphereDecay = c(52, 34, 104), AtmosphereHaze = 1.4,
+		TintColor = c(228, 232, 255), Saturation = 0.24, ExposureCompensation = -0.08, BloomIntensity = 0.55,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.35,
+	},
 	-- Floor 11, Cinder Gate: searing white-hot desert noon, crisp pale mirage haze over dark volcanic ash & ochre sandstone.
 	[11] = {
 		Ambient = c(96, 84, 72), OutdoorAmbient = c(154, 138, 118), ColorShift_Top = c(255, 244, 214), ColorShift_Bottom = c(98, 72, 54),

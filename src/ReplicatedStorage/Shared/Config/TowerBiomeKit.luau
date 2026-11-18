@@ -15,7 +15,7 @@ local TowerBiomeKit = {}
 
 export type Role =
 	"STONE" | "TRIM" | "ACCENT" | "MOSS" | "GLOW" | "WOOD" | "FOLIAGE" | "METAL" | "GOLD"
-	| "CRYSTAL" | "CAP" | "STEM" | "ALT" | "CORAL"
+	| "CRYSTAL" | "CAP" | "STEM" | "ALT" | "CORAL" | "BULB" | "CANDLE"
 
 export type Template = {
 	Size: Vector3,
@@ -80,12 +80,15 @@ TowerBiomeKit.Templates = table.freeze({
 
 -- Floor-specific sculpted templates (optional until imported into ServerStorage.TowerBiomeKit; callers
 -- check TowerKitProps.Has(name) and fall back to native parts until the FBX is imported).
+-- Kits and the floors they dress:
+--   fungal_f6_kit (tools/blender/generate_fungal_f6_kit.py): Floor 6, Sporelit Entry.
 TowerBiomeKit.ExtraTemplates = table.freeze({
 	AqueductBrokenSpan = table.freeze({ Size = Vector3.new(23.055, 19.059, 16.419), Min = Vector3.new(-11.167, -0.284, -7.26), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	AshmarketStall = table.freeze({ Size = Vector3.new(14.8, 11.676, 9.0), Min = Vector3.new(-7.4, -0.05, -4.5), Roles = table.freeze({ "ALT", "FOLIAGE", "STONE", "TRIM", "WOOD" }) }),
 	BarracksBlock = table.freeze({ Size = Vector3.new(35.847, 29.25, 24.85), Min = Vector3.new(-17.923, -1.2, -12.2), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE", "TRIM", "WOOD" }) }),
 	BuriedWagon = table.freeze({ Size = Vector3.new(16.375, 12.662, 18.778), Min = Vector3.new(-6.98, -0.387, -10.084), Roles = table.freeze({ "FOLIAGE", "METAL", "MOSS", "WOOD" }) }),
 	CalderaDragonCorpse = table.freeze({ Size = Vector3.new(67.43, 23.026, 67.985), Min = Vector3.new(-35.215, -0.84, -28.518), Roles = table.freeze({ "GLOW", "STONE", "TRIM" }) }),
+	CandleAltar = table.freeze({ Size = Vector3.new(18.582, 12.9, 12.109), Min = Vector3.new(-9.212, 0.0, -5.867), Roles = table.freeze({ "ACCENT", "BULB", "CANDLE", "GLOW", "MOSS", "STEM", "TRIM" }) }),
 	CaravanseraiSkylight = table.freeze({ Size = Vector3.new(11.6, 1.665, 11.6), Min = Vector3.new(-5.8, 0.005, -5.8), Roles = table.freeze({ "GLOW", "METAL", "STONE", "TRIM" }) }),
 	CenoteCascadeSpillway = table.freeze({ Size = Vector3.new(23.0, 30.2, 27.1), Min = Vector3.new(-11.5, 0.0, -13.8), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	CenoteColonnadeDome = table.freeze({ Size = Vector3.new(125.819, 67.285, 45.009), Min = Vector3.new(-62.791, -0.258, -34.0), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
@@ -94,6 +97,8 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	CrevasseCartPillar = table.freeze({ Size = Vector3.new(10.374, 24.703, 14.64), Min = Vector3.new(-5.143, -0.545, -6.004), Roles = table.freeze({ "CRYSTAL", "METAL", "MOSS", "STONE", "WOOD" }) }),
 	CurtainWallRuins = table.freeze({ Size = Vector3.new(32.1, 18.875, 7.673), Min = Vector3.new(-16.1, -0.475, -3.178), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	DesertCaravanWagon = table.freeze({ Size = Vector3.new(16.12, 8.767, 20.249), Min = Vector3.new(-6.0, -0.031, -7.386), Roles = table.freeze({ "FOLIAGE", "METAL", "MOSS", "WOOD" }) }),
+	EggSacCluster = table.freeze({ Size = Vector3.new(8.207, 5.376, 6.356), Min = Vector3.new(-4.356, -0.3, -3.186), Roles = table.freeze({ "BULB", "CRYSTAL", "MOSS", "STEM" }) }),
+	ElderCap = table.freeze({ Size = Vector3.new(87.606, 110.267, 88.212), Min = Vector3.new(-44.673, -2.73, -43.234), Roles = table.freeze({ "BULB", "CAP", "GLOW", "MOSS", "STEM" }) }),
 	ElderColossusHead = table.freeze({ Size = Vector3.new(31.201, 33.998, 26.571), Min = Vector3.new(-13.597, 0.0, -13.42), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	ElderCrownRing = table.freeze({ Size = Vector3.new(61.558, 25.692, 24.398), Min = Vector3.new(-32.991, -0.045, -7.673), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	ElderHandFingers = table.freeze({ Size = Vector3.new(56.327, 29.658, 27.232), Min = Vector3.new(-23.551, -1.8, -15.167), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
@@ -113,7 +118,10 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	GlassArchSpan = table.freeze({ Size = Vector3.new(98.271, 61.76, 25.947), Min = Vector3.new(-49.908, 0.265, -13.299), Roles = table.freeze({ "CRYSTAL", "GLOW", "STONE" }) }),
 	GlassCactusCluster = table.freeze({ Size = Vector3.new(9.492, 8.609, 9.825), Min = Vector3.new(-5.031, 0.05, -5.118), Roles = table.freeze({ "ALT", "FOLIAGE", "MOSS", "STONE" }) }),
 	GlowLilyCluster = table.freeze({ Size = Vector3.new(10.516, 3.532, 9.0), Min = Vector3.new(-5.453, 0.063, -4.2), Roles = table.freeze({ "FOLIAGE", "GLOW", "GOLD", "MOSS", "WOOD" }) }),
+	GlowcapTuftA = table.freeze({ Size = Vector3.new(7.011, 2.71, 5.929), Min = Vector3.new(-3.409, -0.35, -2.672), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "STEM" }) }),
+	GlowcapTuftB = table.freeze({ Size = Vector3.new(7.753, 3.179, 5.318), Min = Vector3.new(-3.624, -0.35, -2.897), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "STEM" }) }),
 	GothicPillarColonnade = table.freeze({ Size = Vector3.new(12.0, 48.951, 12.072), Min = Vector3.new(-6.0, -1.0, -5.822), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE" }) }),
+	HangingRootFringe = table.freeze({ Size = Vector3.new(38.713, 30.308, 7.623), Min = Vector3.new(-19.404, 1.408, -2.005), Roles = table.freeze({ "GLOW", "MOSS", "WOOD" }) }),
 	HeartrootMotherHeart = table.freeze({ Size = Vector3.new(73.643, 90.59, 48.352), Min = Vector3.new(-37.988, -2.197, -28.69), Roles = table.freeze({ "FOLIAGE", "GLOW", "MOSS", "WOOD" }) }),
 	HollowStumpRim = table.freeze({ Size = Vector3.new(86.521, 29.645, 60.122), Min = Vector3.new(-43.706, -1.036, -42.875), Roles = table.freeze({ "FOLIAGE", "MOSS", "WOOD" }) }),
 	HuntersLodge = table.freeze({ Size = Vector3.new(27.88, 22.516, 22.1), Min = Vector3.new(-11.708, -1.6, -9.8), Roles = table.freeze({ "GLOW", "MOSS", "STONE", "TRIM", "WOOD" }) }),
@@ -126,12 +134,14 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	KneelingKnight = table.freeze({ Size = Vector3.new(6.212, 8.393, 7.168), Min = Vector3.new(-3.073, -0.153, -4.277), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE" }) }),
 	MasterTombPavilion = table.freeze({ Size = Vector3.new(36.139, 23.802, 24.226), Min = Vector3.new(-18.057, -0.002, -12.026), Roles = table.freeze({ "FOLIAGE", "GLOW", "GOLD", "METAL", "STONE", "TRIM" }) }),
 	MessCauldron = table.freeze({ Size = Vector3.new(8.325, 7.128, 7.626), Min = Vector3.new(-4.031, 0.1, -3.756), Roles = table.freeze({ "CRYSTAL", "METAL", "MOSS", "STONE" }) }),
+	MyceliumVein = table.freeze({ Size = Vector3.new(27.623, 20.987, 1.646), Min = Vector3.new(-5.718, -0.584, -0.548), Roles = table.freeze({ "GLOW", "STEM" }) }),
+	PadCap = table.freeze({ Size = Vector3.new(4.979, 0.644, 4.98), Min = Vector3.new(-2.468, 0.002, -2.506), Roles = table.freeze({ "CAP", "GLOW" }) }),
 	PermafrostCage = table.freeze({ Size = Vector3.new(10.8, 23.4, 10.8), Min = Vector3.new(-5.4, -0.6, -5.4), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE" }) }),
 	PortcullisGate = table.freeze({ Size = Vector3.new(68.0, 42.3, 19.15), Min = Vector3.new(-34.0, -0.1, -9.0), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	RavineHorizonSpire = table.freeze({ Size = Vector3.new(17.6, 60.3, 17.6), Min = Vector3.new(-8.8, -0.1, -8.8), Roles = table.freeze({ "ALT", "GLOW", "STONE", "TRIM" }) }),
 	ReedPondCluster = table.freeze({ Size = Vector3.new(7.493, 6.128, 7.881), Min = Vector3.new(-3.494, -0.091, -4.298), Roles = table.freeze({ "FOLIAGE", "GLOW", "WOOD" }) }),
-	RimelightCrystalCluster = table.freeze({ Size = Vector3.new(10.747, 14.706, 10.21), Min = Vector3.new(-5.472, 0.104, -5.148), Roles = table.freeze({ "CRYSTAL", "GLOW", "MOSS", "STONE" }) }),
 	RimefallIcefall = table.freeze({ Size = Vector3.new(97.474, 73.995, 31.911), Min = Vector3.new(-47.381, -0.2, -19.825), Roles = table.freeze({ "CRYSTAL", "GLOW", "MOSS", "STONE" }) }),
+	RimelightCrystalCluster = table.freeze({ Size = Vector3.new(10.747, 14.706, 10.21), Min = Vector3.new(-5.472, 0.104, -5.148), Roles = table.freeze({ "CRYSTAL", "GLOW", "MOSS", "STONE" }) }),
 	RootBridgeArch = table.freeze({ Size = Vector3.new(54.835, 23.185, 7.634), Min = Vector3.new(-27.434, -0.208, -3.727), Roles = table.freeze({ "GLOW", "MOSS", "TRIM", "WOOD" }) }),
 	RootKnotLantern = table.freeze({ Size = Vector3.new(3.727, 9.471, 3.2), Min = Vector3.new(-1.6, -0.161, -1.6), Roles = table.freeze({ "GLOW", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
 	RootThrone = table.freeze({ Size = Vector3.new(31.462, 34.652, 31.541), Min = Vector3.new(-15.731, -0.652, -20.0), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
@@ -143,12 +153,14 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	SolmereBalustrade = table.freeze({ Size = Vector3.new(16.6, 5.55, 3.0), Min = Vector3.new(-8.3, 0.0, -1.5), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM" }) }),
 	SolmereColonnadeWing = table.freeze({ Size = Vector3.new(55.2, 36.962, 17.079), Min = Vector3.new(-27.6, -0.525, -8.579), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
 	SpiceVaultRuins = table.freeze({ Size = Vector3.new(32.443, 14.864, 22.991), Min = Vector3.new(-16.0, -0.064, -5.9), Roles = table.freeze({ "ALT", "CORAL", "GOLD", "METAL", "STONE", "TRIM" }) }),
+	SporeMoss = table.freeze({ Size = Vector3.new(8.469, 1.02, 6.524), Min = Vector3.new(-4.337, -0.25, -3.05), Roles = table.freeze({ "BULB", "GLOW", "MOSS" }) }),
 	SunDiscShrine = table.freeze({ Size = Vector3.new(17.127, 22.698, 9.405), Min = Vector3.new(-8.435, 0.0, -4.205), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "MOSS", "TRIM" }) }),
 	ThroneOfIcicles = table.freeze({ Size = Vector3.new(25.054, 44.005, 19.3), Min = Vector3.new(-12.21, -1.0, -9.3), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE" }) }),
 	TollHouseRuins = table.freeze({ Size = Vector3.new(39.997, 13.554, 31.326), Min = Vector3.new(-18.523, -0.154, -14.0), Roles = table.freeze({ "ALT", "GLOW", "METAL", "MOSS", "STONE", "TRIM" }) }),
 	TollShelterRuins = table.freeze({ Size = Vector3.new(20.526, 14.699, 15.653), Min = Vector3.new(-10.326, -1.094, -8.653), Roles = table.freeze({ "CRYSTAL", "METAL", "MOSS", "STONE", "WOOD" }) }),
 	VarrashLightningRod = table.freeze({ Size = Vector3.new(11.781, 29.7, 12.079), Min = Vector3.new(-6.027, 0.0, -6.356), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "STONE" }) }),
 	VarrashWaystone = table.freeze({ Size = Vector3.new(3.8, 10.3, 3.8), Min = Vector3.new(-1.9, 0.0, -1.9), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
+	VelmariLampPost = table.freeze({ Size = Vector3.new(4.2, 11.9, 5.947), Min = Vector3.new(-2.1, 0.0, -1.3), Roles = table.freeze({ "ACCENT", "BULB", "GLOW", "TRIM" }) }),
 	VineboundGuardian = table.freeze({ Size = Vector3.new(10.405, 14.987, 9.137), Min = Vector3.new(-5.203, -0.007, -4.63), Roles = table.freeze({ "ACCENT", "GLOW", "MOSS", "TRIM", "WOOD" }) }),
 	VineboundKeep = table.freeze({ Size = Vector3.new(46.67, 47.701, 22.501), Min = Vector3.new(-23.441, -0.201, -13.767), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
 	VineboundTower = table.freeze({ Size = Vector3.new(25.625, 51.665, 24.861), Min = Vector3.new(-12.37, -1.165, -12.661), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
@@ -190,6 +202,9 @@ TowerBiomeKit.Biomes = table.freeze({
 			STEM = swatch(165, 162, 195, M.SmoothPlastic),
 			CRYSTAL = swatch(120, 240, 230, M.Glass, 0.2),
 			ALT = swatch(115, 225, 255, M.SmoothPlastic),
+			-- Violet spore-bulbs and the Sporecap Chanters' candle flames (fungal_f6_kit).
+			BULB = swatch(196, 112, 255, M.Neon),
+			CANDLE = swatch(255, 198, 122, M.Neon),
 		}),
 	}),
 	ashen_dunes = table.freeze({
@@ -386,6 +401,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	GlassArchSpan = true, RavineHorizonSpire = true, VarrashLightningRod = true,
 	KilnTower = true, SignalLensTower = true, PortcullisGate = true, AshmarketStall = true,
 	ElderHandFingers = true, ElderShieldRim = true, ElderColossusHead = true, ElderCrownRing = true, ElderShoulderPauldron = true, CinderholdVent = true, CalderaDragonCorpse = true,
+	ElderCap = true, CandleAltar = true, VelmariLampPost = true,
 	RimefallIcefall = true, HuntersLodge = true, FisherHut = true, IceFloeSlab = true, WardStarShieldMarker = true,
 	BarracksBlock = true, KennelRow = true, FrozenSoldier = true, MessCauldron = true,
 	CrevasseCartPillar = true, GlacierShrine = true, TollShelterRuins = true, FrozenBareTree = true,

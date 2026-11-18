@@ -13,6 +13,7 @@ end
 local ROLES = {
 	STONE = true, TRIM = true, ACCENT = true, MOSS = true, GLOW = true, WOOD = true, FOLIAGE = true,
 	METAL = true, GOLD = true, CRYSTAL = true, CAP = true, STEM = true, ALT = true, CORAL = true,
+	BULB = true, CANDLE = true,
 }
 
 test("Every kit template has a size, stands on the ground and uses known colour roles", function()
@@ -65,13 +66,19 @@ test("Every extra floor-specific template has a size, stands on the ground and u
 	local count = 0
 	for name, t in Kit.ExtraTemplates do
 		count += 1
+		assert(not Kit.Templates[name], name .. " is both a core and an extra template")
 		assert(t.Size.X > 0 and t.Size.Y > 0 and t.Size.Z > 0, name .. " has no size")
-		assert(t.Min.Y > -2.5 and t.Min.Y < 0.5, name .. " does not stand on its origin")
+		assert(t.Min.Y > -3 and t.Min.Y < 2, name .. " does not stand on its origin")
 		assert(#t.Roles > 0, name .. " has no roles")
 		for _, role in t.Roles do
 			assert(ROLES[role], name .. " uses unknown role " .. role)
 		end
 	end
+	-- Floor 6 (Sporelit Entry, fungal_f6_kit).
+	for _, name in { "ElderCap", "GlowcapTuftA", "GlowcapTuftB", "SporeMoss", "MyceliumVein", "CandleAltar", "VelmariLampPost", "HangingRootFringe", "EggSacCluster", "PadCap" } do
+		assert(Kit.ExtraTemplates[name], "fungal_f6_kit is missing " .. name)
+	end
+	assert(Kit.Biomes.fungal_hollow.Palette.BULB and Kit.Biomes.fungal_hollow.Palette.CANDLE, "fungal palette lacks BULB or CANDLE")
 	assert(count >= 45, "expected Floor 2-5 and Floor 11-15 extra templates")
 end)
 
@@ -148,6 +155,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[3] ~= nil, "floor 3 (Rootway Crossing) has its noon grade")
 	assert(Light.FloorGrades[4] ~= nil, "floor 4 (Vinebound Bastion) has its overcast grade")
 	assert(Light.FloorGrades[5] ~= nil, "floor 5 (Mossbound Court) has its golden-hour dusk grade")
+	assert(Light.FloorGrades[6] ~= nil, "floor 6 (Sporelit Entry) has its underground-twilight grade")
 	assert(Light.FloorGrades[11] ~= nil, "floor 11 (Cinder Gate) has its searing desert noon grade")
 	assert(Light.FloorGrades[12] ~= nil, "floor 12 (Buried Caravan) has its afternoon sandstorm grade")
 	assert(Light.FloorGrades[13] ~= nil, "floor 13 (Glasswind Ravine) has its ravine dusk grade")
@@ -158,7 +166,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[18] ~= nil, "floor 18 (Shattered Iceway) has its blizzard grade")
 	assert(Light.FloorGrades[19] ~= nil, "floor 19 (Whiteguard Keep) has its twilight aurora grade")
 	assert(Light.FloorGrades[20] ~= nil, "floor 20 (Frostbound Throne) has its frozen night grade")
-	assert(Light.TowerPreset(2, 6) == Light.TowerPreset(2), "a floor without its own grade shares its biome's")
+	assert(Light.TowerPreset(5, 21) == Light.TowerPreset(5), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400

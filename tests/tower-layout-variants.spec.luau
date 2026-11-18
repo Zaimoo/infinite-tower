@@ -235,6 +235,101 @@ test("Floor 15 is the hand-authored Colossus Dais: Elder Colossus body route, Sh
 	assert(totalMobs == 35, "Floor 15 keeps 35 live camp mobs plus the Boss (got " .. totalMobs .. ")")
 end)
 
+test("Floor 6 is the hand-authored Sporelit Entry: a horseshoe round the glowpool, nothing across it", function()
+	local room = Layout.ForFloor(6)
+	assert(room.Authored == "fungal:6" and room.Name == "Sporelit Entry")
+	assert(same(room, Layout.Get(1, 6)), "the authored floor is not fixed")
+	assert(not same(room, Layout.Get(1)), "floor 6 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_Crossing == nil and paths.Basin_Apex == nil, "a path crosses the glowpool")
+	assert(paths.EastGallery_Crossing == "STAIRS", "the Mason's Stair is not stairs")
+	-- The bridge steps down onto the dais (every Crossing -> Apex path is a grand stair); the rest are ramps.
+	assert(paths.Crossing_Apex == "STAIRS" and paths.WestGallery_Apex == "RAMP" and paths.Basin_WestGallery == "RAMP" and paths.Basin_EastGallery == "RAMP")
+	assert(room.EliteCount == 1 and #room.Camps == 5)
+	assert(room.Platforms.Crossing.Name == "Veinspan" and room.Platforms.Apex.Name == "Skylight Dais")
+	local td = room.Terrain
+	assert(td and td.Direct and td.Decks.Crossing and td.Decks.Sanctuary and room.Skylight)
+	-- Terrain terraces sit on the voxel grid: smooth terrain renders exactly on a plane only at multiples of 4.
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	-- Every path keeps off the central glowpool and the Elder Cap island.
+	local island, pool = td.Islands[1], td.Pools[1]
+	for _, link in room.Links do
+		for step = 0, 20 do
+			local x = link.AX + (link.BX - link.AX) * step / 20
+			local z = link.AZ + (link.BZ - link.AZ) * step / 20
+			assert(math.sqrt((x - island.X) ^ 2 + (z - island.Z) ^ 2) > island.R + link.Width / 2 + 8, link.Id .. " runs over the Elder Cap island")
+			assert(((x - pool.X) / pool.RX) ^ 2 + ((z - pool.Z) / pool.RZ) ^ 2 > 1, link.Id .. " runs through the glowpool")
+		end
+	end
+	-- No camp in the glowpool, and the arrival area stays clear.
+	for _, camp in room.Camps do
+		assert(((camp.X - pool.X) / pool.RX) ^ 2 + ((camp.Z - pool.Z) / pool.RZ) ^ 2 > 1.4, camp.Id .. " is in the glowpool")
+		assert(math.abs(camp.X) > 60 or camp.Z < room.Platforms.Basin.Z - 30, camp.Id .. " is in the arrival area")
+	end
+	-- The oculus opens over the dais.
+	local apex = room.Platforms.Apex
+	assert(math.abs(room.Skylight.X - apex.X) < apex.Width / 2 and math.abs(room.Skylight.Z - apex.Z) < apex.Depth / 2)
+end)
+
+test("Floor 6's terrain is the walking surface: flush under natural ground, recessed under decks, pools off the paths", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(6)
+	local field = Terrain.Field(room, "fungal_hollow", 6)
+	assert(field.Surface == Terrain.Surfaces.FUNGAL, "floor 6 uses the Fungal surface palette")
+	assert(math.abs(field.LiquidLevel - (field.Bottom + room.Terrain.LiquidRise)) < 1e-6)
+	for id, t in room.Platforms do
+		local y, kind = field.Sample(t.X + 3, t.Z - 3)
+		if room.Terrain.Decks[id] then
+			assert(y <= t.Y - 4.5 + 1e-6, id .. ": the terrain rises into a deck")
+		else
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, string.format("%s: ground %.2f is not flush with the walking plane %.2f", id, y, t.Y))
+			assert(kind == "WALK" or kind == "TRAIL", id .. " is not walkway ground (" .. kind .. ")")
+		end
+	end
+	-- Under the Veinspan bridge the east pool runs on; the Elder Cap stands on its island in the glowpool.
+	local cross = room.Platforms.Crossing
+	local _, under = field.Sample(cross.X + 4, cross.Z + 6)
+	assert(under == "POOL", "no pool under the Veinspan (" .. under .. ")")
+	local isle = room.Terrain.Islands[1]
+	local iy, ik = field.Sample(isle.X, isle.Z)
+	assert(ik == "ISLAND" and iy > field.LiquidLevel + 2, "the Elder Cap island does not rise out of the pool")
+	local _, open = field.Sample(isle.X + 44, isle.Z)
+	assert(open == "POOL", "the glowpool is missing round the island")
+	-- Every ramp's centreline is walkable ground at its own height (SOFT under its surface).
+	for _, link in room.Links do
+		if link.Kind ~= "STAIRS" then
+			for step = 1, 9 do
+				local t = step / 10
+				local x, z = link.AX + (link.BX - link.AX) * t, link.AZ + (link.BZ - link.AZ) * t
+				local want = link.AY + (link.BY - link.AY) * t
+				local y = field.Sample(x, z)
+				assert(math.abs(y - (want - 2)) < 0.05 or y < want - 2, link.Id .. " ground rises over the ramp")
+				assert(y > want - 2.6, string.format("%s ground sags under the ramp (%.2f vs %.2f)", link.Id, y, want))
+			end
+		end
+	end
+end)
+
+test("Fungal-owned terrain materials are used by no biome palette", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local owned = {}
+	for _, m in Terrain.FungalMaterials do
+		owned[m] = true
+		assert(Terrain.MaterialColors[m] ~= nil, tostring(m) .. " has no Fungal colour")
+	end
+	for biome, palette in Terrain.Palettes do
+		for key, m in palette :: any do
+			assert(not owned[m], biome .. " palette " .. key .. " uses a Fungal-owned material")
+		end
+	end
+	for key, m in Terrain.Surfaces.FUNGAL :: any do
+		assert(owned[m] or Terrain.MaterialColors[m] == nil, "Fungal surface " .. key .. " uses another look's recoloured material")
+	end
+end)
+
 test("Floor 16 is the hand-authored Rimefall Approach: shoreline route and ice-floe chain across frozen lake", function()
 	local room = Layout.ForFloor(16)
 	assert(room.Authored == "frozen:1" and room.Name == "Rimefall Approach" and room.PathStyle == "WHITEGUARD")

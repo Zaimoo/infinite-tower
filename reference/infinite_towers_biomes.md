@@ -31,6 +31,8 @@ An ancient civilization reclaimed by an endless emerald wilderness. Massive ston
 
 A vast underground ecosystem dominated by enormous bioluminescent mushrooms and twisting fungal growths. Glowing spores drift through the damp air, casting blue, purple, and turquoise light across the cavern floor. Networks of giant roots connect towering mushroom formations, while strange organisms thrive in the perpetual darkness. Beneath its enchanting appearance lies a dangerous world of poisonous fungi and mutated creatures.
 
+The caverns were quarried and lit by the **Velmari**, an order of lamp-masons who farmed light underground: they built in indigo slate and violet cobble, set teal crystals into their stonework, and carved their motif, the **gill-wheel** (a disc of radiating gill lines round a hanging bulb), on every keystone, altar and lamp-post. Their glowcaps grew together into one organism, the **Veinweb**, whose cyan-violet veins run through all five floors like nerves; the giant mushrooms are its fruit, the spore-bulbs its seeds, and the Spore Matriarch its heart. The Velmari became its gardeners, then its congregation; their robed descendants, the Sporecap Chanters, still keep candles burning on the altars.
+
 ## 3. Ashen Dunes
 
 **Theme:** Desert / Volcanic Wasteland

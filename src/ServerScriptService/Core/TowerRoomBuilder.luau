@@ -307,6 +307,14 @@ function Builder.Build(id: number, generation: number): any
 	local origin = Builder.Origin(id)
 	local idx = floorSpec.IndexInBiome
 	local layout = Layout.Get(idx, id)
+	if layout.Authored == "fungal:9" then
+		-- Floor 9 (Rotcap Keep): replace default cyan accents with sickly yellow-green rot mixed into violet.
+		theme = table.clone(theme)
+		theme.LightColor = Color3.fromRGB(182, 245, 74)
+		theme.AccentColor = Color3.fromRGB(138, 72, 224)
+		theme.LiquidColor = Color3.fromRGB(128, 196, 58)
+		theme.HorizonColor = Color3.fromRGB(172, 232, 84)
+	end
 	local safe = layout.Sanctuary
 
 	local model = Instance.new("Model")
@@ -361,33 +369,87 @@ function Builder.Build(id: number, generation: number): any
 		p.CanTouch = false
 	end
 
+	-- Hand-authored floors whose terraces and ramps are the terrain itself (TowerLayout `Terrain.Direct`):
+	-- natural terraces, landings and ramps keep their parts only as invisible, non-colliding proxies, while
+	-- built decks (`Terrain.Decks`) stay solid, visible masonry (TowerTerrain keeps a voxel under them).
+	local td = layout.Terrain
+	local direct = natural and td ~= nil and td.Direct == true
+	local deckIds = if direct then td.Decks or {} else {}
+	local deckThickness = if direct then td.DeckThickness or {} else {}
+	-- Round decks (`Terrain.RoundDecks`: a cap top) and hung walkways (`Terrain.Bridges`: rope and plank).
+	local roundDecks = if direct then td.RoundDecks or {} else {}
+	local hungLinks = if direct then td.Bridges or {} else {}
+	local plank = Color3.fromRGB(104, 80, 62)
+	local plankDark = Color3.fromRGB(70, 54, 44)
+	local rope = Color3.fromRGB(150, 128, 96)
+	local capTop = Color3.fromRGB(98, 60, 176)
+	local proxy = disableTerrainProxyPart
+	-- Velmari masonry (Fungal Hollow's lamp-masons): indigo slate decks and stairs, violet cobble.
+	local velmari = natural and layout.PathStyle == "VELMARI"
+	local matriarchHollow = layout.Authored == "fungal:10"
+	local webCable = Color3.fromRGB(218, 206, 242)
+	local slateIndigo = Color3.fromRGB(62, 56, 94)
+	local slateDark = Color3.fromRGB(42, 38, 66)
+
 	-- Vaulted ceiling with natural environmental skylight aperture (allows sunlight & sunrays to enter)
 	local skyFraction = if isDirectTerrainLayout(layout) then 0.82 else 0.54
 	local openW = width * skyFraction
 	local openD = depth * skyFraction
 	local borderX = (width - openW) / 2
 	local borderZ = (depth - openD) / 2
-
-	for _, sz in { -1, 1 } do
-		local ceilZ = decor(model, "VaultCeilingZ", Vector3.new(width + 12, 6, borderZ + 8), origin + Vector3.new(0, height + 3, sz * (depth / 2 - borderZ / 2)), theme.WallColor, theme.WallMaterial)
-		ceilZ.CastShadow = false
-	end
-	for _, sx in { -1, 1 } do
-		local ceilX = decor(model, "VaultCeilingX", Vector3.new(borderX + 8, 5.7, openD), origin + Vector3.new(sx * (width / 2 - borderX / 2), height + 3.05, 0), theme.WallColor, theme.WallMaterial)
-		ceilX.CastShadow = false
-	end
-	for _, sz in { -1, 1 } do
-		decor(model, "SkylightRimZ", Vector3.new(openW + 12, 3.5, 4), origin + Vector3.new(0, height + 1, sz * (openD / 2)), theme.TrimColor, theme.TrimMaterial)
-	end
-	for _, sx in { -1, 1 } do
-		decor(model, "SkylightRimX", Vector3.new(4, 3.3, openD + 12), origin + Vector3.new(sx * (openW / 2), height + 1.15, 0), theme.TrimColor, theme.TrimMaterial)
+	local sky = layout.Skylight
+	if sky then
+		-- A closed cavern vault pierced by one round oculus (an authored floor's Skylight). Four slabs leave
+		-- a square hole round it and a ring of blocks rounds the hole off; the oculus rim carries the hanging
+		-- roots (TowerBiomeAssets), and the shaft below is the floor's only daylight.
+		local r = sky.Radius
+		local x0, x1, z0, z1 = -width / 2 - 6, width / 2 + 6, -depth / 2 - 6, depth / 2 + 6
+		local function vault(name: string, ax: number, bx: number, az: number, bz: number)
+			if bx - ax > 0.5 and bz - az > 0.5 then
+				-- Casts shadows: underground, daylight only comes in through the oculus.
+				local slab = decor(model, name, Vector3.new(bx - ax, 6, bz - az), origin + Vector3.new((ax + bx) / 2, height + 3, (az + bz) / 2), theme.WallColor, theme.WallMaterial)
+				slab.CastShadow = true
+			end
+		end
+		vault("VaultCeilingZ", x0, x1, z0, sky.Z - r)
+		vault("VaultCeilingZ", x0, x1, sky.Z + r, z1)
+		vault("VaultCeilingX", x0, sky.X - r, sky.Z - r, sky.Z + r)
+		vault("VaultCeilingX", sky.X + r, x1, sky.Z - r, sky.Z + r)
+		local segments = 20
+		for i = 0, segments - 1 do
+			local a = (i + 0.5) * math.pi * 2 / segments
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local centre = origin + Vector3.new(sky.X, height + 3, sky.Z) + dir * (r + 13)
+			local block = decor(model, "VaultOculusRing", Vector3.new(2 * math.pi * (r + 26) / segments * 1.15, 6, 26), centre, theme.WallColor, theme.WallMaterial)
+			block.CFrame = CFrame.lookAt(centre, centre + dir)
+			block.CastShadow = true
+			local rimAt = origin + Vector3.new(sky.X, height - 0.5, sky.Z) + dir * (r + 1.5)
+			local rim = decor(model, "OculusRim", Vector3.new(2 * math.pi * r / segments * 1.12, 3, 4), rimAt, theme.CliffColor, theme.CliffMaterial)
+			rim.CFrame = CFrame.lookAt(rimAt, rimAt + dir)
+		end
+	else
+		-- Vaulted ceiling with natural environmental skylight aperture (allows sunlight & sunrays to enter)
+		for _, sz in { -1, 1 } do
+			local ceilZ = decor(model, "VaultCeilingZ", Vector3.new(width + 12, 6, borderZ + 8), origin + Vector3.new(0, height + 3, sz * (depth / 2 - borderZ / 2)), theme.WallColor, theme.WallMaterial)
+			ceilZ.CastShadow = false
+		end
+		for _, sx in { -1, 1 } do
+			local ceilX = decor(model, "VaultCeilingX", Vector3.new(borderX + 8, 5.7, openD), origin + Vector3.new(sx * (width / 2 - borderX / 2), height + 3.05, 0), theme.WallColor, theme.WallMaterial)
+			ceilX.CastShadow = false
+		end
+		for _, sz in { -1, 1 } do
+			decor(model, "SkylightRimZ", Vector3.new(openW + 12, 3.5, 4), origin + Vector3.new(0, height + 1, sz * (openD / 2)), theme.TrimColor, theme.TrimMaterial)
+		end
+		for _, sx in { -1, 1 } do
+			decor(model, "SkylightRimX", Vector3.new(4, 3.3, openD + 12), origin + Vector3.new(sx * (openW / 2), height + 1.15, 0), theme.TrimColor, theme.TrimMaterial)
+		end
 	end
 
 	-- High-altitude natural skylight light source (casts soft sunlight/skylight down across the room)
 	local sunShaft = Instance.new("Part")
 	sunShaft.Name = "NaturalSkylightShaft"
 	sunShaft.Size = Vector3.new(openW * 0.7, 2, openD * 0.7)
-	sunShaft.Position = origin + Vector3.new(0, height + 8, -depth * 0.05)
+	sunShaft.Position = origin + if sky then Vector3.new(sky.X, height + 8, sky.Z) else Vector3.new(0, height + 8, -depth * 0.05)
 	sunShaft.Anchored = true
 	sunShaft.CanCollide = false
 	sunShaft.CanQuery = false
@@ -403,6 +465,12 @@ function Builder.Build(id: number, generation: number): any
 	naturalSpot.Brightness = 1.4
 	naturalSpot.Color = theme.LightColor:Lerp(Color3.fromRGB(255, 245, 225), 0.45)
 	naturalSpot.Shadows = false
+	if sky then
+		-- The oculus: a narrower, paler shaft straight down onto the floor beneath it.
+		naturalSpot.Angle = 48
+		naturalSpot.Brightness = 2.2
+		naturalSpot.Color = if layout.Authored == "fungal:9" then Color3.fromRGB(186, 245, 92) else Color3.fromRGB(176, 238, 255)
+	end
 	naturalSpot.Parent = sunShaft
 
 	local isNatural = floorSpec.BiomeId == "verdant_ruins"
@@ -684,6 +752,35 @@ function Builder.Build(id: number, generation: number): any
 		slab:SetAttribute("TerraceId", name)
 
 		local topCenter = origin + Vector3.new(terrace.X, terrace.Y, terrace.Z)
+		if direct and deckIds[name] then
+			-- Built masonry: a solid, visible deck (thin over water when the floor says so, e.g. a bridge).
+			local t = deckThickness[name]
+			if roundDecks[name] then
+				-- A cap top: a disc through the terrace's corners (it covers the whole terrace), its rim, gills and
+				-- stem dressed by TowerBiomeAssets.
+				local diameter = math.sqrt(terrace.Width ^ 2 + terrace.Depth ^ 2) + 2
+				local thick = t or 3
+				slab.Shape = Enum.PartType.Cylinder
+				slab.Size = Vector3.new(thick, diameter, diameter)
+				slab.CFrame = CFrame.new(topCenter - Vector3.new(0, thick / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+				slab.Color = capTop
+				slab.Material = Enum.Material.SmoothPlastic
+				continue
+			end
+			if t then
+				slab.Size = Vector3.new(terrace.Width, t, terrace.Depth)
+				slab.Position = topCenter - Vector3.new(0, t / 2, 0)
+			end
+			if velmari and name ~= "Sanctuary" then
+				slab.Color = slateIndigo
+				slab.Material = Enum.Material.Slate
+			end
+			continue
+		elseif direct then
+			-- Natural ground: the terrain is the walking surface; the part only keeps the terrace's metadata.
+			proxy(slab)
+			continue
+		end
 		if natural then
 			-- A natural plateau (including the Sanctuary spawn glade): matches the biome's Terrain ground;
 			-- architectural bridge/viaduct decks keep collision on slab while Floor 3 pads dress as organic root/stump forms.
@@ -1132,7 +1229,22 @@ function Builder.Build(id: number, generation: number): any
 		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
 		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
 		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
-		if isArchitecturalDeck(layout, terraceName) then
+		if direct then
+			-- On a deck the landing is part of the masonry (solid, the deck's colour); elsewhere it is terrain.
+			-- A hung walkway's landings are its own planks, run out onto the terrace it reaches.
+			if hungLinks[id] then
+				if matriarchHollow then
+					p.Color, p.Material = slateIndigo, Enum.Material.Slate
+				else
+					p.Color, p.Material = plank, Enum.Material.WoodPlanks
+				end
+			elseif terraceName and deckIds[terraceName] then
+				local deck = model:FindFirstChild(if terraceName == "Sanctuary" then "SafeArrival" else terraceName) :: BasePart?
+				if deck then p.Color, p.Material = deck.Color, deck.Material end
+			else
+				proxy(p)
+			end
+		elseif isArchitecturalDeck(layout, terraceName) then
 			if masonryStyle and masonryStyle.LandingProxy then
 				-- Keep landing collider solid & flush atop organic/fortress decks without showing protruding rectangles.
 				disableTerrainProxyPart(p)
@@ -1186,12 +1298,14 @@ function Builder.Build(id: number, generation: number): any
 				local center = a + flat * t
 				local baseTreadW = if rootStair then link.Width * (0.84 + 0.14 * math.sin(step * 1.15)) else link.Width
 				local treadW = baseTreadW - (step % 2) * 0.08
-				local treadCol = if masonryStyle and masonryStyle.StairColorA
+				local treadCol = if velmari then (if step % 2 == 0 then slateIndigo else slateDark)
+					elseif masonryStyle and masonryStyle.StairColorA
 					then (if step % 2 == 0 then masonryStyle.StairColorA else masonryStyle.StairColorB)
 					elseif pathStyle
 					then (if step % 2 == 0 then pathStyle.StairColorA else pathStyle.StairColorB)
 					else theme.TrimColor
-				local treadMat = if masonryStyle and masonryStyle.StairMatA
+				local treadMat = if velmari then Enum.Material.Slate
+					elseif masonryStyle and masonryStyle.StairMatA
 					then (if step % 2 == 0 then masonryStyle.StairMatA else masonryStyle.StairMatB)
 					elseif pathStyle
 					then (if step % 2 == 0 then pathStyle.StairMatA else pathStyle.StairMatB)
@@ -1256,7 +1370,33 @@ function Builder.Build(id: number, generation: number): any
 			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, if masonryStyle and masonryStyle.RampYOffset then masonryStyle.RampYOffset else -0.96, 0)
 			structure(ramp,link.Id)
 			local bridgeKind = masonryStyle and masonryStyle.BridgeKind
-			if isSuspendedLink(layout, link.Id) and bridgeKind == "SOLMERE_ARCH" then
+			if hungLinks[link.Id] then
+				-- Floor 10: Velmari silk-and-slate web spans; Floor 8: Lampkeeper rope-and-plank walkways.
+				ramp.Color = if matriarchHollow then slateIndigo else plank
+				ramp.Material = if matriarchHollow then Enum.Material.Slate else Enum.Material.WoodPlanks
+				local length = delta.Magnitude
+				local boards = math.max(1, math.floor((length - 2) / 3.4))
+				for i = 1, boards do
+					local at = a:Lerp(b, (i - 0.5) / boards)
+					local board = decor(model, "RampStepLip", Vector3.new(link.Width - 2, 0.18, 0.9), at, if matriarchHollow then slateDark else plankDark, if matriarchHollow then Enum.Material.Slate else Enum.Material.WoodPlanks)
+					board.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.07, 0)
+				end
+			elseif direct then
+				-- An earthen ramp: the terrain is the path (TowerTerrain paints its trodden trail). Flush slate
+				-- pavers laid down its spine, staggered, read as the masons' old stepping stones.
+				proxy(ramp)
+				local length = delta.Magnitude
+				local stones = math.max(1, math.floor((length - 4) / 5.2))
+				for i = 1, stones do
+					local stagger = if i % 2 == 0 then 1.4 else -1.4
+					local at = a:Lerp(b, (i - 0.5) / stones) + right * stagger
+					local stoneW = link.Width * (0.26 + ((i * 7) % 3) * 0.04)
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.45, 2.2), at,
+						if velmari then (if i % 2 == 0 then slateIndigo else slateDark) else flagstoneDark,
+						if velmari then Enum.Material.Slate else Enum.Material.Limestone)
+					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
+				end
+			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "SOLMERE_ARCH" then
 				-- Floors 4-5 Solmere mossy limestone bridges across the moat/cenote:
 				-- solid weathered stone deck continuing cleanly onto both landings, with bank abutments, flagstones & hanging vines.
 				ramp.Color = solmereLimestone
@@ -1627,6 +1767,21 @@ function Builder.Build(id: number, generation: number): any
 				local curbGroup = propGroup(model, "BridgeCurb")
 				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, curbCol, curbMat, if visibleCurb then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.35, 0)
+				if hungLinks[link.Id] then
+					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
+					local railOffset = right * (side * (link.Width / 2 - 0.6))
+					for _, h in { 1.6, 3.4 } do
+						local r0, r1 = a + railOffset + Vector3.new(0, h, 0), b + railOffset + Vector3.new(0, h, 0)
+						local railPart = decor(curbGroup, "BridgeRopeRail", Vector3.new(0.3, 0.3, (r1 - r0).Magnitude), (r0 + r1) / 2, if matriarchHollow then webCable else rope, Enum.Material.Fabric)
+						railPart.CFrame = CFrame.lookAt((r0 + r1) / 2, r1)
+					end
+					local posts = math.max(2, math.floor(delta.Magnitude / 12) + 1)
+					for i = 0, posts - 1 do
+						local at = a:Lerp(b, i / (posts - 1)) + railOffset
+						local post = decor(curbGroup, "BridgeRopePost", Vector3.new(0.7, 4.2, 0.7), at + Vector3.new(0, 1.9, 0), if matriarchHollow then slateDark else plankDark, if matriarchHollow then Enum.Material.Slate else Enum.Material.Wood)
+						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+					end
+				end
 				if visibleCurb then
 					if curbMode == "FORTRESS_MERLON" then
 						-- Natural weathered sandstone parapet cap plus spaced fortress merlon stones
@@ -1766,14 +1921,26 @@ function Builder.Build(id: number, generation: number): any
 	end
 	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme, field)
 
+	-- Fill lanterns under the vault; a closed cavern with an oculus (Skylight) keeps fewer, so its own glows
+	-- carry the light and the floor stays within its light budget.
+	local rotKeep = layout.Authored == "fungal:9"
+	local heartHollow = layout.Authored == "fungal:10"
+	local lanternStep = if rotKeep then 260 elseif heartHollow then 280 elseif sky then (if math.max(width, depth) > 540 then 185 else 150) else 100
+	local lanternIdx = 0
 	if not pathStyle or pathStyle.ShowVaultLanterns ~= false then
-		for x = -width / 2 + 50, width / 2 - 40, 100 do
-			for z = -depth / 2 + 50, depth / 2 - 40, 100 do
-				local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 42, z), theme.LightColor, Enum.Material.SmoothPlastic, 1)
+		for x = -width / 2 + 50, width / 2 - 40, lanternStep do
+			for z = -depth / 2 + 50, depth / 2 - 40, lanternStep do
+				lanternIdx += 1
+				local lightColor = if rotKeep
+					then (if lanternIdx % 2 == 1 then theme.LightColor else Color3.fromRGB(152, 82, 238))
+					elseif heartHollow
+					then (if lanternIdx % 2 == 1 then Color3.fromRGB(196, 82, 245) else Color3.fromRGB(96, 238, 255))
+					else theme.LightColor
+				local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 42, z), lightColor, Enum.Material.SmoothPlastic, 1)
 				local light = Instance.new("PointLight")
-				light.Range = 60
-				light.Brightness = 0.55
-				light.Color = theme.LightColor
+				light.Range = if rotKeep or heartHollow then 68 else 60
+				light.Brightness = if rotKeep then 0.75 elseif heartHollow then 0.7 else 0.55
+				light.Color = lightColor
 				light.Shadows = false
 				light.Parent = lamp
 			end

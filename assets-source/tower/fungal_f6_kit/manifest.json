@@ -1,0 +1,194 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CandleAltar": {
+      "Min": [
+        -9.212,
+        0.0,
+        -5.867
+      ],
+      "Roles": {
+        "ACCENT": 200,
+        "BULB": 168,
+        "CANDLE": 700,
+        "GLOW": 84,
+        "MOSS": 240,
+        "STEM": 728,
+        "TRIM": 320
+      },
+      "Size": [
+        18.582,
+        12.9,
+        12.109
+      ],
+      "Triangles": 2440
+    },
+    "EggSacCluster": {
+      "Min": [
+        -4.356,
+        -0.3,
+        -3.186
+      ],
+      "Roles": {
+        "BULB": 180,
+        "CRYSTAL": 1200,
+        "MOSS": 80,
+        "STEM": 120
+      },
+      "Size": [
+        8.207,
+        5.376,
+        6.356
+      ],
+      "Triangles": 1580
+    },
+    "ElderCap": {
+      "Min": [
+        -44.673,
+        -2.73,
+        -43.234
+      ],
+      "Roles": {
+        "BULB": 1600,
+        "CAP": 384,
+        "GLOW": 908,
+        "MOSS": 320,
+        "STEM": 734
+      },
+      "Size": [
+        87.606,
+        110.267,
+        88.212
+      ],
+      "Triangles": 3946
+    },
+    "GlowcapTuftA": {
+      "Min": [
+        -3.409,
+        -0.35,
+        -2.672
+      ],
+      "Roles": {
+        "CAP": 699,
+        "GLOW": 500,
+        "MOSS": 80,
+        "STEM": 280
+      },
+      "Size": [
+        7.011,
+        2.71,
+        5.929
+      ],
+      "Triangles": 1559
+    },
+    "GlowcapTuftB": {
+      "Min": [
+        -3.624,
+        -0.35,
+        -2.897
+      ],
+      "Roles": {
+        "CAP": 599,
+        "GLOW": 400,
+        "MOSS": 80,
+        "STEM": 240
+      },
+      "Size": [
+        7.753,
+        3.179,
+        5.318
+      ],
+      "Triangles": 1319
+    },
+    "HangingRootFringe": {
+      "Min": [
+        -19.404,
+        1.408,
+        -2.005
+      ],
+      "Roles": {
+        "GLOW": 100,
+        "MOSS": 96,
+        "WOOD": 1164
+      },
+      "Size": [
+        38.713,
+        30.308,
+        7.623
+      ],
+      "Triangles": 1360
+    },
+    "MyceliumVein": {
+      "Min": [
+        -5.718,
+        -0.584,
+        -0.548
+      ],
+      "Roles": {
+        "GLOW": 564,
+        "STEM": 752
+      },
+      "Size": [
+        27.623,
+        20.987,
+        1.646
+      ],
+      "Triangles": 1316
+    },
+    "PadCap": {
+      "Min": [
+        -2.468,
+        0.002,
+        -2.506
+      ],
+      "Roles": {
+        "CAP": 128,
+        "GLOW": 160
+      },
+      "Size": [
+        4.979,
+        0.644,
+        4.98
+      ],
+      "Triangles": 288
+    },
+    "SporeMoss": {
+      "Min": [
+        -4.337,
+        -0.25,
+        -3.05
+      ],
+      "Roles": {
+        "BULB": 200,
+        "GLOW": 60,
+        "MOSS": 80
+      },
+      "Size": [
+        8.469,
+        1.02,
+        6.524
+      ],
+      "Triangles": 340
+    },
+    "VelmariLampPost": {
+      "Min": [
+        -2.1,
+        0.0,
+        -1.3
+      ],
+      "Roles": {
+        "ACCENT": 112,
+        "BULB": 140,
+        "GLOW": 90,
+        "TRIM": 96
+      },
+      "Size": [
+        4.2,
+        11.9,
+        5.947
+      ],
+      "Triangles": 438
+    }
+  },
+  "Unit": "studs"
+}
