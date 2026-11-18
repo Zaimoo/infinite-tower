@@ -812,17 +812,16 @@ function Builder.Build(id: number, generation: number): any
 		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
 		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
 		if isArchitecturalDeck(layout, terraceName) then
-			if isOrganicMasonry then
-				-- Keep landing collider solid & flush atop organic root/stump islands without showing protruding rectangles
+			if isOrganicMasonry or layout.Masonry == "VARRASH_FORTRESS" then
+				-- Keep landing collider solid & flush atop organic/fortress decks without showing protruding rectangles.
 				disableTerrainProxyPart(p)
 				p.CanCollide = true
 				p.CanQuery = true
 			else
 				local glassMasonry = layout.Masonry == "VARRASH_GLASS"
-				local fortVarrash = layout.Masonry == "VARRASH_FORTRESS"
 				p.Color = if glassMasonry then Color3.fromRGB(28, 24, 30) elseif varrash then varrashSandstone else solmereLimestone
 				p.Material = if glassMasonry then Enum.Material.Slate elseif varrash then Enum.Material.Sandstone else Enum.Material.Limestone
-				if isFortressStone or layout.Masonry == "VARRASH_DECK" or glassMasonry or fortVarrash then
+				if isFortressStone or layout.Masonry == "VARRASH_DECK" or glassMasonry then
 					-- Stack multiple landings on the same terrace by +0.03 so overlapping landings never z-fight,
 					-- and start at +0.05 above TraversalRamp (+0.01) and Slab (0.00) and below medallions/flagstones (+0.14+).
 					local tKey = terraceName or ""
@@ -830,10 +829,8 @@ function Builder.Build(id: number, generation: number): any
 					landingLayerByTerrace[tKey] = layer + 1
 					local topOff = -0.95 + layer * 0.03 -- height 2: top = +0.05, +0.08, +0.11...
 					p.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff, 0)
-					if isFortressStone or fortVarrash then
-						local underCol = if fortVarrash then Color3.fromRGB(48, 42, 46) else flagstoneDark
-						local underMat = if fortVarrash then Enum.Material.Basalt else Enum.Material.Limestone
-						local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.6, 1.4, math.max(1, (b - a).Magnitude - 1.0)), (a + b) / 2, underCol, underMat)
+					if isFortressStone then
+						local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.6, 1.4, math.max(1, (b - a).Magnitude - 1.0)), (a + b) / 2, flagstoneDark, Enum.Material.Limestone)
 						under.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff - 1.75, 0)
 					end
 				end
@@ -980,16 +977,20 @@ function Builder.Build(id: number, generation: number): any
 					end
 				end
 			elseif isSuspendedLink(layout, link.Id) and varrash and layout.Masonry == "VARRASH_FORTRESS" then
-				-- Floor 14 Sunscar Fortress bridges: weathered sandstone arch decks on basalt piers beside the lava, never in it.
+				-- Floor 14 Sunscar Fortress bridges: weathered sandstone causeways with natural sand/stone blending,
+				-- subtle staggered paving (no harsh stripes), and battered basalt piers beside the lava, never in it.
 				local fortBasalt = Color3.fromRGB(48, 42, 46)
+				local stoneWarm = Color3.fromRGB(174, 144, 106)
+				local stoneMuted = Color3.fromRGB(156, 128, 94)
+				local driftSandCol = Color3.fromRGB(154, 136, 108)
 				ramp.Color = varrashSandstone
 				ramp.Material = Enum.Material.Sandstone
 				if link.From == "Basin" then
 					local deepBottom = origin.Y + layout.Bottom - 7
-					local abutH = math.max(6, a.Y - deepBottom - 0.2)
+					local abutH = math.max(6, a.Y - deepBottom - 0.15)
 					local landA = origin + Vector3.new(link.LandingA.AX, link.LandingA.AY, link.LandingA.AZ)
-					local abutAt = a:Lerp(landA, 0.28)
-					local abut = part(model, "BridgeBankAbutment", Vector3.new(link.Width + 3.2, abutH, 10), Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), fortBasalt, Enum.Material.Basalt)
+					local abutAt = a:Lerp(landA, 0.22)
+					local abut = part(model, "BridgeBankAbutment", Vector3.new(link.Width + 1.4, abutH, 18), Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), fortBasalt, Enum.Material.Basalt)
 					abut.CFrame = CFrame.lookAt(Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.25, abutAt.Z), Vector3.new(b.X, a.Y - abutH / 2 - 0.25, b.Z))
 					abut.CanQuery = true
 					abut.CanTouch = false
@@ -1000,24 +1001,24 @@ function Builder.Build(id: number, generation: number): any
 					for _, frac in { 0.16, 0.31, 0.69, 0.84 } do
 						local pAt = a:Lerp(b, frac)
 						local pH = math.max(6, pAt.Y - deepBottom - 1.5)
-						local pier = part(model, "ScarBridgeBasaltPier", Vector3.new(link.Width - 2.0, pH, 9.0), Vector3.new(pAt.X, pAt.Y - pH / 2 - 1.6, pAt.Z), fortBasalt, Enum.Material.Basalt)
+						local pier = part(model, "ScarBridgeBasaltPier", Vector3.new(link.Width - 1.5, pH, 9.5), Vector3.new(pAt.X, pAt.Y - pH / 2 - 1.6, pAt.Z), fortBasalt, Enum.Material.Basalt)
 						pier.CFrame = CFrame.lookAt(pier.Position, pier.Position + flat)
 						pier.CanQuery = true
 						pier.CanTouch = false
 					end
 				end
-				local underRamp = decor(model, "BridgeStoneUnderside", Vector3.new(link.Width - 2.4, 1.5, math.max(1, delta.Magnitude - 1.2)), mid, fortBasalt, Enum.Material.Basalt)
-				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.65, 0)
-				local stoneA = a:Lerp(b, 0.08)
-				local stoneB = a:Lerp(b, 0.92)
-				local stones = math.max(3, math.floor(((stoneB - stoneA).Magnitude - 2) / 4.4))
+				local underRamp = decor(model, "BridgeStoneUnderside", Vector3.new(link.Width - 1.8, 2.8, math.max(1, delta.Magnitude - 1.0)), mid, fortBasalt, Enum.Material.Basalt)
+				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -3.15, 0)
+				local stoneA = a:Lerp(b, 0.06)
+				local stoneB = a:Lerp(b, 0.94)
+				local stones = math.max(3, math.floor(((stoneB - stoneA).Magnitude - 2) / 5.4))
 				for i = 1, stones do
 					local t = (i - 0.5) / stones
-					local stagger = math.sin(i * 1.7) * 1.4
+					local stagger = math.sin(i * 2.1 + delta.X * 0.03) * 2.4
 					local at = stoneA:Lerp(stoneB, t) + right * stagger
-					local stoneW = link.Width * (0.46 + ((i * 5) % 4) * 0.05)
-					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.14, 3.0), at, if i % 2 == 0 then varrashSandstone else varrashBasalt, if i % 2 == 0 then Enum.Material.Sandstone else Enum.Material.Slate)
-					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.21 + (i % 2) * 0.03, 0) * CFrame.Angles(0, math.rad(((i * 17) % 12) - 6), 0)
+					local stoneW = link.Width * (0.30 + ((i * 5) % 4) * 0.04)
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.10, 3.6), at, if i % 2 == 0 then stoneWarm else stoneMuted, Enum.Material.Sandstone)
+					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.09 + (i % 3) * 0.025, 0) * CFrame.Angles(0, math.rad(((i * 23) % 16) - 8), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and varrash then
 				-- Floor 13 ravine-spanning fused black obsidian & amber-glass arch bridge: solid surface over open chasm.
@@ -1172,16 +1173,29 @@ function Builder.Build(id: number, generation: number): any
 				local curbOffset = right * (side * (link.Width / 2 - 1.02))
 				local curbGroup = propGroup(model, "BridgeCurb")
 				local glassCurb = layout.Masonry == "VARRASH_GLASS" and visibleCurb
+				local fortCurb = layout.Masonry == "VARRASH_FORTRESS" and visibleCurb
 				local curbCol = if not visibleCurb then theme.TrimColor elseif glassCurb then Color3.fromRGB(32, 26, 34) elseif varrash then varrashSandstone else flagstoneDark
 				local curbMat = if not visibleCurb then theme.TrimMaterial elseif glassCurb then Enum.Material.Slate elseif varrash then Enum.Material.Sandstone else Enum.Material.Limestone
 				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, curbCol, curbMat, if visibleCurb then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.35, 0)
 				if visibleCurb then
-					-- Solmere mossy kerb, Varrash terracotta-sand cap, or Floor 13 translucent amber-glass parapet strip.
-					local capCol = if glassCurb then Color3.fromRGB(236, 138, 40) elseif varrash then Color3.fromRGB(175, 95, 65) else moss
-					local capMat = if glassCurb then Enum.Material.Glass elseif varrash then Enum.Material.Sand else Enum.Material.Grass
-					local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.5, 0.5, math.max(1, curbLen - 1)), mid + curbOffset, capCol, capMat, if glassCurb then 0.25 else nil)
-					cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.25, 0)
+					if fortCurb then
+						-- Natural weathered sandstone parapet cap plus spaced fortress merlon stones
+						local cap = decor(curbGroup, "BridgeSandCap", Vector3.new(2.5, 0.45, math.max(1, curbLen - 1)), mid + curbOffset, Color3.fromRGB(142, 118, 90), Enum.Material.Sandstone)
+						cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.15, 0)
+						local posts = math.max(2, math.floor(curbLen / 24))
+						for pIdx = 1, posts do
+							local pt = a:Lerp(b, pIdx / (posts + 1)) + curbOffset
+							local merlon = decor(curbGroup, "BridgeFortressMerlon", Vector3.new(2.7, 1.8, 3.6), pt, Color3.fromRGB(168, 138, 100), Enum.Material.Sandstone)
+							merlon.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.4, 0)
+						end
+					else
+						-- Solmere mossy kerb, Varrash terracotta-sand cap, or Floor 13 translucent amber-glass parapet strip.
+						local capCol = if glassCurb then Color3.fromRGB(236, 138, 40) elseif varrash then Color3.fromRGB(175, 95, 65) else moss
+						local capMat = if glassCurb then Enum.Material.Glass elseif varrash then Enum.Material.Sand else Enum.Material.Grass
+						local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.5, 0.5, math.max(1, curbLen - 1)), mid + curbOffset, capCol, capMat, if glassCurb then 0.25 else nil)
+						cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.25, 0)
+					end
 				end
 			end
 			continue

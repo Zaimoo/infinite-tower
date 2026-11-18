@@ -2874,6 +2874,12 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			for _, side in { -1, 1 } do
 				local pierH = (cross.Y - bottom) + 3.0
 				block("PortcullisGatePierBase", V(18, pierH, 22), V(cross.X + side * 28.5 * gs, cross.Y - pierH * 0.5, cross.Z + 16), fBasalt, Enum.Material.Basalt)
+				-- Stepped barbican wing walls connecting the gate piers cleanly into the front curtain walls
+				local wingX = cross.X + side * 53
+				local wingZ = cross.Z + 22
+				block("BarbicanWingBase", V(28, pierH + 2, 10), V(wingX, cross.Y - pierH * 0.5 + 1.0, wingZ), fBasalt, Enum.Material.Basalt)
+				block("BarbicanWingWall", V(28, 22, 8.5), V(wingX, cross.Y + 11.5, wingZ), fSand, Enum.Material.Sandstone)
+				block("BarbicanWingParapet", V(29, 2.4, 9.5), V(wingX, cross.Y + 23.0, wingZ), fTerra, Enum.Material.Slate)
 			end
 			if KitProps.Has("PortcullisGate") then
 				kitAt("PortcullisGate", gateCf, gs, f14Override)
@@ -2983,6 +2989,128 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 						local p = V(bx + math.cos(a) * (1.8 + k * 0.7), by + 1.0, bz + math.sin(a) * (1.8 + k * 0.7))
 						local sh = block("AmberGlassShard", V(0.85, 3.0 + (k % 2), 1.4), p, fShard, Enum.Material.Glass, nil, 0.22)
 						sh.CFrame = CFrame.new(origin + p) * CFrame.Angles(math.rad(28), a, math.rad(16))
+					end
+				end)
+			end
+		end
+
+		-- 6. Surrounding Fortress Curtain Walls & Watchtowers framing the Sunscar Citadel
+		local f14WallOverride = {
+			TRIM = { Color = fSand, Material = Enum.Material.Sandstone },
+			ACCENT = { Color = fTerra, Material = Enum.Material.Slate },
+			MOSS = { Color = fBasalt, Material = Enum.Material.Basalt },
+			WOOD = { Color = fTerra, Material = Enum.Material.Slate },
+		}
+		local wallScale = 1.45 * scale
+		local wallW = 32.1 * wallScale
+		local wallD = 7.673 * wallScale
+		local curtainPlacements = {
+			-- South barbican curtain wings connecting PortcullisGate wings to front watchtowers
+			{ -96, 72, 0.08, 4.5, 1.45 },
+			{ 96, 72, -0.08, 4.5, 1.45 },
+			-- North citadel corner & backdrop walls framing Sunscar Throne
+			{ -158, -228, -0.52, 15.0, 1.45 },
+			{ 158, -230, 0.52, 15.0, 1.45 },
+			{ -98, -244, -0.14, 17.5, 1.45 },
+			{ 98, -246, 0.14, 17.5, 1.45 },
+		}
+		for _, cw in curtainPlacements do
+			local wx, wz, wyaw, minY, mult = cw[1], cw[2], cw[3], cw[4], cw[5]
+			local ws = mult * scale
+			local cwW = 32.1 * ws
+			local cwD = 7.673 * ws
+			local halfX = math.abs(math.cos(wyaw)) * (cwW * 0.42) + math.abs(math.sin(wyaw)) * (cwD * 0.48)
+			local halfZ = math.abs(math.sin(wyaw)) * (cwW * 0.42) + math.abs(math.cos(wyaw)) * (cwD * 0.48)
+			if footprintClear(wx, wz, math.max(halfX, 7), math.max(halfZ, 7)) then
+				local wy = math.max(f14GroundAt(wx, wz) - 0.6, minY)
+				table.insert(reservedSpots, { wx, wz, 14 })
+				group("VarrashCurtainWall", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local plinthH = (wy - bottom) + 2.2
+					local plinth = block(
+						"CurtainWallPlinth",
+						V(cwW * 0.96, plinthH, cwD * 1.08),
+						V(wx, wy - plinthH * 0.5 + 0.8, wz),
+						fBasalt,
+						Enum.Material.Basalt
+					)
+					plinth.CFrame = CFrame.new(origin + V(wx, wy - plinthH * 0.5 + 0.8, wz)) * CFrame.Angles(0, wyaw, 0)
+					if KitProps.Has("CurtainWallRuins") then
+						kitAt("CurtainWallRuins", CFrame.new(wx, wy, wz) * CFrame.Angles(0, wyaw, 0), ws, f14WallOverride)
+					else
+						local wallBlk = block("CurtainWallCore", V(cwW * 0.9, 26, cwD * 0.8), V(wx, wy + 13, wz), fSand, Enum.Material.Sandstone)
+						wallBlk.CFrame = CFrame.new(origin + V(wx, wy + 13, wz)) * CFrame.Angles(0, wyaw, 0)
+					end
+				end)
+			end
+		end
+
+		-- Outer deck-rim bastion ramparts crowning West/East Galleries and Bastions
+		local deckParapets = {
+			{ -198, layout.Platforms.WestGallery.Y, 0, 66 },
+			{ 198, layout.Platforms.EastGallery.Y, -10, 66 },
+			{ -197, layout.Platforms.WestBastion.Y, -150, 64 },
+			{ 197, layout.Platforms.EastBastion.Y, -160, 64 },
+		}
+		for _, dp in deckParapets do
+			local px, py, pz, plen = dp[1], dp[2], dp[3], dp[4]
+			group("VarrashDeckParapet", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				block("DeckParapetWall", V(5.5, 16, plen), V(px, py + 7.5, pz), fSand, Enum.Material.Sandstone)
+				block("DeckParapetCoping", V(6.4, 2.0, plen + 1.0), V(px, py + 16.0, pz), fTerra, Enum.Material.Slate)
+				for _, mz in { -plen * 0.3, plen * 0.3 } do
+					block("DeckParapetMerlon", V(5.8, 3.2, 8.5), V(px, py + 18.6, pz + mz), fSand, Enum.Material.Sandstone)
+				end
+			end)
+		end
+
+		-- Connecting curtain walls spanning between each pair of mid-flank watchtowers
+		for _, fw in { { -194, -78, 9.5 }, { 194, -84, 9.5 } } do
+			local fx, fz, fy = fw[1], fw[2], fw[3]
+			group("VarrashFlankWall", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local plinthH = (fy - bottom) + 2.0
+				block("FlankWallPlinth", V(9.0, plinthH, 34), V(fx, fy - plinthH * 0.5 + 0.8, fz), fBasalt, Enum.Material.Basalt)
+				block("FlankWallBody", V(6.8, 22, 32), V(fx, fy + 11.5, fz), fSand, Enum.Material.Sandstone)
+				block("FlankWallCoping", V(7.8, 2.2, 33), V(fx, fy + 23.2, fz), fTerra, Enum.Material.Slate)
+			end)
+		end
+
+		local towerPlacements = {
+			-- Twin front gatehouse corner towers flanking the front barbican walls
+			{ -134, 66, 5.5, 34, true },
+			{ 134, 66, 5.5, 34, true },
+			-- Mid-flank chasm watchtowers bracketing the West & East gap walls
+			{ -194, -56, 8.5, 34, false },
+			{ 194, -62, 8.5, 34, false },
+			{ -194, -100, 10.5, 36, false },
+			{ 194, -106, 10.5, 36, false },
+			-- North citadel flanking towers beside the north curtain walls
+			{ -128, -236, 16.5, 38, false },
+			{ 128, -240, 16.5, 38, false },
+		}
+		for _, tw in towerPlacements do
+			local tx, tz, minY, towerH, lit = tw[1], tw[2], tw[3], tw[4], tw[5]
+			if footprintClear(tx, tz, 6.5, 6.5) then
+				local ty = math.max(f14GroundAt(tx, tz) - 0.5, minY)
+				table.insert(reservedSpots, { tx, tz, 13 })
+				group("VarrashBastionTower", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local plinthH = (ty - bottom) + 4.5
+					block("VarrashTowerPlinth", V(19.5, plinthH, 19.5), V(tx, ty - plinthH * 0.5 + 2.0, tz), fBasalt, Enum.Material.Basalt)
+					local shaft = block("VarrashTowerShaft", V(14.5, towerH, 14.5), V(tx, ty + towerH * 0.5 + 1.5, tz), fSand, Enum.Material.Sandstone)
+					block("VarrashTowerBand", V(15.6, 2.6, 15.6), V(tx, ty + towerH - 3.5, tz), fTerra, Enum.Material.Slate)
+					block("VarrashTowerCornice", V(17.8, 2.8, 17.8), V(tx, ty + towerH + 2.2, tz), fBasalt, Enum.Material.Basalt)
+					for _, mx in { -6.4, 6.4 } do
+						for _, mz in { -6.4, 6.4 } do
+							block("VarrashTowerMerlon", V(4.6, 4.2, 4.6), V(tx + mx, ty + towerH + 5.2, tz + mz), fSand, Enum.Material.Sandstone)
+						end
+					end
+					local slit = block("VarrashTowerSlit", V(1.1, 7.2, 15.1), V(tx, ty + towerH * 0.62 + 1.5, tz), fAmber, Enum.Material.Neon)
+					if lit then
+						pointLight(shaft, fAmber, 1.2, 38)
+					else
+						slit.Material = Enum.Material.Neon
 					end
 				end)
 			end
