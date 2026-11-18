@@ -524,6 +524,71 @@ local AUTHORED: {[number]: any} = {
 		},
 		Skylight = {X = 0, Z = -124, Radius = 36},
 	},
+	-- Floor 10, Matriarch's Hollow (Fungal Hollow, BOSS_ARENA): the Spore Matriarch's nest, and the floor
+	-- that plays least like Floor 9. Floor 9 climbs wings to spires against the north wall; here the boss dais
+	-- is a rock mesa in the MIDDLE of the nest, under the great oculus, and the terraces ring it: from the
+	-- Silk Shore the route laps the dais (west by the Egg Gallery and the West Cocoon Arcade, or east by the
+	-- Spinneret and the East Cocoon Arcade) to the Brood Pillar at the very back, the gate of the nest, and
+	-- the only way in is the Silk Stair from the pillar, inward and up across the brood pool to the dais. The
+	-- Matriarch is in view from every side of the lap.
+	[10] = {
+		Key = "fungal:10",
+		Name = "Matriarch's Hollow",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 196, Width = 480, Depth = 100},
+		WestGallery = {X = -205, Y = 8, Z = -30, Width = 86, Depth = 80},
+		EastGallery = {X = 205, Y = 12, Z = -30, Width = 86, Depth = 80},
+		WestBastion = {X = -160, Y = 16, Z = -215, Width = 86, Depth = 80},
+		EastBastion = {X = 160, Y = 20, Z = -215, Width = 86, Depth = 80},
+		-- The Brood Pillar: a deck on a silk-and-mushroom column at the back of the nest, the ring's low point.
+		Crossing = {X = 0, Y = 12, Z = -262, Width = 76, Depth = 68},
+		-- The dais: a rounded rock mesa in the middle of the nest (terrain), the boss arena.
+		Apex = {X = 0, Y = 28, Z = -60, Width = 140, Depth = 110},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"WestGallery", "WestBastion"}, {"EastGallery", "EastBastion"},
+			{"WestBastion", "Crossing"}, {"EastBastion", "Crossing"},
+			{"Crossing", "Apex"},
+		},
+		-- The wall stairs up to the cocoon arcades (the Silk Stair is stairs anyway: every Crossing -> Apex is).
+		Stairs = {WestGallery_WestBastion = true, EastGallery_EastBastion = true},
+		Names = {
+			Sanctuary = "The Last Lamp", Basin = "Silk Shore", WestGallery = "West Egg Gallery",
+			EastGallery = "Spinneret Ledge", WestBastion = "West Cocoon Arcade", EastBastion = "East Cocoon Arcade",
+			Crossing = "Brood Pillar", Apex = "Matriarch's Dais",
+		},
+		-- The Silk Stair lands on the dais' north side, so the boss portals stand at its south side, facing the
+		-- way the Masters came in, spread wide of the Veinweb heart between them.
+		Portals = {Side = "SOUTH", Spread = 44},
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			Decks = {Sanctuary = true, Crossing = true},
+			DeckThickness = {Crossing = 4},
+			Shapes = {Apex = {Round = 3.0, Grow = 4}},
+			-- The dais is in the middle: no shelf behind it (the ring's north terraces stand there).
+			NoApexShelf = true,
+			-- Silk spans hung over the brood pool: the back ring to the pillar, and the Silk Stair to the dais.
+			Bridges = {WestBastion_Crossing = true, EastBastion_Crossing = true, Crossing_Apex = true},
+			LiquidRise = 2.6,
+			FloorDip = 6,
+			WallBand = {Base = 34, Noise = 12},
+			Pools = {
+				{X = 0, Z = -46, RX = 124, RZ = 128},   -- the brood pool round the dais mesa
+				{X = 0, Z = -262, RX = 54, RZ = 42},    -- under the Brood Pillar
+				{X = -84, Z = -246, RX = 40, RZ = 28},  -- under the west span
+				{X = 84, Z = -246, RX = 40, RZ = 28},   -- under the east span
+			},
+			-- A made nest: few caps outside the heart, silk and stone instead.
+			GroveScale = 0.35,
+			GroundCover = {"SporeMoss", "GlowcapTuftB", "SporeMoss"},
+			GroundCoverCount = 140,
+			CliffVeins = 54,
+		},
+		-- The great oculus, over the dais in the middle of the nest.
+		Skylight = {X = 0, Z = -60, Radius = 70},
+	},
 	-- Floor 11, Cinder Gate (Ashen Dunes Introduction): wind-rippled black-ash plains swept by the central
 	-- Sleeping Dune (dead-end Dune Crest lookout) with a half-buried Varrash caravan wreck, banded Toll House
 	-- ruins, a cylindrical Watch Kiln tower, waystone-lined tracks, and the towering Cinder Gate in the basalt wall.
