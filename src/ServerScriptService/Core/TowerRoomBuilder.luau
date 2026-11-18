@@ -255,7 +255,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, KitCaravanseraiSkylight = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, GlassArchSpan = true, KitCaravanseraiSkylight = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -634,6 +634,28 @@ function Builder.Build(id: number, generation: number): any
 							end
 						end
 					end
+				elseif layout.Masonry == "VARRASH_GLASS" then
+					-- Suspended fused obsidian & amber-glass span deck (open ravine chasm visible underneath).
+					local obsidian = Color3.fromRGB(26, 22, 28)
+					local obsidianEdge = Color3.fromRGB(40, 34, 42)
+					local amberGlass = Color3.fromRGB(242, 146, 44)
+					local amberCore = Color3.fromRGB(218, 124, 34)
+					slab.Size = Vector3.new(terrace.Width, 3.0, terrace.Depth)
+					slab.Position = Vector3.new(topCenter.X, topCenter.Y - 1.5, topCenter.Z)
+					slab.Color = obsidian
+					slab.Material = Enum.Material.Slate
+					decor(model, "GlassArchKeel", Vector3.new(terrace.Width - 6, 2.2, math.max(8, terrace.Depth * 0.52)), topCenter + Vector3.new(0, -4.1, 0), obsidianEdge, Enum.Material.Basalt)
+					for _, sz in { -1, 1 } do
+						decor(model, "GlassArchAmberVeinZ", Vector3.new(terrace.Width - 2, 1.1, 1.2), topCenter + Vector3.new(0, -2.2, sz * (terrace.Depth / 2 - 0.1)), amberGlass, Enum.Material.Glass, 0.22)
+						decor(model, "GlassArchGlowSeamZ", Vector3.new(terrace.Width - 10, 0.45, 0.45), topCenter + Vector3.new(0, -3.5, sz * (terrace.Depth * 0.24)), amberCore, Enum.Material.Neon)
+					end
+					for _, sx in { -1, 1 } do
+						decor(model, "GlassArchAmberVeinX", Vector3.new(1.2, 1.1, math.max(1, terrace.Depth - 3.0)), topCenter + Vector3.new(sx * (terrace.Width / 2 - 0.1), -2.2, 0), amberGlass, Enum.Material.Glass, 0.22)
+					end
+					-- Surface vitrified amber-glass fissure inlays across Crossing deck (staggered well above slab/landings at +0.16)
+					for gIdx = -1, 1, 2 do
+						decor(model, "GlassDeckInlay", Vector3.new(terrace.Width * 0.68, 0.10, 1.1), topCenter + Vector3.new(0, 0.16, gIdx * 10), amberGlass, Enum.Material.Glass, 0.2)
+					end
 				else
 					slab.Color = solmereLimestone
 					slab.Material = Enum.Material.Limestone
@@ -723,9 +745,10 @@ function Builder.Build(id: number, generation: number): any
 				p.CanCollide = true
 				p.CanQuery = true
 			else
-				p.Color = if varrash then varrashSandstone else solmereLimestone
-				p.Material = if varrash then Enum.Material.Sandstone else Enum.Material.Limestone
-				if isFortressStone or layout.Masonry == "VARRASH_DECK" then
+				local glassMasonry = layout.Masonry == "VARRASH_GLASS"
+				p.Color = if glassMasonry then Color3.fromRGB(28, 24, 30) elseif varrash then varrashSandstone else solmereLimestone
+				p.Material = if glassMasonry then Enum.Material.Slate elseif varrash then Enum.Material.Sandstone else Enum.Material.Limestone
+				if isFortressStone or layout.Masonry == "VARRASH_DECK" or glassMasonry then
 					-- Stack multiple landings on the same terrace by +0.03 so overlapping landings never z-fight,
 					-- and start at +0.05 above TraversalRamp (+0.01) and Slab (0.00) and below medallions/flagstones (+0.14+).
 					local tKey = terraceName or ""
@@ -761,26 +784,51 @@ function Builder.Build(id: number, generation: number): any
 
 		if link.Kind == "STAIRS" then
 			local steps = math.max(1, math.ceil(math.abs(delta.Y)))
-			local rootStair = isSuspendedLink(layout, link.Id)
+			local rootStair = isSuspendedLink(layout, link.Id) and not varrash
+			local glassStair = varrash and layout.Masonry == "VARRASH_GLASS"
+			local obsidianA = Color3.fromRGB(24, 20, 26)
+			local obsidianB = Color3.fromRGB(34, 28, 36)
+			local amberInlay = Color3.fromRGB(218, 128, 36)
 			for step = 1, steps do
 				local t = (step - 0.5) / steps
 				local top = a.Y + delta.Y * step / steps
 				local center = a + flat * t
 				local baseTreadW = if rootStair then link.Width * (0.84 + 0.14 * math.sin(step * 1.15)) else link.Width
 				local treadW = baseTreadW - (step % 2) * 0.08
+				local treadCol = if solmere then (if step % 2 == 0 then flagstone else flagstoneDark)
+					elseif glassStair then (if step % 2 == 0 then obsidianA else obsidianB)
+					elseif varrash then (if step % 2 == 0 then varrashSandstone else varrashBasalt)
+					else theme.TrimColor
+				local treadMat = if solmere then Enum.Material.Limestone
+					elseif glassStair then (if step % 2 == 0 then Enum.Material.Glass else Enum.Material.Basalt)
+					elseif varrash then (if step % 2 == 0 then Enum.Material.Sandstone else Enum.Material.Slate)
+					else theme.TrimMaterial
 				local tread = part(
 					model,
 					"GrandStairTread",
 					Vector3.new(treadW, 2, flat.Magnitude / steps + 0.18),
 					Vector3.new(center.X, top - 1, center.Z),
-					if solmere then (if step % 2 == 0 then flagstone else flagstoneDark) elseif varrash then (if step % 2 == 0 then varrashSandstone else varrashBasalt) else theme.TrimColor,
-					if solmere then Enum.Material.Limestone elseif varrash then (if step % 2 == 0 then Enum.Material.Sandstone else Enum.Material.Slate) else theme.TrimMaterial
+					treadCol,
+					treadMat
 				)
 				tread.CFrame = CFrame.lookAt(tread.Position, tread.Position + flat) * (if rootStair then CFrame.Angles(0, math.rad(math.sin(step * 1.7) * 2.5), 0) else CFrame.identity)
 				structure(tread,link.Id)
+				if glassStair and step % 2 == 1 then
+					local inlay = decor(model, "GlassStairAmberInlay", Vector3.new(treadW * 0.72, 0.08, 0.42), Vector3.new(center.X, top + 0.05, center.Z), amberInlay, Enum.Material.Neon)
+					inlay.CFrame = CFrame.lookAt(inlay.Position, inlay.Position + flat) * CFrame.new(0, 0, -0.35)
+				end
 				if natural then continue end
 				local runner = decor(model, "GrandStairRunner", Vector3.new(link.Width * 0.36, 0.12, flat.Magnitude / steps + 0.2), Vector3.new(center.X, top + 0.08, center.Z), theme.AccentColor, theme.TrimMaterial)
 				runner.CFrame = CFrame.lookAt(runner.Position, runner.Position + flat)
+			end
+			if glassStair and isSuspendedLink(layout, link.Id) then
+				-- Black obsidian stringer keel underneath suspended glass stairs
+				local underStair = decor(model, "GlassStairUnderside", Vector3.new(link.Width - 3.0, 2.2, math.max(1, delta.Magnitude - 1.0)), mid, obsidianA, Enum.Material.Basalt)
+				underStair.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.1, 0)
+				for _, side in { -1, 1 } do
+					local seam = decor(model, "GlassStairSideVein", Vector3.new(0.5, 0.65, math.max(1, delta.Magnitude - 2.0)), mid + right * (side * (link.Width * 0.44)), amberInlay, Enum.Material.Glass, 0.2)
+					seam.CFrame = CFrame.lookAt(seam.Position, seam.Position + delta) * CFrame.new(0, -1.35, 0)
+				end
 			end
 			if rootStair then
 				-- Braided Heartroot trunks climbing both sides across landings & hugging underneath the root-cut stairs
@@ -854,6 +902,27 @@ function Builder.Build(id: number, generation: number): any
 						end
 						prevPt = nextPt
 					end
+				end
+			elseif isSuspendedLink(layout, link.Id) and varrash then
+				-- Floor 13 ravine-spanning fused black obsidian & amber-glass arch bridge: solid surface over open chasm.
+				local obsidian = Color3.fromRGB(26, 22, 28)
+				local amberGlass = Color3.fromRGB(238, 142, 42)
+				ramp.Color = obsidian
+				ramp.Material = Enum.Material.Slate
+				local underRamp = decor(model, "BridgeGlassUnderside", Vector3.new(link.Width - 2.6, 2.0, math.max(1, delta.Magnitude - 1.0)), mid, varrashBasalt, Enum.Material.Basalt)
+				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.55, 0)
+				for _, side in { -1, 1 } do
+					local vein = decor(model, "BridgeAmberVein", Vector3.new(0.65, 0.65, math.max(1, delta.Magnitude - 2.0)), mid + right * (side * (link.Width * 0.44)), amberGlass, Enum.Material.Glass, 0.22)
+					vein.CFrame = CFrame.lookAt(vein.Position, vein.Position + delta) * CFrame.new(0, -1.55, 0)
+				end
+				local stoneA = a:Lerp(b, 0.08)
+				local stoneB = a:Lerp(b, 0.92)
+				local stones = math.max(3, math.floor(((stoneB - stoneA).Magnitude - 2) / 5.5))
+				for i = 1, stones do
+					local t = (i - 0.5) / stones
+					local at = stoneA:Lerp(stoneB, t)
+					local band = decor(model, "RampStepLip", Vector3.new(link.Width * 0.58, 0.10, 0.65), at, if i % 2 == 0 then amberGlass else varrashBasalt, if i % 2 == 0 then Enum.Material.Glass else Enum.Material.Slate, if i % 2 == 0 then 0.2 else nil)
+					band.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.08 + (i % 2) * 0.03, 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) then
 				-- Floor 3 Gorge-spanning Heartroot bridge: invisible flat collider slab wrapped in densely braided curved
@@ -986,13 +1055,16 @@ function Builder.Build(id: number, generation: number): any
 			for _, side in { -1, 1 } do
 				local curbOffset = right * (side * (link.Width / 2 - 1.02))
 				local curbGroup = propGroup(model, "BridgeCurb")
-				local curbCol = if not visibleCurb then theme.TrimColor elseif varrash then varrashSandstone else flagstoneDark
-				local curbMat = if not visibleCurb then theme.TrimMaterial elseif varrash then Enum.Material.Sandstone else Enum.Material.Limestone
+				local glassCurb = layout.Masonry == "VARRASH_GLASS" and visibleCurb
+				local curbCol = if not visibleCurb then theme.TrimColor elseif glassCurb then Color3.fromRGB(32, 26, 34) elseif varrash then varrashSandstone else flagstoneDark
+				local curbMat = if not visibleCurb then theme.TrimMaterial elseif glassCurb then Enum.Material.Slate elseif varrash then Enum.Material.Sandstone else Enum.Material.Limestone
 				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, curbCol, curbMat, if visibleCurb then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.35, 0)
 				if visibleCurb then
-					-- Solmere mossy kerb, or Varrash drifted-sand / terracotta cap along bridge parapets.
-					local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.5, 0.5, math.max(1, curbLen - 1)), mid + curbOffset, if varrash then Color3.fromRGB(175, 95, 65) else moss, if varrash then Enum.Material.Sand else Enum.Material.Grass)
+					-- Solmere mossy kerb, Varrash terracotta-sand cap, or Floor 13 translucent amber-glass parapet strip.
+					local capCol = if glassCurb then Color3.fromRGB(236, 138, 40) elseif varrash then Color3.fromRGB(175, 95, 65) else moss
+					local capMat = if glassCurb then Enum.Material.Glass elseif varrash then Enum.Material.Sand else Enum.Material.Grass
+					local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.5, 0.5, math.max(1, curbLen - 1)), mid + curbOffset, capCol, capMat, if glassCurb then 0.25 else nil)
 					cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.25, 0)
 				end
 			end
@@ -1061,7 +1133,7 @@ function Builder.Build(id: number, generation: number): any
 	end
 	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme, field)
 
-	if layout.Authored ~= "ashen:1" and layout.Authored ~= "ashen:2" then
+	if layout.PathStyle ~= "VARRASH" then
 		for x = -width / 2 + 50, width / 2 - 40, 100 do
 			for z = -depth / 2 + 50, depth / 2 - 40, 100 do
 				local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 42, z), theme.LightColor, Enum.Material.SmoothPlastic, 1)

@@ -290,6 +290,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 238, 212), Saturation = 0.04, ExposureCompensation = 0.02, BloomIntensity = 0.38,
 		SunRaysIntensity = 0.22, SunRaysSpread = 0.75,
 	},
+	-- Floor 13, Glasswind Ravine: dusk in the ravine. Low orange light from the west, cool violet shade, amber glow through the Glass Arch.
+	[13] = {
+		Ambient = c(74, 64, 84), OutdoorAmbient = c(118, 94, 98), ColorShift_Top = c(255, 166, 92), ColorShift_Bottom = c(68, 58, 92),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(198, 146, 128), AtmosphereDecay = c(128, 86, 82), AtmosphereHaze = 1.30,
+		TintColor = c(255, 230, 208), Saturation = 0.10, ExposureCompensation = 0.00, BloomIntensity = 0.42,
+		SunRaysIntensity = 0.20, SunRaysSpread = 0.78,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

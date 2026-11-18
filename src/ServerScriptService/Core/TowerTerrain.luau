@@ -213,6 +213,15 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 						local ripple = (feat.RippleAmp or 0.22) * math.sin((lx + lz * 0.35) * 0.45) * env
 						base = math.max(base, bottom + peak + ripple)
 					end
+				elseif feat.Kind == "RAVINE" then
+					if z >= feat.ZStart and z <= feat.ZEnd then
+						local meander = (feat.NoiseAmp or 8) * fbm(z / 55, 0, seed + 51, 2)
+						local dist = math.abs(x - (feat.X or 0) - meander)
+						if dist < feat.HalfWidth then
+							-- Deep wind-scoured obsidian canyon trench along the ravine spine
+							base = bottom
+						end
+					end
 				end
 			end
 		end

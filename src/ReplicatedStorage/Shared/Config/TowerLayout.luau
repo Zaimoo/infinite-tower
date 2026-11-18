@@ -374,6 +374,54 @@ local AUTHORED: {[number]: any} = {
 			Crossing = "Caravanserai Roof", WestGallery = "Spice Vault", Apex = "Caravan Master's Tomb",
 		},
 	},
+	-- Floor 13, Glasswind Ravine (Ashen Dunes Expanded): a deep north-south obsidian canyon splits
+	-- two wall ledges (West Ledge high on the west rim, East Ledge lower on the east rim), joined
+	-- only across a suspended fused-glass Glass Arch (Crossing); east ledge reaches Apex only via the arch.
+	[13] = {
+		Key = "ashen:3",
+		Name = "Glasswind Ravine",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Masonry = "VARRASH_GLASS",
+		Decks = {
+			Crossing = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true },
+			Links = {
+				WestGallery_Crossing = true,
+				EastGallery_Crossing = true,
+				Crossing_Apex = true,
+			},
+		},
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "RAVINE", X = 0, ZStart = -142, ZEnd = 74, HalfWidth = 48, NoiseAmp = 8 },
+			{ Kind = "DUNE", X = -108, Z = 44, Width = 76, Length = 80, Height = 8.0, Yaw = 16, CrestSway = 0.14, SlipSteep = 0.95 },
+		},
+		Basin = {X = 0, Y = 0, Z = 124, Width = 400, Depth = 104},
+		WestGallery = {X = -140, Y = 10, Z = -34, Width = 80, Depth = 110},
+		EastGallery = {X = 140, Y = 6, Z = -56, Width = 80, Depth = 110},
+		Crossing = {X = 0, Y = 5, Z = -78, Width = 64, Depth = 44},
+		Apex = {X = 0, Y = 18, Z = -185, Width = 110, Depth = 84},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"},
+			{"Basin", "EastGallery"},
+			{"WestGallery", "Crossing"},
+			{"EastGallery", "Crossing"},
+			{"Crossing", "Apex"},
+			{"WestGallery", "Apex"},
+		},
+		Patrols = {
+			WEST_LEDGE = { "WestGallery", "Apex" },
+			ARCH_CROSSING = { "WestGallery", "Crossing", "EastGallery" },
+		},
+		Names = {
+			Sanctuary = "Ravine Threshold", Basin = "Ravine Mouth", WestGallery = "West Ledge",
+			EastGallery = "East Ledge", Crossing = "Glass Arch", Apex = "Lightning Scar",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any
@@ -702,7 +750,8 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 			point(room.Width*0.22, basin.Y, backZ),
 		},
 	}
-	if index >= 3 then
+	local replaceGeneric = room.Patrols ~= nil and room.Authored ~= "verdant:4"
+	if index >= 3 and not replaceGeneric then
 		for _, side in {"West", "East"} do
 			local gallery = p[side.."Gallery"]
 			local route = {point(gallery.X, gallery.Y, gallery.Z)}
@@ -713,7 +762,7 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 			routes["GALLERY_"..string.upper(side)] = route
 		end
 	end
-	if index >= 4 then
+	if index >= 4 and not replaceGeneric then
 		local west, east = assert(pathBetween("WestBastion", "Apex")), assert(pathBetween("EastBastion", "Apex"))
 		local ring = {point(p.WestBastion.X, p.WestBastion.Y, p.WestBastion.Z)}
 		for _, link in west do
