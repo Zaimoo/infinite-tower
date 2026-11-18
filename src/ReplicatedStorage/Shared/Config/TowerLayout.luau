@@ -100,6 +100,111 @@ local AUTHORED: {[number]: any} = {
 			WestGallery = "Shrine Glade", EastGallery = "Banyan Well", Apex = "Dawn Gate",
 		},
 	},
+	-- Floor 2, Broken Aqueduct (Verdant Ruins): an asymmetric diagonal layout. The aqueduct snapped
+	-- mid-span between AqueductSouth (Crossing) and AqueductNorth, forcing a detour through the
+	-- Mill Ruin (EastGallery) to reach the off-centre Wellhead Shrine (Apex) in the north-west.
+	[2] = {
+		Key = "verdant:2",
+		Name = "Broken Aqueduct",
+		PathStyle = "SOLMERE",
+		Basin = {X = 0, Y = 0, Z = 112, Width = 360, Depth = 96},
+		WestGallery = {X = -134, Y = 6, Z = -6, Width = 88, Depth = 76},
+		Crossing = {X = 16, Y = 10, Z = 2, Width = 56, Depth = 64},
+		EastGallery = {X = 138, Y = 4, Z = -36, Width = 84, Depth = 76},
+		ExtraPlatforms = {
+			AqueductNorth = {X = 16, Y = 12, Z = -96, Width = 56, Depth = 56},
+		},
+		Apex = {X = -68, Y = 14, Z = -174, Width = 104, Depth = 76},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "Crossing"}, {"Basin", "EastGallery"},
+			{"EastGallery", "AqueductNorth"}, {"AqueductNorth", "Apex"}, {"WestGallery", "Apex"},
+		},
+		Stairs = {
+			WestGallery_Apex = true,
+		},
+		Names = {
+			Sanctuary = "Springhead Gate", Basin = "Mill Pond", WestGallery = "Cistern Plaza",
+			Crossing = "Aqueduct South", AqueductNorth = "Aqueduct North", EastGallery = "Mill Ruin",
+			Apex = "Wellhead Shrine",
+		},
+	},
+	-- Floor 3, Rootway Crossing (Verdant Ruins): an east-west river gorge splits the south bank (Fern Bank)
+	-- from the north cliff (Root-Throne), bridged by three Heartroot spans at different elevations: The Knot
+	-- (central root tangle island), Root Perch (west arched root bridge), and Hollow Stump (east felled giant).
+	[3] = {
+		Key = "verdant:3",
+		Name = "Rootway Crossing",
+		PathStyle = "SOLMERE",
+		Basin = {X = 0, Y = 0, Z = 124, Width = 400, Depth = 108},
+		Crossing = {X = 0, Y = 5, Z = 0, Width = 74, Depth = 60},
+		WestGallery = {X = -150, Y = 10, Z = -26, Width = 84, Depth = 76},
+		EastGallery = {X = 152, Y = 6, Z = -34, Width = 84, Depth = 76},
+		Apex = {X = 0, Y = 18, Z = -182, Width = 104, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "Crossing"}, {"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"Crossing", "Apex"}, {"WestGallery", "Apex"}, {"EastGallery", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Fallen Gate", Basin = "Fern Bank", Crossing = "The Knot",
+			WestGallery = "Root Perch", EastGallery = "Hollow Stump", Apex = "Root-Throne",
+		},
+	},
+	-- Floor 4, Vinebound Bastion (Verdant Ruins): a strangler-fig-breached Solmere fortress. An Outer Ward
+	-- marsh meadow looks across a green moat to the Gatehouse & flanking Barracks/Sun Shrine wall-walks,
+	-- with West & East Bastion towers and the roofless Inner Keep behind.
+	[4] = {
+		Key = "verdant:4",
+		Name = "Vinebound Bastion",
+		PathStyle = "SOLMERE",
+		Basin = {X = 0, Y = 0, Z = 160, Width = 440, Depth = 114},
+		Crossing = {X = 0, Y = 5, Z = 48, Width = 74, Depth = 60},
+		WestGallery = {X = -158, Y = 8, Z = 12, Width = 86, Depth = 78},
+		EastGallery = {X = 158, Y = 8, Z = 4, Width = 86, Depth = 78},
+		WestBastion = {X = -152, Y = 14, Z = -140, Width = 84, Depth = 76},
+		EastBastion = {X = 152, Y = 16, Z = -150, Width = 84, Depth = 76},
+		Apex = {X = 0, Y = 22, Z = -198, Width = 104, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "Crossing"}, {"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"Crossing", "WestGallery"}, {"Crossing", "EastGallery"},
+			{"WestGallery", "WestBastion"}, {"EastGallery", "EastBastion"},
+			{"WestBastion", "Apex"}, {"EastBastion", "Apex"},
+			{"Crossing", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Fallen Gate", Basin = "Outer Ward", Crossing = "Gatehouse",
+			WestGallery = "Barracks", EastGallery = "Sun Shrine",
+			WestBastion = "West Tower", EastBastion = "East Tower", Apex = "Inner Keep",
+		},
+	},
+	-- Floor 5, Mossbound Court (Verdant Ruins Boss Arena): sunken amphitheatre cenote ringed by tiered Solmere
+	-- colonnade galleries, cascading falls, and a central sunbridge causeway rising to the 140x110 Mossbound Dais.
+	[5] = {
+		Key = "verdant:5",
+		Name = "Mossbound Court",
+		PathStyle = "SOLMERE",
+		Basin = {X = 0, Y = 0, Z = 176, Width = 480, Depth = 108},
+		Crossing = {X = 0, Y = 5, Z = 40, Width = 74, Depth = 60},
+		WestGallery = {X = -176, Y = 6, Z = 12, Width = 86, Depth = 80},
+		EastGallery = {X = 176, Y = 8, Z = 6, Width = 86, Depth = 80},
+		WestBastion = {X = -160, Y = 14, Z = -126, Width = 86, Depth = 80},
+		EastBastion = {X = 162, Y = 16, Z = -134, Width = 86, Depth = 80},
+		Apex = {X = 0, Y = 28, Z = -222, Width = 140, Depth = 110},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "Crossing"}, {"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"WestGallery", "WestBastion"}, {"EastGallery", "EastBastion"},
+			{"WestBastion", "Apex"}, {"EastBastion", "Apex"},
+			{"Crossing", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Fallen Gate", Basin = "Cenote Rim", Crossing = "Sunbridge",
+			WestGallery = "West Terrace", EastGallery = "East Terrace",
+			WestBastion = "Northwest Tier", EastBastion = "Northeast Tier", Apex = "Mossbound Dais",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any
@@ -126,6 +231,11 @@ local function build(index: number, v: any?): any
 		platform("WestBastion", -w*.28, 14, -d*.31, 84, 76)
 		platform("EastBastion", w*.28, 14, -d*.31, 84, 76)
 	end
+	if v and v.ExtraPlatforms then
+		for id, o in v.ExtraPlatforms do
+			platform(id, o.X, o.Y, o.Z, o.Width, o.Depth)
+		end
+	end
 	local function link(a, b)
 		local p, q = platforms[a], platforms[b]
 		local dx, dz = q.X-p.X, q.Z-p.Z
@@ -151,6 +261,9 @@ local function build(index: number, v: any?): any
 		local connector = {From=a, To=b, AX=p.X+ux*insetA, AZ=p.Z+uz*insetA, AY=p.Y,
 			BX=q.X-ux*insetB, BZ=q.Z-uz*insetB, BY=q.Y, Width=28}
 		landings(connector,ux,uz,math.max(20,2*math.abs(insetA-edgeA)+12),math.max(20,2*math.abs(insetB-edgeB)+12))
+		if v and v.Stairs and v.Stairs[connector.Id] then
+			connector.Kind = "STAIRS"
+		end
 		table.insert(links, connector)
 	end
 	-- A path from a to b; on a varied floor it may wind through a bend terrace beside the straight line
@@ -437,6 +550,25 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 		end
 		table.insert(ring, point(p.EastBastion.X, p.EastBastion.Y, p.EastBastion.Z))
 		routes.BASTION_RING = ring
+	end
+	if room.Authored == "verdant:4" then
+		local ww = pathBetween("Crossing", "WestGallery")
+		local we = pathBetween("Crossing", "EastGallery")
+		if ww and we then
+			local wallWalk = { point(p.WestGallery.X, p.WestGallery.Y, p.WestGallery.Z) }
+			for i = #ww, 1, -1 do
+				local link = ww[i]
+				table.insert(wallWalk, point(link.BX, link.BY, link.BZ))
+				table.insert(wallWalk, point(link.AX, link.AY, link.AZ))
+			end
+			table.insert(wallWalk, point(p.Crossing.X, p.Crossing.Y, p.Crossing.Z))
+			for _, link in we do
+				table.insert(wallWalk, point(link.AX, link.AY, link.AZ))
+				table.insert(wallWalk, point(link.BX, link.BY, link.BZ))
+			end
+			table.insert(wallWalk, point(p.EastGallery.X, p.EastGallery.Y, p.EastGallery.Z))
+			routes.WALL_WALK = wallWalk
+		end
 	end
 	return routes
 end

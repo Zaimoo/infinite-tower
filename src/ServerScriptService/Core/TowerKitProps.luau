@@ -53,7 +53,7 @@ function TowerKitProps.Ready(): boolean
 end
 
 function TowerKitProps.Size(name: string): Vector3
-	local t = Kit.Templates[name]
+	local t = Kit.Templates[name] or Kit.ExtraTemplates[name]
 	return if t then t.Size else Vector3.one
 end
 
@@ -88,7 +88,7 @@ function TowerKitProps.Place(parent: Instance, name: string, baseCF: CFrame, sca
 	end
 	-- Roots and rock feet may sink into their support, but never more than MAX_SINK: the settle pass probes
 	-- from 4 studs above a prop's lowest point and must start above the ground it stands on.
-	local spec = Kit.Templates[name]
+	local spec = Kit.Templates[name] or Kit.ExtraTemplates[name]
 	local sink = if spec then -spec.Min.Y * scale.Y else 0
 	if sink > TowerKitProps.MAX_SINK then
 		baseCF += Vector3.new(0, sink - TowerKitProps.MAX_SINK, 0)

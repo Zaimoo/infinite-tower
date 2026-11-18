@@ -1,0 +1,104 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CenoteCascadeSpillway": {
+      "Min": [
+        -11.5,
+        0.0,
+        -13.8
+      ],
+      "Roles": {
+        "ACCENT": 348,
+        "MOSS": 160,
+        "TRIM": 731,
+        "WOOD": 56
+      },
+      "Size": [
+        23.0,
+        30.2,
+        27.1
+      ],
+      "Triangles": 1295
+    },
+    "CenoteColonnadeDome": {
+      "Min": [
+        -62.791,
+        -0.258,
+        -34.0
+      ],
+      "Roles": {
+        "ACCENT": 597,
+        "GOLD": 112,
+        "MOSS": 400,
+        "TRIM": 2200,
+        "WOOD": 92
+      },
+      "Size": [
+        125.819,
+        67.285,
+        45.009
+      ],
+      "Triangles": 3401
+    },
+    "GlowLilyCluster": {
+      "Min": [
+        -5.453,
+        0.063,
+        -4.2
+      ],
+      "Roles": {
+        "FOLIAGE": 108,
+        "GLOW": 447,
+        "GOLD": 298,
+        "MOSS": 20,
+        "WOOD": 56
+      },
+      "Size": [
+        10.516,
+        3.532,
+        9.0
+      ],
+      "Triangles": 929
+    },
+    "HeartrootMotherHeart": {
+      "Min": [
+        -37.988,
+        -2.197,
+        -28.69
+      ],
+      "Roles": {
+        "FOLIAGE": 400,
+        "GLOW": 174,
+        "MOSS": 160,
+        "WOOD": 542
+      },
+      "Size": [
+        73.643,
+        90.59,
+        48.352
+      ],
+      "Triangles": 1276
+    },
+    "SolmereColonnadeWing": {
+      "Min": [
+        -27.6,
+        -0.525,
+        -8.579
+      ],
+      "Roles": {
+        "ACCENT": 498,
+        "GOLD": 96,
+        "MOSS": 160,
+        "TRIM": 952,
+        "WOOD": 80
+      },
+      "Size": [
+        55.2,
+        36.962,
+        17.079
+      ],
+      "Triangles": 1786
+    }
+  },
+  "Unit": "studs"
+}

@@ -1,0 +1,104 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CurtainWallRuins": {
+      "Min": [
+        -16.1,
+        -0.475,
+        -3.178
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "MOSS": 240,
+        "TRIM": 605,
+        "WOOD": 46
+      },
+      "Size": [
+        32.1,
+        18.875,
+        7.673
+      ],
+      "Triangles": 935
+    },
+    "GatehouseArch": {
+      "Min": [
+        -38.5,
+        -0.657,
+        -6.205
+      ],
+      "Roles": {
+        "ACCENT": 368,
+        "GOLD": 224,
+        "MOSS": 240,
+        "TRIM": 1562,
+        "WOOD": 132
+      },
+      "Size": [
+        77.0,
+        30.357,
+        14.304
+      ],
+      "Triangles": 2526
+    },
+    "VineboundGuardian": {
+      "Min": [
+        -5.203,
+        -0.007,
+        -4.63
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "GLOW": 64,
+        "MOSS": 80,
+        "TRIM": 474,
+        "WOOD": 46
+      },
+      "Size": [
+        10.405,
+        14.987,
+        9.137
+      ],
+      "Triangles": 708
+    },
+    "VineboundKeep": {
+      "Min": [
+        -23.441,
+        -0.201,
+        -13.767
+      ],
+      "Roles": {
+        "ACCENT": 234,
+        "GOLD": 128,
+        "MOSS": 160,
+        "TRIM": 916,
+        "WOOD": 170
+      },
+      "Size": [
+        46.67,
+        47.701,
+        22.501
+      ],
+      "Triangles": 1608
+    },
+    "VineboundTower": {
+      "Min": [
+        -12.37,
+        -1.165,
+        -12.661
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "MOSS": 320,
+        "TRIM": 675,
+        "WOOD": 360
+      },
+      "Size": [
+        25.625,
+        51.665,
+        24.861
+      ],
+      "Triangles": 1399
+    }
+  },
+  "Unit": "studs"
+}
