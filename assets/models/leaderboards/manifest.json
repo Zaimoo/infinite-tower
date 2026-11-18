@@ -1,0 +1,214 @@
+{
+  "leaderboard_pediment_frame": {
+    "TemplateId": "leaderboard_pediment_frame",
+    "FBX": "leaderboard_pediment_frame.fbx",
+    "Triangles": 2056,
+    "Parts": [
+      {
+        "Name": "Pediment_PlinthBase",
+        "SubCollection": "leaderboard_pediment_frame",
+        "Offset": [
+          0.0,
+          1.0,
+          0.12
+        ],
+        "Size": [
+          13.8,
+          2.0,
+          3.3
+        ],
+        "Material": "Slate",
+        "Color": [
+          42,
+          46,
+          58
+        ],
+        "Collidable": true,
+        "MeshId": "rbxassetid://70463826097423"
+      },
+      {
+        "Name": "Pediment_Pillars",
+        "SubCollection": "leaderboard_pediment_frame",
+        "Offset": [
+          0.0,
+          8.2,
+          0.16
+        ],
+        "Size": [
+          13.06,
+          12.72,
+          2.18
+        ],
+        "Material": "Slate",
+        "Color": [
+          54,
+          59,
+          74
+        ],
+        "Collidable": true,
+        "MeshId": "rbxassetid://121750596862487"
+      },
+      {
+        "Name": "Pediment_GableRoof",
+        "SubCollection": "leaderboard_pediment_frame",
+        "Offset": [
+          0.0,
+          17.1652,
+          -0.0425
+        ],
+        "Size": [
+          15.2801,
+          5.5704,
+          2.695
+        ],
+        "Material": "Slate",
+        "Color": [
+          46,
+          50,
+          64
+        ],
+        "Collidable": true,
+        "MeshId": "rbxassetid://72389884430099"
+      },
+      {
+        "Name": "Pediment_ObsidianBacking",
+        "SubCollection": "leaderboard_pediment_frame",
+        "Offset": [
+          0.0,
+          8.2,
+          0.845
+        ],
+        "Size": [
+          10.1,
+          12.6,
+          1.15
+        ],
+        "Material": "Basalt",
+        "Color": [
+          24,
+          27,
+          36
+        ],
+        "Collidable": true,
+        "MeshId": "rbxassetid://138767837085602"
+      }
+    ]
+  },
+  "leaderboard_power_monolith": {
+    "TemplateId": "leaderboard_power_monolith",
+    "FBX": "leaderboard_power_monolith.fbx",
+    "Triangles": 8448,
+    "Parts": [
+      {
+        "Name": "Monolith_SteppedBase",
+        "SubCollection": "leaderboard_power_monolith",
+        "Offset": [
+          0.0,
+          1.025,
+          0.16
+        ],
+        "Size": [
+          15.0,
+          2.05,
+          3.55
+        ],
+        "Material": "Basalt",
+        "Color": [
+          34,
+          38,
+          50
+        ],
+        "Collidable": true,
+        "MeshId": "rbxassetid://90623071203616"
+      },
+      {
+        "Name": "Monolith_ArchStones",
+        "SubCollection": "leaderboard_power_monolith",
+        "Offset": [
+          0.0,
+          11.295,
+          0.2325
+        ],
+        "Size": [
+          13.4698,
+          18.93,
+          2.655
+        ],
+        "Material": "Basalt",
+        "Color": [
+          30,
+          34,
+          46
+        ],
+        "Collidable": true,
+        "MeshId": "rbxassetid://80156580794627"
+      },
+      {
+        "Name": "Monolith_Keystones",
+        "SubCollection": "leaderboard_power_monolith",
+        "Offset": [
+          0.0,
+          19.3004,
+          -0.1325
+        ],
+        "Size": [
+          12.0631,
+          5.2492,
+          2.655
+        ],
+        "Material": "Basalt",
+        "Color": [
+          44,
+          49,
+          66
+        ],
+        "Collidable": true,
+        "MeshId": "rbxassetid://80651827845796"
+      },
+      {
+        "Name": "Monolith_GlitchChannels",
+        "SubCollection": "leaderboard_power_monolith",
+        "Offset": [
+          0.0,
+          10.1448,
+          -0.635
+        ],
+        "Size": [
+          12.32,
+          19.3895,
+          0.61
+        ],
+        "Material": "Neon",
+        "Color": [
+          46,
+          128,
+          255
+        ],
+        "Collidable": false,
+        "MeshId": "rbxassetid://115364299830942"
+      },
+      {
+        "Name": "Monolith_KeystoneRunes",
+        "SubCollection": "leaderboard_power_monolith",
+        "Offset": [
+          -0.0107,
+          18.5979,
+          -1.255
+        ],
+        "Size": [
+          10.2211,
+          5.6003,
+          0.45
+        ],
+        "Material": "Neon",
+        "Color": [
+          130,
+          200,
+          255
+        ],
+        "Collidable": false,
+        "MeshId": "rbxassetid://134090976258807"
+      }
+    ]
+  }
+}

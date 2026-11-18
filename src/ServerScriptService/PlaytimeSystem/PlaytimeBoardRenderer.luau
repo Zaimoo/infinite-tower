@@ -1,10 +1,10 @@
-local Workspace = game:GetService("Workspace")
-
-local Config          = require(script.Parent:WaitForChild("PlaytimeConfig"))
-local Utils           = require(script.Parent:WaitForChild("PlaytimeUtils"))
+--!strict
+local Config           = require(script.Parent:WaitForChild("PlaytimeConfig"))
+local Utils            = require(script.Parent:WaitForChild("PlaytimeUtils"))
 local DataStoreModule  = require(script.Parent:WaitForChild("PlaytimeDataStore"))
 local StandBuilder     = require(script.Parent:WaitForChild("PlaytimeStandBuilder"))
-local SharedLeaderboards = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("SharedLeaderboards"))
+local BaseOverhaul     = script.Parent.Parent:WaitForChild("BaseOverhaul")
+local RenderHelper     = require(BaseOverhaul:WaitForChild("LeaderboardRenderHelper"))
 
 local Renderer = {}
 
@@ -12,76 +12,42 @@ local nextRefreshAt   = os.clock() + Config.BOARD_REFRESH
 local lastUpdateEpoch = os.time()
 
 local function getAllScreenParts(): { BasePart }
-	local parts = {}
-	-- One shared board in the Masters' Commons Leaderboard Pavilion
-	local host = SharedLeaderboards.Host()
-	local pstand = host and host:FindFirstChild("AvxsedPlaytimeWS")
-	local s = pstand and pstand:FindFirstChild("ScreenPlaytime")
-	if s and s:IsA("BasePart") then
-		table.insert(parts, s)
-	end
-	if #parts == 0 then
-		local fallback = Utils.resolvePath(Config.Paths.ScreenPlaytimePart, Workspace, 2)
-		if fallback and fallback:IsA("BasePart") then
-			table.insert(parts, fallback)
-		end
-	end
-	return parts
-end
-
-local function setCardData(card: Frame, userId: number, seconds: number)
-	local avatarFrame = card:FindFirstChild("AvatarIconFrame")
-	local avatarIcon  = avatarFrame and avatarFrame:FindFirstChild("AvatarIcon") :: ImageLabel?
-	local infoLabel   = card:FindFirstChild("InfoLabel")
-	local nameLbl     = infoLabel and infoLabel:FindFirstChild("DisplayNameLabel") :: TextLabel?
-	local userLbl     = infoLabel and infoLabel:FindFirstChild("UsernameLabel") :: TextLabel?
-	local timeFrame   = card:FindFirstChild("TotalPlaytimeLabelFrame")
-	local timeLbl     = timeFrame and timeFrame:FindFirstChild("TotalPlaytimeLabel") :: TextLabel?
-
-	local uname, dname = Utils.getUsernamePair(userId)
-	if nameLbl then nameLbl.Text = dname end
-	if userLbl then userLbl.Text = "@" .. uname end
-	if timeLbl then timeLbl.Text = Utils.formatHM(seconds) end
-	if avatarIcon then avatarIcon.Image = Utils.getAvatarThumb(userId, "AvatarBust", 150, 150) end
+	return RenderHelper.ResolveScreenParts("AvxsedPlaytimeWS", "ScreenPlaytime")
 end
 
 function Renderer.FullRender()
 	local top = DataStoreModule.GetSortedTop(Config.MAX_BOARD_ROWS)
 
-	local ids = {}
-	for _, e in ipairs(top) do table.insert(ids, e.UserId) end
+	local ids = table.create(#top)
+	local entries: { RenderHelper.CardEntry } = table.create(#top)
+	for i, e in ipairs(top) do
+		ids[i] = e.UserId
+		entries[i] = { UserId = e.UserId, Value = e.Seconds }
+	end
 	Utils.resolveNamesBulk(ids)
 
 	local screenParts = getAllScreenParts()
-	for _, screenPart in ipairs(screenParts) do
-		local surfaceGui = screenPart:FindFirstChild("SurfaceGui")
-		local holder = surfaceGui and surfaceGui:FindFirstChild("Holder")
-		local body = holder and holder:FindFirstChild("Body")
-		local scrollFrame = body and body:FindFirstChild("ScrollingFrame") :: ScrollingFrame?
-		local template = scrollFrame and scrollFrame:FindFirstChild("TemplateCardFrame") :: Frame?
-		if not scrollFrame or not template then continue end
+	RenderHelper.RenderScreenCards(
+		screenParts,
+		entries,
+		"TotalPlaytimeLabelFrame",
+		"TotalPlaytimeLabel",
+		Utils.getUsernamePair,
+		Utils.getAvatarThumb,
+		Utils.formatHM
+	)
 
-		template.Visible = false
-
-		-- Remove old generated cards
-		for _, child in ipairs(scrollFrame:GetChildren()) do
-			if child:IsA("Frame") and child.Name:sub(1, 5) == "Card_" then
-				child:Destroy()
-			end
-		end
-
-		for i, entry in ipairs(top) do
-			local card = template:Clone()
-			card.Name        = "Card_" .. entry.UserId
-			card.Visible     = true
-			card.LayoutOrder = i
-			card.Parent      = scrollFrame
-			setCardData(card, entry.UserId, entry.Seconds)
+	local hasRigstand = false
+	for _, s in ipairs(screenParts) do
+		if s.Parent and s.Parent:FindFirstChild("Rigstand") then
+			hasRigstand = true
+			break
 		end
 	end
-
-	local top3 = { top[1], top[2], top[3] }
-	StandBuilder.Update(top3)
+	if hasRigstand then
+		local top3 = { top[1], top[2], top[3] }
+		StandBuilder.Update(top3)
+	end
 
 	nextRefreshAt   = os.clock() + Config.BOARD_REFRESH
 	lastUpdateEpoch = os.time()
@@ -89,18 +55,12 @@ end
 
 function Renderer.Tick()
 	local secsLeft = math.max(0, math.floor(nextRefreshAt - os.clock()))
-	local lastUpdateStr = os.date("%I:%M %p", lastUpdateEpoch)
-
 	local screenParts = getAllScreenParts()
+	RenderHelper.TickFooter(screenParts, secsLeft, lastUpdateEpoch)
+
 	for _, screenPart in ipairs(screenParts) do
 		local surfaceGui = screenPart:FindFirstChild("SurfaceGui")
 		local holder = surfaceGui and surfaceGui:FindFirstChild("Holder")
-		local footer = holder and holder:FindFirstChild("Footer")
-		local updateLabel = footer and footer:FindFirstChild("LabelFrame") and footer.LabelFrame:FindFirstChild("UpdateLabel") :: TextLabel?
-		if updateLabel then
-			updateLabel.Text = string.format("Update In %d sec, Last Update %s", secsLeft, lastUpdateStr)
-		end
-
 		local body = holder and holder:FindFirstChild("Body")
 		local scrollFrame = body and body:FindFirstChild("ScrollingFrame") :: ScrollingFrame?
 		if scrollFrame then

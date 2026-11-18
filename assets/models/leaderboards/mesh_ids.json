@@ -1,0 +1,15 @@
+{
+  "leaderboard_pediment_frame": {
+    "Pediment_PlinthBase": "rbxassetid://70463826097423",
+    "Pediment_Pillars": "rbxassetid://121750596862487",
+    "Pediment_GableRoof": "rbxassetid://72389884430099",
+    "Pediment_ObsidianBacking": "rbxassetid://138767837085602"
+  },
+  "leaderboard_power_monolith": {
+    "Monolith_SteppedBase": "rbxassetid://90623071203616",
+    "Monolith_ArchStones": "rbxassetid://80156580794627",
+    "Monolith_Keystones": "rbxassetid://80651827845796",
+    "Monolith_GlitchChannels": "rbxassetid://115364299830942",
+    "Monolith_KeystoneRunes": "rbxassetid://134090976258807"
+  }
+}

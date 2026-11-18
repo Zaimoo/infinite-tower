@@ -1,8 +1,10 @@
-local Players          = game:GetService("Players")
-local DataStoreService = game:GetService("DataStoreService")
+local Players           = game:GetService("Players")
+local DataStoreService  = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(script.Parent:WaitForChild("PlaytimeConfig"))
-local Utils  = require(script.Parent:WaitForChild("PlaytimeUtils"))
+local Config           = require(script.Parent:WaitForChild("PlaytimeConfig"))
+local Utils            = require(script.Parent:WaitForChild("PlaytimeUtils"))
+local LeaderboardRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("LeaderboardRules"))
 
 local DataStoreModule = {}
 
@@ -222,7 +224,7 @@ function DataStoreModule.GetSortedTop(count: number): { { UserId: number, Second
 	end
 
 	table.sort(result, function(a, b) return a.Seconds > b.Seconds end)
-	return result
+	return LeaderboardRules.ClampSorted(result, count)
 end
 
 return DataStoreModule

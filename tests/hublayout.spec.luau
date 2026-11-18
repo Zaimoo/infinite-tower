@@ -214,5 +214,18 @@ test("Runesmith's Anvil mirrors the Raid Portal west of the pool, clear of the p
 	assert(math.sqrt((s.X + 192) ^ 2 + (s.Z + 75) ^ 2) - footprint > 54, "anvil crowds the west orchard")
 end)
 
+test("Leaderboard Plaza sits in the eastern promenade wedge clear of Pilgrim's Way, the Dais, and Plot 8's path", function()
+	local pavX, pavZ, pavClear = 86, 156, 48
+	local daisEdge = 56
+	assert(math.abs(pavX) + pavClear <= Hub.HubHalfX - 20 and math.abs(pavZ) + pavClear <= Hub.HubHalfZ - 20, "Leaderboard Plaza must sit inside the Commons")
+	assert(math.sqrt(pavX ^ 2 + pavZ ^ 2) - pavClear > daisEdge, "Leaderboard Plaza must clear the Wayfinder Dais")
+	assert(pavX - 36 > Hub.BoulevardWidth * 0.5, "Leaderboard Plaza footprint must clear Pilgrim's Way")
+	for i = 1, N do
+		local land = Hub.HubLandingPoint(i)
+		local d = segDist(pavX, pavZ, land.X - Hub.HubCentre.X, land.Z - Hub.HubCentre.Z, 0, 0)
+		assert(d > 50, "Leaderboard Plaza crowds the path to Plot_" .. i .. " (" .. d .. " studs)")
+	end
+end)
+
 print(string.format("HubLayout: %d passed, %d failed", passed, failed))
 if failed > 0 then error("hub layout tests failed") end
