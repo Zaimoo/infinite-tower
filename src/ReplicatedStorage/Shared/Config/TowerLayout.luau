@@ -544,6 +544,83 @@ local AUTHORED: {[number]: any} = {
 			WestBastion = "Shoulder", EastBastion = "Fallen Crown", Apex = "Colossus Dais",
 		},
 	},
+	-- Floor 16, Rimefall Approach (Frozen Citadel): natural deep winter below the frozen Rimefall.
+	-- Two routes cross the frozen lake: the long shoreline road round Hunters' Lodge on the west bank,
+	-- or the narrow chain of jagged ice floes across the lake (with Fisher's Hut on a side floe).
+	[16] = {
+		Key = "frozen:1",
+		Name = "Rimefall Approach",
+		PathStyle = "WHITEGUARD",
+		DirectTerrain = true,
+		Masonry = "GLACIER_SLAB",
+		Decks = {
+			FloeSouth = true,
+			Crossing = true,
+			FloeNorth = true,
+		},
+		Suspended = {
+			Platforms = { FloeSouth = true, Crossing = true, FloeNorth = true },
+			Links = {
+				Basin_FloeSouth = true,
+				FloeSouth_Crossing = true,
+				Crossing_EastGallery = true,
+				Crossing_FloeNorth = true,
+				FloeNorth_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 2.8, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 84, Feather = 28 },
+			{
+				Kind = "POOL_ELLIPSES_SQ",
+				Strength = 0.28,
+				Gain = 0.28,
+				Ellipses = {
+					{ X = 54, Z = -46, RX = 108, RZ = 82 },
+					{ X = 18, Z = -94, RX = 60, RZ = 46 },
+				},
+			},
+			{
+				Kind = "PRESSURE_RIDGE",
+				Ridges = {
+					{ AX = -12, AZ = -18, BX = 26, BZ = -62, HalfWidth = 4.5, Height = 2.2, WarpAmp = 4.5 },
+					{ AX = 84, AZ = 6, BX = 104, BZ = -84, HalfWidth = 4.2, Height = 2.0, WarpAmp = 5.0 },
+				},
+			},
+			{ Kind = "ICEFALL", X = -8, Z = -196, Width = 108, Depth = 34, Height = 42 },
+			{ Kind = "DUNE", X = -84, Z = 132, Width = 34, Length = 52, Height = 3.8, Yaw = 12, CrestSway = 0.14, SlipSteep = 1.25 },
+			{ Kind = "DUNE", X = 96, Z = 134, Width = 36, Length = 50, Height = 3.6, Yaw = -10, CrestSway = 0.14, SlipSteep = 1.25 },
+		},
+		Basin = { X = 0, Y = 0, Z = 90, Width = 330, Depth = 80 },
+		WestGallery = { X = -116, Y = 4, Z = -10, Width = 84, Depth = 76 },
+		Crossing = { X = 60, Y = 4, Z = -50, Width = 56, Depth = 48 },
+		EastGallery = { X = 130, Y = 5, Z = -30, Width = 60, Depth = 56 },
+		ExtraPlatforms = {
+			FloeSouth = { X = 40, Y = 2, Z = 10, Width = 40, Depth = 36 },
+			FloeNorth = { X = 60, Y = 8, Z = -108, Width = 40, Depth = 36 },
+		},
+		Apex = { X = -30, Y = 12, Z = -158, Width = 104, Depth = 76 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "WestGallery", "Apex" },
+			{ "Basin", "FloeSouth" },
+			{ "FloeSouth", "Crossing" },
+			{ "Crossing", "EastGallery" },
+			{ "Crossing", "FloeNorth" },
+			{ "FloeNorth", "Apex" },
+		},
+		Names = {
+			Sanctuary = "Snowdrift Gate",
+			Basin = "Snowfield",
+			WestGallery = "Hunters' Lodge",
+			FloeSouth = "South Floe",
+			Crossing = "Heart Floe",
+			EastGallery = "Fisher's Hut",
+			FloeNorth = "North Floe",
+			Apex = "Rimefall Shrine",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

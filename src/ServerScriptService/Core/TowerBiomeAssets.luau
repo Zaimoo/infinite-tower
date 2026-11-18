@@ -3490,6 +3490,208 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end)
 			end
 		end
+	elseif biome == "frozen_citadel" and layout.Authored == "frozen:1" then
+		-- Floor 16, Rimefall Approach: natural winter lakeside & ice floes below the frozen Rimefall.
+		local cGranite = rgb(104, 118, 134)
+		local cGraniteDark = rgb(74, 86, 100)
+		local cSnow = rgb(232, 242, 252)
+		local cGlacier = rgb(146, 206, 238)
+		local cTimber = rgb(92, 74, 60)
+		local cWarmGlow = rgb(255, 206, 128)
+		local cRimeBlue = rgb(142, 224, 255)
+		local lakeY = if field then field.LiquidLevel + 2.0 else 0.8
+		local groundAt16 = function(x: number, z: number): number
+			for _, plat in layout.Platforms do
+				if math.abs(x - plat.X) <= plat.Width * 0.5 + 4 and math.abs(z - plat.Z) <= plat.Depth * 0.5 + 4 then
+					return plat.Y
+				end
+			end
+			return if field then math.max(field.Height(x, z) + 2.0, bottom) else bottom
+		end
+		table.insert(reservedSpots, { 24, -198, 42 })
+		table.insert(reservedSpots, { -30, -194, 34 })
+		local f16Override = {
+			STONE = { Color = cGranite, Material = Enum.Material.Slate },
+			MOSS = { Color = cSnow, Material = Enum.Material.Snow },
+			CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.1 },
+			GLOW = { Color = cRimeBlue, Material = Enum.Material.Neon },
+			WOOD = { Color = cTimber, Material = Enum.Material.Wood },
+			TRIM = { Color = rgb(196, 206, 218), Material = Enum.Material.Slate },
+			ALT = { Color = rgb(118, 124, 132), Material = Enum.Material.Fabric },
+			METAL = { Color = rgb(54, 62, 74), Material = Enum.Material.Metal },
+		}
+
+		-- 1. Foreground Ward-Star Shield Waymarker planted in Snowfield (-28, 0, 100) + curving sledge tracks
+		local shX, shZ = -28, 100
+		table.insert(reservedSpots, { shX, shZ, 12 })
+		group("WardStarShieldMarker", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local sy = groundAt16(shX, shZ)
+			local scf = CFrame.new(shX, sy - 0.35, shZ) * CFrame.Angles(0, 0.32, 0)
+			if KitProps.Has("WardStarShieldMarker") then
+				kitAt("WardStarShieldMarker", scf, 1.05 * scale, f16Override)
+			else
+				block("WardStarShieldMound", V(9.5, 2.2, 6.2), V(shX, sy + 0.5, shZ), cSnow, Enum.Material.Snow)
+				local shieldBaseCF = CFrame.new(origin + V(shX, sy + 4.3, shZ)) * CFrame.Angles(math.rad(-14), 0.32, math.rad(9))
+				local slab = block("WardStarShieldSlab", V(5.8, 6.8, 1.0), V(shX, sy + 4.3, shZ), cGranite, Enum.Material.Slate)
+				slab.CFrame = shieldBaseCF
+				local rim = block("WardStarShieldRim", V(6.4, 7.4, 0.55), V(shX, sy + 4.3, shZ), cGlacier, Enum.Material.Ice)
+				rim.CFrame = shieldBaseCF * CFrame.new(0, 0, -0.15)
+				for _, armAngle in { 0, math.rad(60), math.rad(-60) } do
+					local arm = block("WardStarEmblemArm", V(4.2, 0.65, 0.45), V(shX, sy + 4.5, shZ), cRimeBlue, Enum.Material.Ice)
+					arm.CFrame = shieldBaseCF * CFrame.new(0, 0.3, 0.52) * CFrame.Angles(0, 0, armAngle)
+				end
+			end
+		end)
+		group("SnowfieldSledgeTracks", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			for seg = 1, 5 do
+				local t = (seg - 0.5) / 5
+				local tx = -42 - t * 34
+				local tz = 122 - math.sin(t * 1.4) * 20
+				local ty = groundAt16(tx, tz) - 0.12
+				for _, rut in { -1.5, 1.5 } do
+					local rPart = block("SledgeTrackRut", V(0.45, 0.14, 7.6), V(tx + rut, ty, tz), rgb(176, 198, 218), Enum.Material.Glacier)
+					rPart.CFrame = CFrame.new(origin + V(tx + rut, ty, tz)) * CFrame.Angles(0, math.rad(34), 0)
+				end
+			end
+		end)
+
+		-- 2. Hunters' Lodge on the open west shoreline south-west of WestGallery (-128, ly, 28)
+		local lodgeX, lodgeZ = -128, 28
+		table.insert(reservedSpots, { lodgeX, lodgeZ, 20 })
+		group("HuntersLodge", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local ly = math.max(groundAt16(lodgeX, lodgeZ), layout.Platforms.WestGallery.Y - 1.5)
+			local lPlinthH = math.max(3, ly - bottom + 2)
+			block("LodgeStoneFooting", V(24, lPlinthH, 20), V(lodgeX, ly - lPlinthH * 0.5 + 0.5, lodgeZ), cGraniteDark, Enum.Material.Slate)
+			local lcf = CFrame.new(lodgeX, ly - 0.3, lodgeZ) * CFrame.Angles(0, -math.pi * 0.32, 0)
+			if KitProps.Has("HuntersLodge") then
+				local mdl = kitAt("HuntersLodge", lcf, 1.04 * scale, {
+					STONE = f16Override.STONE,
+					MOSS = f16Override.MOSS,
+					WOOD = f16Override.WOOD,
+					TRIM = f16Override.TRIM,
+					GLOW = { Color = cWarmGlow, Material = Enum.Material.Neon },
+				})
+				local gp = mdl and mdl:FindFirstChild("GLOW")
+				if gp then pointLight(gp, cWarmGlow, 0.9, 34) end
+			else
+				local baseCF = CFrame.new(origin + V(lodgeX, ly, lodgeZ)) * CFrame.Angles(0, -math.pi * 0.32, 0)
+				local body = block("LodgeTimberBody", V(19, 8.0, 15), V(lodgeX, ly + 4.0, lodgeZ), cTimber, Enum.Material.Wood)
+				body.CFrame = baseCF * CFrame.new(0, 4.0, 0)
+				local stoneBase = block("LodgeStoneWall", V(19.8, 3.0, 15.8), V(lodgeX, ly + 1.5, lodgeZ), cGranite, Enum.Material.Slate)
+				stoneBase.CFrame = baseCF * CFrame.new(0, 1.5, 0)
+				for _, side in { -1, 1 } do
+					local roof = block("LodgeSnowRoofSlope", V(22, 1.6, 11.5), V(lodgeX, ly + 10.5, lodgeZ), cSnow, Enum.Material.Snow)
+					roof.CFrame = baseCF * CFrame.new(0, 10.2, side * 4.4) * CFrame.Angles(side * 0.56, 0, 0)
+				end
+				local chimney = block("LodgeStoneChimney", V(3.0, 11, 3.0), V(lodgeX, ly + 11.0, lodgeZ), cGraniteDark, Enum.Material.Slate)
+				chimney.CFrame = baseCF * CFrame.new(5.5, 11.5, -4.0)
+				local win = block("LodgeWarmWindow", V(2.8, 2.8, 0.6), V(lodgeX, ly + 5.0, lodgeZ), cWarmGlow, Enum.Material.Neon)
+				win.CFrame = baseCF * CFrame.new(0, 4.8, 7.6)
+				pointLight(win, cWarmGlow, 0.9, 34)
+				local rack = block("LodgeDryingRack", V(8.5, 0.6, 0.6), V(lodgeX, ly + 4.2, lodgeZ), cTimber, Enum.Material.Wood)
+				rack.CFrame = baseCF * CFrame.new(-3.5, 4.2, 11.0)
+				for _, rx in { -3.5, 3.5 } do
+					local post = block("LodgeRackPost", V(0.7, 5.2, 0.7), V(lodgeX, ly + 2.6, lodgeZ), cTimber, Enum.Material.Wood)
+					post.CFrame = baseCF * CFrame.new(-3.5 + rx, 2.6, 11.0)
+				end
+			end
+		end)
+
+		-- 3. Fisher's Hut & beached rowboat on the east shoreline south of EastGallery (128, hy, 22)
+		local hutX, hutZ = 128, 22
+		table.insert(reservedSpots, { hutX, hutZ, 18 })
+		group("FisherHut", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local hy = math.max(groundAt16(hutX, hutZ), lakeY + 0.5)
+			local hPlinthH = math.max(3, hy - bottom + 2)
+			block("FisherShoreBank", V(22, hPlinthH, 16), V(hutX, hy - hPlinthH * 0.5 + 0.4, hutZ), cGraniteDark, Enum.Material.Slate)
+			local hcf = CFrame.new(hutX, hy - 0.2, hutZ) * CFrame.Angles(0, math.pi * 0.28, 0)
+			if KitProps.Has("FisherHut") then
+				local mdl = kitAt("FisherHut", hcf, 1.02 * scale, {
+					STONE = f16Override.STONE,
+					MOSS = f16Override.MOSS,
+					WOOD = f16Override.WOOD,
+					ALT = f16Override.ALT,
+					GLOW = { Color = cWarmGlow, Material = Enum.Material.Neon },
+				})
+				local gp = mdl and mdl:FindFirstChild("GLOW")
+				if gp then pointLight(gp, cWarmGlow, 0.85, 30) end
+			else
+				local baseCF = CFrame.new(origin + V(hutX, hy, hutZ)) * CFrame.Angles(0, math.pi * 0.28, 0)
+				local body = block("FisherCabin", V(11.5, 5.8, 9.5), V(hutX, hy + 2.9, hutZ), cTimber, Enum.Material.Wood)
+				body.CFrame = baseCF * CFrame.new(0, 2.9, 0)
+				for _, side in { -1, 1 } do
+					local roof = block("FisherCabinSnowRoof", V(13.5, 1.3, 6.8), V(hutX, hy + 7.2, hutZ), cSnow, Enum.Material.Snow)
+					roof.CFrame = baseCF * CFrame.new(0, 7.1, side * 2.6) * CFrame.Angles(side * 0.50, 0, 0)
+				end
+				local win = block("FisherWarmLantern", V(2.0, 2.2, 0.5), V(hutX, hy + 3.4, hutZ), cWarmGlow, Enum.Material.Neon)
+				win.CFrame = baseCF * CFrame.new(0, 3.4, -4.8)
+				pointLight(win, cWarmGlow, 0.85, 30)
+				local boat = block("FisherRowboat", V(9.0, 1.8, 3.4), V(hutX - 10, lakeY + 0.6, hutZ + 2), cTimber, Enum.Material.Wood)
+				boat.CFrame = CFrame.new(origin + V(hutX - 11, lakeY + 0.7, hutZ + 2)) * CFrame.Angles(0, -0.35, 0)
+				local netRack = block("FisherNetRack", V(7.5, 4.0, 0.4), V(hutX, hy + 2.0, hutZ), rgb(118, 124, 132), Enum.Material.Fabric)
+				netRack.CFrame = baseCF * CFrame.new(-7.5, 2.2, -3.5)
+			end
+		end)
+
+		-- Snow-laden evergreen pines framing both shorelines behind the Lodge and Fisher's Hut
+		for _, pine in {
+			{ -142, 46, 0.95 },
+			{ -144, 32, 1.05 },
+			{ -140, -52, 0.92 },
+			{ 142, 42, 0.96 },
+			{ 144, 16, 1.05 },
+		} do
+			local px, pz, psc = pine[1], pine[2], pine[3]
+			local py = groundAt16(px, pz) - 0.6
+			table.insert(reservedSpots, { px, pz, 8 })
+			if kitOn then
+				group("ShorePine", function()
+					local pineAt = V(px, py, pz)
+					kitAt("PineTree", CFrame.new(pineAt) * CFrame.Angles(0, yawAt(pineAt), 0), psc * scale)
+				end)
+			else
+				tree(V(px, py, pz), psc * scale, false, false)
+			end
+		end
+
+		-- 4. Scattered Frozen Lake Ice Floe Slabs + Heart Floe stone cairn & ice-fishing holes
+		for flIdx, fl in { { -24, -58, 0.4, 0.92 }, { 10, -24, -0.35, 0.86 }, { 114, -88, 0.65, 0.90 } } do
+			local fx, fz, fyaw, fsc = fl[1], fl[2], fl[3], fl[4]
+			table.insert(reservedSpots, { fx, fz, 16 })
+			group("IceFloeSlab", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local fcf = CFrame.new(fx, lakeY - 1.2, fz) * CFrame.Angles(0, fyaw, 0)
+				if KitProps.Has("IceFloeSlab") then
+					kitAt("IceFloeSlab", fcf, fsc * scale, f16Override)
+				else
+					block("OffRouteIceFloe", V(22 * fsc, 2.8, 18 * fsc), V(fx, lakeY + 0.4, fz), cGlacier, Enum.Material.Glacier)
+					block("OffRouteFloeSnow", V(18 * fsc, 0.9, 14 * fsc), V(fx, lakeY + 1.9, fz), cSnow, Enum.Material.Snow)
+				end
+			end)
+		end
+
+		-- Heart Floe (Crossing 60, 4, -50) north-west corner cairn + lakeside ice-fishing holes clear of bridge landings
+		local hf = layout.Platforms.Crossing
+		group("HeartFloeCairn", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local cx, cy, cz = 36, hf.Y, -68
+			for cStep = 1, 4 do
+				local cr = 2.4 - (cStep - 1) * 0.5
+				cyl("HeartFloeCairnStone", V(cx, cy + (cStep - 0.5) * 0.85, cz), cr, 0.85, if cStep % 2 == 0 then cGranite else cGraniteDark, Enum.Material.Slate)
+			end
+		end)
+		for _, holePos in { { 88, -66 }, { 28, -66 } } do
+			group("IceFishingHole", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local hx, hz = holePos[1], holePos[2]
+				cyl("IceFishingHoleRing", V(hx, lakeY + 0.12, hz), 3.6, 0.25, cSnow, Enum.Material.Snow)
+				cyl("IceFishingHoleWater", V(hx, lakeY + 0.16, hz), 2.3, 0.25, rgb(28, 66, 98), Enum.Material.Ice)
+			end)
+		end
 	end
 
 	-- =========================================================================
@@ -3501,7 +3703,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- stand on ground instead of hanging over the chasm.
 	local apexBack = apex.Z - apex.Depth / 2
 	local shelfDepth = apexBack + d / 2
-	if shelfDepth > 1 then
+	if shelfDepth > 1 and layout.Authored ~= "frozen:1" then
 		block("ApexShelfMassif", V(w - 60, apex.Y - bottom, shelfDepth + 2), V(0, (apex.Y + bottom) / 2, -d / 2 + shelfDepth / 2), cliffColor, cliffMat)
 	end
 
@@ -3529,6 +3731,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
+	elseif layout.Authored == "frozen:1" then
+		-- Rimefall Approach owns its north horizon via ICEFALL terrain, RimefallIcefall, and FrozenCitadelSilhouette.
 	else
 		for _, s in { -1, 1 } do
 			local wingX = s * (apex.Width * 0.5 + 38)
@@ -3904,17 +4108,81 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 
 	elseif biome == "frozen_citadel" then
-		group("CitadelKeep", function()
-			block("CitadelKeepHall", V(102 * scale, 58 * scale, 36 * scale), backdrop + V(0, 29 * scale, -4), theme.CliffColor, Enum.Material.Brick)
-			spire(backdrop + V(0, 52 * scale, -4), 52 * scale, 19 * scale, rgb(145, 218, 252), accent, true)
-			cyl("GlacialRoseWindow", backdrop + V(0, 44 * scale, 15), 15 * scale, 2.2, accent, Enum.Material.Neon, 0.18)
-		end)
-		for _, s in { -1, 1 } do
-			spire(backdrop + V(s * 50 * scale, 0, 6), 68 * scale, 17 * scale, rgb(130, 205, 245), accent, true)
-		end
-		arch(backdrop + V(0, 0, 16), 40 * scale, 36 * scale, 10, theme.TrimColor, Enum.Material.Ice, 0)
-		for aIdx = -1, 1 do
-			beam("AuroraBorealisRibbon", V(-w * 0.38, h - 14 - math.abs(aIdx) * 6, aIdx * 85), V(w * 0.38, h - 10, aIdx * 85 - 35), 8.5, if aIdx == 0 then rgb(95, 255, 195) else rgb(115, 220, 255), Enum.Material.Neon, 0.72)
+		if layout.Authored == "frozen:1" then
+			-- The Rimefall cascading behind the Apex shrine & north lake shore, plus the distant Frozen Citadel silhouette high on the ridge.
+			local cGranite = rgb(104, 118, 134)
+			local cGraniteDark = rgb(74, 86, 100)
+			local cSnow = rgb(232, 242, 252)
+			local cGlacier = rgb(146, 206, 238)
+			local cRimeBlue = rgb(142, 224, 255)
+			local wfPos = V(30, apex.Y - 5, apexBack - 7)
+			group("RimefallIcefall", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				block("RimefallBasePlinth", V(72, (apex.Y - bottom) + 6, 24), V(wfPos.X, (apex.Y + bottom) * 0.5 - 2, wfPos.Z - 4), cGraniteDark, Enum.Material.Slate)
+				if KitProps.Has("RimefallIcefall") then
+					local mdl = kitAt("RimefallIcefall", CFrame.new(wfPos), 0.94 * scale, {
+						STONE = { Color = cGraniteDark, Material = Enum.Material.Slate },
+						MOSS = { Color = cSnow, Material = Enum.Material.Snow },
+						CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.1 },
+						GLOW = { Color = cRimeBlue, Material = Enum.Material.Neon },
+					})
+					local gp = mdl and (mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart"))
+					if gp then pointLight(gp, cRimeBlue, 1.5, 76) end
+				else
+					local cliffL = block("RimefallGorgeCliffL", V(14, 56, 18), wfPos + V(-25, 26, 0), cGraniteDark, Enum.Material.Slate)
+					cliffL.CFrame = CFrame.new(origin + wfPos + V(-25, 26, 0)) * CFrame.Angles(0, 0.12, -0.06)
+					local cliffR = block("RimefallGorgeCliffR", V(16, 66, 20), wfPos + V(28, 31, 0), cGraniteDark, Enum.Material.Slate)
+					cliffR.CFrame = CFrame.new(origin + wfPos + V(28, 31, 0)) * CFrame.Angles(0, -0.14, 0.05)
+					block("RimefallUpperSnowCap", V(64, 6, 18), wfPos + V(1, 64, -3), cSnow, Enum.Material.Snow)
+					local cols = {
+						{ -17, 56, 12, 3.0, cGlacier },
+						{ -8, 63, 13, 5.5, rgb(176, 226, 250) },
+						{ 2, 66, 14, 7.0, cGlacier },
+						{ 12, 60, 13, 4.5, rgb(166, 220, 246) },
+						{ 20, 52, 11, 2.5, cGlacier },
+					}
+					for idx, col in cols do
+						local p = block("RimefallCascadeColumn", V(col[3], col[2], 12), wfPos + V(col[1], col[2] * 0.5, col[4]), col[5], Enum.Material.Ice, nil, 0.1)
+						if idx == 3 then pointLight(p, cRimeBlue, 1.5, 76) end
+					end
+					for _, ic in { -14, -4, 7, 17 } do
+						block("RimefallIcicleSpire", V(3.2, 18, 3.2), wfPos + V(ic, 46, 10.5), rgb(212, 240, 255), Enum.Material.Ice, nil, 0.08)
+					end
+					for _, sp in { -15, 0, 16 } do
+						orb("RimefallFoamDrift", wfPos + V(sp, 6, 12), V(16, 10, 13), cSnow, Enum.Material.Snow)
+					end
+				end
+			end)
+			-- Ward-Star Shrine Arch framing the back of Rimefall Shrine outside both Apex portal lanes
+			arch(V(apex.X, apex.Y, apexBack - 7), 62, 34, 8, cGranite, Enum.Material.Slate, 0)
+			-- Distant Frozen Citadel silhouette rising high above the falls in alpine mist
+			group("FrozenCitadelSilhouette", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local silColor = rgb(162, 176, 194)
+				local silZ = -d * 0.5 + 4
+				block("CitadelKeepSilhouette", V(52, 18, 12), V(18, 76, silZ), silColor, Enum.Material.Slate, nil, 0.22)
+				block("CitadelCentralKeep", V(18, 28, 12), V(18, 94, silZ), silColor, Enum.Material.Slate, nil, 0.24)
+				local spireCone = block("CitadelCentralRoof", V(13, 18, 10), V(18, 113, silZ), silColor, Enum.Material.Slate, nil, 0.26)
+				spireCone.CFrame = CFrame.new(origin + V(18, 113, silZ)) * CFrame.Angles(0, 0, math.rad(45))
+				for _, tw in { { -4, 24, 9 }, { 38, 26, 10 } } do
+					cyl("CitadelSpireSilhouette", V(tw[1], 88 + tw[2] * 0.5, silZ), tw[3] * 0.5, tw[2], silColor, Enum.Material.Slate, 0.24)
+					local cap = block("CitadelTurretRoof", V(tw[3] * 0.72, tw[3] * 0.72, tw[3] * 0.72), V(tw[1], 88 + tw[2] + 3, silZ), silColor, Enum.Material.Slate, nil, 0.26)
+					cap.CFrame = CFrame.new(origin + V(tw[1], 88 + tw[2] + 3, silZ)) * CFrame.Angles(0, 0, math.rad(45))
+				end
+			end)
+		else
+			group("CitadelKeep", function()
+				block("CitadelKeepHall", V(102 * scale, 58 * scale, 36 * scale), backdrop + V(0, 29 * scale, -4), theme.CliffColor, Enum.Material.Brick)
+				spire(backdrop + V(0, 52 * scale, -4), 52 * scale, 19 * scale, rgb(145, 218, 252), accent, true)
+				cyl("GlacialRoseWindow", backdrop + V(0, 44 * scale, 15), 15 * scale, 2.2, accent, Enum.Material.Neon, 0.18)
+			end)
+			for _, s in { -1, 1 } do
+				spire(backdrop + V(s * 50 * scale, 0, 6), 68 * scale, 17 * scale, rgb(130, 205, 245), accent, true)
+			end
+			arch(backdrop + V(0, 0, 16), 40 * scale, 36 * scale, 10, theme.TrimColor, Enum.Material.Ice, 0)
+			for aIdx = -1, 1 do
+				beam("AuroraBorealisRibbon", V(-w * 0.38, h - 14 - math.abs(aIdx) * 6, aIdx * 85), V(w * 0.38, h - 10, aIdx * 85 - 35), 8.5, if aIdx == 0 then rgb(95, 255, 195) else rgb(115, 220, 255), Enum.Material.Neon, 0.72)
+			end
 		end
 
 	elseif biome == "infernal_foundry" then

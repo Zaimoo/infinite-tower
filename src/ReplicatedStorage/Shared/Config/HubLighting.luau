@@ -311,6 +311,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 230, 220), Saturation = 0.14, ExposureCompensation = 0.04, BloomIntensity = 0.48,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.65,
 	},
+	-- Floor 16, Rimefall Approach: overcast whiteout morning. Flat bright cool winter light, thick white mist (camps kept clear) & pale ice bloom.
+	[16] = {
+		Ambient = c(102, 118, 136), OutdoorAmbient = c(154, 172, 192), ColorShift_Top = c(230, 240, 252), ColorShift_Bottom = c(126, 152, 180),
+		AtmosphereDensity = 0.38, AtmosphereColor = c(218, 230, 244), AtmosphereDecay = c(162, 184, 210), AtmosphereHaze = 1.65,
+		TintColor = c(240, 248, 255), Saturation = -0.10, Contrast = 0.06, ExposureCompensation = 0.12, BloomIntensity = 0.34,
+		SunRaysIntensity = 0.04, SunRaysSpread = 0.45,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

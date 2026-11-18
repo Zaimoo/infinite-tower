@@ -429,6 +429,12 @@ function Builder.Build(id: number, generation: number): any
 	local obsidianStairB = Color3.fromRGB(34, 28, 36)
 	local amberGlassCol = Color3.fromRGB(238, 142, 42)
 	local amberInlayCol = Color3.fromRGB(218, 128, 36)
+	local glacierIceCol = Color3.fromRGB(152, 206, 234)
+	local glacierSnowCol = Color3.fromRGB(228, 238, 248)
+	local glacierDeepCol = Color3.fromRGB(102, 162, 198)
+	local whiteguardGranite = Color3.fromRGB(116, 128, 142)
+	local whiteguardGraniteDark = Color3.fromRGB(86, 98, 112)
+	local whiteguardIron = Color3.fromRGB(54, 62, 74)
 
 	local MASONRY_STYLES: { [string]: { [string]: any } } = {
 		ORGANIC = {
@@ -492,6 +498,15 @@ function Builder.Build(id: number, generation: number): any
 			CurbMaterial = Enum.Material.Sandstone,
 			CurbMode = "FORTRESS_MERLON",
 		},
+		GLACIER_SLAB = {
+			DeckKind = "GLACIER_SLAB",
+			LandingProxy = true,
+			BridgeKind = "GLACIER_SLAB",
+			CurbColor = glacierIceCol,
+			CurbMaterial = Enum.Material.Glacier,
+			CurbCapColor = glacierSnowCol,
+			CurbCapMaterial = Enum.Material.Snow,
+		},
 	}
 
 	local PATH_STYLES: { [string]: { [string]: any } } = {
@@ -546,6 +561,37 @@ function Builder.Build(id: number, generation: number): any
 			SolidLipColorB = varrashSandstone,
 			SolidLipMatA = Enum.Material.Slate,
 			SolidLipMatB = Enum.Material.Sandstone,
+			SolidLipStep = 3.4,
+			AllowRootStair = false,
+			ShowVaultLanterns = false,
+		},
+		WHITEGUARD = {
+			VisibleCurb = true,
+			CurbColor = whiteguardGranite,
+			CurbMaterial = Enum.Material.Slate,
+			CurbCapColor = whiteguardIron,
+			CurbCapMaterial = Enum.Material.Metal,
+			LandingColor = whiteguardGranite,
+			LandingMaterial = Enum.Material.Slate,
+			StairColorA = whiteguardGranite,
+			StairColorB = Color3.fromRGB(168, 212, 238),
+			StairMatA = Enum.Material.Slate,
+			StairMatB = Enum.Material.Ice,
+			GrassStepLipColorA = whiteguardGranite,
+			GrassStepLipColorB = whiteguardGraniteDark,
+			GrassStepLipMatA = Enum.Material.Slate,
+			GrassStepLipMatB = Enum.Material.Granite,
+			GrassStepLipWBase = 0.34,
+			GrassStepLipWStep = 0.05,
+			GrassStepLipWMod = 5,
+			GrassStepLipH = 0.24,
+			GrassStepLipY = 0.02,
+			SolidRampColor = whiteguardGranite,
+			SolidRampMat = Enum.Material.Slate,
+			SolidLipColorA = whiteguardGraniteDark,
+			SolidLipColorB = glacierSnowCol,
+			SolidLipMatA = Enum.Material.Granite,
+			SolidLipMatB = Enum.Material.Snow,
 			SolidLipStep = 3.4,
 			AllowRootStair = false,
 			ShowVaultLanterns = false,
@@ -912,6 +958,22 @@ function Builder.Build(id: number, generation: number): any
 						local paver = decor(model, "VarrashFortressFlagstone", Vector3.new(8.5 + (k % 3) * 2.2, 0.10, 6.5 + ((k + 1) % 3) * 1.6), pPos, if k % 2 == 0 then varrashSandstone else sandStoneDark, Enum.Material.Sandstone)
 						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
 					end
+				elseif deckKind == "GLACIER_SLAB" then
+					-- Jagged lake ice floe slabs (Floor 16 & Frozen Iceway): snow-packed walking cap over translucent glacier keel
+					local deepBottom = origin.Y + layout.Bottom - 5
+					local wallH = math.max(3.5, (origin.Y + terrace.Y) - deepBottom)
+					slab.Size = Vector3.new(terrace.Width, wallH, terrace.Depth)
+					slab.Position = Vector3.new(topCenter.X, topCenter.Y - wallH / 2, topCenter.Z)
+					slab.Color = glacierIceCol
+					slab.Material = Enum.Material.Glacier
+					local snowCap = decor(model, "GlacierFloeSnowCap", Vector3.new(terrace.Width - 2.6, 0.45, terrace.Depth - 2.6), topCenter + Vector3.new(0, -0.18, 0), glacierSnowCol, Enum.Material.Snow)
+					snowCap.CFrame = CFrame.new(topCenter + Vector3.new(0, -0.18, 0))
+					for _, sz in { -1, 1 } do
+						decor(model, "GlacierSlabIceRimZ", Vector3.new(terrace.Width + 2.2, 1.8, 2.4), topCenter + Vector3.new(0, -1.6, sz * (terrace.Depth / 2 + 0.2)), glacierDeepCol, Enum.Material.Ice, 0.15)
+					end
+					for _, sx in { -1, 1 } do
+						decor(model, "GlacierSlabIceRimX", Vector3.new(2.4, 1.8, math.max(1, terrace.Depth - 2.2)), topCenter + Vector3.new(sx * (terrace.Width / 2 + 0.2), -1.6, 0), glacierDeepCol, Enum.Material.Ice, 0.15)
+					end
 				else
 					slab.Color = solmereLimestone
 					slab.Material = Enum.Material.Limestone
@@ -1228,6 +1290,22 @@ function Builder.Build(id: number, generation: number): any
 					local at = stoneA:Lerp(stoneB, t)
 					local band = decor(model, "RampStepLip", Vector3.new(link.Width * 0.58, 0.10, 0.65), at, if i % 2 == 0 then amberGlass else varrashBasalt, if i % 2 == 0 then Enum.Material.Glass else Enum.Material.Slate, if i % 2 == 0 then 0.2 else nil)
 					band.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.08 + (i % 2) * 0.03, 0)
+				end
+			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "GLACIER_SLAB" then
+				-- Low suspended glacier-ice slab bridge over frozen lake / crevasse
+				ramp.Color = glacierIceCol
+				ramp.Material = Enum.Material.Glacier
+				local underRamp = decor(model, "BridgeGlacierKeel", Vector3.new(link.Width - 2.4, 1.8, math.max(1, delta.Magnitude - 1.0)), mid, glacierDeepCol, Enum.Material.Ice, 0.15)
+				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.55, 0)
+				local stoneA = a:Lerp(b, 0.08)
+				local stoneB = a:Lerp(b, 0.92)
+				local stones = math.max(3, math.floor(((stoneB - stoneA).Magnitude - 2) / 5.2))
+				for i = 1, stones do
+					local t = (i - 0.5) / stones
+					local stagger = math.sin(i * 1.8) * 1.2
+					local at = stoneA:Lerp(stoneB, t) + right * stagger
+					local slabStep = decor(model, "RampStepLip", Vector3.new(link.Width * 0.52, 0.14, 2.8), at, if i % 2 == 0 then glacierSnowCol else whiteguardGranite, if i % 2 == 0 then Enum.Material.Snow else Enum.Material.Slate)
+					slabStep.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.08 + (i % 2) * 0.025, 0) * CFrame.Angles(0, math.rad(((i * 17) % 12) - 6), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) then
 				-- Floor 3 Gorge-spanning Heartroot bridge: invisible flat collider slab wrapped in densely braided curved

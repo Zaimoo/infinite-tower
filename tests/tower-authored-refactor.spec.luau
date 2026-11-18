@@ -105,7 +105,7 @@ local EXPECTED = {
 
 test("data-driven refactor preserves exact room, lane and patrol snapshots for floors 1-5 and unauthored 6-50", function()
 	for floorId, exp in EXPECTED do
-		if floorId == 11 or floorId == 12 or floorId == 13 or floorId == 14 or floorId == 15 then
+		if (floorId >= 11 and floorId <= 16) then
 			continue
 		end
 		local idx = (floorId - 1) % 5 + 1
@@ -135,6 +135,7 @@ test("Verdant 1-5 expose DirectTerrain, Decks, Suspended, Masonry, Liquid, Terra
 	assert(Layout.ForFloor(13).Authored == "ashen:3" and Layout.ForFloor(13).Masonry == "VARRASH_GLASS" and Layout.ForFloor(13).Suspended.Platforms.Crossing and Layout.ForFloor(13).Patrols.ARCH_CROSSING ~= nil)
 	assert(Layout.ForFloor(14).Authored == "ashen:4" and Layout.ForFloor(14).Masonry == "VARRASH_FORTRESS" and Layout.ForFloor(14).Suspended.Links.WestGallery_EastGallery and Layout.ForFloor(14).Patrols.SCAR_BRIDGE ~= nil)
 	assert(Layout.ForFloor(15).Authored == "ashen:5" and Layout.ForFloor(15).Masonry == "VARRASH_DAIS" and Layout.ForFloor(15).Suspended.Platforms.Apex and Layout.ForFloor(15).Patrols.FOREARM ~= nil)
+	assert(Layout.ForFloor(16).Authored == "frozen:1" and Layout.ForFloor(16).DirectTerrain == true and Layout.ForFloor(16).Masonry == "GLACIER_SLAB" and Layout.ForFloor(16).Decks.Crossing)
 	assert(Layout.ForFloor(6).DirectTerrain == false)
 end)
 

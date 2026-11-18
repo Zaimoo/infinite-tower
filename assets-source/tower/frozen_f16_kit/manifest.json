@@ -1,0 +1,102 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "FisherHut": {
+      "Min": [
+        -9.238,
+        0.0,
+        -5.3
+      ],
+      "Roles": {
+        "ALT": 24,
+        "GLOW": 12,
+        "MOSS": 36,
+        "STONE": 48,
+        "WOOD": 144
+      },
+      "Size": [
+        21.43,
+        13.05,
+        10.956
+      ],
+      "Triangles": 264
+    },
+    "HuntersLodge": {
+      "Min": [
+        -11.708,
+        0.0,
+        -9.8
+      ],
+      "Roles": {
+        "GLOW": 24,
+        "MOSS": 48,
+        "STONE": 36,
+        "TRIM": 350,
+        "WOOD": 272
+      },
+      "Size": [
+        27.88,
+        20.916,
+        22.1
+      ],
+      "Triangles": 730
+    },
+    "IceFloeSlab": {
+      "Min": [
+        -12.675,
+        0.2,
+        -10.709
+      ],
+      "Roles": {
+        "CRYSTAL": 160,
+        "MOSS": 80,
+        "STONE": 80
+      },
+      "Size": [
+        26.867,
+        6.619,
+        21.682
+      ],
+      "Triangles": 320
+    },
+    "RimefallIcefall": {
+      "Min": [
+        -47.381,
+        -0.2,
+        -19.825
+      ],
+      "Roles": {
+        "CRYSTAL": 832,
+        "GLOW": 84,
+        "MOSS": 560,
+        "STONE": 400
+      },
+      "Size": [
+        97.474,
+        73.995,
+        31.911
+      ],
+      "Triangles": 1876
+    },
+    "WardStarShieldMarker": {
+      "Min": [
+        -4.79,
+        0.0,
+        -3.192
+      ],
+      "Roles": {
+        "CRYSTAL": 216,
+        "METAL": 60,
+        "MOSS": 80,
+        "STONE": 24
+      },
+      "Size": [
+        8.789,
+        8.242,
+        5.988
+      ],
+      "Triangles": 380
+    }
+  },
+  "Unit": "studs"
+}
