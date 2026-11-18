@@ -87,7 +87,27 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- an ecosystem (section 7) instead of the part-built rows and clutter beds.
 	local natural = kitOn and field ~= nil
 	kit:SetAttribute("Natural", natural)
-	local resolveRole = KitProps.Resolver(biome, theme)
+	local baseResolve = KitProps.Resolver(biome, theme)
+	local resolveRole = if layout.Authored == "fungal:9"
+		then function(role: string)
+			if role == "GLOW" then
+				return rgb(182, 245, 74), Enum.Material.Neon, 0
+			elseif role == "BULB" then
+				return rgb(212, 255, 96), Enum.Material.Neon, 0
+			elseif role == "CAP" then
+				return rgb(96, 48, 172), Enum.Material.SmoothPlastic, 0
+			elseif role == "ACCENT" then
+				return rgb(142, 76, 224), Enum.Material.Slate, 0
+			elseif role == "MOSS" then
+				return rgb(76, 62, 118), Enum.Material.Grass, 0
+			elseif role == "CRYSTAL" then
+				return rgb(174, 242, 88), Enum.Material.Glass, 0.2
+			elseif role == "ALT" then
+				return rgb(208, 226, 172), Enum.Material.SmoothPlastic, 0
+			end
+			return baseResolve(role)
+		end
+		else baseResolve
 	kit:SetAttribute("KitMeshes", kitOn)
 	-- Boxes (cliffs, ledges, islands) that get a kit rock fitted over them once the floor is built.
 	local KIT_CLIFF = { "CliffRockA", "CliffRockB" }
@@ -5640,6 +5660,311 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 			for _, pool in (layout.Terrain and layout.Terrain.Pools) or {} do
 				padCaps(pool.X, pool.Z, 4, math.min(pool.RX, pool.RZ) - 3, 6, math.floor(pool.X * 3 + pool.Z * 5))
+			end
+		end
+
+		if fungalFloor == 9 then
+			local west, east = layout.Platforms.WestGallery, layout.Platforms.EastGallery
+			local westB, eastB = layout.Platforms.WestBastion, layout.Platforms.EastBastion
+			local cross = layout.Platforms.Crossing
+			local bed = if field then field.Bottom - 3 else bottom
+			local rotGlow = rgb(182, 245, 74)
+			local rotBulb = rgb(212, 255, 96)
+			local rotCap = rgb(96, 48, 172)
+			local rotVioletLight = rgb(152, 82, 238)
+			local boneCol = rgb(208, 226, 172)
+			local bannerCloth = rgb(112, 38, 68)
+			local rotStem = rgb(156, 152, 178)
+			local rotMoss = rgb(76, 62, 118)
+			local brokenO = { WOOD = { Color = rgb(92, 72, 56), Material = Enum.Material.WoodPlanks }, TRIM = { Color = slate, Material = Enum.Material.Slate }, STEM = { Color = rope, Material = Enum.Material.Fabric }, MOSS = { Color = rotMoss, Material = Enum.Material.Grass }, CAP = { Color = rotCap }, GLOW = { Color = rotGlow, Material = Enum.Material.Neon }, BULB = { Color = rotBulb, Material = Enum.Material.Neon } }
+			local vatO = { TRIM = { Color = slate, Material = Enum.Material.Slate }, GLOW = { Color = rotGlow, Material = Enum.Material.Neon }, BULB = { Color = rotBulb, Material = Enum.Material.Neon }, MOSS = { Color = rotMoss, Material = Enum.Material.Grass }, WOOD = { Color = rgb(92, 72, 56), Material = Enum.Material.Wood }, CAP = { Color = rotCap } }
+			local boneO = { ALT = { Color = boneCol, Material = Enum.Material.SmoothPlastic }, CAP = { Color = rotCap }, GLOW = { Color = rotGlow, Material = Enum.Material.Neon }, BULB = { Color = rotBulb, Material = Enum.Material.Neon }, STEM = { Color = rotStem }, MOSS = { Color = rotMoss, Material = Enum.Material.Grass } }
+			local towerO = { TRIM = { Color = slateDark, Material = Enum.Material.Slate }, ACCENT = { Color = rgb(142, 76, 224), Material = Enum.Material.Slate }, CAP = { Color = rotCap }, GLOW = { Color = rotGlow, Material = Enum.Material.Neon }, BULB = { Color = rotBulb, Material = Enum.Material.Neon }, STEM = { Color = rotStem }, MOSS = { Color = rotMoss, Material = Enum.Material.Grass } }
+			local bannerO = { WOOD = { Color = rgb(84, 64, 50), Material = Enum.Material.Wood }, TRIM = { Color = slate, Material = Enum.Material.Slate }, FOLIAGE = { Color = bannerCloth, Material = Enum.Material.Fabric }, ALT = { Color = rgb(224, 218, 228), Material = Enum.Material.SmoothPlastic }, GLOW = { Color = rotGlow, Material = Enum.Material.Neon }, CAP = { Color = rotCap } }
+			local clusterO = { CAP = { Color = rotCap }, GLOW = { Color = rotGlow, Material = Enum.Material.Neon }, BULB = { Color = rotBulb, Material = Enum.Material.Neon }, STEM = { Color = rotStem }, MOSS = { Color = rotMoss, Material = Enum.Material.Grass } }
+
+			local function brokenBarricade(at: Vector3, yaw: number, s: number?)
+				local sc = s or 1
+				piece("BrokenBarricade", "BrokenBarricade", at, yaw, sc, brokenO, function()
+					local cf = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+					for _, sx in { -1, 1 } do
+						local plank = block("BrokenBarricadePlank", V(5.5 * sc, 3.2 * sc, 0.5), V(0, 0, 0), rgb(92, 72, 56), Enum.Material.WoodPlanks)
+						plank.CFrame = CFrame.new(origin) * cf * CFrame.new(sx * 4.5 * sc, 1.6 * sc, 0) * CFrame.Angles(0, 0, sx * 0.25)
+						local capPos = cf:PointToWorldSpace(V(sx * 5.2 * sc, 2.3 * sc, -0.4 * sc))
+						orb("BrokenBarricadeCap", capPos, V(2.5 * sc, 1.1 * sc, 2.5 * sc), rotCap, Enum.Material.SmoothPlastic)
+						orb("BrokenBarricadeGills", capPos - V(0, 0.35 * sc, 0), V(2.0 * sc, 0.5 * sc, 2.0 * sc), rotGlow, Enum.Material.Neon)
+						beam("BrokenBarricadeVein", cf:PointToWorldSpace(V(sx * 6.0 * sc, 2.8 * sc, -0.4 * sc)), cf:PointToWorldSpace(V(sx * 2.0 * sc, 0.3 * sc, -1.2 * sc)), 0.22 * sc, rotGlow, Enum.Material.Neon)
+					end
+				end)
+			end
+			local function rotVat(at: Vector3, yaw: number, s: number?)
+				local sc = s or 1
+				piece("RotVat", "RotVat", at, yaw, sc, vatO, function()
+					cyl("RotVatBody", at + V(0, 2.0 * sc, 0), 2.8 * sc, 4.0 * sc, slate, Enum.Material.Slate)
+					cyl("RotVatBrew", at + V(0, 3.9 * sc, 0), 2.4 * sc, 0.35 * sc, rotGlow, Enum.Material.Neon)
+					orb("RotVatBubble", at + V(0.8 * sc, 4.2 * sc, -0.5 * sc), V(1.0, 0.9, 1.0) * sc, rotBulb, Enum.Material.Neon)
+					orb("RotVatCap", at + V(-2.7 * sc, 2.0 * sc, -0.8 * sc), V(2.0 * sc, 0.9 * sc, 2.0 * sc), rotCap, Enum.Material.SmoothPlastic)
+					beam("RotVatSpill", at + V(0.5 * sc, 3.8 * sc, -2.3 * sc), at + V(0.7 * sc, 0.2 * sc, -3.0 * sc), 0.35 * sc, rotGlow, Enum.Material.Neon)
+				end)
+			end
+			local function ossuaryBones(at: Vector3, yaw: number, s: number?)
+				local sc = s or 1
+				piece("OssuaryBones", "OssuaryBones", at, yaw, sc, boneO, function()
+					local cf = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+					orb("OssuarySkull", cf:PointToWorldSpace(V(-0.4 * sc, 1.8 * sc, -2.0 * sc)), V(3.6, 3.2, 4.0) * sc, boneCol, Enum.Material.SmoothPlastic)
+					for _, sx in { -1, 1 } do
+						orb("OssuaryEyeRot", cf:PointToWorldSpace(V((-0.4 + sx * 0.7) * sc, 2.1 * sc, -3.5 * sc)), V(0.7, 0.7, 0.7) * sc, rotBulb, Enum.Material.Neon)
+					end
+					for k = -1, 1 do
+						local rib = block("OssuaryRib", V(8 * sc, 4 * sc, 0.8 * sc), V(0, 0, 0), boneCol, Enum.Material.SmoothPlastic)
+						rib.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 2.4 * sc, k * 2.2 * sc)
+					end
+					local capAt = cf:PointToWorldSpace(V(1.6 * sc, 4.4 * sc, 0.6 * sc))
+					beam("OssuaryStem", cf:PointToWorldSpace(V(1.4 * sc, 0.2 * sc, 0.6 * sc)), capAt, 0.9 * sc, rotStem, Enum.Material.SmoothPlastic)
+					orb("OssuaryCap", capAt + V(0, 0.6 * sc, 0), V(4.2 * sc, 1.5 * sc, 4.2 * sc), rotCap, Enum.Material.SmoothPlastic)
+					cyl("OssuaryCapGills", capAt, 1.8 * sc, 0.4 * sc, rotGlow, Enum.Material.Neon)
+				end)
+			end
+			local function rotcapTower(at: Vector3, yaw: number, s: number?, tilt: CFrame?)
+				local sc = s or 1
+				piece("RotcapTower", "RotcapTower", at, yaw, sc, towerO, function()
+					local cf = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+					local shaft = block("RotcapTowerShaft", V(8 * sc, 20 * sc, 8 * sc), V(0, 0, 0), slateDark, Enum.Material.Slate)
+					shaft.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 10 * sc, 0)
+					local capA = cf:PointToWorldSpace(V(-3.4 * sc, 13.0 * sc, -2.8 * sc))
+					orb("RotcapTowerCap", capA, V(8.4 * sc, 3.0 * sc, 8.4 * sc), rotCap, Enum.Material.SmoothPlastic)
+					cyl("RotcapTowerGills", capA - V(0, 0.9 * sc, 0), 3.6 * sc, 0.6 * sc, rotGlow, Enum.Material.Neon)
+					local capB = cf:PointToWorldSpace(V(1.2 * sc, 20.6 * sc, -1.0 * sc))
+					orb("RotcapTowerCrown", capB, V(7.6 * sc, 2.8 * sc, 7.6 * sc), rotCap, Enum.Material.SmoothPlastic)
+					cyl("RotcapTowerCrownGills", capB - V(0, 0.8 * sc, 0), 3.2 * sc, 0.5 * sc, rotGlow, Enum.Material.Neon)
+					for k = -1, 1 do
+						beam("RotcapTowerVein", cf:PointToWorldSpace(V(k * 2.4 * sc, 0.2 * sc, -4.1 * sc)), cf:PointToWorldSpace(V(k * 2.0 * sc, 18.0 * sc, -4.1 * sc)), 0.35 * sc, rotGlow, Enum.Material.Neon)
+					end
+				end, tilt)
+			end
+			local function velmariBanner(at: Vector3, yaw: number, s: number?)
+				local sc = s or 1
+				piece("VelmariBanner", "VelmariBanner", at, yaw, sc, bannerO, function()
+					block("BannerBase", V(2.4 * sc, 1 * sc, 2.4 * sc), at + V(0, 0.5 * sc, 0), slate, Enum.Material.Slate)
+					beam("BannerPole", at + V(0, 0.8 * sc, 0), at + V(0, 13.5 * sc, 0), 0.5 * sc, rgb(84, 64, 50), Enum.Material.Wood)
+					local cloth = block("BannerCloth", V(4.2 * sc, 7.6 * sc, 0.3), V(0, 0, 0), bannerCloth, Enum.Material.Fabric)
+					cloth.CFrame = CFrame.new(origin) * CFrame.new(at) * CFrame.Angles(0, yaw, 0) * CFrame.new(0, 8.2 * sc, 0.4)
+					orb("BannerCrestGlow", (CFrame.new(at) * CFrame.Angles(0, yaw, 0)):PointToWorldSpace(V(0, 8.4 * sc, 0.65)), V(1.2 * sc, 1.2 * sc, 0.35), rotGlow, Enum.Material.Neon)
+					orb("BannerBaseCap", at + V(0.8 * sc, 1.2 * sc, 0.6 * sc), V(1.8 * sc, 0.8 * sc, 1.8 * sc), rotCap, Enum.Material.SmoothPlastic)
+				end)
+			end
+			local function rotcapCluster(at: Vector3, yaw: number, s: number?)
+				local sc = s or 1
+				piece("RotcapCluster", "RotcapCluster", at, yaw, sc, clusterO, function()
+					local cf = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+					for _, sub in { { 0, 7.0, 0, 3.4 }, { -2.4, 4.8, -1.2, 2.2 }, { 2.4, 5.2, -1.0, 2.4 } } do
+						local base = cf:PointToWorldSpace(V(sub[1] * 0.4 * sc, 0.2 * sc, sub[3] * 0.4 * sc))
+						local top = cf:PointToWorldSpace(V(sub[1] * sc, sub[2] * sc, sub[3] * sc))
+						beam("RotcapClusterStem", base, top, sub[4] * 0.35 * sc, rotStem, Enum.Material.SmoothPlastic)
+						orb("RotcapClusterDome", top + V(0, sub[4] * 0.28 * sc, 0), V(sub[4] * 2 * sc, sub[4] * 0.9 * sc, sub[4] * 2 * sc), rotCap, Enum.Material.SmoothPlastic)
+						cyl("RotcapClusterGills", top - V(0, 0.1 * sc, 0), sub[4] * 0.85 * sc, 0.35 * sc, rotGlow, Enum.Material.Neon)
+						orb("RotcapClusterSpot", top + V(0, sub[4] * 0.55 * sc, 0), V(0.9 * sc, 0.45 * sc, 0.9 * sc), rotBulb, Enum.Material.Neon)
+					end
+				end)
+			end
+			local function rotMyceliumWeb(at: Vector3, yaw: number, s: number?)
+				local sc = s or 1
+				piece("RotMyceliumWeb", "RotMyceliumWeb", at, yaw, sc, clusterO, function()
+					local cf = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+					orb("RotWebMound", at + V(0, 0.8 * sc, 0), V(6.0 * sc, 2.2 * sc, 5.6 * sc), rotMoss, Enum.Material.Grass)
+					for k = 0, 5 do
+						local a = k * math.pi / 3
+						local p0 = cf:PointToWorldSpace(V(0, 1.5 * sc, 0))
+						local p1 = cf:PointToWorldSpace(V(math.cos(a) * 5.6 * sc, 0.25 * sc, math.sin(a) * 5.2 * sc))
+						beam("RotWebTendril", p0, p1, 0.35 * sc, rotGlow, Enum.Material.Neon)
+						orb("RotWebBulb", p0:Lerp(p1, 0.55) + V(0, 0.25 * sc, 0), V(0.8 * sc, 0.8 * sc, 0.8 * sc), rotBulb, Enum.Material.Neon)
+					end
+					orb("RotWebCap", cf:PointToWorldSpace(V(-1.0 * sc, 2.6 * sc, -1.0 * sc)), V(3.6 * sc, 1.2 * sc, 3.6 * sc), rotCap, Enum.Material.SmoothPlastic)
+				end)
+			end
+
+			-- 1. The Broken Gate (Sanctuary) & Fallen Quarry (Basin): smashed barricades, tattered banners,
+			-- torn shelters, dead lamp-posts (no warm light anywhere on Floor 9), Brute club-drag scars, and
+			-- mixed yellow-green & violet rot clusters.
+			for _, sx in { -1, 1 } do
+				shelter(V(sx * (safe.Width / 2 - 12), safe.Y, safe.Z + safe.Depth / 2 - 9), math.pi + sx * 0.25, true)
+				brokenBarricade(V(sx * 34, safe.Y, safe.Z - safe.Depth / 2 + 6), sx * 0.14, 1)
+				velmariBanner(V(sx * 23, safe.Y, safe.Z - safe.Depth / 2 + 4), math.pi, 0.95)
+				lampPost(V(sx * 48, safe.Y, safe.Z - safe.Depth / 2 + 6), math.pi, 1.1, true)
+				velmariBanner(V(sx * 26, basin.Y, basin.Z + basin.Depth / 2 - 9), math.pi, 1.05)
+				-- Second broken barricade line across the north rim of the quarry, outside lanes and camps.
+				brokenBarricade(V(sx * 84, basin.Y, basin.Z - basin.Depth / 2 + 10), sx * 0.12, 1.05)
+				brokenBarricade(V(sx * 152, basin.Y, basin.Z - basin.Depth / 2 + 10), -sx * 0.18, 1.0)
+				-- Brute quarry devastation: club-drag scars and toppled blocks at the far east and west ends.
+				brokenBarricade(V(sx * 194, basin.Y, basin.Z + 4), sx * 0.85, 1.1)
+				lampPost(V(sx * 188, basin.Y, basin.Z + 32), -sx * math.pi / 2, 1.15, true)
+				group("ClubDragScar", function()
+					onTerrain()
+					local x0 = sx * 176
+					for k = 0, 2 do
+						local scar = block("QuarryDragScar", V(2.4, 0.28, 22), V(x0 + sx * k * 5, basin.Y + 0.08, basin.Z + 12), slateDark, Enum.Material.Slate)
+						scar.CFrame *= CFrame.Angles(0, sx * (0.2 + k * 0.08), 0)
+					end
+					block("ToppledQuarryBlock", V(6.5, 4.2, 5.5), V(sx * 204, basin.Y + 2.0, basin.Z - 26), slateDark, Enum.Material.Slate).CFrame *= CFrame.Angles(0.15, 0.4 * sx, 0.1)
+				end)
+			end
+			-- Quarry rot growths and twin rot/violet lights flanking the northern quarry rim.
+			local quarryWestAt = V(-152, basin.Y, basin.Z - basin.Depth / 2 + 20)
+			rotcapCluster(quarryWestAt, 0.5, 1.05)
+			local quarryWestGlow = orb("QuarryWestRotLight", quarryWestAt + V(0, 6, 0), V(1, 1, 1), rotGlow, Enum.Material.SmoothPlastic, 1)
+			pointLight(quarryWestGlow, rotGlow, 1.25, 46)
+			local quarryEastAt = V(152, basin.Y, basin.Z - basin.Depth / 2 + 20)
+			rotMyceliumWeb(quarryEastAt, -0.7, 1.05)
+			local quarryEastGlow = orb("QuarryEastVioletLight", quarryEastAt + V(0, 6, 0), V(1, 1, 1), rotVioletLight, Enum.Material.SmoothPlastic, 1)
+			pointLight(quarryEastGlow, rotVioletLight, 1.25, 46)
+			rotMyceliumWeb(V(-198, basin.Y, basin.Z - 32), 0.4, 0.9)
+			rotcapCluster(V(198, basin.Y, basin.Z - 32), -0.4, 0.95)
+
+			-- 2. Brewing Cellars (WestGallery): Lampkeepers' overrun camp turned into a Chanter shrine,
+			-- bubbling rot vats, and a sickly rot-green CandleAltar (zero warm light).
+			local altarAt = V(west.X - west.Width / 2 + 10, west.Y, west.Z - west.Depth / 2 + 10)
+			group("CandleAltar", function()
+				onTerrain()
+				local yaw = yawToward(altarAt, V(west.X, west.Y, west.Z))
+				if not kitAt("CandleAltar", CFrame.new(altarAt) * CFrame.Angles(0, yaw, 0), 1, { TRIM = { Color = slate, Material = Enum.Material.Slate }, CANDLE = { Color = rotBulb, Material = Enum.Material.Neon }, BULB = { Color = rotGlow, Material = Enum.Material.Neon }, GLOW = { Color = rotGlow, Material = Enum.Material.Neon } }) then
+					block("AltarDaisStep", V(14, 2, 10), altarAt + V(0, 1, 0), slate, Enum.Material.Slate)
+				end
+				local glow = orb("AltarRotGlow", altarAt + V(0, 5, 0), V(1, 1, 1), rotGlow, Enum.Material.SmoothPlastic, 1)
+				pointLight(glow, rotGlow, 1.4, 44)
+			end)
+			table.insert(reservedSpots, { altarAt.X, altarAt.Z, 12 })
+			rotVat(V(west.X - west.Width / 2 + 7, west.Y, west.Z + 6), 0.4, 1.05)
+			rotVat(V(west.X - west.Width / 2 + 10, west.Y, west.Z + west.Depth / 2 - 10), 1.9, 1.15)
+			rotVat(V(west.X - 22, west.Y, west.Z + west.Depth / 2 - 8), -0.8, 0.95)
+			rotcapCluster(V(west.X - west.Width / 2 + 7, west.Y, west.Z - 12), 1.2, 0.72)
+			shelter(V(west.X + west.Width / 2 - 10, west.Y, west.Z - west.Depth / 2 + 10), -math.pi * 0.75, true)
+			cache(V(west.X + west.Width / 2 - 10, west.Y, west.Z - west.Depth / 2 + 24), -1.1)
+
+			-- 3. Ossuary of Caps (EastGallery): giant bones & skulls sprouted with rotcaps, dead lamps among them.
+			local ossNE = V(east.X + east.Width / 2 - 10, east.Y, east.Z - east.Depth / 2 + 10)
+			ossuaryBones(ossNE, -math.pi * 0.75, 1.05)
+			local ossGlow = orb("OssuaryRotGlow", ossNE + V(0, 5, 0), V(1, 1, 1), rotGlow, Enum.Material.SmoothPlastic, 1)
+			pointLight(ossGlow, rotGlow, 1.3, 42)
+			ossuaryBones(V(east.X + east.Width / 2 - 10, east.Y, east.Z + east.Depth / 2 - 10), -math.pi * 0.25, 0.95)
+			rotMyceliumWeb(V(east.X + east.Width / 2 - 8, east.Y, east.Z - 12), -math.pi / 2, 0.7)
+			lampPost(V(east.X + east.Width / 2 - 7, east.Y, east.Z), -math.pi / 2, 1.15, true)
+			lampPost(V(east.X - east.Width / 2 + 10, east.Y, east.Z - east.Depth / 2 + 10), math.pi * 0.25, 1.1, true)
+			lampPost(V(east.X + 20, east.Y, east.Z + east.Depth / 2 - 6), math.pi, 1.05, true)
+
+			-- 4. West & East Rot-Spires (WestBastion, EastBastion): split and leaning keep towers, plus the
+			-- Lampkeepers' last ChalkSign on the East Rot-Spire lookout pointing at Keep of the Rotcap.
+			local westTowerAt = V(westB.X - westB.Width / 2 + 10, westB.Y, westB.Z - westB.Depth / 2 + 10)
+			rotcapTower(westTowerAt, math.pi * 0.2, 0.85)
+			local westTowerGlow = orb("WestSpireRotLight", westTowerAt + V(0, 12, 0), V(1, 1, 1), rotGlow, Enum.Material.SmoothPlastic, 1)
+			pointLight(westTowerGlow, rotGlow, 1.35, 44)
+			velmariBanner(V(westB.X + westB.Width / 2 - 10, westB.Y, westB.Z - westB.Depth / 2 + 8), -0.35, 1.0)
+			local eastTowerAt = V(eastB.X + eastB.Width / 2 - 10, eastB.Y - 0.2, eastB.Z - eastB.Depth / 2 + 10)
+			rotcapTower(eastTowerAt, -math.pi * 0.25, 0.85, CFrame.Angles(0.05, 0, -0.06))
+			local eastTowerGlow = orb("EastSpireVioletLight", eastTowerAt + V(0, 12, 0), V(1, 1, 1), rotVioletLight, Enum.Material.SmoothPlastic, 1)
+			pointLight(eastTowerGlow, rotVioletLight, 1.35, 44)
+			local lookoutAt = V(eastB.X - westB.Width / 2 + 12, eastB.Y, eastB.Z - eastB.Depth / 2 + 10)
+			chalkSign(lookoutAt, yawToward(lookoutAt, V(apex.X, apex.Y, apex.Z)), 1.3)
+			lampPost(lookoutAt + V(6, 0, -4), yawToward(lookoutAt, V(apex.X, apex.Y, apex.Z)), 1.1, true)
+
+			-- 5. The High Spans & The Keystone (Crossing): arched masonry under the high spans above the rot pit,
+			-- the Lampkeepers' last broken barricade at the NW corner, dead lamp and Velmari banners.
+			for _, link in layout.Links do
+				if link.From == "WestBastion" or link.From == "EastBastion" then
+					group("HighSpanArch", function()
+						onTerrain()
+						local a, b = V(link.AX, link.AY, link.AZ), V(link.BX, link.BY, link.BZ)
+						local delta = b - a
+						local spanLen = delta.Magnitude
+						local flat = V(delta.X, 0, delta.Z)
+						local yaw = math.atan2(flat.X, flat.Z)
+						local right = V(-link.UZ, 0, link.UX)
+						for _, frac in { 0.26, 0.74 } do
+							local pt = a:Lerp(b, frac)
+							local pierTop = pt.Y - 2.05
+							local pierH = math.max(4, pierTop - bed)
+							for _, sb in { -1, 1 } do
+								local foot = V(pt.X + right.X * sb * (link.Width / 2 - 2.5), bed, pt.Z + right.Z * sb * (link.Width / 2 - 2.5))
+								local pier = block("HighSpanPier", V(4.5, pierH, 5.5), foot + V(0, pierH / 2, 0), slateDark, Enum.Material.Slate)
+								pier.CFrame = CFrame.lookAt(origin + foot + V(0, pierH / 2, 0), origin + foot + V(0, pierH / 2, 0) + flat)
+								pier.CastShadow = true
+							end
+						end
+						local mid = (a + b) / 2
+						local archSpan = spanLen * 0.48
+						for _, sb in { -1, 1 } do
+							local archCenter = V(mid.X + right.X * sb * (link.Width / 2 - 1.2), mid.Y - archSpan * 0.5 - 3.2, mid.Z + right.Z * sb * (link.Width / 2 - 1.2))
+							ring("HighSpanArchRing", archCenter, archSpan * 0.5, 2.0, cobble, Enum.Material.Cobblestone, CFrame.Angles(0, yaw + math.pi / 2, 0), 0, math.pi, 10)
+						end
+					end)
+				end
+			end
+			group("RotPitGlow", function()
+				onTerrain()
+				local pitGlow = orb("KeystoneRotPitLight", V(cross.X, cross.Y - 8, cross.Z + 20), V(1, 1, 1), rotGlow, Enum.Material.SmoothPlastic, 1)
+				pointLight(pitGlow, rotGlow, 1.5, 68)
+			end)
+			brokenBarricade(V(cross.X - 31, cross.Y, cross.Z - 25), -0.62, 0.75)
+			lampPost(V(cross.X + 32, cross.Y, cross.Z - 25), -0.5, 1.0, true)
+			velmariBanner(V(cross.X - 32, cross.Y, cross.Z + 25), 0.3, 0.9)
+			velmariBanner(V(cross.X + 32, cross.Y, cross.Z + 25), -0.3, 0.9)
+
+			-- 6. Keep of the Rotcap (Apex): ruined keep towers & curtain walls framing the Keep's back corners,
+			-- crowned by the Colossal Rotcap rising from the Keep's back shelf (sickly yellow-green glow underneath).
+			local rotCapOverride = { CAP = { Color = rotCap }, GLOW = { Color = rotGlow, Material = Enum.Material.Neon }, BULB = { Color = rotBulb, Material = Enum.Material.Neon }, STEM = { Color = rotStem }, MOSS = { Color = rotMoss, Material = Enum.Material.Grass } }
+			local crownZ = apex.Z - apex.Depth / 2 + 1
+			local crownBaseY = apex.Y + 16
+			group("RotcapCrown", function()
+				block("RotcapCrownShelf", V(10, 16, 6), V(0, apex.Y + 8, crownZ), slateDark, Enum.Material.Slate)
+				orb("RotcapCrownMoss", V(0, crownBaseY + 0.5, crownZ), V(11, 2.5, 7), rotMoss, Enum.Material.Grass)
+				local crownAt = V(0, crownBaseY, crownZ)
+				if not kitAt("ElderCap", CFrame.new(crownAt + V(0, 2, -1)) * CFrame.Angles(0, 0.15, 0), 0.85, rotCapOverride) then
+					mushroom(crownAt, 1.55, false)
+				end
+				local glow = orb("RotcapCrownGlow", crownAt + V(0, 36, 4), V(2, 2, 2), rotGlow, Enum.Material.SmoothPlastic, 1)
+				pointLight(glow, rotGlow, 1.6, 90)
+			end)
+			table.insert(reservedSpots, { 0, crownZ, 24 })
+			for _, sx in { -1, 1 } do
+				local sideAt = V(sx * 42, apex.Y, apex.Z - 14)
+				if not kitAt("GiantMushroom", CFrame.new(sideAt) * CFrame.Angles(0, sx * 0.9, 0), 0.55, rotCapOverride) then
+					mushroom(sideAt, 0.55, false)
+				end
+				rotcapCluster(V(sx * 22, apex.Y, apex.Z - apex.Depth / 2 + 2), sx * 0.5, 0.9)
+				rotMyceliumWeb(V(sx * 11, apex.Y, apex.Z - apex.Depth / 2 + 2), sx * 0.8, 0.85)
+				rotcapTower(V(sx * 46, apex.Y, apex.Z - apex.Depth / 2 + 6), sx * 0.25, 0.95)
+				velmariBanner(V(sx * 44, apex.Y, apex.Z + apex.Depth / 2 - 8), sx * 0.2, 1.0)
+				group("KeepCurtainWall", function()
+					local wall = block("KeepRuinWall", V(11, 11, 4), V(sx * 33, apex.Y + 5.5, apex.Z - apex.Depth / 2 + 3), slateDark, Enum.Material.Slate)
+					wall.CastShadow = true
+					for k = -1, 1, 2 do
+						block("KeepWallMerlon", V(3.5, 3.5, 4.4), V(sx * 33 + k * 3.5, apex.Y + 12.5, apex.Z - apex.Depth / 2 + 3), cobble, Enum.Material.Cobblestone)
+					end
+				end)
+			end
+
+			-- 7. Rot pools & side-cliff rot falls: sickly pad-caps and yellow-green falls off the west/east cliffs.
+			if field then
+				for _, f in { { X = -205, Z = -78, Dir = 1 }, { X = 205, Z = -78, Dir = -1 } } do
+					local x = f.X
+					for _ = 1, 24 do
+						local nx = x - f.Dir * 2
+						if field.Height(nx, f.Z) > liquid + 36 or math.abs(nx) > w / 2 - 4 then break end
+						x = nx
+					end
+					local top = math.min(field.Height(x - f.Dir * 2, f.Z), liquid + 42)
+					waterfall(V(x + f.Dir * 1.5, liquid - 0.4, f.Z), 12, top - liquid, rotGlow, if f.Dir > 0 then math.pi / 2 else -math.pi / 2)
+				end
+				-- Keep Floor 9 within its local light budget (harsher contrast, no extra waterfall fill lights).
+				for _, child in kit:GetChildren() do
+					if child.Name == "Waterfall" then
+						for _, d in child:GetDescendants() do
+							if d:IsA("PointLight") then d:Destroy() end
+						end
+					end
+				end
+			end
+			for _, pool in (layout.Terrain and layout.Terrain.Pools) or {} do
+				padCaps(pool.X, pool.Z, 4, math.min(pool.RX, pool.RZ) - 4, 6, math.floor(pool.X * 5 + pool.Z * 7 + 9))
 			end
 		end
 

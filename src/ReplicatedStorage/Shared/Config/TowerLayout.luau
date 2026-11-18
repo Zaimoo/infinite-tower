@@ -474,6 +474,56 @@ local AUTHORED: {[number]: any} = {
 		-- The widest oculus yet, over the middle of the chasm: the brightest Fungal floor.
 		Skylight = {X = 0, Z = -50, Radius = 56},
 	},
+	-- Floor 9, Rotcap Keep (Fungal Hollow): the Velmari citadel devoured from the inside by rotcaps, and the
+	-- scene of the Lampkeepers' last stand. An "H" layout with a high keystone: both wings climb north along
+	-- the cavern walls (Brewing Cellars -> West Rot-Spire; Ossuary of Caps -> East Rot-Spire), then high
+	-- spans cross from both spires to The Keystone suspended over the central rot pit, whose stairs climb
+	-- to the roofless Keep of the Rotcap under a colossal rotcap.
+	[9] = {
+		Key = "fungal:9",
+		Name = "Rotcap Keep",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 160, Width = 440, Depth = 110},
+		WestGallery = {X = -156, Y = 8, Z = -12, Width = 92, Depth = 80},
+		EastGallery = {X = 160, Y = 12, Z = -20, Width = 92, Depth = 80},
+		WestBastion = {X = -150, Y = 16, Z = -144, Width = 88, Depth = 78},
+		EastBastion = {X = 150, Y = 20, Z = -136, Width = 88, Depth = 78},
+		Crossing = {X = 0, Y = 20, Z = -124, Width = 76, Depth = 62},
+		Apex = {X = 0, Y = 24, Z = -228, Width = 108, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"WestGallery", "WestBastion"}, {"EastGallery", "EastBastion"},
+			{"WestBastion", "Crossing"}, {"EastBastion", "Crossing"},
+			{"Crossing", "Apex"},
+		},
+		Names = {
+			Sanctuary = "The Broken Gate", Basin = "Fallen Quarry", WestGallery = "Brewing Cellars",
+			EastGallery = "Ossuary of Caps", WestBastion = "West Rot-Spire", EastBastion = "East Rot-Spire",
+			Crossing = "The Keystone", Apex = "Keep of the Rotcap",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			Decks = {Sanctuary = true, Crossing = true},
+			DeckThickness = {Crossing = 4},
+			-- High stone-and-plank spans crossing from both rot-spires to The Keystone above the rot pit.
+			Bridges = {WestBastion_Crossing = true, EastBastion_Crossing = true},
+			LiquidRise = 2.6,
+			FloorDip = 2.2,
+			WallBand = {Base = 40, Noise = 14},
+			Pools = {
+				{X = 0, Z = -76, RX = 68, RZ = 74},    -- the central rot pit under The Keystone
+				{X = -96, Z = -78, RX = 36, RZ = 32},  -- west rot pool under the high span
+				{X = 96, Z = -78, RX = 36, RZ = 32},   -- east rot pool under the high span
+			},
+			GroveScale = 0.65,
+			GroundCover = {"GlowcapTuftA", "GlowcapTuftB", "SporeMoss", "GlowcapTuftA"},
+			GroundCoverCount = 190,
+			CliffVeins = 44,
+		},
+		Skylight = {X = 0, Z = -124, Radius = 36},
+	},
 	-- Floor 11, Cinder Gate (Ashen Dunes Introduction): wind-rippled black-ash plains swept by the central
 	-- Sleeping Dune (dead-end Dune Crest lookout) with a half-buried Varrash caravan wreck, banded Toll House
 	-- ruins, a cylindrical Watch Kiln tower, waystone-lined tracks, and the towering Cinder Gate in the basalt wall.

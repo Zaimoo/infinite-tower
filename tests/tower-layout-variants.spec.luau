@@ -409,6 +409,74 @@ test("Floor 8 is the hand-authored Blooming Chasm: rope walkways over the chasm 
 	end
 end)
 
+test("Floor 9 is the hand-authored Rotcap Keep: an H with a high keystone over the rot pit", function()
+	local room = Layout.ForFloor(9)
+	assert(room.Authored == "fungal:9" and room.Name == "Rotcap Keep")
+	assert(same(room, Layout.Get(4, 9)), "the authored floor is not fixed")
+	assert(not same(room, Layout.Get(4)), "floor 9 should not be the canonical layout")
+	assert(room.Platforms.Sanctuary.Name == "The Broken Gate")
+	assert(room.Platforms.Crossing.Name == "The Keystone" and room.Platforms.Apex.Name == "Keep of the Rotcap")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- The H shape: wings climb to rot-spires, high spans meet at The Keystone, stairs climb to the Keep.
+	assert(paths.Basin_WestGallery == "RAMP" and paths.Basin_EastGallery == "RAMP")
+	assert(paths.WestGallery_WestBastion == "RAMP" and paths.EastGallery_EastBastion == "RAMP")
+	assert(paths.WestBastion_Crossing == "RAMP" and paths.EastBastion_Crossing == "RAMP")
+	assert(paths.Crossing_Apex == "STAIRS")
+	assert(paths.Basin_Crossing == nil and paths.Basin_Apex == nil and paths.WestBastion_Apex == nil and paths.EastBastion_Apex == nil,
+		"floor 9 breaks the H shape")
+	assert(room.EliteCount == 4)
+	local mobs = 0
+	for _, camp in room.Camps do if camp.Id ~= "APEX_SANCTUM" then mobs += camp.Size end end
+	assert(mobs == 35, "floor 9 has " .. mobs .. " live mobs")
+	-- Both wings clear the chasm return ramps.
+	for _, side in { "West", "East" } do
+		local g = room.Platforms[side .. "Gallery"]
+		assert(g.Z + g.Depth / 2 < 41, side .. "Gallery overlaps the chasm return ramp landing")
+	end
+	-- The bastion ring crosses The Keystone.
+	local routes = Layout.PatrolRoutes(4, 9)
+	assert(routes.BASTION_RING and routes.GALLERY_WEST and routes.GALLERY_EAST, "floor 9 lost patrol routes")
+	local hitsKeystone = false
+	for _, pt in routes.BASTION_RING do
+		if math.abs(pt.X - room.Platforms.Crossing.X) <= room.Platforms.Crossing.Width / 2
+			and math.abs(pt.Z - room.Platforms.Crossing.Z) <= room.Platforms.Crossing.Depth / 2 then
+			hitsKeystone = true
+		end
+	end
+	assert(hitsKeystone, "floor 9 bastion ring does not cross The Keystone")
+end)
+
+test("Floor 9's terrain is the walking surface: flush on terrain terraces, open under the high spans and Keystone", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(9)
+	local td = room.Terrain
+	assert(td and td.Direct and td.Decks.Crossing and td.Decks.Sanctuary and room.Skylight)
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	local field = Terrain.Field(room, "fungal_hollow", 9)
+	for id, t in room.Platforms do
+		local y = field.Sample(t.X + 3, t.Z - 3)
+		if td.Decks[id] then
+			assert(y <= t.Y - 4.5 + 1e-6, id .. ": the terrain rises into a deck")
+		else
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, id .. ": ground is not flush with the walking plane")
+		end
+	end
+	-- The rot pit runs under The Keystone; the high spans cross open ground/pools.
+	local cross = room.Platforms.Crossing
+	local _, underCross = field.Sample(cross.X, cross.Z + 12)
+	assert(underCross == "POOL", "no rot pit under The Keystone (" .. underCross .. ")")
+	for _, link in room.Links do
+		if td.Bridges[link.Id] then
+			local x, z = (link.AX + link.BX) / 2, (link.AZ + link.BZ) / 2
+			local y = field.Sample(x, z)
+			assert(y < math.min(link.AY, link.BY) - 4.4, link.Id .. ": ground rises under the high span")
+		end
+	end
+end)
+
 test("Fungal-owned terrain materials are used by no biome palette", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local owned = {}
