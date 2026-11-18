@@ -5337,6 +5337,137 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 		end -- floor 6 (parapets, lamps, altar, warren, falls)
 
+		if fungalFloor == 7 then
+			local east, west = layout.Platforms.EastGallery, layout.Platforms.WestGallery
+			local niches = 0
+			-- 1. Lamp niches cut along the galleries' cliff-side edges, facing in. The Lower Lamp Gallery still
+			-- burns; the Upper Lamp Gallery's lamps are mostly dead (dark bulbs, dull gill-lines).
+			local function niche(at: Vector3, yaw: number, lit: boolean, light: boolean)
+				group("LampNiche", function()
+					onTerrain()
+					local o: any = { TRIM = { Color = slate, Material = Enum.Material.Slate } }
+					if not lit then
+						o.BULB, o.GLOW = deadLamp.BULB, deadLamp.GLOW
+					end
+					if not kitAt("LampNiche", CFrame.new(at) * CFrame.Angles(0, yaw, 0), 1.3, o) then
+						local cf = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+						local slab = block("LampNicheSlab", V(16, 18, 3), V(0, 0, 0), slate, Enum.Material.Slate)
+						slab.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 9, -2.5)
+						orb("LampNicheBulb", cf:PointToWorldSpace(V(0, 11, 0.5)), V(1.6, 2, 1.6), if lit then rgb(255, 198, 122) else rgb(58, 48, 72), if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic)
+					end
+					if light then
+						local glow = orb("LampNicheGlow", at + V(0, 10, 0), V(1, 1, 1), rgb(255, 198, 122), Enum.Material.SmoothPlastic, 1)
+						pointLight(glow, rgb(255, 190, 110), 1.1, 34)
+					end
+				end)
+				niches += 1
+				table.insert(reservedSpots, { at.X, at.Z, 9 })
+			end
+			local ex = east.X + east.Width / 2 - 3
+			niche(V(ex, east.Y, east.Z - 26), -math.pi / 2, true, false)
+			niche(V(ex, east.Y, east.Z), -math.pi / 2, true, true)
+			local wx = west.X - west.Width / 2 + 3
+			niche(V(wx, west.Y, west.Z - 26), math.pi / 2, false, false)
+			niche(V(wx, west.Y, west.Z), math.pi / 2, true, true)
+			niche(V(wx, west.Y, west.Z + 26), math.pi / 2, false, false)
+			-- The Chanters' candle altar in the lower gallery's far corner, facing its camp.
+			local altarAt = V(east.X + east.Width / 2 - 10, east.Y, east.Z + east.Depth / 2 - 8)
+			group("CandleAltar", function()
+				if not kitAt("CandleAltar", CFrame.new(altarAt) * CFrame.Angles(0, yawToward(altarAt, V(east.X, east.Y, east.Z)), 0), 0.9, { TRIM = { Color = slate, Material = Enum.Material.Slate } }) then
+					block("AltarDaisStep", V(12, 2, 9), altarAt + V(0, 1, 0), slate, Enum.Material.Slate)
+				end
+			end)
+			table.insert(reservedSpots, { altarAt.X, altarAt.Z, 11 })
+
+			-- 2. The Netted Isle: Veinweb nets strung on stalks standing in the span pool round the isle (east side,
+			-- north end, and the north-east toward the vault), and shelf-fungus clumps on its rocky shore.
+			local cross = layout.Platforms.Crossing
+			for _, n in {
+				{ cross.X + cross.Width / 2 + 10, cross.Z, -math.pi / 2 },
+				{ cross.X + 6, cross.Z - cross.Depth / 2 - 10, 0 },
+				{ cross.X + cross.Width / 2 + 6, cross.Z - cross.Depth / 2 - 4, -math.pi / 4 },
+			} do
+				group("MyceliumNet", function()
+					onTerrain()
+					local at = V(n[1], groundY(n[1], n[2]), n[2])
+					if not kitAt("MyceliumNet", CFrame.new(at + V(0, -0.4, 0)) * CFrame.Angles(0, n[3], 0), 1.2, { STEM = { Color = rgb(176, 170, 206) } }) then
+						local cf = CFrame.new(at) * CFrame.Angles(0, n[3], 0)
+						for _, sx in { -1, 1 } do
+							beam("NetStalk", cf:PointToWorldSpace(V(sx * 14, 0, 0)), cf:PointToWorldSpace(V(sx * 14, 17, 0)), 1.6, rgb(176, 170, 206), Enum.Material.SmoothPlastic)
+						end
+						for r = 1, 4 do
+							beam("NetStrand", cf:PointToWorldSpace(V(-14, 4 + r * 3, 0)), cf:PointToWorldSpace(V(14, 4 + r * 3, 0)), 0.2, cyan, Enum.Material.Neon)
+						end
+					end
+				end)
+				table.insert(reservedSpots, { n[1], n[2], 15 })
+			end
+			-- The shore: clumps of caps on the isle's rocky slopes, out where its rounded corners fall away (past
+			-- the camp's reach), each on the ground the field gives there.
+			for k = 0, 7 do
+				local a = (k + 0.5) * math.pi / 4
+				local r = cross.Width / 2 + 7 + (k % 3) * 2
+				local x, z = cross.X + math.cos(a) * r, cross.Z + math.sin(a) * r
+				group("IsleShoreFungi", function()
+					onTerrain()
+					local at = V(x, groundY(x, z), z)
+					if not kitAt("MushroomCluster", CFrame.new(at) * CFrame.Angles(0, a * 1.7, 0), 1.1 + 0.15 * (k % 3), capOverride) then
+						mushroom(at, 0.25, false)
+					end
+				end)
+			end
+			padCaps(cross.X, cross.Z, 30, 46, 10, 707)
+			for _, pool in (layout.Terrain and layout.Terrain.Pools) or {} do
+				if pool.X ~= cross.X or pool.Z ~= cross.Z then
+					padCaps(pool.X, pool.Z, 2, math.min(pool.RX, pool.RZ) - 4, 3, math.floor(pool.X * 7 + pool.Z))
+				end
+			end
+
+			-- 3. The Lantern Vault: dead lamp-posts round the dais and the one living lamp, a colossal post at its
+			-- back corner (clear of the boss portals and the paths in).
+			for _, c in { { apex.X + apex.Width / 2 - 4, apex.Z - apex.Depth / 2 + 4 }, { apex.X + apex.Width / 2 - 4, apex.Z + apex.Depth / 2 - 4 }, { apex.X - apex.Width / 2 + 4, apex.Z - apex.Depth / 2 + 4 } } do
+				local at = V(c[1], apex.Y, c[2])
+				lampPost(at, yawToward(at, V(apex.X, apex.Y, apex.Z)), 1.4, true)
+			end
+			local livingAt = V(apex.X - apex.Width / 2 + 10, apex.Y, apex.Z - 20)
+			-- The Lampkeepers' trail begins here: the living lamp is theirs (a warm flame among the dead violet
+			-- bulbs), and their chalk sign beside it points up.
+			lampPost(livingAt, yawToward(livingAt, V(apex.X, apex.Y, apex.Z)), 2.6, false, true)
+			chalkSign(livingAt + V(7, 0, 4), yawToward(livingAt, V(apex.X, apex.Y, apex.Z)))
+			local livingGlow = orb("LivingLampGlow", livingAt + V(0, 26, 0), V(1, 1, 1), flameWarm, Enum.Material.SmoothPlastic, 1)
+			pointLight(livingGlow, rgb(255, 178, 110), 1.6, 70)
+			table.insert(reservedSpots, { livingAt.X, livingAt.Z, 10 })
+
+			-- 4. The Drip Hall: dangling roots hanging from the vault over the hall (they hang high, above every
+			-- path and camp), crystal stands by the hall's east camp and egg-sacs by its west camp.
+			for i, c in { { -110, basin.Z - 10 }, { 104, basin.Z - 2 }, { -40, basin.Z + 30 }, { 52, basin.Z + 34 }, { 0, basin.Z - 40 } } do
+				group("CeilingRoots", function()
+					local fringeH = KitProps.Size("HangingRootFringe").Y
+					local base = V(c[1], h - fringeH * 1.1 + 2, c[2])
+					if not kitAt("HangingRootFringe", CFrame.new(base) * CFrame.Angles(0, i * 1.9, 0), 1.1, { WOOD = { Color = rgb(40, 32, 44) }, MOSS = { Color = rgb(70, 92, 120) } }) then
+						for j = -2, 2 do
+							local top = V(c[1] + j * 6, h - 0.5, c[2])
+							beam("CeilingHangingRoot", top, top - V(0, 12 + (j % 3) * 6, 0), 1.4, rgb(40, 32, 44), Enum.Material.Wood)
+						end
+					end
+				end)
+			end
+			for _, c in { { 158, 150, 0.36, 0.7 }, { 162, 86, 0.3, 2.1 }, { 146, 156, 0.24, 3.9 } } do
+				crystal(V(c[1], groundY(c[1], c[2]), c[2]), c[3], c[4])
+			end
+			for i, c in { { -160, 88 }, { -156, 154 } } do
+				group("EggSacCluster", function()
+					onTerrain()
+					local at = V(c[1], groundY(c[1], c[2]), c[2])
+					if not kitAt("EggSacCluster", CFrame.new(at) * CFrame.Angles(0, i * 2.4, 0), 1.2, { CRYSTAL = { Color = rgb(200, 176, 236), Material = Enum.Material.Glass, Transparency = 0.35 } }) then
+						orb("EggSac", at + V(0, 1.6, 0), V(2.6, 3.2, 2.6), rgb(200, 176, 236), Enum.Material.Glass, 0.35)
+					end
+				end)
+				table.insert(reservedSpots, { c[1], c[2], 6 })
+			end
+			kit:SetAttribute("LampNiches", niches)
+		end
+
 	end
 
 	-- =========================================================================

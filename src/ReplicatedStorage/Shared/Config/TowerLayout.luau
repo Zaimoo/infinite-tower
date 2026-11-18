@@ -369,6 +369,56 @@ local AUTHORED: {[number]: any} = {
 		-- A round oculus in a closed cavern vault, over the Apex (TowerRoomBuilder).
 		Skylight = {X = 0, Z = -132, Radius = 46},
 	},
+	-- Floor 7, Mycelium Galleries (Fungal Hollow): the Velmari's lamp-galleries, cut in tiers into the cavern
+	-- wall and now strung with the Veinweb's nets. The main route is a switchback up the wall: east to the
+	-- Lower Lamp Gallery, back west over the Netted Isle (a rounded rock island rising out of the span pool,
+	-- under a small oculus), up the gallery steps to the Upper Lamp Gallery, and east again to the Lantern
+	-- Vault. A shortcut ramp climbs from the Drip Hall straight onto the isle; the long east climb skips the
+	-- upper gallery.
+	[7] = {
+		Key = "fungal:7",
+		Name = "Mycelium Galleries",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 118, Width = 340, Depth = 88},
+		EastGallery = {X = 126, Y = 4, Z = 20, Width = 88, Depth = 72},
+		Crossing = {X = -20, Y = 8, Z = -40, Width = 60, Depth = 60},
+		WestGallery = {X = -134, Y = 12, Z = -110, Width = 88, Depth = 72},
+		Apex = {X = 40, Y = 16, Z = -180, Width = 104, Depth = 76},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "EastGallery"}, {"Basin", "Crossing"},
+			{"EastGallery", "Apex"}, {"Crossing", "WestGallery"}, {"WestGallery", "Apex"},
+		},
+		-- The gallery steps: broad slate steps from the isle up to the upper gallery.
+		Stairs = {Crossing_WestGallery = true},
+		Names = {
+			Sanctuary = "Lampwright's Stair", Basin = "Drip Hall", EastGallery = "Lower Lamp Gallery",
+			Crossing = "Netted Isle", WestGallery = "Upper Lamp Gallery", Apex = "Lantern Vault",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			Decks = {Sanctuary = true},
+			-- The Netted Isle is terrain, not a slab: a squircle 3 studs past its edges, its corners falling away
+			-- into the pool, so it reads as a rock island.
+			Shapes = {Crossing = {Round = 3.2, Grow = 3}},
+			LiquidRise = 2.6,
+			FloorDip = 2.2,
+			WallBand = {Base = 38, Noise = 14},
+			Pools = {
+				{X = -20, Z = -40, RX = 60, RZ = 56},  -- the span pool round the Netted Isle
+				{X = -120, Z = 40, RX = 26, RZ = 20},  -- drip puddle below the hall's west end
+				{X = 10, Z = -110, RX = 26, RZ = 20},  -- drip puddle below the vault
+			},
+			GroveScale = 0.5,
+			GroundCover = {"GlowcapTuftA", "GlowcapTuftB", "SporeMoss", "GlowcapTuftA"},
+			GroundCoverCount = 170,
+			-- The veins thicken on this floor.
+			CliffVeins = 40,
+		},
+		-- A small oculus over the isle: daylight filtered through the nets.
+		Skylight = {X = -20, Z = -40, Radius = 28},
+	},
 	-- Floor 11, Cinder Gate (Ashen Dunes Introduction): wind-rippled black-ash plains swept by the central
 	-- Sleeping Dune (dead-end Dune Crest lookout) with a half-buried Varrash caravan wreck, banded Toll House
 	-- ruins, a cylindrical Watch Kiln tower, waystone-lined tracks, and the towering Cinder Gate in the basalt wall.

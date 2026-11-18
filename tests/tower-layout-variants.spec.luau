@@ -313,6 +313,60 @@ test("Floor 6's terrain is the walking surface: flush under natural ground, rece
 	end
 end)
 
+test("Floor 7 is the hand-authored Mycelium Galleries: a switchback up the lamp-gallery wall", function()
+	local room = Layout.ForFloor(7)
+	assert(room.Authored == "fungal:7" and room.Name == "Mycelium Galleries")
+	assert(same(room, Layout.Get(2, 7)), "the authored floor is not fixed")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- East, back west over the span and up the gallery steps, east again to the vault; a shortcut onto the span.
+	assert(paths.Basin_EastGallery == "RAMP" and paths.Basin_Crossing == "RAMP" and paths.EastGallery_Apex == "RAMP")
+	assert(paths.Crossing_WestGallery == "STAIRS" and paths.WestGallery_Apex == "RAMP")
+	assert(paths.Basin_WestGallery == nil and paths.Crossing_Apex == nil and paths.Basin_Apex == nil)
+	assert(room.EliteCount == 2)
+	local mobs = 0
+	for _, camp in room.Camps do if camp.Id ~= "APEX_SANCTUM" then mobs += camp.Size end end
+	assert(mobs == 22, "floor 7 has " .. mobs .. " live mobs")
+	local p = room.Platforms
+	assert(p.EastGallery.Y < p.Crossing.Y and p.Crossing.Y < p.WestGallery.Y and p.WestGallery.Y < p.Apex.Y, "the switchback does not climb")
+	assert(p.EastGallery.X > 0 and p.WestGallery.X < 0 and p.Apex.X > 0, "the switchback does not zig-zag")
+	local td = room.Terrain
+	-- The Netted Isle is a rounded terrain island, not a deck.
+	assert(td and td.Direct and not td.Decks.Crossing and td.Shapes.Crossing and room.Skylight)
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	for _, pool in td.Pools do
+		for _, link in room.Links do
+			for step = 0, 20 do
+				local x = link.AX + (link.BX - link.AX) * step / 20
+				local z = link.AZ + (link.BZ - link.AZ) * step / 20
+				-- Only the span pool may run under a path (the shortcut and the steps cross it to reach the bridge).
+				local e = ((x - pool.X) / pool.RX) ^ 2 + ((z - pool.Z) / pool.RZ) ^ 2
+				assert(e > 1 or (pool.X == p.Crossing.X and pool.Z == p.Crossing.Z), link.Id .. " runs through a pool")
+			end
+		end
+	end
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local field = Terrain.Field(room, "fungal_hollow", 7)
+	for id, t in room.Platforms do
+		local y = field.Sample(t.X + 3, t.Z - 3)
+		if td.Decks[id] then
+			assert(y <= t.Y - 4.5 + 1e-6, id .. ": the terrain rises into a deck")
+		else
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, id .. ": ground is not flush with the walking plane")
+		end
+	end
+	-- The isle rises out of the span pool, and its rounded corners fall away (no square slab).
+	local cross = p.Crossing
+	local _, shore = field.Sample(cross.X + cross.Width / 2 + 14, cross.Z)
+	assert(shore == "POOL", "no pool round the Netted Isle (" .. shore .. ")")
+	local cornerY = field.Sample(cross.X + cross.Width / 2 - 1, cross.Z + cross.Depth / 2 - 1)
+	assert(cornerY < cross.Y - 3, "the Netted Isle's corner is still square")
+	local edgeY = field.Sample(cross.X + cross.Width / 2 - 1, cross.Z)
+	assert(math.abs(edgeY - (cross.Y - 2)) < 1e-6, "the Netted Isle's edge is not flat where paths land")
+end)
+
 test("Fungal-owned terrain materials are used by no biome palette", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local owned = {}

@@ -82,6 +82,7 @@ TowerBiomeKit.Templates = table.freeze({
 -- check TowerKitProps.Has(name) and fall back to native parts until the FBX is imported).
 -- Kits and the floors they dress:
 --   fungal_f6_kit (tools/blender/generate_fungal_f6_kit.py): Floor 6, Sporelit Entry.
+--   fungal_f7_kit (tools/blender/generate_fungal_f7_kit.py): Floor 7, Mycelium Galleries (LampNiche, MyceliumNet).
 TowerBiomeKit.ExtraTemplates = table.freeze({
 	AqueductBrokenSpan = table.freeze({ Size = Vector3.new(23.055, 19.059, 16.419), Min = Vector3.new(-11.167, -0.284, -7.26), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	AshmarketStall = table.freeze({ Size = Vector3.new(14.8, 11.676, 9.0), Min = Vector3.new(-7.4, -0.05, -4.5), Roles = table.freeze({ "ALT", "FOLIAGE", "STONE", "TRIM", "WOOD" }) }),
@@ -132,8 +133,10 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	KennelRow = table.freeze({ Size = Vector3.new(27.35, 12.7, 11.536), Min = Vector3.new(-15.95, -0.8, -5.668), Roles = table.freeze({ "CRYSTAL", "METAL", "MOSS", "STONE", "WOOD" }) }),
 	KilnTower = table.freeze({ Size = Vector3.new(27.6, 58.85, 27.6), Min = Vector3.new(-13.8, -0.1, -13.8), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	KneelingKnight = table.freeze({ Size = Vector3.new(6.212, 8.393, 7.168), Min = Vector3.new(-3.073, -0.153, -4.277), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE" }) }),
+	LampNiche = table.freeze({ Size = Vector3.new(12.8, 15.039, 5.469), Min = Vector3.new(-6.4, 0.0, -3.729), Roles = table.freeze({ "ACCENT", "BULB", "GLOW", "MOSS", "STEM", "TRIM" }) }),
 	MasterTombPavilion = table.freeze({ Size = Vector3.new(36.139, 23.802, 24.226), Min = Vector3.new(-18.057, -0.002, -12.026), Roles = table.freeze({ "FOLIAGE", "GLOW", "GOLD", "METAL", "STONE", "TRIM" }) }),
 	MessCauldron = table.freeze({ Size = Vector3.new(8.325, 7.128, 7.626), Min = Vector3.new(-4.031, 0.1, -3.756), Roles = table.freeze({ "CRYSTAL", "METAL", "MOSS", "STONE" }) }),
+	MyceliumNet = table.freeze({ Size = Vector3.new(27.348, 14.849, 3.613), Min = Vector3.new(-13.649, -0.49, -1.839), Roles = table.freeze({ "BULB", "GLOW", "MOSS", "STEM" }) }),
 	MyceliumVein = table.freeze({ Size = Vector3.new(27.623, 20.987, 1.646), Min = Vector3.new(-5.718, -0.584, -0.548), Roles = table.freeze({ "GLOW", "STEM" }) }),
 	PadCap = table.freeze({ Size = Vector3.new(4.979, 0.644, 4.98), Min = Vector3.new(-2.468, 0.002, -2.506), Roles = table.freeze({ "CAP", "GLOW" }) }),
 	PermafrostCage = table.freeze({ Size = Vector3.new(10.8, 23.4, 10.8), Min = Vector3.new(-5.4, -0.6, -5.4), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE" }) }),
@@ -401,7 +404,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	GlassArchSpan = true, RavineHorizonSpire = true, VarrashLightningRod = true,
 	KilnTower = true, SignalLensTower = true, PortcullisGate = true, AshmarketStall = true,
 	ElderHandFingers = true, ElderShieldRim = true, ElderColossusHead = true, ElderCrownRing = true, ElderShoulderPauldron = true, CinderholdVent = true, CalderaDragonCorpse = true,
-	ElderCap = true, CandleAltar = true, VelmariLampPost = true,
+	ElderCap = true, CandleAltar = true, VelmariLampPost = true, LampNiche = true,
 	RimefallIcefall = true, HuntersLodge = true, FisherHut = true, IceFloeSlab = true, WardStarShieldMarker = true,
 	BarracksBlock = true, KennelRow = true, FrozenSoldier = true, MessCauldron = true,
 	CrevasseCartPillar = true, GlacierShrine = true, TollShelterRuins = true, FrozenBareTree = true,
