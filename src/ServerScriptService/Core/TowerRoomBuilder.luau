@@ -502,10 +502,9 @@ function Builder.Build(id: number, generation: number): any
 			DeckKind = "GLACIER_SLAB",
 			LandingProxy = true,
 			BridgeKind = "GLACIER_SLAB",
-			CurbColor = glacierIceCol,
-			CurbMaterial = Enum.Material.Glacier,
-			CurbCapColor = glacierSnowCol,
-			CurbCapMaterial = Enum.Material.Snow,
+			CurbColor = whiteguardGranite,
+			CurbMaterial = Enum.Material.Slate,
+			CurbMode = "WHITEGUARD_BRIDGE",
 		},
 	}
 
@@ -1292,20 +1291,34 @@ function Builder.Build(id: number, generation: number): any
 					band.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.08 + (i % 2) * 0.03, 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "GLACIER_SLAB" then
-				-- Low suspended glacier-ice slab bridge over frozen lake / crevasse
-				ramp.Color = glacierIceCol
-				ramp.Material = Enum.Material.Glacier
-				local underRamp = decor(model, "BridgeGlacierKeel", Vector3.new(link.Width - 2.4, 1.8, math.max(1, delta.Magnitude - 1.0)), mid, glacierDeepCol, Enum.Material.Ice, 0.15)
-				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.55, 0)
-				local stoneA = a:Lerp(b, 0.08)
-				local stoneB = a:Lerp(b, 0.92)
-				local stones = math.max(3, math.floor(((stoneB - stoneA).Magnitude - 2) / 5.2))
-				for i = 1, stones do
-					local t = (i - 0.5) / stones
-					local stagger = math.sin(i * 1.8) * 1.2
-					local at = stoneA:Lerp(stoneB, t) + right * stagger
-					local slabStep = decor(model, "RampStepLip", Vector3.new(link.Width * 0.52, 0.14, 2.8), at, if i % 2 == 0 then glacierSnowCol else whiteguardGranite, if i % 2 == 0 then Enum.Material.Snow else Enum.Material.Slate)
-					slabStep.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.08 + (i % 2) * 0.025, 0) * CFrame.Angles(0, math.rad(((i * 17) % 12) - 6), 0)
+				-- Alpine timber-and-granite frost bridge over the frozen lake (plank deck, stone girders, lake piers)
+				local bridgeWoodA = Color3.fromRGB(102, 80, 62)
+				local bridgeWoodB = Color3.fromRGB(86, 66, 52)
+				local deepBottom = origin.Y + layout.Bottom - 5
+				ramp.Color = bridgeWoodA
+				ramp.Material = Enum.Material.Wood
+				for _, side in { -1, 1 } do
+					local beamAt = mid + right * (side * (link.Width * 0.43))
+					local girder = decor(model, "BridgeSideGirder", Vector3.new(1.8, 1.9, math.max(1, delta.Magnitude - 0.5)), beamAt, whiteguardGranite, Enum.Material.Slate)
+					girder.CFrame = CFrame.lookAt(beamAt, beamAt + delta) * CFrame.new(0, -1.95, 0)
+				end
+				local pierFracs = if delta.Magnitude > 58 then { 0.24, 0.50, 0.76 } else { 0.28, 0.72 }
+				for _, frac in pierFracs do
+					local pt = a:Lerp(b, frac)
+					local pierH = math.max(2.5, pt.Y - deepBottom - 1.2)
+					for _, side in { -1, 1 } do
+						local pierPos = pt + right * (side * (link.Width * 0.42)) - Vector3.new(0, pierH * 0.5 + 1.2, 0)
+						decor(model, "BridgeLakePier", Vector3.new(2.5, pierH, 2.5), pierPos, whiteguardGranite, Enum.Material.Slate)
+					end
+				end
+				local stoneA = a:Lerp(b, 0.05)
+				local stoneB = a:Lerp(b, 0.95)
+				local planks = math.max(4, math.floor(((stoneB - stoneA).Magnitude - 1) / 6.2))
+				for i = 1, planks do
+					local t = (i - 0.5) / planks
+					local at = stoneA:Lerp(stoneB, t)
+					local plank = decor(model, "BridgePlankSleeper", Vector3.new(link.Width + 0.6, 0.14, 2.6), at, if i % 2 == 0 then bridgeWoodA else bridgeWoodB, Enum.Material.Wood)
+					plank.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.06 + (i % 2) * 0.015, 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) then
 				-- Floor 3 Gorge-spanning Heartroot bridge: invisible flat collider slab wrapped in densely braided curved
@@ -1457,6 +1470,29 @@ function Builder.Build(id: number, generation: number): any
 							local pt = a:Lerp(b, pIdx / (posts + 1)) + curbOffset
 							local merlon = decor(curbGroup, "BridgeFortressMerlon", Vector3.new(2.7, 1.8, 3.6), pt, Color3.fromRGB(168, 138, 100), Enum.Material.Sandstone)
 							merlon.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.4, 0)
+						end
+					elseif curbMode == "WHITEGUARD_BRIDGE" then
+						-- Granite parapet curb with carved end newels, intermediate timber posts, and dual wooden guardrails
+						curb.Size = Vector3.new(1.6, 1.5, curbLen)
+						curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.05, 0)
+						local bridgeWood = Color3.fromRGB(92, 72, 56)
+						local railLen = math.max(1, curbLen - 1.2)
+						local railTop = decor(curbGroup, "BridgeHandrail", Vector3.new(0.85, 0.65, railLen), mid + curbOffset, bridgeWood, Enum.Material.Wood)
+						railTop.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 3.05, 0)
+						local railMid = decor(curbGroup, "BridgeMidRail", Vector3.new(0.6, 0.45, railLen), mid + curbOffset, bridgeWood, Enum.Material.Wood)
+						railMid.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.75, 0)
+						for _, endT in { 0.04, 0.96 } do
+							local np = a:Lerp(b, endT) + curbOffset
+							local newel = decor(curbGroup, "BridgeNewelPost", Vector3.new(2.4, 4.6, 2.4), np, whiteguardGranite, Enum.Material.Slate)
+							newel.CFrame = CFrame.lookAt(np, b + curbOffset) * CFrame.new(0, 1.8, 0)
+							local cap = decor(curbGroup, "BridgeNewelCap", Vector3.new(2.8, 0.6, 2.8), np, glacierIceCol, Enum.Material.Ice, 0.1)
+							cap.CFrame = CFrame.lookAt(np, b + curbOffset) * CFrame.new(0, 4.35, 0)
+						end
+						local posts = math.max(1, math.floor(curbLen / 20))
+						for pIdx = 1, posts do
+							local pt = a:Lerp(b, pIdx / (posts + 1)) + curbOffset
+							local post = decor(curbGroup, "BridgeRailPost", Vector3.new(1.1, 3.6, 1.1), pt, bridgeWood, Enum.Material.Wood)
+							post.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.65, 0)
 						end
 					else
 						local capCol = (masonryStyle and masonryStyle.CurbCapColor) or pathStyle.CurbCapColor

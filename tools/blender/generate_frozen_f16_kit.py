@@ -117,8 +117,8 @@ def hunters_lodge(t):
     """Alpine timber-and-granite Hunters' Lodge with steep snow-laden gable roof, eaves icicles, antler mount, and drying rack."""
     stone, wood, trim, moss, glow = t.bm("STONE"), t.bm("WOOD"), t.bm("TRIM"), t.bm("MOSS"), t.bm("GLOW")
 
-    # Granite plinth & chimney
-    box(stone, (22, 18, 3.2), Matrix.Translation((0, 0, 1.6)))
+    # Granite plinth (extends -1.6 below z=0 to seat cleanly into snow without floating gaps) & chimney
+    box(stone, (22, 18, 4.8), Matrix.Translation((0, 0, 0.8)))
     box(stone, (3.6, 3.6, 20), Matrix.Translation((-7.5, 5.5, 10)))
     box(moss, (4.2, 4.2, 1.1), Matrix.Translation((-7.5, 5.5, 20.3)))
 
@@ -227,10 +227,10 @@ def fisher_hut(t):
     """Substantial lakeside Ice-Fisher's Hut with timber jetty pilings, gable cabin, A-frame net racks, stove flue, crates, and two pointed skiffs."""
     stone, wood, alt, moss, glow = t.bm("STONE"), t.bm("WOOD"), t.bm("ALT"), t.bm("MOSS"), t.bm("GLOW")
 
-    # 1. Stone pier pilings + timber dock platform + entry steps & mooring bollards
+    # 1. Stone pier pilings (driven -1.8 below origin to reach into shoreline ice/snow) + timber dock platform + entry steps & mooring bollards
     for sx in (-6.4, 0.0, 6.4):
         for sy in (-5.2, 0.2, 5.6):
-            box(stone, (1.5, 1.5, 2.8), Matrix.Translation((sx, sy, 1.4)))
+            box(stone, (1.5, 1.5, 4.6), Matrix.Translation((sx, sy, 0.5)))
     box(wood, (15.6, 13.0, 0.75), Matrix.Translation((0, 0.2, 2.75)))
     # Front porch steps (-Y) & timber mooring bollards
     box(wood, (4.6, 1.8, 0.65), Matrix.Translation((-2.2, -6.9, 1.8)))

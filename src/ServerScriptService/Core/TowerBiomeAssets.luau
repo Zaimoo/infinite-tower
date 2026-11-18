@@ -3557,17 +3557,20 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end)
 
-		-- 2. Hunters' Lodge on the open west shoreline south-west of WestGallery (-128, ly, 28)
-		local lodgeX, lodgeZ = -128, 28
-		table.insert(reservedSpots, { lodgeX, lodgeZ, 20 })
+		local sanct = layout.Platforms.Sanctuary
+		local sanctX = if sanct then sanct.X else 0
+		local sanctZ = if sanct then sanct.Z else 166
+
+		-- 2. Hunters' Lodge on the open west shoreline facing Sanctuary (-130, ly, 34)
+		local lodgeX, lodgeZ = -130, 34
+		table.insert(reservedSpots, { lodgeX, lodgeZ, 26 })
 		group("HuntersLodge", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local ly = math.max(groundAt16(lodgeX, lodgeZ), layout.Platforms.WestGallery.Y - 1.5)
-			local lPlinthH = math.max(3, ly - bottom + 2)
-			block("LodgeStoneFooting", V(24, lPlinthH, 20), V(lodgeX, ly - lPlinthH * 0.5 + 0.5, lodgeZ), cGraniteDark, Enum.Material.Slate)
-			local lcf = CFrame.new(lodgeX, ly - 0.3, lodgeZ) * CFrame.Angles(0, -math.pi * 0.32, 0)
+			local ly = math.max(groundAt16(lodgeX, lodgeZ) - 1.2, layout.Platforms.WestGallery.Y - 2.6)
+			local lodgeYaw = math.atan2(sanctX - lodgeX, sanctZ - lodgeZ)
+			local lcf = CFrame.new(lodgeX, ly, lodgeZ) * CFrame.Angles(0, lodgeYaw, 0)
 			if KitProps.Has("HuntersLodge") then
-				local mdl = kitAt("HuntersLodge", lcf, 1.04 * scale, {
+				local mdl = kitAt("HuntersLodge", lcf, 1.42 * scale, {
 					STONE = f16Override.STONE,
 					MOSS = f16Override.MOSS,
 					WOOD = f16Override.WOOD,
@@ -3575,42 +3578,46 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					GLOW = { Color = cWarmGlow, Material = Enum.Material.Neon },
 				})
 				local gp = mdl and mdl:FindFirstChild("GLOW")
-				if gp then pointLight(gp, cWarmGlow, 0.9, 34) end
+				if gp then pointLight(gp, cWarmGlow, 0.95, 36) end
 			else
-				local baseCF = CFrame.new(origin + V(lodgeX, ly, lodgeZ)) * CFrame.Angles(0, -math.pi * 0.32, 0)
-				local body = block("LodgeTimberBody", V(19, 8.0, 15), V(lodgeX, ly + 4.0, lodgeZ), cTimber, Enum.Material.Wood)
-				body.CFrame = baseCF * CFrame.new(0, 4.0, 0)
-				local stoneBase = block("LodgeStoneWall", V(19.8, 3.0, 15.8), V(lodgeX, ly + 1.5, lodgeZ), cGranite, Enum.Material.Slate)
-				stoneBase.CFrame = baseCF * CFrame.new(0, 1.5, 0)
-				for _, side in { -1, 1 } do
-					local roof = block("LodgeSnowRoofSlope", V(22, 1.6, 11.5), V(lodgeX, ly + 10.5, lodgeZ), cSnow, Enum.Material.Snow)
-					roof.CFrame = baseCF * CFrame.new(0, 10.2, side * 4.4) * CFrame.Angles(side * 0.56, 0, 0)
+				local baseCF = CFrame.new(origin + V(lodgeX, ly, lodgeZ)) * CFrame.Angles(0, lodgeYaw, 0)
+				local stoneBase = block("LodgeStoneWall", V(27.0, 5.2, 22.0), V(lodgeX, ly + 1.0, lodgeZ), cGranite, Enum.Material.Slate)
+				stoneBase.CFrame = baseCF * CFrame.new(0, 1.0, 0)
+				local body = block("LodgeTimberBody", V(26.0, 11.2, 21.0), V(lodgeX, ly + 8.6, lodgeZ), cTimber, Enum.Material.Wood)
+				body.CFrame = baseCF * CFrame.new(0, 8.6, 0)
+				local door = block("LodgeFrontDoor", V(4.2, 7.6, 0.7), V(lodgeX, ly + 6.4, lodgeZ), rgb(72, 56, 44), Enum.Material.Wood)
+				door.CFrame = baseCF * CFrame.new(0, 6.4, 10.6)
+				for _, sx in { -7.0, 7.0 } do
+					local win = block("LodgeWarmWindow", V(3.4, 3.4, 0.7), V(lodgeX, ly + 8.6, lodgeZ), cWarmGlow, Enum.Material.Neon)
+					win.CFrame = baseCF * CFrame.new(sx, 8.6, 10.6)
+					if sx > 0 then pointLight(win, cWarmGlow, 0.95, 36) end
 				end
-				local chimney = block("LodgeStoneChimney", V(3.0, 11, 3.0), V(lodgeX, ly + 11.0, lodgeZ), cGraniteDark, Enum.Material.Slate)
-				chimney.CFrame = baseCF * CFrame.new(5.5, 11.5, -4.0)
-				local win = block("LodgeWarmWindow", V(2.8, 2.8, 0.6), V(lodgeX, ly + 5.0, lodgeZ), cWarmGlow, Enum.Material.Neon)
-				win.CFrame = baseCF * CFrame.new(0, 4.8, 7.6)
-				pointLight(win, cWarmGlow, 0.9, 34)
-				local rack = block("LodgeDryingRack", V(8.5, 0.6, 0.6), V(lodgeX, ly + 4.2, lodgeZ), cTimber, Enum.Material.Wood)
-				rack.CFrame = baseCF * CFrame.new(-3.5, 4.2, 11.0)
-				for _, rx in { -3.5, 3.5 } do
-					local post = block("LodgeRackPost", V(0.7, 5.2, 0.7), V(lodgeX, ly + 2.6, lodgeZ), cTimber, Enum.Material.Wood)
-					post.CFrame = baseCF * CFrame.new(-3.5 + rx, 2.6, 11.0)
+				for _, side in { -1, 1 } do
+					local roof = block("LodgeSnowRoofSlope", V(29.5, 2.0, 16.0), V(lodgeX, ly + 17.0, lodgeZ), cSnow, Enum.Material.Snow)
+					roof.CFrame = baseCF * CFrame.new(0, 16.8, side * 6.0) * CFrame.Angles(side * 0.56, 0, 0)
+				end
+				local chimney = block("LodgeStoneChimney", V(4.0, 14.5, 4.0), V(lodgeX, ly + 16.0, lodgeZ), cGraniteDark, Enum.Material.Slate)
+				chimney.CFrame = baseCF * CFrame.new(-7.5, 16.0, -5.5)
+				local rack = block("LodgeDryingRack", V(11.0, 0.7, 0.7), V(lodgeX, ly + 5.8, lodgeZ), cTimber, Enum.Material.Wood)
+				rack.CFrame = baseCF * CFrame.new(-15.5, 5.8, 0) * CFrame.Angles(0, math.pi * 0.5, 0)
+				for _, rz in { -4.4, 4.4 } do
+					local post = block("LodgeRackPost", V(0.85, 7.0, 0.85), V(lodgeX, ly + 3.2, lodgeZ), cTimber, Enum.Material.Wood)
+					post.CFrame = baseCF * CFrame.new(-15.5, 3.2, rz)
 				end
 			end
 		end)
 
-		-- 3. Fisher's Hut & beached rowboats on the east shoreline south of EastGallery (120, hy, 18)
-		local hutX, hutZ = 120, 18
-		table.insert(reservedSpots, { hutX, hutZ, 24 })
+		-- 3. Fisher's Hut & beached rowboats on the east shoreline facing Sanctuary (122, hy, 28)
+		local hutX, hutZ = 122, 28
+		table.insert(reservedSpots, { hutX, hutZ, 28 })
 		group("FisherHut", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local hy = math.max(groundAt16(hutX, hutZ), lakeY + 0.5)
-			local hPlinthH = math.max(3, hy - bottom + 2)
-			block("FisherShoreBank", V(21, hPlinthH, 17), V(hutX + 2.5, hy - hPlinthH * 0.5 - 0.1, hutZ + 1.5), cGraniteDark, Enum.Material.Slate)
-			local hcf = CFrame.new(hutX, hy - 0.2, hutZ) * CFrame.Angles(0, math.pi * 0.28, 0)
+			local iceTop = if field then field.LiquidLevel else -1.2
+			local hy = math.max(groundAt16(hutX, hutZ) - 1.4, iceTop - 0.35)
+			local hutYaw = math.atan2(sanctX - hutX, sanctZ - hutZ)
+			local hcf = CFrame.new(hutX, hy, hutZ) * CFrame.Angles(0, hutYaw, 0)
 			if KitProps.Has("FisherHut") then
-				local mdl = kitAt("FisherHut", hcf, 1.28 * scale, {
+				local mdl = kitAt("FisherHut", hcf, 1.52 * scale, {
 					STONE = f16Override.STONE,
 					MOSS = f16Override.MOSS,
 					WOOD = f16Override.WOOD,
@@ -3618,69 +3625,69 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					GLOW = { Color = cWarmGlow, Material = Enum.Material.Neon },
 				})
 				local gp = mdl and mdl:FindFirstChild("GLOW")
-				if gp then pointLight(gp, cWarmGlow, 0.95, 34) end
+				if gp then pointLight(gp, cWarmGlow, 0.95, 36) end
 			else
-				local baseCF = CFrame.new(origin + V(hutX, hy, hutZ)) * CFrame.Angles(0, math.pi * 0.28, 0)
-				-- Timber jetty dock & stone pilings
-				local dock = block("FisherDockDeck", V(21.0, 1.0, 17.0), V(hutX, hy + 2.4, hutZ), cTimber, Enum.Material.Wood)
-				dock.CFrame = baseCF * CFrame.new(0, 2.4, 0)
-				for _, px in { -8.6, 8.6 } do
-					for _, pz in { -7.0, 7.0 } do
-						local pier = block("FisherDockPiling", V(1.7, 4.0, 1.7), V(hutX, hy + 0.9, hutZ), cGranite, Enum.Material.Slate)
-						pier.CFrame = baseCF * CFrame.new(px, 0.9, pz)
+				local baseCF = CFrame.new(origin + V(hutX, hy, hutZ)) * CFrame.Angles(0, hutYaw, 0)
+				-- Timber jetty dock & pilings driven cleanly into the shoreline snow/ice (no grey slab)
+				local dock = block("FisherDockDeck", V(25.0, 1.1, 20.5), V(hutX, hy + 2.8, hutZ), cTimber, Enum.Material.Wood)
+				dock.CFrame = baseCF * CFrame.new(0, 2.8, 0)
+				for _, px in { -10.2, 0, 10.2 } do
+					for _, pz in { -8.4, 8.4 } do
+						local pier = block("FisherDockPiling", V(1.9, 5.2, 1.9), V(hutX, hy + 0.5, hutZ), cGranite, Enum.Material.Slate)
+						pier.CFrame = baseCF * CFrame.new(px, 0.5, pz)
 					end
 				end
-				-- Boarded cabin, door, framed windows, stove flue & thick drifted snow roof
-				local cabin = block("FisherCabin", V(17.4, 8.4, 13.4), V(hutX, hy + 7.1, hutZ), cTimber, Enum.Material.Wood)
-				cabin.CFrame = baseCF * CFrame.new(0, 7.1, 0.6)
-				local door = block("FisherDoor", V(3.6, 6.0, 0.6), V(hutX, hy + 6.0, hutZ), rgb(72, 56, 44), Enum.Material.Wood)
-				door.CFrame = baseCF * CFrame.new(-3.0, 6.0, -6.2)
-				for _, winSpec in { { 3.4, 7.2, -6.2, 0 }, { -8.8, 7.2, 0.6, math.pi * 0.5 } } do
-					local wPart = block("FisherWarmWindow", V(2.8, 2.7, 0.5), V(hutX, hy + 7.2, hutZ), cWarmGlow, Enum.Material.Neon)
+				-- Boarded cabin, front door & windows (+Z facing Sanctuary), stove flue & thick snow roof
+				local cabin = block("FisherCabin", V(20.6, 10.2, 16.0), V(hutX, hy + 8.4, hutZ), cTimber, Enum.Material.Wood)
+				cabin.CFrame = baseCF * CFrame.new(0, 8.4, -0.8)
+				local door = block("FisherDoor", V(4.4, 7.2, 0.7), V(hutX, hy + 7.2, hutZ), rgb(72, 56, 44), Enum.Material.Wood)
+				door.CFrame = baseCF * CFrame.new(-3.6, 7.2, 7.3)
+				for _, winSpec in { { 4.2, 8.6, 7.3, 0 }, { -10.4, 8.6, -0.8, math.pi * 0.5 } } do
+					local wPart = block("FisherWarmWindow", V(3.4, 3.2, 0.6), V(hutX, hy + 8.6, hutZ), cWarmGlow, Enum.Material.Neon)
 					wPart.CFrame = baseCF * CFrame.new(winSpec[1], winSpec[2], winSpec[3]) * CFrame.Angles(0, winSpec[4], 0)
-					if winSpec[4] == 0 then pointLight(wPart, cWarmGlow, 0.95, 34) end
+					if winSpec[4] == 0 then pointLight(wPart, cWarmGlow, 0.95, 36) end
 				end
-				local roofL = block("FisherCabinSnowRoofL", V(13.0, 1.5, 16.8), V(hutX, hy + 13.4, hutZ), cSnow, Enum.Material.Snow)
-				roofL.CFrame = baseCF * CFrame.new(-4.8, 13.2, 0.6) * CFrame.Angles(0, 0, math.rad(34))
-				local roofR = block("FisherCabinSnowRoofR", V(13.0, 1.5, 16.8), V(hutX, hy + 13.4, hutZ), cSnow, Enum.Material.Snow)
-				roofR.CFrame = baseCF * CFrame.new(4.8, 13.2, 0.6) * CFrame.Angles(0, 0, math.rad(-34))
-				local ridge = block("FisherRoofSnowRidge", V(2.8, 1.3, 16.8), V(hutX, hy + 16.6, hutZ), cSnow, Enum.Material.Snow)
-				ridge.CFrame = baseCF * CFrame.new(0, 16.6, 0.6)
-				local flue = block("FisherStoveFlue", V(1.8, 6.2, 1.8), V(hutX, hy + 15.8, hutZ), cGraniteDark, Enum.Material.Slate)
-				flue.CFrame = baseCF * CFrame.new(4.0, 15.8, 3.8)
-				-- Twin fishing-net drying racks flanking the rear & right side clear of front/lakeside windows
-				for _, rSpec in { { 12.8, 2.0, 0.0 }, { -4.0, 11.8, math.pi * 0.5 } } do
+				local roofL = block("FisherCabinSnowRoofL", V(15.4, 1.7, 20.0), V(hutX, hy + 15.8, hutZ), cSnow, Enum.Material.Snow)
+				roofL.CFrame = baseCF * CFrame.new(-5.7, 15.6, -0.8) * CFrame.Angles(0, 0, math.rad(34))
+				local roofR = block("FisherCabinSnowRoofR", V(15.4, 1.7, 20.0), V(hutX, hy + 15.8, hutZ), cSnow, Enum.Material.Snow)
+				roofR.CFrame = baseCF * CFrame.new(5.7, 15.6, -0.8) * CFrame.Angles(0, 0, math.rad(-34))
+				local ridge = block("FisherRoofSnowRidge", V(3.2, 1.5, 20.0), V(hutX, hy + 19.6, hutZ), cSnow, Enum.Material.Snow)
+				ridge.CFrame = baseCF * CFrame.new(0, 19.6, -0.8)
+				local flue = block("FisherStoveFlue", V(2.1, 7.4, 2.1), V(hutX, hy + 18.8, hutZ), cGraniteDark, Enum.Material.Slate)
+				flue.CFrame = baseCF * CFrame.new(4.8, 18.8, -4.6)
+				-- Twin fishing-net drying racks flanking sides clear of front (+Z) door/window
+				for _, rSpec in { { -16.0, -2.0, 0.0 }, { 16.0, -2.0, 0.0 } } do
 					local rCF = baseCF * CFrame.new(rSpec[1], 0, rSpec[2]) * CFrame.Angles(0, rSpec[3], 0)
-					local net = block("FisherNetCloth", V(0.35, 5.0, 8.2), V(hutX, hy + 4.8, hutZ), rgb(118, 124, 132), Enum.Material.Fabric)
-					net.CFrame = rCF * CFrame.new(0, 4.8, 0)
-					local topBar = block("FisherNetBeam", V(0.6, 0.6, 9.8), V(hutX, hy + 7.5, hutZ), cTimber, Enum.Material.Wood)
-					topBar.CFrame = rCF * CFrame.new(0, 7.5, 0)
-					for _, rz in { -4.4, 4.4 } do
-						local leg = block("FisherNetPost", V(0.6, 7.8, 0.6), V(hutX, hy + 3.9, hutZ), cTimber, Enum.Material.Wood)
-						leg.CFrame = rCF * CFrame.new(0, 3.9, rz)
+					local net = block("FisherNetCloth", V(0.4, 5.8, 9.6), V(hutX, hy + 5.4, hutZ), rgb(118, 124, 132), Enum.Material.Fabric)
+					net.CFrame = rCF * CFrame.new(0, 5.4, 0)
+					local topBar = block("FisherNetBeam", V(0.7, 0.7, 11.4), V(hutX, hy + 8.6, hutZ), cTimber, Enum.Material.Wood)
+					topBar.CFrame = rCF * CFrame.new(0, 8.6, 0)
+					for _, rz in { -5.2, 5.2 } do
+						local leg = block("FisherNetPost", V(0.7, 9.0, 0.7), V(hutX, hy + 4.4, hutZ), cTimber, Enum.Material.Wood)
+						leg.CFrame = rCF * CFrame.new(0, 4.4, rz)
 					end
 				end
-				-- Twin parallel beached wooden rowboats pulled up on the lake-edge beside the dock
-				for _, bOff in { { -14.0, 8.5, -0.45 }, { -19.5, 11.5, -0.50 } } do
+				-- Twin parallel wooden rowboats resting along the lakeside snow/ice
+				for _, bOff in { { -19.0, -8.0, -0.45 }, { -25.0, -11.5, -0.52 } } do
 					local boatPos = V(hutX + bOff[1], lakeY + 0.8, hutZ + bOff[2])
 					local bCF = CFrame.new(origin + boatPos) * CFrame.Angles(0, bOff[3], 0)
-					local hull = block("FisherRowboatHull", V(3.4, 1.6, 10.0), boatPos, cTimber, Enum.Material.Wood)
+					local hull = block("FisherRowboatHull", V(4.0, 1.8, 12.2), boatPos, cTimber, Enum.Material.Wood)
 					hull.CFrame = bCF
-					local thwart = block("FisherRowboatSeat", V(2.9, 0.35, 1.2), boatPos, rgb(138, 142, 148), Enum.Material.Wood)
-					thwart.CFrame = bCF * CFrame.new(0, 0.95, 0)
-					local bow = block("FisherRowboatBowTip", V(2.1, 1.5, 2.1), boatPos, cTimber, Enum.Material.Wood)
-					bow.CFrame = bCF * CFrame.new(0, 0.05, -5.0) * CFrame.Angles(0, math.rad(45), 0)
+					local thwart = block("FisherRowboatSeat", V(3.4, 0.4, 1.4), boatPos, rgb(138, 142, 148), Enum.Material.Wood)
+					thwart.CFrame = bCF * CFrame.new(0, 1.1, 0)
+					local bow = block("FisherRowboatBowTip", V(2.4, 1.7, 2.4), boatPos, cTimber, Enum.Material.Wood)
+					bow.CFrame = bCF * CFrame.new(0, 0.05, -6.1) * CFrame.Angles(0, math.rad(45), 0)
 				end
 			end
 		end)
 
 		-- Snow-laden evergreen pines framing both shorelines behind the Lodge and Fisher's Hut
 		for _, pine in {
-			{ -142, 46, 0.95 },
-			{ -144, 32, 1.05 },
+			{ -146, 54, 0.95 },
+			{ -146, 28, 1.05 },
 			{ -140, -52, 0.92 },
-			{ 144, 48, 1.00 },
-			{ 146, 20, 1.08 },
+			{ 146, 54, 1.00 },
+			{ 148, 22, 1.08 },
 		} do
 			local px, pz, psc = pine[1], pine[2], pine[3]
 			local py = groundAt16(px, pz) - 0.6
