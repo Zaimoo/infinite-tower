@@ -1929,6 +1929,221 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 	end
 
+	-- Floor 11, Cinder Gate (ashen:1): searing sunlit Varrash frontier modeled after media_1794989586079_d62a0199.jpg:
+	-- flanking sandstone parapet steps on Sun-Bleached Steps, amber-caged VarrashWaystones lining the tracks,
+	-- half-buried Varrash caravan wagon on the Sleeping Dune windward slope, banded TollHouseRuins + nomad
+	-- Ash Raider tents on the west, tapered WatchKilnTower on the east, amber crystal clusters & dead snags.
+	if layout.Authored == "ashen:1" then
+		local vSand = rgb(188, 158, 116)
+		local vTerra = rgb(175, 95, 65)
+		local vBasalt = rgb(44, 38, 40)
+		local vIron = rgb(58, 52, 56)
+		local vAmber = rgb(255, 162, 62)
+		local vCrystal = rgb(255, 126, 36)
+		local vWood = rgb(142, 118, 92)
+		local vDeadWood = rgb(186, 174, 156)
+		local vCanvas = rgb(104, 108, 112)
+		local vDriftSand = rgb(122, 110, 96)
+
+		local function ashenGroundAt(x: number, z: number): number
+			for _, t in layout.Platforms do
+				if math.abs(x - t.X) <= t.Width / 2 and math.abs(z - t.Z) <= t.Depth / 2 then
+					return t.Y
+				end
+			end
+			return if field then math.max(field.Sample(x, z), bottom) else bottom
+		end
+
+		local f11Override = {
+			TRIM = { Color = vSand, Material = Enum.Material.Sandstone },
+			ALT = { Color = vTerra, Material = Enum.Material.Slate },
+			STONE = { Color = vBasalt, Material = Enum.Material.Basalt },
+			METAL = { Color = vIron, Material = Enum.Material.Metal },
+			GLOW = { Color = vAmber, Material = Enum.Material.Neon },
+			ACCENT = { Color = vCrystal, Material = Enum.Material.Slate },
+			WOOD = { Color = vWood, Material = Enum.Material.Wood },
+			FOLIAGE = { Color = vCanvas, Material = Enum.Material.Fabric },
+			MOSS = { Color = vDriftSand, Material = Enum.Material.Sand },
+		}
+
+		-- 1. Foreground Sanctuary framing: stepped banded sandstone retaining parapets & dark basalt flagstones
+		group("SanctuaryVarrashSteps", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			for _, s in { -1, 1 } do
+				for step = 0, 2 do
+					local px = s * (30 + step * 11)
+					local pz = 121 + step * 5
+					local py = ashenGroundAt(px, pz)
+					local hWall = 3.6 + step * 1.4
+					block("ForegroundParapetBase", V(11.5, hWall, 4.6), V(px, py + hWall * 0.5 - 1.2, pz), vBasalt, Enum.Material.Basalt)
+					block("ForegroundParapetCap", V(12.2, 1.3, 5.2), V(px, py + hWall - 0.65, pz), vSand, Enum.Material.Sandstone)
+				end
+			end
+			for k = -3, 3 do
+				local px = k * 7.2
+				local pz = 123 + ((math.abs(k) * 3) % 5)
+				local py = ashenGroundAt(px, pz)
+				local paver = block("ForegroundBasaltPaver", V(5.4 + (math.abs(k) % 2) * 1.1, 0.35, 4.4), V(px, py + 0.08 + (k % 2) * 0.04, pz), if k % 2 == 0 then vBasalt else rgb(68, 62, 64), Enum.Material.Slate)
+				paver.CanCollide = false
+			end
+		end)
+
+		-- 2. VarrashWaystone caravan trail markers lining central and wing approaches (clear of lanes)
+		local waystoneSpots = {
+			{ -26, 98, true }, { 26, 98, true },
+			{ -26, 72, false }, { 26, 72, false },
+			{ -22, 16, false }, { 22, 16, false },
+			{ -92, 24, false }, { -66, -124, true },
+			{ 92, 14, false }, { 66, -124, true },
+		}
+		for _, ws in waystoneSpots do
+			local wx, wz, lit = ws[1], ws[2], ws[3]
+			if not footprintClear(wx, wz, 2.5, 2.5) then
+				continue
+			end
+			local wy = ashenGroundAt(wx, wz)
+			table.insert(reservedSpots, { wx, wz, 10 })
+			group("VarrashWaystone", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				if KitProps.Has("VarrashWaystone") then
+					local mdl = kitAt("VarrashWaystone", CFrame.new(wx, wy - 0.1, wz), 1.05 * scale, f11Override)
+					if lit and mdl then
+						local anchor = mdl:FindFirstChildWhichIsA("BasePart")
+						if anchor then pointLight(anchor, vAmber, 0.75, 24) end
+					end
+				else
+					block("WaystoneFoot", V(3.8, 1.2, 3.8), V(wx, wy + 0.5, wz), vBasalt, Enum.Material.Basalt)
+					block("WaystoneShaft", V(2.7, 3.8, 2.7), V(wx, wy + 3.0, wz), vSand, Enum.Material.Sandstone)
+					block("WaystoneCap", V(3.2, 1.0, 3.2), V(wx, wy + 5.4, wz), vTerra, Enum.Material.Slate)
+					local ember = orb("WaystoneFlame", V(wx, wy + 7.4, wz), V(1.4, 2.1, 1.4), vAmber, Enum.Material.Neon)
+					if lit then pointLight(ember, vAmber, 0.75, 24) end
+				end
+			end)
+		end
+
+		-- 3. Sleeping Dune Wreck: BuriedVarrash Caravan Wagon pitched into the windward west sand slope
+		local wagX, wagZ = -38, -44
+		if footprintClear(wagX, wagZ, 10, 10) then
+			local wagY = ashenGroundAt(wagX, wagZ)
+			table.insert(reservedSpots, { wagX, wagZ, 22 })
+			group("BuriedWagon", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local wagCf = CFrame.new(wagX, wagY - 0.6, wagZ) * CFrame.Angles(0, math.rad(-38), 0)
+				if KitProps.Has("BuriedWagon") then
+					kitAt("BuriedWagon", wagCf, 1.22 * scale, f11Override)
+				else
+					local bed = block("WagonBed", V(8.5, 1.6, 15.5), wagCf.Position + V(0, 2.5, 0), vWood, Enum.Material.Wood)
+					bed.CFrame = wagCf * CFrame.Angles(math.rad(12), 0, math.rad(-14))
+					local top = orb("WagonCanvas", wagCf.Position + V(0, 6.2, 0), V(8.8, 6.2, 15.0), vCanvas, Enum.Material.Fabric)
+					top.CFrame = wagCf * CFrame.Angles(math.rad(12), 0, math.rad(-14))
+				end
+			end)
+		end
+
+		-- 4. West Midground: TollHouseRuins + Nomad Ash Raider TarpCamp (outside WEST_GALLERY camp & lanes)
+		local tollX, tollZ = -148, 28
+		if footprintClear(tollX, tollZ, 22, 18) then
+			local tollY = ashenGroundAt(tollX, tollZ)
+			table.insert(reservedSpots, { tollX, tollZ, 30 })
+			group("TollHouseRuins", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local tollCf = CFrame.new(tollX, tollY - 0.2, tollZ) * CFrame.Angles(0, math.rad(22), 0)
+				if KitProps.Has("TollHouseRuins") then
+					kitAt("TollHouseRuins", tollCf, 1.15 * scale, f11Override)
+				else
+					for _, side in { -1, 1 } do
+						local wPart = block("TollWall", V(36, 4.5, 3), tollCf.Position + V(0, 2.25, side * 12), vBasalt, Enum.Material.Basalt)
+						wPart.CFrame = tollCf * CFrame.new(0, 2.25, side * 12)
+						local bPart = block("TollWallBand", V(36, 4.5, 3), tollCf.Position + V(0, 6.75, side * 12), vTerra, Enum.Material.Slate)
+						bPart.CFrame = tollCf * CFrame.new(0, 6.75, side * 12)
+						local cPart = block("TollWallCrest", V(32, 3.6, 3), tollCf.Position + V(0, 10.8, side * 12), vSand, Enum.Material.Sandstone)
+						cPart.CFrame = tollCf * CFrame.new(0, 10.8, side * 12)
+					end
+				end
+			end)
+		end
+
+		for tIdx, tc in { { -168, -22, 1.0, 25 }, { -170, 4, 0.85, -18 } } do
+			local tx, tz, ts, tyaw = tc[1], tc[2], tc[3], tc[4]
+			local ty = ashenGroundAt(tx, tz)
+			table.insert(reservedSpots, { tx, tz, 14 })
+			group("AshRaiderTarpTent" .. tIdx, function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local tcf = CFrame.new(tx, ty + 0.2, tz) * CFrame.Angles(0, math.rad(tyaw), 0)
+				for _, side in { -1, 1 } do
+					local roof = block("TarpPitch", V(9.5 * ts, 0.45, 13.0 * ts), V(tx, ty + 3.5, tz), vCanvas, Enum.Material.Fabric)
+					roof.CFrame = tcf * CFrame.new(side * 3.35 * ts, 3.8 * ts + (if side > 0 then 0.08 else 0), 0) * CFrame.Angles(0, 0, math.rad(side * -32))
+					local pole = cyl("TentPole", V(tx, ty, tz), 0.35, 6.8 * ts, vWood, Enum.Material.Wood)
+					pole.CFrame = tcf * CFrame.new(0, 3.4 * ts, side * 5.8 * ts)
+				end
+			end)
+		end
+
+		-- 5. East Midground: WatchKilnTower overlooking Ash Flats & Watch Kiln terrace
+		local kilnX, kilnZ = 160, -24
+		if footprintClear(kilnX, kilnZ, 16, 16) then
+			local kilnY = ashenGroundAt(kilnX, kilnZ)
+			table.insert(reservedSpots, { kilnX, kilnZ, 26 })
+			group("WatchKilnTower", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local kilnCf = CFrame.new(kilnX, kilnY - 2.6, kilnZ) * CFrame.Angles(0, math.rad(-140), 0)
+				if KitProps.Has("WatchKilnTower") then
+					local mdl = kitAt("WatchKilnTower", kilnCf, 1.25 * scale, f11Override)
+					if mdl then
+						local anchor = mdl:FindFirstChildWhichIsA("BasePart")
+						if anchor then pointLight(anchor, vAmber, 1.15, 38) end
+					end
+				else
+					cyl("KilnBase", V(kilnX, kilnY + 1.5, kilnZ), 11, 10, vBasalt, Enum.Material.Basalt)
+					cyl("KilnDrum", V(kilnX, kilnY + 11.5, kilnZ), 9.5, 12, vSand, Enum.Material.Sandstone)
+					cyl("KilnBand", V(kilnX, kilnY + 12.5, kilnZ), 9.9, 2.6, vTerra, Enum.Material.Slate)
+					local emberTop = orb("KilnSignalGlow", V(kilnX, kilnY + 25.5, kilnZ), V(3.2, 2.4, 3.2), vAmber, Enum.Material.Neon)
+					pointLight(emberTop, vAmber, 1.15, 38)
+				end
+			end)
+		end
+
+		-- 6. Glowing Ember Crystal Clusters & Sun-Bleached Dead Desert Snags
+		local crystalSpots = {
+			{ -46, 114, 1.0 }, { 42, 116, 0.9 },
+			{ -122, 42, 1.15 }, { -128, 12, 0.9 },
+			{ -18, 42, 0.85 }, { 24, 38, 0.95 },
+			{ 132, -8, 1.05 }, { -88, -62, 1.1 },
+		}
+		for cIdx, cs in crystalSpots do
+			local cx, cz, csc = cs[1], cs[2], cs[3]
+			if footprintClear(cx, cz, 5, 5) then
+				local cy = ashenGroundAt(cx, cz)
+				table.insert(reservedSpots, { cx, cz, 6 })
+				group("EmberCrystalPatch", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					for sh = 1, 3 do
+						local ang = (cIdx * 1.7 + sh * 2.1)
+						local shH = (3.8 + sh * 1.4) * csc
+						local shPos = V(cx + math.cos(ang) * (1.2 * csc), cy + shH * 0.45, cz + math.sin(ang) * (1.2 * csc))
+						local shard = block("EmberCrystalShard", V(1.3 * csc, shH, 1.3 * csc), shPos, vCrystal, Enum.Material.Glass, nil, 0.15)
+						shard.CFrame = CFrame.new(origin + shPos) * CFrame.Angles(math.rad((sh - 2) * 18), ang, math.rad((sh - 1) * 14))
+					end
+				end)
+			end
+		end
+
+		for _, snag in { { 172, 16, 0.95 }, { -168, -66, 0.9 }, { 132, -118, 0.85 } } do
+			local sx, sz, ss = snag[1], snag[2], snag[3]
+			local sy = ashenGroundAt(sx, sz)
+			table.insert(reservedSpots, { sx, sz, 12 })
+			group("BleachedDesertSnag", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				if KitProps.Has("DeadTree") then
+					kitAt("DeadTree", CFrame.new(sx, sy - 0.5, sz) * CFrame.Angles(0, math.rad(sx), 0), ss, { WOOD = { Color = vDeadWood, Material = Enum.Material.Wood } })
+				else
+					beam("DeadSnagTrunk", V(sx, sy, sz), V(sx + 2, sy + 20 * ss, sz - 1), 2.8 * ss, vDeadWood, Enum.Material.Wood)
+					beam("DeadSnagLimbA", V(sx + 1.5, sy + 13 * ss, sz - 0.5), V(sx - 6, sy + 23 * ss, sz + 3), 1.4 * ss, vDeadWood, Enum.Material.Wood)
+				end
+			end)
+		end
+	end
+
 	-- =========================================================================
 	-- 5. MONUMENTAL NORTH APEX CITADEL / TEMPLE / PORTAL & OVERHEAD SKY SPECTACLE
 	-- =========================================================================
@@ -1942,13 +2157,26 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		block("ApexShelfMassif", V(w - 60, apex.Y - bottom, shelfDepth + 2), V(0, (apex.Y + bottom) / 2, -d / 2 + shelfDepth / 2), cliffColor, cliffMat)
 	end
 
-	for _, s in { -1, 1 } do
-		local wingX = s * (apex.Width * 0.5 + 38)
-		group("CitadelWing", function()
-			block("NorthCitadelWingCliff", V(68, 76 * scale, 44), backdrop + V(wingX, 28 * scale, 4), cliffColor, cliffMat)
-			arch(backdrop + V(wingX, 12 * scale, 28), 36 * scale, 34 * scale, 10, theme.TrimColor, theme.TrimMaterial, 0)
-			waterfall(backdrop + V(s * (apex.Width * 0.5 + 16), bottom - apex.Y, 20), 15 * scale, (apex.Y - bottom + 40 * scale), liquidColor, 0)
+	if layout.Authored == "ashen:1" then
+		-- Columnar dark basalt cliff palisade framing the north horizon (mirrors media_1794989586079_d62a0199.jpg)
+		group("AshenBasaltCliffWall", function()
+			for i = -8, 8 do
+				if math.abs(i) <= 1 then continue end
+				local cx = i * 24
+				local cz = backdrop.Z + math.abs(i % 3) * 6 - 4
+				local ch = (58 + ((math.abs(i) * 13) % 24)) * scale
+				block("ColumnarBasaltCliff", V(24.5, ch, 28), V(cx, apex.Y + ch * 0.5 - 12, cz), rgb(38, 34, 36), Enum.Material.Basalt)
+			end
 		end)
+	else
+		for _, s in { -1, 1 } do
+			local wingX = s * (apex.Width * 0.5 + 38)
+			group("CitadelWing", function()
+				block("NorthCitadelWingCliff", V(68, 76 * scale, 44), backdrop + V(wingX, 28 * scale, 4), cliffColor, cliffMat)
+				arch(backdrop + V(wingX, 12 * scale, 28), 36 * scale, 34 * scale, 10, theme.TrimColor, theme.TrimMaterial, 0)
+				waterfall(backdrop + V(s * (apex.Width * 0.5 + 16), bottom - apex.Y, 20), 15 * scale, (apex.Y - bottom + 40 * scale), liquidColor, 0)
+			end)
+		end
 	end
 
 	if biome == "verdant_ruins" then
@@ -2114,19 +2342,44 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end)
 
 	elseif biome == "ashen_dunes" then
-		group("Volcano", function()
-			for k = 1, 11 do
-				local a = k * math.pi / 11
-				local peakH = (38 + math.sin(a) * 60) * scale
-				block("VolcanoCalderaSlope", V(25 * scale, peakH, 30 * scale), backdrop + V((k - 6) * 19 * scale, peakH / 2 - 4, -6), rgb(36, 26, 26), Enum.Material.Basalt)
-			end
-			orb("CalderaCraterMagma", backdrop + V(0, 66 * scale, -4), V(48 * scale, 18 * scale, 20 * scale), rgb(255, 112, 28), Enum.Material.SmoothPlastic, 0.15)
-			orb("VolcanicAshPlume1", backdrop + V(0, 86 * scale, -6), V(62 * scale, 28 * scale, 34 * scale), rgb(52, 38, 38), Enum.Material.Slate, 0.25)
-			orb("VolcanicAshPlume2", backdrop + V(12, 106 * scale, -8), V(80 * scale, 30 * scale, 42 * scale), rgb(68, 44, 42), Enum.Material.Slate, 0.35)
-			for _, s in { -1, 1 } do
-				beam("CalderaLavaRiver", backdrop + V(s * 12 * scale, 62 * scale, 4), backdrop + V(s * 38 * scale, 2, 24), 5.0 * scale, rgb(255, 105, 24), Enum.Material.SmoothPlastic, 0.2)
-			end
-		end)
+		if layout.Authored == "ashen:1" then
+			local gateAt = V(apex.X, apex.Y, apex.Z - apex.Depth / 2 - 4)
+			group("CinderGateArch", function()
+				if KitProps.Has("CinderGateArch") then
+					local mdl = kitAt("CinderGateArch", CFrame.new(gateAt), 1.18 * scale, {
+						TRIM = { Color = rgb(188, 158, 116), Material = Enum.Material.Sandstone },
+						ALT = { Color = rgb(175, 95, 65), Material = Enum.Material.Slate },
+						STONE = { Color = rgb(40, 34, 36), Material = Enum.Material.Basalt },
+						METAL = { Color = rgb(58, 52, 56), Material = Enum.Material.Metal },
+						GLOW = { Color = rgb(255, 165, 65), Material = Enum.Material.Neon },
+						ACCENT = { Color = rgb(245, 115, 42), Material = Enum.Material.Slate },
+					})
+					if mdl then
+						local anchor = mdl:FindFirstChildWhichIsA("BasePart")
+						if anchor then pointLight(anchor, rgb(255, 155, 62), 1.5, 52) end
+					end
+				else
+					arch(gateAt, 38 * scale, 48 * scale, 10, rgb(188, 158, 116), Enum.Material.Sandstone, 0)
+					block("CinderGateRecess", V(22, 34 * scale, 6), gateAt + V(0, 17 * scale, -4), rgb(24, 20, 22), Enum.Material.Basalt)
+					local emberKey = orb("CinderGateFlameKeystone", gateAt + V(0, 50 * scale, 2), V(3.6, 5.4, 2.6), rgb(255, 165, 65), Enum.Material.Neon)
+					pointLight(emberKey, rgb(255, 155, 62), 1.5, 52)
+				end
+			end)
+		else
+			group("Volcano", function()
+				for k = 1, 11 do
+					local a = k * math.pi / 11
+					local peakH = (38 + math.sin(a) * 60) * scale
+					block("VolcanoCalderaSlope", V(25 * scale, peakH, 30 * scale), backdrop + V((k - 6) * 19 * scale, peakH / 2 - 4, -6), rgb(36, 26, 26), Enum.Material.Basalt)
+				end
+				orb("CalderaCraterMagma", backdrop + V(0, 66 * scale, -4), V(48 * scale, 18 * scale, 20 * scale), rgb(255, 112, 28), Enum.Material.SmoothPlastic, 0.15)
+				orb("VolcanicAshPlume1", backdrop + V(0, 86 * scale, -6), V(62 * scale, 28 * scale, 34 * scale), rgb(52, 38, 38), Enum.Material.Slate, 0.25)
+				orb("VolcanicAshPlume2", backdrop + V(12, 106 * scale, -8), V(80 * scale, 30 * scale, 42 * scale), rgb(68, 44, 42), Enum.Material.Slate, 0.35)
+				for _, s in { -1, 1 } do
+					beam("CalderaLavaRiver", backdrop + V(s * 12 * scale, 62 * scale, 4), backdrop + V(s * 38 * scale, 2, 24), 5.0 * scale, rgb(255, 105, 24), Enum.Material.SmoothPlastic, 0.2)
+				end
+			end)
+		end
 
 	elseif biome == "frozen_citadel" then
 		group("CitadelKeep", function()

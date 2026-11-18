@@ -309,6 +309,35 @@ local AUTHORED: {[number]: any} = {
 			WestBastion = "Northwest Tier", EastBastion = "Northeast Tier", Apex = "Mossbound Dais",
 		},
 	},
+	-- Floor 11, Cinder Gate (Ashen Dunes Introduction): wind-rippled black-ash plains swept by the central
+	-- Sleeping Dune (dead-end Dune Crest lookout) with a half-buried Varrash caravan wreck, banded Toll House
+	-- ruins, a cylindrical Watch Kiln tower, waystone-lined tracks, and the towering Cinder Gate in the basalt wall.
+	[11] = {
+		Key = "ashen:1",
+		Name = "Cinder Gate",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "DUNE", X = -10, Z = -74, Width = 148, Length = 112, Height = 18, Yaw = -18, CrestSway = 0.24, SlipSteep = 1.25, RippleAmp = 0.24 },
+			{ Kind = "DUNE", X = -84, Z = 26, Width = 54, Length = 60, Height = 5.5, Yaw = 25, CrestSway = 0.14, SlipSteep = 1.2 },
+			{ Kind = "DUNE", X = 86, Z = 18, Width = 56, Length = 62, Height = 6.0, Yaw = -22, CrestSway = 0.14, SlipSteep = 1.2 },
+		},
+		Basin = {X = 0, Y = 0, Z = 82, Width = 330, Depth = 88},
+		Crossing = {X = 0, Y = 10, Z = -20, Width = 48, Depth = 44},
+		WestGallery = {X = -116, Y = 4, Z = -20, Width = 84, Depth = 76},
+		EastGallery = {X = 118, Y = 7, Z = -44, Width = 80, Depth = 72},
+		Apex = {X = 0, Y = 12, Z = -150, Width = 110, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"}, {"Basin", "Crossing"},
+			{"WestGallery", "Apex"}, {"EastGallery", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Sun-Bleached Steps", Basin = "Ash Flats", Crossing = "Dune Crest",
+			WestGallery = "Toll House", EastGallery = "Watch Kiln", Apex = "Cinder Gate",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

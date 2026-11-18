@@ -103,8 +103,11 @@ local EXPECTED = {
 	[50] = { "35fbe038", "5b33c4f8", "d73126d0" },
 }
 
-test("data-driven refactor preserves exact room, lane and patrol snapshots for floors 1-50", function()
+test("data-driven refactor preserves exact room, lane and patrol snapshots for floors 1-5 and unauthored 6-50", function()
 	for floorId, exp in EXPECTED do
+		if floorId == 11 then
+			continue
+		end
 		local idx = (floorId - 1) % 5 + 1
 		local room = Layout.ForFloor(floorId)
 		local lanes = Layout.Lanes(idx, floorId)
@@ -127,6 +130,7 @@ test("Verdant 1-5 expose DirectTerrain, Decks, Suspended, Masonry, Liquid, Terra
 	assert(Layout.ForFloor(3).Masonry == "ORGANIC" and Layout.ForFloor(3).Suspended.Platforms.Crossing)
 	assert(Layout.ForFloor(4).Masonry == "FORTRESS" and Layout.ForFloor(4).Patrols.WALL_WALK ~= nil)
 	assert(Layout.ForFloor(5).Masonry == "FORTRESS" and Layout.ForFloor(5).SunMedallions == true)
+	assert(Layout.ForFloor(11).Authored == "ashen:1" and Layout.ForFloor(11).DirectTerrain == true)
 	assert(Layout.ForFloor(6).DirectTerrain == false)
 end)
 

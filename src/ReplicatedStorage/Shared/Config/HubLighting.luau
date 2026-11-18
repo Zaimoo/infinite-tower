@@ -276,6 +276,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 244, 224), Saturation = 0.16, ExposureCompensation = 0.02, BloomIntensity = 0.38,
 		SunRaysIntensity = 0.22, SunRaysSpread = 0.85,
 	},
+	-- Floor 11, Cinder Gate: searing white-hot desert noon, crisp pale mirage haze over dark volcanic ash & ochre sandstone.
+	[11] = {
+		Ambient = c(96, 84, 72), OutdoorAmbient = c(154, 138, 118), ColorShift_Top = c(255, 244, 214), ColorShift_Bottom = c(98, 72, 54),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(242, 224, 198), AtmosphereDecay = c(178, 134, 96), AtmosphereHaze = 0.90,
+		TintColor = c(255, 248, 232), Saturation = 0.06, ExposureCompensation = 0.08, BloomIntensity = 0.34,
+		SunRaysIntensity = 0.14, SunRaysSpread = 0.65,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

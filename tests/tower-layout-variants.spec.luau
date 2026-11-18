@@ -102,6 +102,27 @@ test("Floor 5 is the hand-authored Mossbound Court: sunken cenote spiral, Sunbri
 	assert(routes.BASIN_LOOP and routes.GALLERY_WEST and routes.GALLERY_EAST and routes.BASTION_RING)
 end)
 
+test("Floor 11 is the hand-authored Cinder Gate: Varrash dune crest lookout, Toll House, Watch Kiln", function()
+	local room = Layout.ForFloor(11)
+	assert(room.Authored == "ashen:1" and room.Name == "Cinder Gate" and room.PathStyle == "VARRASH")
+	assert(room.DirectTerrain == true and room.Liquid and room.Liquid.Dry == true)
+	assert(same(room, Layout.Get(1, 11)), "the authored floor 11 is not fixed")
+	assert(not same(room, Layout.Get(1)), "floor 11 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_Crossing == "RAMP" and paths.Crossing_Apex == nil, "Dune Crest is a dead-end ridge lookout")
+	assert(paths.WestGallery_Apex == "RAMP" and paths.EastGallery_Apex == "RAMP")
+	assert(room.Platforms.Basin.Name == "Ash Flats" and room.Platforms.Crossing.Name == "Dune Crest")
+	assert(room.Platforms.WestGallery.Name == "Toll House" and room.Platforms.EastGallery.Name == "Watch Kiln")
+	assert(room.Platforms.Apex.Name == "Cinder Gate" and room.EliteCount == 1)
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		assert(camp.Platform ~= "Crossing", "Dune Crest carries no camp")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 16, "Floor 11 keeps 16 live camp mobs (got " .. totalMobs .. ")")
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do

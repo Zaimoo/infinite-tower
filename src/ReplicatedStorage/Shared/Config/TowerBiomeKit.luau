@@ -82,8 +82,10 @@ TowerBiomeKit.Templates = table.freeze({
 -- check TowerKitProps.Has(name) and fall back to native parts until the FBX is imported).
 TowerBiomeKit.ExtraTemplates = table.freeze({
 	AqueductBrokenSpan = table.freeze({ Size = Vector3.new(23.055, 19.059, 16.419), Min = Vector3.new(-11.167, -0.284, -7.26), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
+	BuriedWagon = table.freeze({ Size = Vector3.new(16.375, 12.662, 18.778), Min = Vector3.new(-6.98, -0.387, -10.084), Roles = table.freeze({ "FOLIAGE", "METAL", "MOSS", "WOOD" }) }),
 	CenoteCascadeSpillway = table.freeze({ Size = Vector3.new(23.0, 30.2, 27.1), Min = Vector3.new(-11.5, 0.0, -13.8), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	CenoteColonnadeDome = table.freeze({ Size = Vector3.new(125.819, 67.285, 45.009), Min = Vector3.new(-62.791, -0.258, -34.0), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
+	CinderGateArch = table.freeze({ Size = Vector3.new(58.32, 51.614, 18.924), Min = Vector3.new(-29.16, -0.114, -7.253), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	CurtainWallRuins = table.freeze({ Size = Vector3.new(32.1, 18.875, 7.673), Min = Vector3.new(-16.1, -0.475, -3.178), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	FernCluster = table.freeze({ Size = Vector3.new(9.888, 3.741, 10.323), Min = Vector3.new(-4.642, 0.0, -5.13), Roles = table.freeze({ "FOLIAGE", "MOSS", "WOOD" }) }),
 	GatehouseArch = table.freeze({ Size = Vector3.new(77.0, 30.357, 14.304), Min = Vector3.new(-38.5, -0.657, -6.205), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
@@ -97,9 +99,12 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	SolmereBalustrade = table.freeze({ Size = Vector3.new(16.6, 5.55, 3.0), Min = Vector3.new(-8.3, 0.0, -1.5), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM" }) }),
 	SolmereColonnadeWing = table.freeze({ Size = Vector3.new(55.2, 36.962, 17.079), Min = Vector3.new(-27.6, -0.525, -8.579), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
 	SunDiscShrine = table.freeze({ Size = Vector3.new(17.127, 22.698, 9.405), Min = Vector3.new(-8.435, 0.0, -4.205), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "MOSS", "TRIM" }) }),
+	TollHouseRuins = table.freeze({ Size = Vector3.new(39.997, 13.554, 31.326), Min = Vector3.new(-18.523, -0.154, -14.0), Roles = table.freeze({ "ALT", "GLOW", "METAL", "MOSS", "STONE", "TRIM" }) }),
+	VarrashWaystone = table.freeze({ Size = Vector3.new(3.8, 10.3, 3.8), Min = Vector3.new(-1.9, 0.0, -1.9), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
 	VineboundGuardian = table.freeze({ Size = Vector3.new(10.405, 14.987, 9.137), Min = Vector3.new(-5.203, -0.007, -4.63), Roles = table.freeze({ "ACCENT", "GLOW", "MOSS", "TRIM", "WOOD" }) }),
 	VineboundKeep = table.freeze({ Size = Vector3.new(46.67, 47.701, 22.501), Min = Vector3.new(-23.441, -0.201, -13.767), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
 	VineboundTower = table.freeze({ Size = Vector3.new(25.625, 51.665, 24.861), Min = Vector3.new(-12.37, -1.165, -12.661), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
+	WatchKilnTower = table.freeze({ Size = Vector3.new(26.415, 27.947, 22.967), Min = Vector3.new(-15.235, 0.0, -9.57), Roles = table.freeze({ "ALT", "GLOW", "METAL", "MOSS", "STONE", "TRIM" }) }),
 	Waterwheel = table.freeze({ Size = Vector3.new(26.255, 27.045, 12.575), Min = Vector3.new(-12.5, -0.417, -5.827), Roles = table.freeze({ "FOLIAGE", "METAL", "MOSS", "TRIM", "WOOD" }) }),
 }) :: { [string]: Template }
 
@@ -326,6 +331,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	RootThrone = true, HollowStumpRim = true, RootBridgeArch = true, RootKnotLantern = true,
 	GatehouseArch = true, VineboundTower = true, VineboundKeep = true, CurtainWallRuins = true, VineboundGuardian = true,
 	CenoteColonnadeDome = true, SolmereColonnadeWing = true, HeartrootMotherHeart = true, CenoteCascadeSpillway = true,
+	CinderGateArch = true, VarrashWaystone = true, BuriedWagon = true, TollHouseRuins = true, WatchKilnTower = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit

@@ -62,6 +62,9 @@ TowerTerrain.MaterialColors = table.freeze({
 	[M.Mud] = Color3.fromRGB(70, 56, 46),
 	[M.Ground] = Color3.fromRGB(96, 80, 62),
 	[M.Rock] = Color3.fromRGB(104, 106, 100),
+	[M.Sand] = Color3.fromRGB(122, 110, 96),
+	[M.Sandstone] = Color3.fromRGB(172, 138, 102),
+	[M.Basalt] = Color3.fromRGB(56, 52, 54),
 })
 local colorsApplied = false
 local function applyColors()
