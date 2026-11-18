@@ -220,8 +220,32 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 						local meander = (feat.NoiseAmp or 8) * fbm(z / 55, 0, seed + 51, 2)
 						local dist = math.abs(x - (feat.X or 0) - meander)
 						if dist < feat.HalfWidth then
-							-- Deep wind-scoured obsidian canyon trench along the ravine spine
+							-- Deep wind-scoured canyon trench along the ravine spine
 							base = bottom
+							if feat.IceFloor and palette.LiquidSolid and dist < feat.HalfWidth * 0.62 then
+								kind = "POOL"
+							end
+						end
+					end
+				elseif feat.Kind == "GLACIER_SPINE" then
+					-- Raised, strata-banded glacier ridge running along the spine under elevated Iceway slabs
+					local z0, z1 = feat.ZStart or -152, feat.ZEnd or 68
+					if z >= z0 - 18 and z <= z1 + 18 then
+						local endFade = math.clamp(math.min(z - (z0 - 18), (z1 + 18) - z) / 22, 0, 1)
+						local meander = (feat.NoiseAmp or 5) * fbm(z / 44, 0, seed + 91, 2)
+						local hw = (feat.HalfWidth or 42) * (0.88 + 0.22 * fbm(z / 28, 0, seed + 97, 2))
+						local dist = math.abs(x - (feat.X or 0) - meander)
+						if dist < hw then
+							local u = dist / hw
+							local wallProfile = (1 - u ^ 1.8) ^ 0.72
+							local alongT = math.clamp((z1 - z) / math.max(1, z1 - z0), 0, 1)
+							local shelfH = (feat.BaseHeight or 12) + alongT * (feat.RiseHeight or 8)
+							local strata = math.sin(z * 0.26 + u * 2.4) * (feat.StrataAmp or 1.4) * (1 - u)
+							local hRidge = bottom + (shelfH * wallProfile + strata) * endFade
+							if hRidge > base then
+								base = hRidge
+								kind = "APRON"
+							end
 						end
 					end
 				elseif feat.Kind == "ICEFALL" then

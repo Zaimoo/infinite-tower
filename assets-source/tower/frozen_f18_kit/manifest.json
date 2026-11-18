@@ -1,0 +1,85 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CrevasseCartPillar": {
+      "Min": [
+        -5.143,
+        -0.545,
+        -6.004
+      ],
+      "Roles": {
+        "CRYSTAL": 336,
+        "METAL": 500,
+        "MOSS": 160,
+        "STONE": 240,
+        "WOOD": 900
+      },
+      "Size": [
+        10.374,
+        24.703,
+        14.64
+      ],
+      "Triangles": 2136
+    },
+    "GlacierShrine": {
+      "Min": [
+        -3.8,
+        -0.948,
+        -3.8
+      ],
+      "Roles": {
+        "CRYSTAL": 52,
+        "GLOW": 84,
+        "MOSS": 80,
+        "STONE": 72,
+        "TRIM": 36
+      },
+      "Size": [
+        9.309,
+        12.131,
+        7.6
+      ],
+      "Triangles": 324
+    },
+    "SeracCluster": {
+      "Min": [
+        -8.041,
+        -1.131,
+        -6.584
+      ],
+      "Roles": {
+        "CRYSTAL": 240,
+        "GLOW": 32,
+        "MOSS": 80,
+        "STONE": 240
+      },
+      "Size": [
+        15.233,
+        29.744,
+        11.663
+      ],
+      "Triangles": 592
+    },
+    "TollShelterRuins": {
+      "Min": [
+        -10.326,
+        -1.094,
+        -8.653
+      ],
+      "Roles": {
+        "CRYSTAL": 80,
+        "METAL": 36,
+        "MOSS": 160,
+        "STONE": 72,
+        "WOOD": 216
+      },
+      "Size": [
+        20.526,
+        14.699,
+        15.653
+      ],
+      "Triangles": 564
+    }
+  },
+  "Unit": "studs"
+}

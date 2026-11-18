@@ -325,6 +325,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(234, 245, 255), Saturation = 0.02, Contrast = 0.18, ExposureCompensation = 0.18, BloomIntensity = 0.44,
 		SunRaysIntensity = 0.12, SunRaysSpread = 0.35,
 	},
+	-- Floor 18 (Shattered Iceway): blizzard afternoon — dim diffuse storm light, blue-grey alpine haze, crisp silhouette contrast & camp readability at 120 studs.
+	[18] = {
+		Ambient = c(92, 108, 128), OutdoorAmbient = c(138, 156, 178), ColorShift_Top = c(212, 224, 240), ColorShift_Bottom = c(84, 106, 134),
+		AtmosphereDensity = 0.36, AtmosphereColor = c(194, 210, 228), AtmosphereDecay = c(134, 154, 178), AtmosphereHaze = 1.55,
+		TintColor = c(232, 242, 255), Saturation = -0.06, Contrast = 0.14, ExposureCompensation = 0.08, BloomIntensity = 0.32,
+		SunRaysIntensity = 0.04, SunRaysSpread = 0.40,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

@@ -288,6 +288,39 @@ test("Floor 17 is the hand-authored Frozen Barracks: street lattice converging o
 	assert(totalMobs == 22, "Floor 17 keeps 22 live camp mobs (got " .. totalMobs .. ")")
 end)
 
+test("Floor 18 is the hand-authored Shattered Iceway: glacier spine, twin crevasse bridges, East Moraine via Upper Iceway", function()
+	local room = Layout.ForFloor(18)
+	assert(room.Authored == "frozen:3" and room.Name == "Shattered Iceway" and room.PathStyle == "WHITEGUARD")
+	assert(room.DirectTerrain == true and room.Masonry == "GLACIER_SLAB")
+	assert(room.Decks and room.Decks.Crossing and room.Decks.UpperIceway)
+	assert(room.Suspended and room.Suspended.Links.Crossing_WestGallery and room.Suspended.Links.Crossing_EastGallery and room.Suspended.Links.EastGallery_UpperIceway)
+	assert(room.Bottom == -4 and #room.ReturnLinks == 2, "Floor 18 has twin crevasses and two Basin return ramps")
+	assert(same(room, Layout.Get(3, 18)), "the authored floor 18 is not fixed")
+	assert(not same(room, Layout.Get(3)), "floor 18 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_Crossing == "RAMP" and paths.Crossing_UpperIceway == "RAMP")
+	assert(paths.Crossing_WestGallery == "RAMP" and paths.Crossing_EastGallery == "RAMP")
+	assert(paths.EastGallery_UpperIceway == "RAMP" and paths.UpperIceway_Apex == "STAIRS" and paths.WestGallery_Apex == "RAMP")
+	assert(paths.EastGallery_Apex == nil, "Floor 18 East Moraine reaches Apex only via Upper Iceway")
+	assert(room.Platforms.Basin.Name == "Moraine Foot" and room.Platforms.Crossing.Name == "Lower Iceway")
+	assert(room.Platforms.UpperIceway.Name == "Upper Iceway" and room.Platforms.WestGallery.Name == "West Moraine")
+	assert(room.Platforms.EastGallery.Name == "East Moraine" and room.Platforms.Apex.Name == "Icefall Gate" and room.EliteCount == 3)
+	local routes = Layout.PatrolRoutes(3, 18)
+	assert(routes.BASIN_LOOP and routes.WEST_MORAINE and routes.ICEWAY_CROSS and routes.EAST_CLIMB)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil, "authored patrols replace generic gallery routes on Floor 18")
+	local totalMobs, upperElites = 0, 0
+	for _, camp in room.Camps do
+		assert(camp.Platform ~= "UpperIceway", "UpperIceway holds no camp")
+		if camp.Platform ~= "Apex" then
+			totalMobs += camp.Size
+			if camp.Elite and camp.Y > 0 then upperElites += 1 end
+		end
+	end
+	assert(upperElites >= 1, "Floor 18 places at least one Elite camp above entry level")
+	assert(totalMobs == 25, "Floor 18 keeps 25 live camp mobs (got " .. totalMobs .. ")")
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do

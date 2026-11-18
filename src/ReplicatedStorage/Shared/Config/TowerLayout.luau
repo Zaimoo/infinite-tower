@@ -667,6 +667,71 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Commander's Hall",
 		},
 	},
+	-- Floor 18, Shattered Iceway (Frozen Citadel Terrain Variation): an inverted ravine with a central glacier spine
+	-- rising in two heaved road slabs (Lower Iceway -> Upper Iceway), flanked by twin crevasses spanned by suspended
+	-- ice-slab bridges to West and East Moraines; East Moraine rejoins the spine while West Moraine climbs to the Icefall Gate.
+	[18] = {
+		Key = "frozen:3",
+		Name = "Shattered Iceway",
+		PathStyle = "WHITEGUARD",
+		DirectTerrain = true,
+		Masonry = "GLACIER_SLAB",
+		Decks = {
+			Crossing = true,
+			UpperIceway = true,
+		},
+		Suspended = {
+			Links = {
+				Crossing_WestGallery = true,
+				Crossing_EastGallery = true,
+				EastGallery_UpperIceway = true,
+			},
+		},
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 112, Feather = 28 },
+			{ Kind = "GLACIER_SPINE", X = 0, ZStart = -152, ZEnd = 68, HalfWidth = 42, BaseHeight = 12, RiseHeight = 8, StrataAmp = 1.4, NoiseAmp = 5 },
+			{ Kind = "RAVINE", X = -86, ZStart = -126, ZEnd = 62, HalfWidth = 34, NoiseAmp = 7, IceFloor = true },
+			{ Kind = "RAVINE", X = 86, ZStart = -146, ZEnd = 62, HalfWidth = 34, NoiseAmp = 7, IceFloor = true },
+			{ Kind = "ICEFALL", X = 0, Z = -242, Width = 136, Depth = 42, Height = 56 },
+			{ Kind = "DUNE", X = -148, Z = 138, Width = 44, Length = 72, Height = 5.6, Yaw = 12, CrestSway = 0.14, SlipSteep = 1.2 },
+			{ Kind = "DUNE", X = 148, Z = 138, Width = 44, Length = 72, Height = 5.6, Yaw = -12, CrestSway = 0.14, SlipSteep = 1.2 },
+		},
+		Basin = { X = 0, Y = 0, Z = 124, Width = 400, Depth = 104 },
+		Crossing = { X = 0, Y = 6, Z = 10, Width = 70, Depth = 60 },
+		WestGallery = { X = -150, Y = 8, Z = -40, Width = 80, Depth = 80 },
+		EastGallery = { X = 150, Y = 4, Z = -70, Width = 80, Depth = 80 },
+		ExtraPlatforms = {
+			UpperIceway = { X = 0, Y = 12, Z = -96, Width = 64, Depth = 56 },
+		},
+		Apex = { X = 0, Y = 18, Z = -190, Width = 110, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "Crossing" },
+			{ "Crossing", "WestGallery" },
+			{ "Crossing", "EastGallery" },
+			{ "Crossing", "UpperIceway" },
+			{ "UpperIceway", "Apex" },
+			{ "WestGallery", "Apex" },
+			{ "EastGallery", "UpperIceway" },
+		},
+		Stairs = { UpperIceway_Apex = true },
+		Patrols = {
+			WEST_MORAINE = { "WestGallery", "Apex" },
+			ICEWAY_CROSS = { "WestGallery", "Crossing", "EastGallery" },
+			EAST_CLIMB = { "EastGallery", "UpperIceway" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Moraine Gate",
+			Basin = "Moraine Foot",
+			Crossing = "Lower Iceway",
+			UpperIceway = "Upper Iceway",
+			WestGallery = "West Moraine",
+			EastGallery = "East Moraine",
+			Apex = "Icefall Gate",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any
