@@ -86,6 +86,7 @@ local AUTHORED: {[number]: any} = {
 		-- Ramps and stairs are Solmere flagstone causeways with mossy kerbs (TowerRoomBuilder), and the
 		-- canopy of giant trees replaces the ramp arches (TowerBiomeAssets).
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
 		Crossing = {X = 0, Y = 3, Z = -34, Width = 52, Depth = 96},
 		WestGallery = {X = -116, Y = 4, Z = -30, Width = 84, Depth = 76},
 		EastGallery = {X = 118, Y = 6, Z = -40, Width = 84, Depth = 76},
@@ -107,6 +108,26 @@ local AUTHORED: {[number]: any} = {
 		Key = "verdant:2",
 		Name = "Broken Aqueduct",
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
+		Decks = {
+			Crossing = true,
+			AqueductNorth = true,
+		},
+		Liquid = { LevelOffset = 2.6, FloorDip = 1.8 },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 70, Feather = 28 },
+			{
+				Kind = "POOL_ELLIPSES_SQ",
+				Strength = 0.28,
+				Gain = 0.28,
+				Ellipses = {
+					{ X = -34, Z = 16, RX = 36, RZ = 32 },
+					{ X = 16, Z = -48, RX = 62, RZ = 34 },
+					{ X = -94, Z = -82, RX = 24, RZ = 62 },
+					{ X = 134, Z = 16, RX = 36, RZ = 32 },
+				},
+			},
+		},
 		Basin = {X = 0, Y = 0, Z = 112, Width = 360, Depth = 96},
 		WestGallery = {X = -134, Y = 6, Z = -6, Width = 88, Depth = 76},
 		Crossing = {X = 16, Y = 10, Z = 2, Width = 56, Depth = 64},
@@ -136,6 +157,28 @@ local AUTHORED: {[number]: any} = {
 		Key = "verdant:3",
 		Name = "Rootway Crossing",
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
+		Masonry = "ORGANIC",
+		Decks = {
+			Crossing = true,
+			WestGallery = true,
+			EastGallery = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, WestGallery = true, EastGallery = true },
+			Links = {
+				Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
+				Crossing_Apex = true, WestGallery_Apex = true, EastGallery_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "RIVER_GORGE",
+				BaseZ = -42, Amp = 14, Freq = 95, NoiseScale = 65, NoiseAmp = 10, NoiseSeed = 61, HalfWidth = 44, Gain = 0.34,
+				WestPool = { X = -190, Z = -32, RX = 40, RZ = 40 },
+			},
+		},
 		Basin = {X = 0, Y = 0, Z = 124, Width = 400, Depth = 108},
 		Crossing = {X = 0, Y = 5, Z = 0, Width = 74, Depth = 60},
 		WestGallery = {X = -150, Y = 10, Z = -26, Width = 84, Depth = 76},
@@ -158,6 +201,40 @@ local AUTHORED: {[number]: any} = {
 		Key = "verdant:4",
 		Name = "Vinebound Bastion",
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
+		Masonry = "FORTRESS",
+		Decks = {
+			Crossing = true,
+			WestGallery = true,
+			EastGallery = true,
+			WestBastion = true,
+			EastBastion = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
+			Links = {
+				Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
+				Crossing_WestGallery = true, Crossing_EastGallery = true,
+				WestGallery_WestBastion = true, EastGallery_EastBastion = true,
+				WestBastion_Apex = true, EastBastion_Apex = true,
+				Crossing_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "MOAT_CHANNELS",
+				BaseZ = 78, Amp = 8, Freq = 85, NoiseScale = 55, NoiseAmp = 8, NoiseSeed = 71, HalfWidth = 30, Gain = 0.30,
+				Channels = {
+					{ X = -92, Z = -55, RX = 42, RZ = 85 },
+					{ X = 92, Z = -55, RX = 42, RZ = 85 },
+				},
+			},
+		},
+		Patrols = {
+			WALL_WALK = { "WestGallery", "Crossing", "EastGallery" },
+		},
 		Basin = {X = 0, Y = 0, Z = 160, Width = 440, Depth = 114},
 		Crossing = {X = 0, Y = 5, Z = 48, Width = 74, Depth = 60},
 		WestGallery = {X = -158, Y = 8, Z = 12, Width = 86, Depth = 78},
@@ -185,6 +262,33 @@ local AUTHORED: {[number]: any} = {
 		Key = "verdant:5",
 		Name = "Mossbound Court",
 		PathStyle = "SOLMERE",
+		DirectTerrain = true,
+		Masonry = "FORTRESS",
+		SunMedallions = true,
+		Decks = {
+			Crossing = true,
+			WestGallery = true,
+			EastGallery = true,
+			WestBastion = true,
+			EastBastion = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, WestGallery = true, EastGallery = true, WestBastion = true, EastBastion = true, Apex = true },
+			Links = {
+				Basin_Crossing = true, Basin_WestGallery = true, Basin_EastGallery = true,
+				WestGallery_WestBastion = true, EastGallery_EastBastion = true,
+				WestBastion_Apex = true, EastBastion_Apex = true,
+				Crossing_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "CENOTE_LAGOON",
+				Z = -28, RX = 172, RZ = 146, NoiseScale = 60, NoiseAmp = 0.08, NoiseSeed = 83, Base = 0.30, Gain = 0.34,
+			},
+		},
 		Basin = {X = 0, Y = 0, Z = 176, Width = 480, Depth = 108},
 		Crossing = {X = 0, Y = 5, Z = 40, Width = 74, Depth = 60},
 		WestGallery = {X = -176, Y = 6, Z = 12, Width = 86, Depth = 80},
@@ -346,7 +450,15 @@ local function build(index: number, v: any?): any
 	end
 	return {Width=w, Depth=d, Height=heights[index], Bottom=bottom, ReturnLinks=returns,
 		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe, EliteCount=eliteCount, Index=index,
-		Varied=v ~= nil, Authored=v and v.Key or nil, Name=v and v.Name or nil, PathStyle=v and v.PathStyle or nil}
+		Varied=v ~= nil, Authored=v and v.Key or nil, Name=v and v.Name or nil, PathStyle=v and v.PathStyle or nil,
+		DirectTerrain=v ~= nil and v.DirectTerrain == true,
+		Decks=v and v.Decks or nil,
+		Suspended=v and v.Suspended or nil,
+		Masonry=v and v.Masonry or nil,
+		SunMedallions=v ~= nil and v.SunMedallions == true,
+		Liquid=v and v.Liquid or nil,
+		TerrainFeatures=v and v.TerrainFeatures or nil,
+		Patrols=v and v.Patrols or nil}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,
@@ -551,23 +663,43 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 		table.insert(ring, point(p.EastBastion.X, p.EastBastion.Y, p.EastBastion.Z))
 		routes.BASTION_RING = ring
 	end
-	if room.Authored == "verdant:4" then
-		local ww = pathBetween("Crossing", "WestGallery")
-		local we = pathBetween("Crossing", "EastGallery")
-		if ww and we then
-			local wallWalk = { point(p.WestGallery.X, p.WestGallery.Y, p.WestGallery.Z) }
-			for i = #ww, 1, -1 do
-				local link = ww[i]
-				table.insert(wallWalk, point(link.BX, link.BY, link.BZ))
-				table.insert(wallWalk, point(link.AX, link.AY, link.AZ))
+	if room.Patrols then
+		for routeName, stops in room.Patrols do
+			if #stops >= 2 and p[stops[1]] then
+				local first = p[stops[1]]
+				local route = { point(first.X, first.Y, first.Z) }
+				local ok = true
+				for i = 1, #stops - 1 do
+					local fromId, toId = stops[i], stops[i + 1]
+					local toPlat = p[toId]
+					if not toPlat then
+						ok = false
+						break
+					end
+					local seg = pathBetween(fromId, toId)
+					if seg then
+						for _, link in seg do
+							table.insert(route, point(link.AX, link.AY, link.AZ))
+							table.insert(route, point(link.BX, link.BY, link.BZ))
+						end
+					else
+						local rev = pathBetween(toId, fromId)
+						if not rev then
+							ok = false
+							break
+						end
+						for j = #rev, 1, -1 do
+							local link = rev[j]
+							table.insert(route, point(link.BX, link.BY, link.BZ))
+							table.insert(route, point(link.AX, link.AY, link.AZ))
+						end
+					end
+					table.insert(route, point(toPlat.X, toPlat.Y, toPlat.Z))
+				end
+				if ok then
+					routes[routeName] = route
+				end
 			end
-			table.insert(wallWalk, point(p.Crossing.X, p.Crossing.Y, p.Crossing.Z))
-			for _, link in we do
-				table.insert(wallWalk, point(link.AX, link.AY, link.AZ))
-				table.insert(wallWalk, point(link.BX, link.BY, link.BZ))
-			end
-			table.insert(wallWalk, point(p.EastGallery.X, p.EastGallery.Y, p.EastGallery.Z))
-			routes.WALL_WALK = wallWalk
 		end
 	end
 	return routes

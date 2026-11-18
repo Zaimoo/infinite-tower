@@ -339,75 +339,17 @@ function Builder.Build(id: number, generation: number): any
 		part(model, "WallX", Vector3.new(6, height + 16, depth + 12), origin + Vector3.new(side * (width / 2 + 3), height / 2 - 8, 0), theme.WallColor, theme.WallMaterial)
 		part(model, "WallZ", Vector3.new(width, height + 16, 6), origin + Vector3.new(0, height / 2 - 8, side * (depth / 2 + 3)), theme.WallColor, theme.WallMaterial)
 	end
-	local DECK_PLATFORMS: { [string]: { [string]: boolean } } = {
-		["verdant:2"] = {
-			Crossing = true,
-			AqueductNorth = true,
-		},
-		["verdant:3"] = {
-			Crossing = true,
-			WestGallery = true,
-			EastGallery = true,
-		},
-		["verdant:4"] = {
-			Crossing = true,
-			WestGallery = true,
-			EastGallery = true,
-			WestBastion = true,
-			EastBastion = true,
-			Apex = true,
-		},
-		["verdant:5"] = {
-			Crossing = true,
-			WestGallery = true,
-			EastGallery = true,
-			WestBastion = true,
-			EastBastion = true,
-			Apex = true,
-		},
-	}
-	local SUSPENDED_LINKS: { [string]: { [string]: boolean } } = {
-		["verdant:3"] = {
-			Basin_Crossing = true,
-			Basin_WestGallery = true,
-			Basin_EastGallery = true,
-			Crossing_Apex = true,
-			WestGallery_Apex = true,
-			EastGallery_Apex = true,
-		},
-		["verdant:4"] = {
-			Basin_Crossing = true,
-			Basin_WestGallery = true,
-			Basin_EastGallery = true,
-			Crossing_WestGallery = true,
-			Crossing_EastGallery = true,
-			WestGallery_WestBastion = true,
-			EastGallery_EastBastion = true,
-			WestBastion_Apex = true,
-			EastBastion_Apex = true,
-			Crossing_Apex = true,
-		},
-		["verdant:5"] = {
-			Basin_Crossing = true,
-			Basin_WestGallery = true,
-			Basin_EastGallery = true,
-			WestGallery_WestBastion = true,
-			EastGallery_EastBastion = true,
-			WestBastion_Apex = true,
-			EastBastion_Apex = true,
-			Crossing_Apex = true,
-		},
-	}
 	local function isDirectTerrainLayout(l: any): boolean
-		return l.Authored == "verdant:1" or l.Authored == "verdant:2" or l.Authored == "verdant:3" or l.Authored == "verdant:4" or l.Authored == "verdant:5"
+		return l.DirectTerrain == true
 	end
-	local isFortressStone = layout.Authored == "verdant:4" or layout.Authored == "verdant:5"
+	local isFortressStone = layout.Masonry == "FORTRESS"
+	local isOrganicMasonry = layout.Masonry == "ORGANIC"
 	local function isArchitecturalDeck(l: any, platformName: string?): boolean
-		local map = l.Authored and DECK_PLATFORMS[l.Authored]
+		local map = l.Decks
 		return map ~= nil and platformName ~= nil and map[platformName] == true
 	end
 	local function isSuspendedLink(l: any, linkId: string): boolean
-		local map = l.Authored and SUSPENDED_LINKS[l.Authored]
+		local map = l.Suspended and l.Suspended.Links
 		return map ~= nil and map[linkId] == true
 	end
 	local function disableTerrainProxyPart(p: BasePart)
@@ -530,7 +472,7 @@ function Builder.Build(id: number, generation: number): any
 			-- A natural plateau (including the Sanctuary spawn glade): matches the biome's Terrain ground;
 			-- architectural bridge/viaduct decks keep collision on slab while Floor 3 pads dress as organic root/stump forms.
 			if isArchitecturalDeck(layout, name) then
-				if layout.Authored == "verdant:3" then
+				if isOrganicMasonry then
 					slab.Size = Vector3.new(terrace.Width, 2.6, terrace.Depth)
 					slab.Position = origin + Vector3.new(terrace.X, terrace.Y - 1.3, terrace.Z)
 					disableTerrainProxyPart(slab)
@@ -631,7 +573,7 @@ function Builder.Build(id: number, generation: number): any
 							cornerPier.CanTouch = false
 						end
 					end
-					if layout.Authored == "verdant:5" then
+					if layout.SunMedallions then
 						-- Carved Solmere sun-disc medallions inset cleanly above TraversalLanding layers (top +0.16 / +0.22 / +0.28)
 						local sunDia = math.min(terrace.Width, terrace.Depth) * (if name == "Apex" then 0.40 else 0.32)
 						flatDisc("CenoteSunMedallion", topCenter + Vector3.new(0, 0.14, 0), sunDia, 0.10, Color3.fromRGB(204, 166, 82), Enum.Material.Cobblestone)
@@ -733,7 +675,7 @@ function Builder.Build(id: number, generation: number): any
 		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
 		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
 		if isArchitecturalDeck(layout, terraceName) then
-			if layout.Authored == "verdant:3" then
+			if isOrganicMasonry then
 				-- Keep landing collider solid & flush atop organic root/stump islands without showing protruding rectangles
 				disableTerrainProxyPart(p)
 				p.CanCollide = true
