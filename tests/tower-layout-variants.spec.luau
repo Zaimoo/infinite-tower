@@ -334,8 +334,9 @@ test("Floor 19 is the hand-authored Whiteguard Keep: separated cave and battleme
 	for _, link in room.Links do paths[link.Id] = link.Kind end
 	assert(paths.Basin_Crossing == "RAMP" and paths.Crossing_EastGallery == "RAMP" and paths.EastGallery_EastBastion == "RAMP" and paths.EastBastion_Apex == "RAMP")
 	assert(paths.Basin_WestGallery == "RAMP" and paths.WestGallery_WestBastion == "RAMP" and paths.WestBastion_Apex == "RAMP")
-	assert(paths.Basin_EastGallery == nil and paths.Crossing_WestGallery == nil and paths.Crossing_Apex == nil and paths.WestGallery_EastGallery == nil,
-		"Floor 19 west cave route and east battlement route share no terrace below Keep Hall")
+	assert(paths.Crossing_WestGallery == "RAMP", "Floor 19 middle Crossing connects to left WestGallery via viaduct ramp")
+	assert(paths.Basin_EastGallery == nil and paths.Crossing_Apex == nil and paths.WestGallery_EastGallery == nil,
+		"Floor 19 west cave route and east battlement route only connect via Crossing")
 	assert(room.Platforms.Basin.Name == "Siege Camp" and room.Platforms.Crossing.Name == "Viaduct Gate")
 	assert(room.Platforms.EastGallery.Name == "East Bailey" and room.Platforms.EastBastion.Name == "Whiteguard Tower")
 	assert(room.Platforms.WestGallery.Name == "Ice Cave Mouth" and room.Platforms.WestBastion.Name == "Crystal Grotto")

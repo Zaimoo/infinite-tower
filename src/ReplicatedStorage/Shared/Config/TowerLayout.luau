@@ -750,6 +750,7 @@ local AUTHORED: {[number]: any} = {
 		Suspended = {
 			Links = {
 				Basin_Crossing = true,
+				Crossing_WestGallery = true,
 				Crossing_EastGallery = true,
 				EastGallery_EastBastion = true,
 				EastBastion_Apex = true,
@@ -776,6 +777,7 @@ local AUTHORED: {[number]: any} = {
 		Paths = {
 			{ "Sanctuary", "Basin" },
 			{ "Basin", "Crossing" },
+			{ "Crossing", "WestGallery" },
 			{ "Crossing", "EastGallery" },
 			{ "EastGallery", "EastBastion" },
 			{ "EastBastion", "Apex" },
