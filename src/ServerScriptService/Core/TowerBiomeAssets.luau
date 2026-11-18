@@ -3274,31 +3274,29 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end)
 
-		-- 2. Fallen Hand (WestGallery -180, 6, 30): Giant open stone hand fingers curling up on outer west rim
-		local handPlat = layout.Platforms.WestGallery
-		local handX, handZ = handPlat.X - 64, handPlat.Z - 26
-		table.insert(reservedSpots, { handX, handZ, 26 })
+		-- 2. Fallen Hand: Giant open stone hand rising out of the foreground-west molten lake beside Crossing
+		local handX, handZ = -60, 40
+		table.insert(reservedSpots, { handX, handZ, 30 })
 		group("ElderHandFingers", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local hy = math.min(f15GroundAt(handX, handZ), handPlat.Y)
-			local baseBot = math.max(bottom, hy - 8)
-			local plinthH = (hy - baseBot) + 3.5
-			block("ElderHandWristPlinth", V(22, plinthH, 42), V(handX, hy - plinthH * 0.5 + 1.4, handZ), cBasalt, Enum.Material.Basalt)
-			local hcf = CFrame.new(handX, hy - 0.6, handZ) * CFrame.Angles(0, -math.pi * 0.45, 0)
+			local hy = lavaTopY + 1.0
+			local plinthH = (hy - bottom) + 3.5
+			block("ElderHandWristPlinth", V(30, plinthH, 48), V(handX, hy - plinthH * 0.5 + 1.2, handZ), cBasalt, Enum.Material.Basalt)
+			local hcf = CFrame.new(handX, hy - 0.5, handZ) * CFrame.Angles(0, -math.pi * 0.65, 0)
 			if KitProps.Has("ElderHandFingers") then
-				kitAt("ElderHandFingers", hcf, 0.84 * scale, cOverride)
+				kitAt("ElderHandFingers", hcf, 1.12 * scale, cOverride)
 			else
 				for fIdx = -2, 2 do
 					local ang = fIdx * 0.24
-					local fx = math.sin(ang) * 17
-					local fz = -math.cos(ang) * 7
-					local fh = if fIdx == 0 then 24 else if math.abs(fIdx) == 1 then 21 else 16
+					local fx = math.sin(ang) * 20
+					local fz = -math.cos(ang) * 8
+					local fh = if fIdx == 0 then 32 else if math.abs(fIdx) == 1 then 28 else 22
 					local fp = hcf:PointToWorldSpace(V(fx, fh * 0.36, fz))
-					local finger = block("ElderStoneFinger", V(6.0, fh * 0.72, 6.2), fp, cSand, Enum.Material.Sandstone)
-					finger.CFrame = CFrame.new(origin + fp) * CFrame.Angles(math.rad(-14), -math.pi * 0.42 + ang * 0.4, 0)
-					local tipP = hcf:PointToWorldSpace(V(fx * 0.92, fh * 0.82, fz - 3.2))
-					local tip = block("ElderFingerTip", V(5.0, fh * 0.38, 5.2), tipP, cBasalt, Enum.Material.Basalt)
-					tip.CFrame = CFrame.new(origin + tipP) * CFrame.Angles(math.rad(-42), -math.pi * 0.42 + ang * 0.4, 0)
+					local finger = block("ElderStoneFinger", V(7.2, fh * 0.72, 7.4), fp, cSand, Enum.Material.Sandstone)
+					finger.CFrame = CFrame.new(origin + fp) * CFrame.Angles(math.rad(-14), -math.pi * 0.62 + ang * 0.4, 0)
+					local tipP = hcf:PointToWorldSpace(V(fx * 0.92, fh * 0.82, fz - 3.6))
+					local tip = block("ElderFingerTip", V(6.0, fh * 0.38, 6.2), tipP, cBasalt, Enum.Material.Basalt)
+					tip.CFrame = CFrame.new(origin + tipP) * CFrame.Angles(math.rad(-42), -math.pi * 0.62 + ang * 0.4, 0)
 				end
 			end
 		end)
@@ -3316,120 +3314,113 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				local bPt = V(pB.X, pB.Y, pB.Z)
 				local dir = (bPt - aPt)
 				local yaw = math.atan2(dir.X, dir.Z)
-				for _, frac in { 0.34, 0.50, 0.66 } do
+				for _, frac in { 0.32, 0.50, 0.68 } do
 					local mid = aPt:Lerp(bPt, frac)
-					local cuff = block("ColossusArmBracer", V(33, 4.0, 11), mid - V(0, 4.4, 0), if frac == 0.50 then cTerra else cSand, Enum.Material.Sandstone)
-					cuff.CFrame = CFrame.new(origin + mid - V(0, 4.4, 0)) * CFrame.Angles(0, yaw, 0)
-					local pierH = math.max(4, mid.Y - bottom - 4.0)
-					local pier = block("ColossusArmPier", V(22, pierH, 10), V(mid.X, mid.Y - 4.4 - pierH * 0.5, mid.Z), cBasalt, Enum.Material.Basalt)
-					pier.CFrame = CFrame.new(origin + V(mid.X, mid.Y - 4.4 - pierH * 0.5, mid.Z)) * CFrame.Angles(0, yaw, 0)
+					local cuff = block("ColossusArmBracer", V(38, 5.2, 13.5), mid - V(0, 4.6, 0), if frac == 0.50 then cTerra else cSand, Enum.Material.Sandstone)
+					cuff.CFrame = CFrame.new(origin + mid - V(0, 4.6, 0)) * CFrame.Angles(0, yaw, 0)
+					local pierH = math.max(4, mid.Y - bottom - 4.4)
+					local pier = block("ColossusArmPier", V(26, pierH, 12), V(mid.X, mid.Y - 4.6 - pierH * 0.5, mid.Z), cBasalt, Enum.Material.Basalt)
+					pier.CFrame = CFrame.new(origin + V(mid.X, mid.Y - 4.6 - pierH * 0.5, mid.Z)) * CFrame.Angles(0, yaw, 0)
 				end
 			end)
 		end
 
-		-- 4. Elder's Chest Ribs (-30, 10, -40): giant broken rib buttresses framing Crossing's open east flank
+		-- 4. Elder's Chest Ribs (-30, 10, -40): colossal curved rib buttresses framing Crossing's open east flank
 		local cross = layout.Platforms.Crossing
 		group("ElderChestRibs", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			for _, rzOff in { -14, 0, 14 } do
-				local rx = cross.X + cross.Width * 0.5 + 7
+			for _, rzOff in { -15, 0, 15 } do
+				local rx = cross.X + cross.Width * 0.5 + 10
 				local rz = cross.Z + rzOff
-				local ribH = (cross.Y - bottom) + 10
-				local rib = block("ElderChestRibPillar", V(7.0, ribH, 7.0), V(rx, cross.Y - ribH * 0.5 + 8.0, rz), cSand, Enum.Material.Sandstone)
-				rib.CFrame = CFrame.new(origin + V(rx, cross.Y - ribH * 0.5 + 8.0, rz)) * CFrame.Angles(0, 0, math.rad(16))
+				local ribH = (cross.Y - bottom) + 20
+				local rib = block("ElderChestRibPillar", V(9.5, ribH, 9.0), V(rx, cross.Y - ribH * 0.5 + 14.0, rz), cSand, Enum.Material.Sandstone)
+				rib.CFrame = CFrame.new(origin + V(rx, cross.Y - ribH * 0.5 + 14.0, rz)) * CFrame.Angles(0, 0, math.rad(20))
 			end
 		end)
 
-		-- 5. Broken Shield (EastGallery 180, 8, 20): massive tilted circular shield half-sunk in the lava shore
-		local shieldPlat = layout.Platforms.EastGallery
-		local shX, shZ = shieldPlat.X + 58, shieldPlat.Z - 6
-		table.insert(reservedSpots, { shX, shZ, 26 })
+		-- 5. Broken Shield: massive tilted circular shield rising out of the mid-east molten lake
+		local shX, shZ = 100, -48
+		table.insert(reservedSpots, { shX, shZ, 30 })
 		group("ElderShieldRim", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local sy = math.min(f15GroundAt(shX, shZ), shieldPlat.Y - 2)
-			local baseBot = math.max(bottom, sy - 8)
-			local plinthH = (sy - baseBot) + 3.0
-			block("ElderShieldCradle", V(22, plinthH, 32), V(shX, sy - plinthH * 0.5 + 1.2, shZ), cBasalt, Enum.Material.Basalt)
-			local scf = CFrame.new(shX, sy - 0.6, shZ) * CFrame.Angles(0, -math.pi * 0.38, 0)
+			local sy = lavaTopY + 1.0
+			local plinthH = (sy - bottom) + 3.5
+			block("ElderShieldCradle", V(30, plinthH, 40), V(shX, sy - plinthH * 0.5 + 1.2, shZ), cBasalt, Enum.Material.Basalt)
+			local scf = CFrame.new(shX, sy - 0.5, shZ) * CFrame.Angles(0, -math.pi * 0.25, 0)
 			if KitProps.Has("ElderShieldRim") then
-				local mdl = kitAt("ElderShieldRim", scf, 0.94 * scale, cOverride)
+				local mdl = kitAt("ElderShieldRim", scf, 1.34 * scale, cOverride)
 				if mdl then
 					local glowPart = mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart")
-					if glowPart then pointLight(glowPart, cMagma, 1.3, 44) end
+					if glowPart then pointLight(glowPart, cMagma, 1.4, 48) end
 				end
 			else
 				for _, sSide in { -1, 1 } do
-					local halfD = cyl("ElderShieldDisc", V(shX, sy + 9, shZ), 20, 3.8, cSand, Enum.Material.Sandstone)
-					halfD.CFrame = CFrame.new(origin) * scf * CFrame.new(sSide * 2.2, 9.5, sSide * 0.8) * CFrame.Angles(math.rad(56), 0, math.rad(sSide * -6))
+					local halfD = cyl("ElderShieldDisc", V(shX, sy + 12, shZ), 26, 4.4, cSand, Enum.Material.Sandstone)
+					halfD.CFrame = CFrame.new(origin) * scf * CFrame.new(sSide * 2.6, 12.5, sSide * 0.8) * CFrame.Angles(math.rad(56), 0, math.rad(sSide * -6))
 				end
-				local boss = cyl("ElderShieldBoss", V(shX, sy + 9, shZ), 5.8, 5.2, cBronze, Enum.Material.Metal)
-				boss.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 9.8, -1.6) * CFrame.Angles(math.rad(56), 0, 0)
-				local seam = block("ElderShieldCrackGlow", V(2.0, 28, 4.8), V(shX, sy + 9, shZ), cMagma, Enum.Material.Neon)
-				seam.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 9.5, 0) * CFrame.Angles(math.rad(-34), 0, 0)
+				local boss = cyl("ElderShieldBoss", V(shX, sy + 12, shZ), 7.2, 6.2, cBronze, Enum.Material.Metal)
+				boss.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 12.8, -2.0) * CFrame.Angles(math.rad(56), 0, 0)
+				local seam = block("ElderShieldCrackGlow", V(2.4, 34, 5.4), V(shX, sy + 12, shZ), cMagma, Enum.Material.Neon)
+				seam.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 12.5, 0) * CFrame.Angles(math.rad(-34), 0, 0)
 			end
 		end)
 
-		-- 6. Shoulder Pauldron & Basalt Column Ring (WestBastion -150, 16, -150)
-		local shoulderPlat = layout.Platforms.WestBastion
-		local spX, spZ = shoulderPlat.X - 58, shoulderPlat.Z - 2
-		table.insert(reservedSpots, { spX, spZ, 26 })
+		-- 6. Shoulder Pauldron & Basalt Column Ring towering on the upper-left ridge beside Apex Dais
+		local spX, spZ = -114, -242
+		table.insert(reservedSpots, { spX, spZ, 28 })
 		group("ElderShoulderPauldron", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local spy = math.min(f15GroundAt(spX, spZ), shoulderPlat.Y)
-			local baseBot = math.max(bottom, spy - 8)
-			local plinthH = (spy - baseBot) + 4.0
-			block("ShoulderCradle", V(22, plinthH, 32), V(spX, spy - plinthH * 0.5 + 1.5, spZ), cBasalt, Enum.Material.Basalt)
-			local spcf = CFrame.new(spX, spy - 0.5, spZ) * CFrame.Angles(0, -math.pi * 0.44, 0)
+			local spy = 18
+			local plinthH = (spy - bottom) + 4.0
+			block("ShoulderCradle", V(32, plinthH, 40), V(spX, spy - plinthH * 0.5 + 1.5, spZ), cBasalt, Enum.Material.Basalt)
+			local spcf = CFrame.new(spX, spy - 0.5, spZ) * CFrame.Angles(0, -math.pi * 0.34, 0)
 			if KitProps.Has("ElderShoulderPauldron") then
-				kitAt("ElderShoulderPauldron", spcf, 0.96 * scale, cOverride)
+				kitAt("ElderShoulderPauldron", spcf, 1.36 * scale, cOverride)
 			else
-				local dome = orb("ShoulderPauldronDome", V(spX + 3, spy + 10, spZ), V(24, 18, 28), cSand, Enum.Material.Sandstone)
-				dome.CFrame = CFrame.new(origin + V(spX + 3, spy + 10, spZ)) * CFrame.Angles(0, -math.pi * 0.42, math.rad(16))
+				local dome = orb("ShoulderPauldronDome", V(spX + 3, spy + 13, spZ), V(32, 24, 36), cSand, Enum.Material.Sandstone)
+				dome.CFrame = CFrame.new(origin + V(spX + 3, spy + 13, spZ)) * CFrame.Angles(0, -math.pi * 0.34, math.rad(16))
 				for cIdx = -2, 2 do
-					local colH = 26 + ((math.abs(cIdx) + 1) % 3) * 10
-					cyl("ShoulderBasaltCol", V(spX - 8 + cIdx * 3, spy + colH * 0.5, spZ + cIdx * 7), 3.6, colH, cBasalt, Enum.Material.Basalt)
+					local colH = 34 + ((math.abs(cIdx) + 1) % 3) * 12
+					cyl("ShoulderBasaltCol", V(spX - 10 + cIdx * 3.5, spy + colH * 0.5, spZ + cIdx * 8), 4.4, colH, cBasalt, Enum.Material.Basalt)
 				end
 			end
 		end)
 
-		-- 7. Fallen Crown & Elder Colossus Head (EastBastion 170, 14, -140)
-		local crownPlat = layout.Platforms.EastBastion
-		local crX, crZ = crownPlat.X + 58, crownPlat.Z - 8
-		local hdX, hdZ = crownPlat.X + 52, crownPlat.Z + 44
-		table.insert(reservedSpots, { crX, crZ, 24 })
-		table.insert(reservedSpots, { hdX, hdZ, 22 })
+		-- 7. Elder Colossus Head (upper-right caldera overlooking lake) & Fallen Crown (upper-right ridge beside Apex Dais)
+		local crX, crZ = 126, -266
+		local hdX, hdZ = 76, -110
+		table.insert(reservedSpots, { crX, crZ, 28 })
+		table.insert(reservedSpots, { hdX, hdZ, 26 })
 		group("ElderCrownRing", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local cry = math.min(f15GroundAt(crX, crZ), crownPlat.Y)
-			local baseBot = math.max(bottom, cry - 8)
-			local plinthH = (cry - baseBot) + 3.5
-			block("CrownCradle", V(22, plinthH, 34), V(crX, cry - plinthH * 0.5 + 1.2, crZ), cBasalt, Enum.Material.Basalt)
-			local crcf = CFrame.new(crX, cry - 0.5, crZ) * CFrame.Angles(0, math.pi * 0.44, 0)
+			local cry = 18
+			local plinthH = (cry - bottom) + 4.0
+			block("CrownCradle", V(34, plinthH, 42), V(crX, cry - plinthH * 0.5 + 1.2, crZ), cBasalt, Enum.Material.Basalt)
+			local crcf = CFrame.new(crX, cry - 0.5, crZ) * CFrame.Angles(0, math.pi * 0.28, 0)
 			if KitProps.Has("ElderCrownRing") then
-				kitAt("ElderCrownRing", crcf, 0.92 * scale, cOverride)
+				kitAt("ElderCrownRing", crcf, 1.34 * scale, cOverride)
 			else
 				for k = -3, 3 do
-					local sp = crcf:PointToWorldSpace(V(k * 6.5, 10 + (k % 2) * 3, -math.abs(k) * 2))
-					block("CrownSpike", V(4.6, 20 + (k % 2) * 5, 4.6), sp, cSand, Enum.Material.Sandstone)
+					local sp = crcf:PointToWorldSpace(V(k * 8.5, 13 + (k % 2) * 4, -math.abs(k) * 2.5))
+					block("CrownSpike", V(5.8, 26 + (k % 2) * 6, 5.8), sp, cSand, Enum.Material.Sandstone)
 				end
 			end
 		end)
 		group("ElderColossusHead", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local hdy = math.min(f15GroundAt(hdX, hdZ), crownPlat.Y - 1)
-			local baseBot = math.max(bottom, hdy - 8)
-			local plinthH = (hdy - baseBot) + 3.5
-			block("HeadRubbleCradle", V(20, plinthH, 22), V(hdX, hdy - plinthH * 0.5 + 1.2, hdZ), cBasalt, Enum.Material.Basalt)
-			local hdcf = CFrame.new(hdX, hdy - 0.4, hdZ) * CFrame.Angles(0, math.pi * 0.28, 0)
+			local hdy = lavaTopY + 6.0
+			local plinthH = (hdy - bottom) + 3.5
+			block("HeadRubbleCradle", V(28, plinthH, 30), V(hdX, hdy - plinthH * 0.5 + 1.2, hdZ), cBasalt, Enum.Material.Basalt)
+			local hdcf = CFrame.new(hdX, hdy - 0.4, hdZ) * CFrame.Angles(0, math.pi * 0.18, 0)
 			if KitProps.Has("ElderColossusHead") then
-				local mdl = kitAt("ElderColossusHead", hdcf, 0.92 * scale, cOverride)
+				local mdl = kitAt("ElderColossusHead", hdcf, 1.36 * scale, cOverride)
 				if mdl then
 					local glowPart = mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart")
-					if glowPart then pointLight(glowPart, cEmber, 0.9, 34) end
+					if glowPart then pointLight(glowPart, cEmber, 1.0, 38) end
 				end
 			else
-				local headBlk = block("FallenColossusCranium", V(20, 15, 24), V(hdX, hdy + 7.5, hdZ), cSand, Enum.Material.Sandstone)
-				headBlk.CFrame = CFrame.new(origin) * hdcf * CFrame.new(0, 7.5, 0) * CFrame.Angles(math.rad(-22), 0, math.rad(18))
+				local headBlk = block("FallenColossusCranium", V(26, 20, 30), V(hdX, hdy + 10, hdZ), cSand, Enum.Material.Sandstone)
+				headBlk.CFrame = CFrame.new(origin) * hdcf * CFrame.new(0, 10, 0) * CFrame.Angles(math.rad(-22), 0, math.rad(18))
 			end
 		end)
 
@@ -3848,12 +3839,12 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			local cSand = rgb(176, 146, 108)
 			local cTerra = rgb(164, 86, 56)
 			local cMagma = rgb(255, 110, 28)
-			local ventPos = V(apex.X, apex.Y - 2, apexBack - 44)
+			local ventPos = V(apex.X, apex.Y - 2, apexBack - 46)
 			group("CinderholdVent", function()
 				currentParent:SetAttribute("OnTerrain", true)
-				block("CinderholdVentPlinth", V(96, (apex.Y - bottom) + 4, 38), V(ventPos.X, (apex.Y + bottom) * 0.5, ventPos.Z), cBasalt, Enum.Material.Basalt)
+				block("CinderholdVentPlinth", V(110, (apex.Y - bottom) + 4, 44), V(ventPos.X, (apex.Y + bottom) * 0.5, ventPos.Z), cBasalt, Enum.Material.Basalt)
 				if KitProps.Has("CinderholdVent") then
-					local mdl = kitAt("CinderholdVent", CFrame.new(ventPos), 0.88 * scale, {
+					local mdl = kitAt("CinderholdVent", CFrame.new(ventPos), 1.05 * scale, {
 						STONE = { Color = cBasalt, Material = Enum.Material.Basalt },
 						TRIM = { Color = cSand, Material = Enum.Material.Sandstone },
 						ALT = { Color = cTerra, Material = Enum.Material.Slate },
