@@ -318,6 +318,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(240, 248, 255), Saturation = -0.10, Contrast = 0.06, ExposureCompensation = 0.12, BloomIntensity = 0.34,
 		SunRaysIntensity = 0.04, SunRaysSpread = 0.45,
 	},
+	-- Floor 17 (Frozen Barracks): clear, cold noon — crisp high contrast, sharp blue shadows, thin sky, sparkling frost.
+	[17] = {
+		Ambient = c(74, 102, 138), OutdoorAmbient = c(138, 168, 204), ColorShift_Top = c(240, 248, 255), ColorShift_Bottom = c(92, 128, 174),
+		AtmosphereDensity = 0.22, AtmosphereColor = c(206, 228, 252), AtmosphereDecay = c(138, 172, 214), AtmosphereHaze = 0.85,
+		TintColor = c(234, 245, 255), Saturation = 0.02, Contrast = 0.18, ExposureCompensation = 0.18, BloomIntensity = 0.44,
+		SunRaysIntensity = 0.12, SunRaysSpread = 0.35,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

@@ -509,6 +509,16 @@ function Builder.Build(id: number, generation: number): any
 			CurbMaterial = Enum.Material.Slate,
 			CurbMode = "WHITEGUARD_BRIDGE",
 		},
+		WHITEGUARD = {
+			CurbColor = whiteguardGranite,
+			CurbMaterial = Enum.Material.Slate,
+			CurbCapColor = whiteguardIron,
+			CurbCapMaterial = Enum.Material.Metal,
+			StairColorA = whiteguardGranite,
+			StairColorB = Color3.fromRGB(168, 212, 238),
+			StairMatA = Enum.Material.Slate,
+			StairMatB = Enum.Material.Ice,
+		},
 	}
 
 	local PATH_STYLES: { [string]: { [string]: any } } = {

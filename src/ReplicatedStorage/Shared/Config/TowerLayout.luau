@@ -621,6 +621,52 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Rimefall Shrine",
 		},
 	},
+	-- Floor 17, Frozen Barracks (Frozen Citadel Expanded): garrison streets forming a walkable mesh converging on the
+	-- Armory and climbing a grand straight granite stair to the Commander's Hall, with the drill company frozen mid-march.
+	[17] = {
+		Key = "frozen:2",
+		Name = "Frozen Barracks",
+		PathStyle = "WHITEGUARD",
+		DirectTerrain = true,
+		Masonry = "WHITEGUARD",
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 98, Feather = 24 },
+			{ Kind = "DUNE", X = -152, Z = 136, Width = 38, Length = 68, Height = 5.2, Yaw = 8, CrestSway = 0.14, SlipSteep = 1.2 },
+			{ Kind = "DUNE", X = 152, Z = 136, Width = 38, Length = 68, Height = 5.2, Yaw = -8, CrestSway = 0.14, SlipSteep = 1.2 },
+			{ Kind = "DUNE", X = -148, Z = -128, Width = 44, Length = 72, Height = 6.0, Yaw = 12, CrestSway = 0.14, SlipSteep = 1.2 },
+		},
+		Basin = { X = 0, Y = 0, Z = 112, Width = 360, Depth = 92 },
+		WestGallery = { X = -130, Y = 6, Z = 0, Width = 84, Depth = 76 },
+		Crossing = { X = 0, Y = 4, Z = -10, Width = 72, Depth = 58 },
+		EastGallery = { X = 130, Y = 6, Z = 0, Width = 84, Depth = 76 },
+		ExtraPlatforms = {
+			Armory = { X = 0, Y = 10, Z = -96, Width = 64, Depth = 44 },
+		},
+		Apex = { X = 0, Y = 14, Z = -180, Width = 104, Depth = 80 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "EastGallery" },
+			{ "Basin", "Crossing" },
+			{ "WestGallery", "Crossing" },
+			{ "EastGallery", "Crossing" },
+			{ "Crossing", "Armory" },
+			{ "WestGallery", "Armory" },
+			{ "EastGallery", "Armory" },
+			{ "Armory", "Apex" },
+		},
+		Stairs = { Armory_Apex = true },
+		Names = {
+			Sanctuary = "Barracks Gate",
+			Basin = "Parade Ground",
+			WestGallery = "West Barracks",
+			Crossing = "Mess Hall",
+			EastGallery = "East Barracks & Kennels",
+			Armory = "Armory",
+			Apex = "Commander's Hall",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any
