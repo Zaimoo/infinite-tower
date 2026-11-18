@@ -2610,7 +2610,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				kitAt("GlassArchSpan", archCf, 1.42 * scale, {
 					STONE = { Color = obsidianRock, Material = Enum.Material.Basalt },
 					CRYSTAL = { Color = vAmber, Material = Enum.Material.Glass },
-					GLOW = { Color = rgb(255, 168, 62), Material = Enum.Material.Neon },
+					GLOW = { Color = rgb(208, 118, 34), Material = Enum.Material.Neon },
 				})
 			else
 				for _, side in { -1, 1 } do
@@ -2624,24 +2624,24 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end)
 
-		-- 2. Fulgurite Crystal Clusters: East Ledge rim ("organ pipes") + deep Ravine Chasm floor
+		-- 2. Fulgurite Crystal Clusters: bold organ-pipe crystal clusters along East Ledge lip & Ravine floor
 		local fulgSpots = {
-			{ 96, -18, 1.15, 22 },
-			{ 82, -104, 1.25, -35 },
-			{ 96, -94, 1.10, 58 },
-			{ -12, 34, 1.25, 15 },
-			{ 18, -16, 1.10, -48 },
-			{ -38, -124, 1.20, 72 },
-			{ 38, -124, 1.10, -62 },
+			{ 96, -18, 1.65, 22 },
+			{ 82, -104, 1.70, -35 },
+			{ 96, -94, 1.55, 58 },
+			{ -14, 34, 1.80, 15 },
+			{ 20, -14, 1.60, -48 },
+			{ -40, -124, 1.65, 72 },
+			{ 40, -124, 1.60, -62 },
 		}
 		for _, fc in fulgSpots do
 			local fx, fz, fs, fyaw = fc[1], fc[2], fc[3], fc[4]
 			if footprintClear(fx, fz, 7, 7) then
 				local fy = f13MinGroundAt(fx, fz, 6)
-				table.insert(reservedSpots, { fx, fz, 10 })
+				table.insert(reservedSpots, { fx, fz, 12 })
 				group("FulguriteCluster", function()
 					currentParent:SetAttribute("OnTerrain", true)
-					local fcf = CFrame.new(fx, fy - 0.8, fz) * CFrame.Angles(0, math.rad(fyaw), 0)
+					local fcf = CFrame.new(fx, fy - 0.6, fz) * CFrame.Angles(0, math.rad(fyaw), 0)
 					if KitProps.Has("FulguriteCluster") then
 						kitAt("FulguriteCluster", fcf, fs * scale, {
 							CRYSTAL = { Color = vCrystalWhite, Material = Enum.Material.Glass },
@@ -2690,17 +2690,17 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end)
 		end
 
-		-- 3. Distant NE Dusk Horizon Beacon Tower (RavineHorizonSpire)
-		local spX, spZ = 188, -196
-		local spY = f13MinGroundAt(spX, spZ, 10)
+		-- 3. Prominent NE Dusk Horizon Beacon Tower (RavineHorizonSpire) rising cleanly atop East Ledge ridge
+		local spX, spZ = 174, -150
+		local spY = math.max(f13GroundAt(spX, spZ), 12)
 		table.insert(reservedSpots, { spX, spZ, 18 })
 		group("RavineHorizonSpire", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local spCf = CFrame.new(spX, spY - 2.0, spZ) * CFrame.Angles(0, math.rad(-25), 0)
-			local plinthH = math.max(6, (spY - bottom) + 4)
-			block("HorizonSpireFooting", V(24, plinthH, 24), V(spX, spY - plinthH * 0.5, spZ), obsidianRock, Enum.Material.Basalt)
+			local spCf = CFrame.new(spX, spY - 1.5, spZ) * CFrame.Angles(0, math.rad(-25), 0)
+			local plinthH = math.max(12, (spY - bottom) + 6)
+			block("HorizonSpireFooting", V(30, plinthH, 30), V(spX, spY - plinthH * 0.5, spZ), obsidianRock, Enum.Material.Basalt)
 			if KitProps.Has("RavineHorizonSpire") then
-				kitAt("RavineHorizonSpire", spCf, 1.38 * scale, {
+				kitAt("RavineHorizonSpire", spCf, 1.55 * scale, {
 					TRIM = { Color = vSand, Material = Enum.Material.Sandstone },
 					ALT = { Color = vTerra, Material = Enum.Material.Slate },
 					STONE = { Color = obsidianRock, Material = Enum.Material.Basalt },
@@ -2712,16 +2712,16 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end)
 
-		-- 4. One Sandfall Cascade pouring down the far NW canyon cliff wall (facing away from ramps)
-		local sfX, sfZ = -196, -138
-		local sfBotY = f13MinGroundAt(sfX + 12, sfZ + 8, 5)
+		-- 4. One Sandfall Cascade pouring down the visible NW canyon cliff wall toward the ravine
+		local sfX, sfZ = -168, -112
+		local sfBotY = f13MinGroundAt(sfX + 24, sfZ + 12, 5)
 		group("RavineSandfall", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			local sfTop = V(sfX, 58, sfZ)
-			local sfBot = V(sfX + 18, sfBotY - 1.0, sfZ + 10)
-			beam("SandfallCascadeStream", sfTop, sfBot, 10.5, vSand, Enum.Material.SmoothPlastic, 0.25)
-			beam("SandfallMistCore", sfTop + V(1, 0, 1), sfBot + V(1, 1, 1), 6.2, rgb(224, 192, 148), Enum.Material.SmoothPlastic, 0.42)
-			local footCone = orb("SandfallPlungeMound", sfBot, V(22, 6.5, 20), vDrift, Enum.Material.Sand)
+			local sfTop = V(sfX, 56, sfZ)
+			local sfBot = V(sfX + 28, sfBotY - 1.0, sfZ + 14)
+			beam("SandfallCascadeStream", sfTop, sfBot, 12.0, vSand, Enum.Material.SmoothPlastic, 0.22)
+			beam("SandfallMistCore", sfTop + V(1, 0, 1), sfBot + V(1, 1, 1), 7.0, rgb(228, 194, 148), Enum.Material.SmoothPlastic, 0.38)
+			local footCone = orb("SandfallPlungeMound", sfBot, V(26, 7.5, 22), vDrift, Enum.Material.Sand)
 			local sfEmit = Instance.new("ParticleEmitter")
 			sfEmit.Name = "SandfallDustPlume"
 			sfEmit.Color = ColorSequence.new(rgb(220, 184, 134))
@@ -2733,51 +2733,55 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			sfEmit.Parent = footCone
 		end)
 
-		-- 5. Overhanging Obsidian-Glass Shelf Eaves above West Ledge (kept >= 36Y, clear above camp Y+22)
+		-- 5. Cliff-buttress Obsidian & Amber-Glass Arch Overhangs rising from bedrock beside West Ledge
 		for ohIdx, ohZ in { -68, -28, 12 } do
 			group("WestLedgeGlassOverhang", function()
 				currentParent:SetAttribute("OnTerrain", true)
 				local shelfY = 38 + (ohIdx % 2) * 3
-				local rockEave = block("ObsidianOverhangSlab", V(48, 8, 28), V(-196, shelfY, ohZ), obsidianRock, Enum.Material.Basalt)
-				rockEave.CFrame = CFrame.new(origin + V(-196, shelfY, ohZ)) * CFrame.Angles(0, math.rad((ohIdx - 2) * 8), math.rad(-10))
-				local glassVein = block("ObsidianOverhangGlass", V(38, 2.2, 22), V(-192, shelfY - 3.6, ohZ), vAmber, Enum.Material.Glass, nil, 0.28)
-				glassVein.CFrame = rockEave.CFrame * CFrame.new(2, -3.6, 0)
+				local buttressH = shelfY - bottom + 2
+				block("ObsidianCliffButtress", V(30, buttressH, 24), V(-208, bottom + buttressH * 0.5 - 1, ohZ), obsidianRock, Enum.Material.Basalt)
+				local rockEave = block("ObsidianOverhangSlab", V(36, 7, 22), V(-192, shelfY, ohZ), obsidianRock, Enum.Material.Basalt)
+				rockEave.CFrame = CFrame.new(origin + V(-192, shelfY, ohZ)) * CFrame.Angles(0, math.rad((ohIdx - 2) * 6), math.rad(-10))
+				local glassVein = block("ObsidianOverhangGlass", V(30, 2.4, 18), V(-190, shelfY - 3.6, ohZ), vAmber, Enum.Material.Glass, nil, 0.25)
+				glassVein.CFrame = rockEave.CFrame * CFrame.new(2, -3.8, 0)
 			end)
 		end
 
-		-- 6. Right-Bank Ash Raider Camp Ruins + Tarp Tents & Orange-Blooming Desert Cacti along West/Mouth basalt cliffs
-		for tIdx, tc in { { 196, -124, 1.0, -24 }, { 192, -88, 0.92, 18 } } do
+		-- 6. Elevated East-Bank Ash Raider Camp Shelf (Tarp Tents, Broken Ruin & Campfire at Y+5) + Foreground Cacti
+		for tIdx, tc in { { 188, -22, 1.05, -24 }, { 188, -88, 0.95, 18 } } do
 			local tx, tz, ts, tyaw = tc[1], tc[2], tc[3], tc[4]
 			if footprintClear(tx, tz, 9, 9) then
-				local ty = f13MinGroundAt(tx, tz, 7)
-				table.insert(reservedSpots, { tx, tz, 14 })
+				local benchY = 5.0
+				table.insert(reservedSpots, { tx, tz, 15 })
 				group("AshRaiderTarpTent" .. tIdx, function()
 					currentParent:SetAttribute("OnTerrain", true)
-					local tcf = CFrame.new(origin + V(tx, ty - 0.3, tz)) * CFrame.Angles(0, math.rad(tyaw), 0)
+					local shelfH = benchY - bottom + 2
+					block("EastCampCliffShelf", V(30, shelfH, 30), V(tx, benchY - shelfH * 0.5, tz), obsidianRock, Enum.Material.Basalt)
+					local tcf = CFrame.new(origin + V(tx, benchY - 0.1, tz)) * CFrame.Angles(0, math.rad(tyaw), 0)
 					for _, side in { -1, 1 } do
-						local roof = block("TarpPitch", V(9.5 * ts, 0.45, 13.0 * ts), V(tx, ty + 3.5, tz), vCanvas, Enum.Material.Fabric)
+						local roof = block("TarpPitch", V(9.5 * ts, 0.45, 13.0 * ts), V(tx, benchY + 3.5, tz), vCanvas, Enum.Material.Fabric)
 						roof.CFrame = tcf * CFrame.new(side * 3.35 * ts, 3.8 * ts + (if side > 0 then 0.08 else 0), 0) * CFrame.Angles(0, 0, math.rad(side * -32))
-						local pole = cyl("TentPole", V(tx, ty, tz), 0.35, 7.2 * ts, vWood, Enum.Material.Wood)
+						local pole = cyl("TentPole", V(tx, benchY, tz), 0.35, 7.2 * ts, vWood, Enum.Material.Wood)
 						pole.CFrame = tcf * CFrame.new(0, 3.3 * ts, side * 5.8 * ts)
 					end
 					if tIdx == 1 then
-						local ember = orb("RavineCampfireEmber", V(tx - 8, ty + 0.6, tz + 6), V(2.4, 1.2, 2.4), vAmber, Enum.Material.Neon)
+						local ember = orb("RavineCampfireEmber", V(tx - 8, benchY + 0.6, tz + 6), V(2.4, 1.2, 2.4), vAmber, Enum.Material.Neon)
 						pointLight(ember, vAmber, 1.1, 32)
 					end
 				end)
 			end
 		end
 
-		for _, cc in { { -192, 138, 1.15 }, { -156, 158, 1.05 }, { -112, -112, 1.05 }, { 192, 140, 1.05 } } do
+		for _, cc in { { -82, 68, 1.55 }, { 82, 68, 1.55 }, { -126, 48, 1.50 }, { 132, 48, 1.50 } } do
 			local cx, cz, cs = cc[1], cc[2], cc[3]
 			if footprintClear(cx, cz, 6, 6) then
 				local cy = f13MinGroundAt(cx, cz, 5)
-				table.insert(reservedSpots, { cx, cz, 8 })
+				table.insert(reservedSpots, { cx, cz, 9 })
 				group("GlassCactusCluster", function()
 					currentParent:SetAttribute("OnTerrain", true)
-					local ccf = CFrame.new(cx, cy - 0.6, cz) * CFrame.Angles(0, math.rad(cx * 3), 0)
+					local ccf = CFrame.new(cx, cy - 0.2, cz) * CFrame.Angles(0, math.rad(cx * 3), 0)
 					if KitProps.Has("GlassCactusCluster") then
-						kitAt("GlassCactusCluster", ccf, 1.35 * cs * scale, {
+						kitAt("GlassCactusCluster", ccf, cs * scale, {
 							FOLIAGE = { Color = vCactus, Material = Enum.Material.Grass },
 							ALT = { Color = vBloom, Material = Enum.Material.SmoothPlastic },
 							STONE = { Color = obsidianRock, Material = Enum.Material.Basalt },
@@ -3076,14 +3080,15 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end
 			end)
 		elseif layout.Authored == "ashen:3" then
-			-- Lightning Scar Apex Backdrop: twin VarrashLightningRod storm arrestor pylons & fused basalt crater rim
+			-- Lightning Scar Apex Backdrop: twin VarrashLightningRod storm arrestor pylons on visible south-flank rim & fused basalt crater rim
 			local scarObsidian = rgb(32, 26, 32)
 			local scarAmber = rgb(248, 152, 46)
 			local scarCrystal = rgb(230, 220, 206)
 			for _, side in { -1, 1 } do
-				local rodAt = V(apex.X + side * 44, apex.Y - 0.8, apex.Z - apex.Depth / 2 - 8)
+				local rodAt = V(apex.X + side * 48, apex.Y - 0.6, apexBack - 8)
 				group("VarrashLightningRod", function()
 					currentParent:SetAttribute("OnTerrain", true)
+					block("LightningRodBasePlinth", V(20, 8, 20), rodAt - V(0, 3.5, 0), scarObsidian, Enum.Material.Basalt)
 					if KitProps.Has("VarrashLightningRod") then
 						local mdl = kitAt("VarrashLightningRod", CFrame.new(rodAt) * CFrame.Angles(0, math.rad(side * 22), 0), 1.35 * scale, {
 							METAL = { Color = rgb(72, 58, 48), Material = Enum.Material.Metal },
