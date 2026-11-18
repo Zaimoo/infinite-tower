@@ -419,6 +419,61 @@ local AUTHORED: {[number]: any} = {
 		-- A small oculus over the isle: daylight filtered through the nets.
 		Skylight = {X = -20, Z = -40, Radius = 28},
 	},
+	-- Floor 8, Blooming Chasm (Fungal Hollow): the cavern floor fell away and the Veinweb bloomed in the chasm.
+	-- The Lampkeepers (the last Velmari who refused the Veinweb) made their refuge here: their last lit camp is
+	-- the Sanctuary, and from the Rim of Blooms their rope walkways, lashed to the Veinweb's cables, hang out
+	-- over the chasm to the Violet Cap (the walkable top of a colossal mushroom) and the Crystal Islet. Both
+	-- reach the Old Aqueduct, a surviving Velmari span running east-west between them, whose stairs climb to
+	-- the Bloomcrown Ledge; the islet also climbs the Spine, a rock ridge, straight to the ledge.
+	[8] = {
+		Key = "fungal:8",
+		Name = "Blooming Chasm",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 136, Width = 400, Depth = 96},
+		-- Square, so the round cap top (a disc through its corners) stays close to it.
+		WestGallery = {X = -140, Y = 8, Z = -20, Width = 62, Depth = 62},
+		EastGallery = {X = 150, Y = 4, Z = -30, Width = 84, Depth = 76},
+		-- 48 deep, so the deck's camp stays clear of the stairs' first treads (they start 4 studs inside it).
+		Crossing = {X = 10, Y = 12, Z = -60, Width = 96, Depth = 48},
+		Apex = {X = 0, Y = 20, Z = -196, Width = 104, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"WestGallery", "Crossing"}, {"EastGallery", "Crossing"},
+			{"Crossing", "Apex"}, {"EastGallery", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Lampkeepers' Rest", Basin = "Rim of Blooms", WestGallery = "Violet Cap",
+			EastGallery = "Crystal Islet", Crossing = "Old Aqueduct", Apex = "Bloomcrown Ledge",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			-- Built or grown decks: the Sanctuary's landing, the aqueduct (a span: no ground raised under it)
+			-- and the Violet Cap's top (a round cap on its stem: no ground under it either).
+			Decks = {Sanctuary = true, Crossing = true, WestGallery = true},
+			DeckThickness = {Crossing = 4, WestGallery = 3},
+			RoundDecks = {WestGallery = true},
+			-- The Lampkeepers' rope walkways: plank decks hung over the chasm (solid, visible parts; the chasm
+			-- stays open beneath them). The Spine (EastGallery_Apex) is a rock ridge: terrain.
+			Bridges = {Basin_WestGallery = true, Basin_EastGallery = true, WestGallery_Crossing = true, EastGallery_Crossing = true},
+			LiquidRise = 2.6,
+			FloorDip = 2.2,
+			WallBand = {Base = 40, Noise = 14},
+			Pools = {
+				{X = 10, Z = -62, RX = 58, RZ = 34},   -- under the aqueduct
+				{X = -136, Z = -22, RX = 40, RZ = 36}, -- round the Violet Cap's stem
+				{X = 64, Z = 30, RX = 40, RZ = 28},    -- the bloom pool in the middle of the chasm
+			},
+			-- A sea of mid-size caps on the chasm floor, below eye level.
+			GroveScale = 1.3,
+			GroundCover = {"GlowcapTuftA", "GlowcapTuftB", "SporeMoss", "GlowcapTuftA"},
+			GroundCoverCount = 200,
+			CliffVeins = 30,
+		},
+		-- The widest oculus yet, over the middle of the chasm: the brightest Fungal floor.
+		Skylight = {X = 0, Z = -50, Radius = 56},
+	},
 	-- Floor 11, Cinder Gate (Ashen Dunes Introduction): wind-rippled black-ash plains swept by the central
 	-- Sleeping Dune (dead-end Dune Crest lookout) with a half-buried Varrash caravan wreck, banded Toll House
 	-- ruins, a cylindrical Watch Kiln tower, waystone-lined tracks, and the towering Cinder Gate in the basalt wall.

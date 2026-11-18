@@ -82,6 +82,10 @@ test("Every extra floor-specific template has a size, stands on the ground and u
 	for _, name in { "LampNiche", "MyceliumNet" } do
 		assert(Kit.ExtraTemplates[name], "fungal_f7_kit is missing " .. name)
 	end
+	-- Floor 8 (Blooming Chasm, fungal_f8_kit: the Lampkeepers' camp kit).
+	for _, name in { "CapShelter", "CampSupplies", "CrystalBrazier", "Barricade", "ChalkSign" } do
+		assert(Kit.ExtraTemplates[name], "fungal_f8_kit is missing " .. name)
+	end
 	assert(Kit.Biomes.fungal_hollow.Palette.BULB and Kit.Biomes.fungal_hollow.Palette.CANDLE, "fungal palette lacks BULB or CANDLE")
 	assert(count >= 45, "expected Floor 2-5 and Floor 11-15 extra templates")
 end)
@@ -161,6 +165,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[5] ~= nil, "floor 5 (Mossbound Court) has its golden-hour dusk grade")
 	assert(Light.FloorGrades[6] ~= nil, "floor 6 (Sporelit Entry) has its underground-twilight grade")
 	assert(Light.FloorGrades[7] ~= nil, "floor 7 (Mycelium Galleries) has its deep-gallery grade")
+	assert(Light.FloorGrades[8] ~= nil, "floor 8 (Blooming Chasm) has its full-bloom grade")
 	assert(Light.FloorGrades[11] ~= nil, "floor 11 (Cinder Gate) has its searing desert noon grade")
 	assert(Light.FloorGrades[12] ~= nil, "floor 12 (Buried Caravan) has its afternoon sandstorm grade")
 	assert(Light.FloorGrades[13] ~= nil, "floor 13 (Glasswind Ravine) has its ravine dusk grade")

@@ -367,6 +367,48 @@ test("Floor 7 is the hand-authored Mycelium Galleries: a switchback up the lamp-
 	assert(math.abs(edgeY - (cross.Y - 2)) < 1e-6, "the Netted Isle's edge is not flat where paths land")
 end)
 
+test("Floor 8 is the hand-authored Blooming Chasm: rope walkways over the chasm to a cap, an islet and the aqueduct", function()
+	local room = Layout.ForFloor(8)
+	assert(room.Authored == "fungal:8" and room.Name == "Blooming Chasm")
+	assert(same(room, Layout.Get(3, 8)), "the authored floor is not fixed")
+	assert(room.Platforms.Sanctuary.Name == "Lampkeepers' Rest", "the Sanctuary is the Lampkeepers' camp")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_WestGallery and paths.Basin_EastGallery and paths.WestGallery_Crossing and paths.EastGallery_Crossing)
+	assert(paths.Crossing_Apex == "STAIRS" and paths.EastGallery_Apex == "RAMP")
+	assert(paths.WestGallery_Apex == nil and paths.Basin_Crossing == nil, "the aqueduct is reached only from the islands")
+	assert(room.EliteCount == 3)
+	local mobs = 0
+	for _, camp in room.Camps do if camp.Id ~= "APEX_SANCTUM" then mobs += camp.Size end end
+	assert(mobs == 25, "floor 8 has " .. mobs .. " live mobs")
+	local td = room.Terrain
+	assert(td.Decks.WestGallery and td.RoundDecks.WestGallery and td.Decks.Crossing, "the cap top and the aqueduct are decks")
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	-- The Violet Cap's patrol walks its rope walkway to the aqueduct (it has no path up).
+	local routes = Layout.PatrolRoutes(3, 8)
+	assert(routes.GALLERY_WEST and routes.GALLERY_EAST, "floor 8 lost a gallery patrol")
+	local last = routes.GALLERY_WEST[#routes.GALLERY_WEST]
+	assert(math.abs(last.Y - room.Platforms.Crossing.Y) < 1e-6, "the Violet Cap patrol does not reach the aqueduct")
+	-- The walkways hang over open chasm: no ground rises under their middles; the terrain terraces are flush.
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local field = Terrain.Field(room, "fungal_hollow", 8)
+	for _, link in room.Links do
+		if td.Bridges[link.Id] then
+			local x, z = (link.AX + link.BX) / 2, (link.AZ + link.BZ) / 2
+			local y = field.Sample(x, z)
+			assert(y < math.min(link.AY, link.BY) - 4.4, link.Id .. ": ground rises under the rope walkway")
+		end
+	end
+	for id, t in room.Platforms do
+		if not td.Decks[id] then
+			local y = field.Sample(t.X + 3, t.Z - 3)
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, id .. ": ground is not flush with the walking plane")
+		end
+	end
+end)
+
 test("Fungal-owned terrain materials are used by no biome palette", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local owned = {}

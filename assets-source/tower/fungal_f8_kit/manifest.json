@@ -1,0 +1,101 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "Barricade": {
+      "Min": [
+        -7.21,
+        -0.328,
+        -2.012
+      ],
+      "Roles": {
+        "MOSS": 80,
+        "STEM": 48,
+        "TRIM": 224,
+        "WOOD": 478
+      },
+      "Size": [
+        14.898,
+        6.059,
+        3.619
+      ],
+      "Triangles": 830
+    },
+    "CampSupplies": {
+      "Min": [
+        -4.014,
+        -0.25,
+        -2.899
+      ],
+      "Roles": {
+        "FOLIAGE": 492,
+        "MOSS": 80,
+        "TRIM": 214,
+        "WOOD": 648
+      },
+      "Size": [
+        8.399,
+        2.45,
+        5.42
+      ],
+      "Triangles": 1434
+    },
+    "CapShelter": {
+      "Min": [
+        -7.167,
+        -0.2,
+        -4.976
+      ],
+      "Roles": {
+        "CAP": 120,
+        "FOLIAGE": 36,
+        "GLOW": 8,
+        "MOSS": 80,
+        "STEM": 120,
+        "WOOD": 168
+      },
+      "Size": [
+        13.762,
+        7.351,
+        8.796
+      ],
+      "Triangles": 532
+    },
+    "ChalkSign": {
+      "Min": [
+        -1.502,
+        -0.1,
+        -1.138
+      ],
+      "Roles": {
+        "ALT": 132,
+        "STONE": 80
+      },
+      "Size": [
+        3.058,
+        2.63,
+        1.803
+      ],
+      "Triangles": 212
+    },
+    "CrystalBrazier": {
+      "Min": [
+        -2.679,
+        -0.22,
+        -2.55
+      ],
+      "Roles": {
+        "CANDLE": 240,
+        "CRYSTAL": 80,
+        "MOSS": 80,
+        "TRIM": 681
+      },
+      "Size": [
+        5.95,
+        2.52,
+        5.546
+      ],
+      "Triangles": 1081
+    }
+  },
+  "Unit": "studs"
+}
