@@ -2507,7 +2507,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 	elseif biome == "ashen_dunes" then
 		if layout.Authored == "ashen:1" then
-			local gateAt = V(apex.X, apex.Y, apex.Z - apex.Depth / 2 - 4)
+			local gateAt = V(apex.X, apex.Y, apex.Z - apex.Depth / 2 - 10)
 			group("CinderGateArch", function()
 				if KitProps.Has("CinderGateArch") then
 					local mdl = kitAt("CinderGateArch", CFrame.new(gateAt), 1.18 * scale, {
