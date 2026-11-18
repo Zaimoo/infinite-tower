@@ -300,6 +300,71 @@ def cinderhold_vent(t):
         box(metal, (9.0, 4.8, 10.0), M((side * 15.0, -9.5, 6.0), rot=(0.15, side * 0.2, 0)), bevel=0.12)
 
 
+@template("CalderaDragonCorpse", STONE=1000, TRIM=2400, GLOW=350)
+def caldera_dragon_corpse(t):
+    """Colossal half-submerged Ash-Dragon skeleton lying in the molten caldera lake."""
+    stone, trim, glow = t.bm("STONE"), t.bm("TRIM"), t.bm("GLOW")
+
+    # Charred basalt magma crust island under the ribcage & skull
+    rock_clean(stone, (30.0, 46.0, 4.2), M((0.0, 0.0, -0.1)), seed=167, roughness=0.24, subdiv=2)
+    box(glow, (11.0, 22.0, 1.4), M((0.0, -2.0, 1.2)), bevel=0.1)
+
+    # Horned Dragon Skull at front (-Y) resting tilted on the basalt crust
+    skull_c = Vector((-2.0, -24.0, 5.2))
+    s_rot = (-0.18, 0.14, 0.22)
+    sm = M(tuple(skull_c), rot=s_rot)
+    cone(trim, 6.2, 2.4, 15.5, 6, sm @ Matrix.Rotation(math.pi * 0.5, 4, "X"))  # snout pointing -Y
+    box(trim, (11.5, 8.5, 6.4), sm @ Matrix.Translation(Vector((0, 4.0, 0.8))), bevel=0.25)  # cranium
+    box(trim, (6.5, 11.0, 2.4), sm @ Matrix.Translation(Vector((0.6, -2.5, -3.4))) @ Matrix.Rotation(0.24, 4, "X"), bevel=0.16)  # lower jaw
+    for side in (-1, 1):
+        # Sweeping obsidian-tipped dragon horns curving backward (+Y) and upward
+        h0 = sm @ Vector((side * 4.4, 5.5, 2.8))
+        h1 = sm @ Vector((side * 7.8, 12.0, 7.6))
+        h2 = sm @ Vector((side * 9.5, 19.5, 11.2))
+        tapered_limb(trim, h0, h1, 2.1, 1.4, segs=6)
+        tapered_limb(stone, h1, h2, 1.4, 0.35, segs=6)
+        box(glow, (1.8, 2.2, 1.5), sm @ Matrix.Translation(Vector((side * 3.8, 0.5, 1.4))), bevel=0.05)
+
+    # Sinuous arched vertebrae spine + dorsal ridges curving through the lava lake (y=-18..+28)
+    spine_pts = []
+    for k in range(11):
+        u = k / 10.0
+        sy = -17.0 + u * 45.0
+        sx = math.sin(u * math.pi * 1.45) * 7.5
+        sz = 2.6 + math.sin(u * math.pi * 0.92) * 6.2
+        spine_pts.append(Vector((sx, sy, sz)))
+    for k in range(len(spine_pts) - 1):
+        p0, p1 = spine_pts[k], spine_pts[k + 1]
+        r = 2.6 - (k / len(spine_pts)) * 1.4
+        tapered_limb(trim, p0, p1, r, r * 0.9, segs=6)
+        # Jagged obsidian dorsal fin spikes along the spine
+        cone(stone, 1.2, 0.3, 4.2 - k * 0.2, 5, M(tuple((p0 + p1) * 0.5 + Vector((0, 0, r * 0.6))), rot=(-0.25, 0, 0)))
+
+    # 6 pairs of massive arched rib bones curving out of the glowing magma heart pool
+    for r_idx in range(6):
+        sp = spine_pts[r_idx + 1]
+        span = 11.5 + math.sin((r_idx / 5.0) * math.pi) * 6.5
+        h_arc = 10.5 + math.sin((r_idx / 5.0) * math.pi) * 4.5
+        for side in (-1, 1):
+            rp0 = sp
+            rp1 = Vector((sp.x + side * span * 0.72, sp.y - 1.0, sp.z + h_arc * 0.45))
+            rp2 = Vector((sp.x + side * span, sp.y - 2.2, 1.2))
+            tapered_limb(trim, rp0, rp1, 1.65, 1.25, segs=6)
+            tapered_limb(trim, rp1, rp2, 1.25, 0.65, segs=6)
+
+    # Two asymmetric skeletal dragon wing spars rising from the shoulder region
+    wing_specs = [
+        (-1, Vector((-5.0, -8.0, 7.2)), Vector((-19.0, -2.0, 21.0)), Vector((-30.0, 9.0, 14.0)), -1.0),
+        ( 1, Vector(( 5.0, -6.0, 7.2)), Vector(( 16.0,  2.0, 15.5)), Vector(( 25.0, 12.0, 2.5)),  1.0),
+    ]
+    for _, w0, w1, w2, side in wing_specs:
+        tapered_limb(trim, w0, w1, 2.0, 1.3, segs=6)
+        tapered_limb(trim, w1, w2, 1.3, 0.7, segs=6)
+        for f in range(3):
+            tip = w1 + Vector((side * (9.0 + f * 3.5), 6.0 + f * 5.0, -4.0 - f * 3.5))
+            tapered_limb(stone, w1, tip, 0.85, 0.28, segs=5)
+
+
 def build_f15():
     reset_scene()
     kit = bpy.data.collections.new("AshenF15Kit")

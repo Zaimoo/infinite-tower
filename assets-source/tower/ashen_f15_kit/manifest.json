@@ -1,6 +1,24 @@
 {
   "Front": "-Y in Blender, +Z in Roblox",
   "Templates": {
+    "CalderaDragonCorpse": {
+      "Min": [
+        -35.215,
+        -0.84,
+        -28.518
+      ],
+      "Roles": {
+        "GLOW": 234,
+        "STONE": 376,
+        "TRIM": 970
+      },
+      "Size": [
+        67.43,
+        23.026,
+        67.985
+      ],
+      "Triangles": 1580
+    },
     "CinderholdVent": {
       "Min": [
         -44.2,

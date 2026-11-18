@@ -84,6 +84,7 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	AqueductBrokenSpan = table.freeze({ Size = Vector3.new(23.055, 19.059, 16.419), Min = Vector3.new(-11.167, -0.284, -7.26), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	AshmarketStall = table.freeze({ Size = Vector3.new(14.8, 11.676, 9.0), Min = Vector3.new(-7.4, -0.05, -4.5), Roles = table.freeze({ "ALT", "FOLIAGE", "STONE", "TRIM", "WOOD" }) }),
 	BuriedWagon = table.freeze({ Size = Vector3.new(16.375, 12.662, 18.778), Min = Vector3.new(-6.98, -0.387, -10.084), Roles = table.freeze({ "FOLIAGE", "METAL", "MOSS", "WOOD" }) }),
+	CalderaDragonCorpse = table.freeze({ Size = Vector3.new(67.43, 23.026, 67.985), Min = Vector3.new(-35.215, -0.84, -28.518), Roles = table.freeze({ "GLOW", "STONE", "TRIM" }) }),
 	CaravanseraiSkylight = table.freeze({ Size = Vector3.new(11.6, 1.665, 11.6), Min = Vector3.new(-5.8, 0.005, -5.8), Roles = table.freeze({ "GLOW", "METAL", "STONE", "TRIM" }) }),
 	CenoteCascadeSpillway = table.freeze({ Size = Vector3.new(23.0, 30.2, 27.1), Min = Vector3.new(-11.5, 0.0, -13.8), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	CenoteColonnadeDome = table.freeze({ Size = Vector3.new(125.819, 67.285, 45.009), Min = Vector3.new(-62.791, -0.258, -34.0), Roles = table.freeze({ "ACCENT", "GOLD", "MOSS", "TRIM", "WOOD" }) }),
@@ -356,7 +357,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	SandStriderRibs = true, SandStriderSkull = true, DesertCaravanWagon = true, SpiceVaultRuins = true, MasterTombPavilion = true,
 	GlassArchSpan = true, RavineHorizonSpire = true, VarrashLightningRod = true,
 	KilnTower = true, SignalLensTower = true, PortcullisGate = true, AshmarketStall = true,
-	ElderHandFingers = true, ElderShieldRim = true, ElderColossusHead = true, ElderCrownRing = true, ElderShoulderPauldron = true, CinderholdVent = true,
+	ElderHandFingers = true, ElderShieldRim = true, ElderColossusHead = true, ElderCrownRing = true, ElderShoulderPauldron = true, CinderholdVent = true, CalderaDragonCorpse = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit

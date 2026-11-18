@@ -3147,19 +3147,19 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			GLOW = { Color = cMagma, Material = Enum.Material.Neon },
 		}
 
-		-- 1. Cracked-lava Caldera Lake glowing veins across the lake bed (Y = liquidLevel + 0.14)
+		-- 1. Cracked-lava Caldera Lake magma web & cliff lava-falls pouring into the caldera
 		local lavaTopY = (field and field.LiquidLevel or -6.8) + 0.14
 		group("CalderaLavaSeams", function()
 			currentParent:SetAttribute("OnTerrain", true)
-			for laneIdx, xs in { -115, 0, 115 } do
-				local prevPt = V(xs * 0.7, lavaTopY, -190)
+			for laneIdx, xs in { -128, -42, 34, 122 } do
+				local prevPt = V(xs * 0.72, lavaTopY, -186)
 				for k = 1, 5 do
 					local t = k / 5
-					local nz = -190 + t * 295
-					local nx = xs * (0.75 + 0.25 * math.sin(t * math.pi)) + math.sin(nz * 0.04 + laneIdx) * 14
+					local nz = -186 + t * 290
+					local nx = xs * (0.78 + 0.22 * math.sin(t * math.pi)) + math.sin(nz * 0.045 + laneIdx * 1.3) * 16
 					local nextPt = V(nx, lavaTopY, nz)
-					local seam = beam("CalderaMagmaCrack", prevPt, nextPt, 3.2, cMagma, Enum.Material.Neon)
-					if laneIdx == 0 and (k == 2 or k == 4) then
+					local seam = beam("CalderaMagmaCrack", prevPt, nextPt, if k % 2 == 0 then 3.4 else 2.4, cMagma, Enum.Material.Neon)
+					if laneIdx == 34 and (k == 2 or k == 4) then
 						local em = Instance.new("ParticleEmitter")
 						em.Name = "CalderaRisingEmbers"
 						em.Color = ColorSequence.new(rgb(255, 152, 48), rgb(255, 64, 20))
@@ -3170,7 +3170,103 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 						em.Speed = NumberRange.new(7, 14)
 						em.Parent = seam
 					end
+					if k == 2 or k == 4 then
+						local fork = nextPt + V((if laneIdx < 0 then 1 else -1) * 26, 0, 14)
+						beam("CalderaMagmaFork", nextPt, fork, 1.8, cEmber, Enum.Material.Neon)
+					end
 					prevPt = nextPt
+				end
+			end
+			-- Cliff magma cascades pouring off the caldera walls into the cracked-lava shore
+			for _, lf in {
+				{ -116, 12, -162, -96, lavaTopY, -148 },
+				{ 118, 12, -150, 96, lavaTopY, -134 },
+				{ -114, 4, 64, -92, lavaTopY, 64 },
+				{ 118, 5, 58, 96, lavaTopY, 58 },
+			} do
+				local topP = V(lf[1], lf[2], lf[3])
+				local botP = V(lf[4], lf[5], lf[6])
+				beam("CalderaLavaFall", topP, botP, 4.2, cMagma, Enum.Material.Neon)
+				cyl("LavaFallSplash", botP, 8.5, 0.6, cEmber, Enum.Material.Neon)
+			end
+		end)
+
+		-- 1b. Colossal Ash-Dragon Corpse half-submerged in the middle of the molten caldera lake
+		local drX, drZ = 52, 34
+		local drY = lavaTopY - 0.35
+		table.insert(reservedSpots, { drX, drZ, 34 })
+		group("CalderaDragonCorpse", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local dcf = CFrame.new(drX, drY, drZ) * CFrame.Angles(0, -0.52, 0)
+			if KitProps.Has("CalderaDragonCorpse") then
+				local mdl = kitAt("CalderaDragonCorpse", dcf, 1.22 * scale, {
+					STONE = { Color = cBasalt, Material = Enum.Material.Basalt },
+					TRIM = { Color = rgb(196, 182, 162), Material = Enum.Material.Sandstone },
+					GLOW = { Color = cMagma, Material = Enum.Material.Neon },
+				})
+				local glowPart = mdl and (mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart"))
+				if glowPart then
+					pointLight(glowPart, cMagma, 1.8, 58)
+				end
+			else
+				local boneCol = rgb(198, 184, 164)
+				local darkBone = rgb(134, 122, 110)
+				local crust = cyl("DragonMagmaCrust", V(drX, lavaTopY - 1.2, drZ), 26, 3.6, cBasalt, Enum.Material.Basalt)
+				crust.CFrame = CFrame.new(origin) * dcf * CFrame.new(0, -0.8, 0)
+				local heartPool = cyl("DragonHeartLavaPool", V(drX, drY + 0.5, drZ), 13, 0.8, cMagma, Enum.Material.Neon)
+				heartPool.CFrame = CFrame.new(origin) * dcf * CFrame.new(0, 0.6, 2)
+				pointLight(heartPool, cMagma, 1.8, 58)
+				local dEm = Instance.new("ParticleEmitter")
+				dEm.Name = "DragonCorpseEmbers"
+				dEm.Color = ColorSequence.new(rgb(255, 168, 58), rgb(255, 68, 22))
+				dEm.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0.15) })
+				dEm.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+				dEm.Lifetime = NumberRange.new(2.0, 3.8)
+				dEm.Rate = 6
+				dEm.Speed = NumberRange.new(8, 16)
+				dEm.Parent = heartPool
+
+				-- Horned Dragon Skull angled toward Ashmarket (+Z local in dcf)
+				local headPos = dcf:PointToWorldSpace(V(-2, 5.5, 24))
+				local skull = block("DragonSkullCranium", V(12, 7.5, 14), headPos, boneCol, Enum.Material.Sandstone)
+				skull.CFrame = CFrame.new(origin + headPos) * CFrame.Angles(math.rad(14), -0.52, math.rad(-10))
+				local snoutPos = dcf:PointToWorldSpace(V(-3, 4.2, 34))
+				local snout = block("DragonSkullSnout", V(7.5, 5.0, 13), snoutPos, boneCol, Enum.Material.Sandstone)
+				snout.CFrame = CFrame.new(origin + snoutPos) * CFrame.Angles(math.rad(16), -0.52, math.rad(-10))
+				for _, side in { -1, 1 } do
+					local hPos = dcf:PointToWorldSpace(V(-2 + side * 6.5, 9.5, 16))
+					local horn = block("DragonObsidianHorn", V(2.4, 3.2, 16), hPos, cBasalt, Enum.Material.Basalt)
+					horn.CFrame = CFrame.new(origin + hPos) * CFrame.Angles(math.rad(-26), -0.52 + side * 0.25, 0)
+					local eyePos = dcf:PointToWorldSpace(V(-2 + side * 4.4, 6.4, 24))
+					orb("DragonEmberEye", eyePos, V(2.2, 1.8, 2.2), cMagma, Enum.Material.Neon)
+				end
+
+				-- Sinuous vertebrae spine + 5 pairs of colossal ribcage arches + 2 skeletal wing spars
+				for sIdx = 1, 7 do
+					local u = (sIdx - 1) / 6
+					local spLocal = V(math.sin(u * math.pi * 1.4) * 7, 3.5 + math.sin(u * math.pi) * 6.5, 16 - u * 44)
+					local spWorld = dcf:PointToWorldSpace(spLocal)
+					local vert = block("DragonVertebra", V(5.2 - u * 1.8, 5.0 - u * 1.6, 7.0), spWorld, darkBone, Enum.Material.Sandstone)
+					vert.CFrame = CFrame.new(origin + spWorld) * CFrame.Angles(0, -0.52 + math.cos(u * 4) * 0.25, 0)
+				end
+				for rIdx = 1, 5 do
+					local rz = 12 - (rIdx - 1) * 5.8
+					local span = 12 + math.sin((rIdx / 5) * math.pi) * 5.5
+					local ribH = 12 + math.sin((rIdx / 5) * math.pi) * 4.5
+					for _, side in { -1, 1 } do
+						local rMid = dcf:PointToWorldSpace(V(side * (span * 0.55), ribH * 0.45, rz))
+						local rib = block("DragonRibBone", V(2.2, ribH, 2.4), rMid, boneCol, Enum.Material.Sandstone)
+						rib.CFrame = CFrame.new(origin + rMid) * CFrame.Angles(0, -0.52, math.rad(side * 28))
+					end
+				end
+				for _, wg in { { -1, 21, 14 }, { 1, 15, 7 } } do
+					local side, wy, wz = wg[1], wg[2], wg[3]
+					local wMid = dcf:PointToWorldSpace(V(side * 16, wy * 0.6, wz - 6))
+					local spar = block("DragonWingSpar", V(2.2, 2.2, 28), wMid, darkBone, Enum.Material.Sandstone)
+					spar.CFrame = CFrame.new(origin + wMid) * CFrame.Angles(math.rad(-28), -0.52 + side * 0.72, 0)
+					local wTip = dcf:PointToWorldSpace(V(side * 26, wy * 0.35, wz - 16))
+					local fingerSpar = block("DragonWingFinger", V(1.4, 1.4, 22), wTip, cBasalt, Enum.Material.Basalt)
+					fingerSpar.CFrame = CFrame.new(origin + wTip) * CFrame.Angles(math.rad(18), -0.52 + side * 0.95, 0)
 				end
 			end
 		end)
@@ -3191,12 +3287,15 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			else
 				for fIdx = -2, 2 do
 					local ang = fIdx * 0.24
-					local fx = math.sin(ang) * 18
+					local fx = math.sin(ang) * 17
 					local fz = -math.cos(ang) * 7
 					local fh = if fIdx == 0 then 24 else if math.abs(fIdx) == 1 then 21 else 16
-					local fp = hcf:PointToWorldSpace(V(fx, fh * 0.45, fz))
-					local finger = block("ElderStoneFinger", V(6.2, fh, 6.4), fp, cSand, Enum.Material.Sandstone)
-					finger.CFrame = CFrame.new(origin + fp) * CFrame.Angles(math.rad(-20), -math.pi * 0.42 + ang * 0.4, 0)
+					local fp = hcf:PointToWorldSpace(V(fx, fh * 0.36, fz))
+					local finger = block("ElderStoneFinger", V(6.0, fh * 0.72, 6.2), fp, cSand, Enum.Material.Sandstone)
+					finger.CFrame = CFrame.new(origin + fp) * CFrame.Angles(math.rad(-14), -math.pi * 0.42 + ang * 0.4, 0)
+					local tipP = hcf:PointToWorldSpace(V(fx * 0.92, fh * 0.82, fz - 3.2))
+					local tip = block("ElderFingerTip", V(5.0, fh * 0.38, 5.2), tipP, cBasalt, Enum.Material.Basalt)
+					tip.CFrame = CFrame.new(origin + tipP) * CFrame.Angles(math.rad(-42), -math.pi * 0.42 + ang * 0.4, 0)
 				end
 			end
 		end)
@@ -3256,10 +3355,14 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					if glowPart then pointLight(glowPart, cMagma, 1.3, 44) end
 				end
 			else
-				local disc = cyl("ElderShieldDisc", V(shX, sy + 9, shZ), 22, 4.2, cSand, Enum.Material.Sandstone)
-				disc.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 9, 0) * CFrame.Angles(math.rad(58), 0, 0)
-				local seam = block("ElderShieldCrackGlow", V(2.2, 26, 5.2), V(shX, sy + 9, shZ), cMagma, Enum.Material.Neon)
-				seam.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 9, 0) * CFrame.Angles(math.rad(-32), 0, 0)
+				for _, sSide in { -1, 1 } do
+					local halfD = cyl("ElderShieldDisc", V(shX, sy + 9, shZ), 20, 3.8, cSand, Enum.Material.Sandstone)
+					halfD.CFrame = CFrame.new(origin) * scf * CFrame.new(sSide * 2.2, 9.5, sSide * 0.8) * CFrame.Angles(math.rad(56), 0, math.rad(sSide * -6))
+				end
+				local boss = cyl("ElderShieldBoss", V(shX, sy + 9, shZ), 5.8, 5.2, cBronze, Enum.Material.Metal)
+				boss.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 9.8, -1.6) * CFrame.Angles(math.rad(56), 0, 0)
+				local seam = block("ElderShieldCrackGlow", V(2.0, 28, 4.8), V(shX, sy + 9, shZ), cMagma, Enum.Material.Neon)
+				seam.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 9.5, 0) * CFrame.Angles(math.rad(-34), 0, 0)
 			end
 		end)
 
@@ -3349,12 +3452,12 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end)
 		end
 
-		-- Foreground Basin Ash Raider outpost tents & ember vents along Caldera Floor
-		for _, fg in { { -54, 164, 0.35 }, { 56, 168, -0.42 } } do
+		-- Foreground Basin Ash Raider outpost tents, ember shrines & wrecked caravan wagons along Caldera Floor
+		for idxF, fg in { { -56, 164, 0.35 }, { 58, 168, -0.42 } } do
 			local fx, fz, fyaw = fg[1], fg[2], fg[3]
-			if footprintClear(fx, fz, 10, 10) then
+			if footprintClear(fx, fz, 12, 12) then
 				local fy = f15GroundAt(fx, fz)
-				table.insert(reservedSpots, { fx, fz, 14 })
+				table.insert(reservedSpots, { fx, fz, 16 })
 				group("CalderaOutpostCamp", function()
 					currentParent:SetAttribute("OnTerrain", true)
 					local tarp = block("OutpostAshTarp", V(14, 0.5, 11), V(fx, fy + 5.2, fz), cCloth, Enum.Material.Fabric)
@@ -3364,6 +3467,32 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					end
 					local fireCore = orb("CalderaCampEmber", V(fx + 2.5, fy + 0.6, fz + 8), V(2.4, 1.2, 2.4), cEmber, Enum.Material.Neon)
 					pointLight(fireCore, cEmber, 0.9, 26)
+					-- Buried charred caravan wagon wreck beside the camp
+					local wx, wz = fx + (if idxF == 1 then -18 else 18), fz - 10
+					local wy = f15GroundAt(wx, wz)
+					local bed = block("WreckedWagonBed", V(8.5, 2.2, 12.0), V(wx, wy + 1.4, wz), cBronze, Enum.Material.Wood)
+					bed.CFrame = CFrame.new(origin + V(wx, wy + 1.4, wz)) * CFrame.Angles(math.rad(10), fyaw + 0.4, math.rad(-8))
+					cyl("WreckedWagonWheel", V(wx + 4.4, wy + 1.8, wz + 2), 2.4, 0.8, cBasalt, Enum.Material.Wood)
+				end)
+			end
+		end
+		-- Sealed-Flame Varrash Ember Shrines guiding the shore & framing the Colossus Dais stairs
+		for idxS, sh in { { -102, 0, 126, true }, { 104, 0, 126, true }, { -56, 28, -184, false }, { 56, 28, -184, false } } do
+			local sx, sy, sz, lit = sh[1], sh[2], sh[3], sh[4]
+			if footprintClear(sx, sz, 6, 6) then
+				local groundY = math.min(f15GroundAt(sx, sz), sy)
+				table.insert(reservedSpots, { sx, sz, 10 })
+				group("VarrashEmberShrine", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local baseBot = math.max(bottom, groundY - 4)
+					local plinthH = (groundY - baseBot) + 3.0
+					block("ShrineBasaltBase", V(7.5, plinthH, 7.5), V(sx, groundY - plinthH * 0.5 + 1.2, sz), cBasalt, Enum.Material.Basalt)
+					block("ShrineSandstoneShaft", V(4.6, 8.5, 4.6), V(sx, groundY + 5.2, sz), cSand, Enum.Material.Sandstone)
+					block("ShrineBronzeCage", V(5.6, 3.6, 5.6), V(sx, groundY + 10.6, sz), cBronze, Enum.Material.Metal)
+					local flame = orb("ShrineEmberFlame", V(sx, groundY + 11.2, sz), V(3.0, 4.2, 3.0), cMagma, Enum.Material.Neon)
+					if lit then
+						pointLight(flame, cMagma, 1.1, 34)
+					end
 				end)
 			end
 		end
