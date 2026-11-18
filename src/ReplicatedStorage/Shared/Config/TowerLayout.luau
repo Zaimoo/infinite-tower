@@ -844,8 +844,6 @@ local AUTHORED: {[number]: any} = {
 		Paths = {
 			{ "Sanctuary", "Basin" },
 			{ "Basin", "Crossing" },
-			{ "Basin", "WestGallery" },
-			{ "Basin", "EastGallery" },
 			{ "Crossing", "WestGallery" },
 			{ "Crossing", "EastGallery" },
 			{ "WestGallery", "WestBastion" },

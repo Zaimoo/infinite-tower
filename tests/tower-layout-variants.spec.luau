@@ -364,7 +364,8 @@ test("Floor 20 is the hand-authored Frostbound Throne: symmetric cathedral nave,
 	for _, link in room.Links do paths[link.Id] = link.Kind end
 	assert(paths.Crossing_Apex == "STAIRS", "Floor 20 Crossing -> Apex is the Royal Stair")
 	assert(paths.Crossing_WestGallery == "RAMP" and paths.Crossing_EastGallery == "RAMP", "Floor 20 has nave-to-aisle transepts")
-	assert(paths.Basin_Crossing == "RAMP" and paths.Basin_WestGallery == "RAMP" and paths.Basin_EastGallery == "RAMP")
+	assert(paths.Basin_Crossing == "RAMP" and paths.Basin_WestGallery == nil and paths.Basin_EastGallery == nil,
+		"Floor 20 Basin connects solely through the Antechamber Gate to Crossing")
 	assert(paths.WestGallery_WestBastion == "RAMP" and paths.EastGallery_EastBastion == "RAMP")
 	assert(paths.WestBastion_Apex == "RAMP" and paths.EastBastion_Apex == "RAMP")
 	assert(room.Platforms.Basin.Name == "Frozen Antechamber" and room.Platforms.Crossing.Name == "Nave of Kneeling Knights")

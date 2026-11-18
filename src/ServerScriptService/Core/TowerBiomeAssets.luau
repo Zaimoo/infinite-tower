@@ -4633,9 +4633,29 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				doorIce.CFrame = doorCF * CFrame.new(0, -6, -4)
 				local ban = markNS(block("AntechamberBanner", V(3.6, 14, 0.6), V(s * 36, 27, gz + 9.2), cBanner, Enum.Material.Fabric))
 				ban:SetAttribute("SolidScenery", false)
-				-- Outer ruined porch courtyard wall segments & corner towers
-				local wall = markNS(block("AntechamberNorthWall", V(34, 24, 7.5), V(s * 62, 12, gz), cGranite, Enum.Material.Slate))
-				markNS(block("AntechamberNorthSnow", V(35, 1.6, 8.2), V(s * 62, 24.8, gz), cSnow, Enum.Material.Snow))
+				-- Continued crenellated Antechamber wing walls & tip bastion towers on each side
+				local wallLen = 132
+				local wallX = s * 110
+				markNS(block("AntechamberNorthWall", V(wallLen, 24, 7.5), V(wallX, 12, gz), cGranite, Enum.Material.Slate))
+				markNS(block("AntechamberNorthSnow", V(wallLen + 1, 1.6, 8.2), V(wallX, 24.8, gz), cSnow, Enum.Material.Snow))
+				for mx = -54, 54, 18 do
+					markNS(block("AntechamberWingMerlon", V(5.4, 3.6, 8.0), V(wallX + mx, 27.0, gz), cGraniteDark, Enum.Material.Slate))
+					if math.abs(mx) == 18 or math.abs(mx) == 54 then
+						markNS(block("AntechamberWingPilaster", V(7.0, 26, 10.5), V(wallX + mx, 13, gz), cGraniteDark, Enum.Material.Slate))
+					end
+				end
+				-- Grand bastion tower capping the tip of each wing wall (X = +-180, Z = 132)
+				local tipX = s * 180
+				markNS(cyl("AntechamberTipTowerShaft", V(tipX, 21, gz), 9.2, 42, cGranite, Enum.Material.Slate))
+				markNS(cyl("AntechamberTipTowerBase", V(tipX, 4.5, gz), 10.6, 9, cGraniteDark, Enum.Material.Slate))
+				markNS(cyl("AntechamberTipTowerBand", V(tipX, 24, gz), 9.8, 1.4, cIron, Enum.Material.Metal))
+				markNS(cyl("AntechamberTipTowerCrown", V(tipX, 43.5, gz), 10.4, 4.0, cGraniteDark, Enum.Material.Slate))
+				markNS(cyl("AntechamberTipTowerSnow", V(tipX, 46.0, gz), 9.8, 1.2, cSnow, Enum.Material.Snow))
+				for m = 0, 3 do
+					local ang = math.rad(m * 90 + 45)
+					markNS(block("AntechamberTipTowerMerlon", V(3.4, 3.6, 3.4), V(tipX + math.cos(ang) * 8.2, 48.0, gz + math.sin(ang) * 8.2), cGraniteDark, Enum.Material.Slate))
+				end
+				markNS(block("AntechamberTipTowerSlit", V(1.6, 8.0, 1.4), V(tipX, 28, gz + 9.2), cRimelight, Enum.Material.Neon))
 				local archHaunch = markNS(block("AntechamberArchHaunch", V(20, 5.5, 11.0), V(s * 18, 32.5, gz), cGraniteDark, Enum.Material.Slate))
 				archHaunch.CFrame = CFrame.new(origin + V(s * 18, 32.5, gz)) * CFrame.Angles(0, 0, -s * math.rad(30))
 			end
