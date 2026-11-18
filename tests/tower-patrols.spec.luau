@@ -110,4 +110,18 @@ test("Floor 19 patrols keep all generic routes plus VIADUCT on walkable paths", 
 	end
 end)
 
+test("Floor 20 patrols keep generic routes plus TRANSEPT on walkable paths", function()
+	local room = Layout.ForFloor(20)
+	local routes = Layout.PatrolRoutes(5, 20)
+	assert(routes.BASIN_LOOP and routes.GALLERY_WEST and routes.GALLERY_EAST and routes.BASTION_RING and routes.TRANSEPT)
+	for id, route in routes do
+		assert(#route >= 2, id .. " is too short")
+		for _, wp in route do
+			assert(onWalkable(room, wp), id .. " waypoint off the walkways on Floor 20")
+		end
+		local seconds = PatrolPath.LoopLength(route) / PatrolPath.Speed
+		assert(seconds > 5 and seconds < 240, id .. " loop takes " .. seconds .. " s")
+	end
+end)
+
 print("Patrol tests: " .. passed .. " passed, 0 failed")

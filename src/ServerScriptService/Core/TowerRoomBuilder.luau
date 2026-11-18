@@ -531,6 +531,21 @@ function Builder.Build(id: number, generation: number): any
 			StairMatA = Enum.Material.Slate,
 			StairMatB = Enum.Material.Ice,
 		},
+		THRONE_HALL = {
+			DeckKind = "THRONE_HALL",
+			LandingProxy = true,
+			BridgeKind = "WHITEGUARD_VIADUCT",
+			StairUnder = true,
+			StairUnderHeight = 3.2,
+			StairUnderY = -2.6,
+			CurbColor = whiteguardGranite,
+			CurbMaterial = Enum.Material.Slate,
+			CurbMode = "WHITEGUARD_MERLON",
+			StairColorA = whiteguardGranite,
+			StairColorB = Color3.fromRGB(168, 212, 238),
+			StairMatA = Enum.Material.Slate,
+			StairMatB = Enum.Material.Ice,
+		},
 	}
 
 	local PATH_STYLES: { [string]: { [string]: any } } = {
@@ -983,8 +998,8 @@ function Builder.Build(id: number, generation: number): any
 						local paver = decor(model, "VarrashFortressFlagstone", Vector3.new(8.5 + (k % 3) * 2.2, 0.10, 6.5 + ((k + 1) % 3) * 1.6), pPos, if k % 2 == 0 then varrashSandstone else sandStoneDark, Enum.Material.Sandstone)
 						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
 					end
-				elseif deckKind == "WHITEGUARD_FORTRESS" then
-					-- Floor 19 Whiteguard Keep bastions & courtyard: blue-grey granite courses extending into chasm + corner piers + flagstones
+				elseif deckKind == "WHITEGUARD_FORTRESS" or deckKind == "THRONE_HALL" then
+					-- Floors 19-20 Whiteguard Keep / Frostbound Throne Cathedral: blue-grey granite courses extending into chasm + corner piers + flagstones + Nave/Dais Ward-Star medallion
 					local deepBottom = origin.Y + layout.Bottom - 7
 					local wallH = math.max(4, (origin.Y + terrace.Y) - deepBottom)
 					slab.Size = Vector3.new(terrace.Width, wallH, terrace.Depth)
@@ -1001,6 +1016,16 @@ function Builder.Build(id: number, generation: number): any
 							local cornerPier = part(model, "WhiteguardCornerPier", Vector3.new(6.8, wallH - 0.16, 6.8), cp, whiteguardGraniteDark, Enum.Material.Slate, true)
 							cornerPier.CanQuery = true
 							cornerPier.CanTouch = false
+						end
+					end
+					if deckKind == "THRONE_HALL" and (name == "Crossing" or name == "Apex") then
+						local medDia = math.min(terrace.Width, terrace.Depth) * (if name == "Apex" then 0.56 else 0.52)
+						flatDisc("ThroneWardRing", topCenter + Vector3.new(0, 0.05, 0), medDia, 0.08, whiteguardGraniteDark, Enum.Material.Slate)
+						flatDisc("ThroneWardFrostDisc", topCenter + Vector3.new(0, 0.08, 0), medDia * 0.84, 0.08, Color3.fromRGB(162, 208, 236), Enum.Material.Ice)
+						flatDisc("ThroneWardInnerCore", topCenter + Vector3.new(0, 0.11, 0), medDia * 0.72, 0.08, whiteguardGranite, Enum.Material.Slate)
+						for rIdx = 0, 2 do
+							local starBar = decor(model, "ThroneWardStarRay", Vector3.new(medDia * 0.76, 0.09, 2.2), topCenter + Vector3.new(0, 0.13, 0), Color3.fromRGB(196, 228, 248), Enum.Material.Ice)
+							starBar.CFrame = CFrame.new(topCenter + Vector3.new(0, 0.13, 0)) * CFrame.Angles(0, math.rad(rIdx * 60), 0)
 						end
 					end
 					for k = 1, 7 do
@@ -1190,8 +1215,10 @@ function Builder.Build(id: number, generation: number): any
 				runner.CFrame = CFrame.lookAt(runner.Position, runner.Position + flat)
 			end
 			if suspended and masonryStyle and masonryStyle.StairUnder then
-				-- Stringer keel underneath suspended stairs (obsidian on F13, basalt on F15 trade-road cut)
-				local underStair = decor(model, "GlassStairUnderside", Vector3.new(link.Width - 3.0, masonryStyle.StairUnderHeight, math.max(1, delta.Magnitude - 1.0)), mid, obsidianStairA, Enum.Material.Basalt)
+				-- Stringer keel underneath suspended stairs (granite on F20 royal stair, obsidian/basalt on F13/F15)
+				local underCol = if layout.Masonry == "THRONE_HALL" then whiteguardGraniteDark else obsidianStairA
+				local underMat = if layout.Masonry == "THRONE_HALL" then Enum.Material.Slate else Enum.Material.Basalt
+				local underStair = decor(model, "GlassStairUnderside", Vector3.new(link.Width - 3.0, masonryStyle.StairUnderHeight, math.max(1, delta.Magnitude - 1.0)), mid, underCol, underMat)
 				underStair.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, masonryStyle.StairUnderY, 0)
 				if masonryStyle.StairUnderVeins then
 					for _, side in { -1, 1 } do
@@ -1375,7 +1402,7 @@ function Builder.Build(id: number, generation: number): any
 					local ic = decor(model, "BridgeEaveIcicle", Vector3.new(1.5, 5.2, 1.5), archBeamPos + right * (link.Width * 0.48) - Vector3.new(0, 4.2, 0), Color3.fromRGB(148, 212, 246), Enum.Material.Ice, 0.14)
 					ic.CFrame = CFrame.new(ic.Position) * pierDir
 				end
-				local corbels = math.max(2, math.floor(spanLen / 18))
+				local corbels = math.max(2, math.floor(spanLen / 24))
 				for cIdx = 1, corbels do
 					local t = cIdx / (corbels + 1)
 					local cAt = a:Lerp(b, t)

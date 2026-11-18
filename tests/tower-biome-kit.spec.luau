@@ -153,6 +153,11 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[13] ~= nil, "floor 13 (Glasswind Ravine) has its ravine dusk grade")
 	assert(Light.FloorGrades[14] ~= nil, "floor 14 (Sunscar Fortress) has its night kiln-glow grade")
 	assert(Light.FloorGrades[15] ~= nil, "floor 15 (Colossus Dais) has its volcanic eruption grade")
+	assert(Light.FloorGrades[16] ~= nil, "floor 16 (Rimefall Approach) has its overcast winter grade")
+	assert(Light.FloorGrades[17] ~= nil, "floor 17 (Frozen Barracks) has its clear cold noon grade")
+	assert(Light.FloorGrades[18] ~= nil, "floor 18 (Shattered Iceway) has its blizzard grade")
+	assert(Light.FloorGrades[19] ~= nil, "floor 19 (Whiteguard Keep) has its twilight aurora grade")
+	assert(Light.FloorGrades[20] ~= nil, "floor 20 (Frostbound Throne) has its frozen night grade")
 	assert(Light.TowerPreset(2, 6) == Light.TowerPreset(2), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400

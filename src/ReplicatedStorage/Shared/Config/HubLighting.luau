@@ -339,6 +339,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(226, 242, 255), Saturation = 0.08, Contrast = 0.12, ExposureCompensation = 0.14, BloomIntensity = 0.46,
 		SunRaysIntensity = 0.06, SunRaysSpread = 0.45,
 	},
+	-- Floor 20 (Frostbound Throne): frozen night — moonlit indigo cathedral, still crisp air, cyan Stillheart & ice crystal bloom.
+	[20] = {
+		Ambient = c(74, 88, 128), OutdoorAmbient = c(116, 134, 178), ColorShift_Top = c(146, 204, 212), ColorShift_Bottom = c(72, 82, 132),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(132, 160, 198), AtmosphereDecay = c(92, 108, 156), AtmosphereHaze = 1.05,
+		TintColor = c(226, 240, 255), Saturation = 0.04, Contrast = 0.16, ExposureCompensation = 0.16, BloomIntensity = 0.48,
+		SunRaysIntensity = 0.05, SunRaysSpread = 0.42,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 
