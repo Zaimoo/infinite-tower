@@ -62,9 +62,9 @@ TowerTerrain.MaterialColors = table.freeze({
 	[M.Mud] = Color3.fromRGB(70, 56, 46),
 	[M.Ground] = Color3.fromRGB(96, 80, 62),
 	[M.Rock] = Color3.fromRGB(104, 106, 100),
-	[M.Sand] = Color3.fromRGB(122, 110, 96),
-	[M.Sandstone] = Color3.fromRGB(172, 138, 102),
-	[M.Basalt] = Color3.fromRGB(56, 52, 54),
+	[M.Sand] = Color3.fromRGB(154, 136, 108),
+	[M.Sandstone] = Color3.fromRGB(182, 148, 108),
+	[M.Basalt] = Color3.fromRGB(58, 52, 54),
 })
 local colorsApplied = false
 local function applyColors()
@@ -408,11 +408,12 @@ local function materialFor(field: Field, palette: Palette, kind: string, y: numb
 	if directTerrain then
 		local tuft = math.noise(x / 17, z / 17, seed + 5)
 		local patch = math.noise(x / 29, z / 29, seed + 13)
+		local trailMat = if palette.Ground == M.Grass then M.Ground else palette.Slope
 		if kind == "TRAIL" then
-			return if tuft > 0.28 then palette.Ground else M.Ground
+			return if tuft > 0.28 then palette.Ground else trailMat
 		elseif kind == "BRIDGE" or kind == "WALK" then
 			if patch > 0.34 then
-				return M.Ground
+				return trailMat
 			elseif tuft > 0.16 then
 				return palette.Slope
 			end

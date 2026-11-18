@@ -319,9 +319,9 @@ local AUTHORED: {[number]: any} = {
 		DirectTerrain = true,
 		Liquid = { Dry = true },
 		TerrainFeatures = {
-			{ Kind = "DUNE", X = -10, Z = -74, Width = 148, Length = 112, Height = 18, Yaw = -18, CrestSway = 0.24, SlipSteep = 1.25, RippleAmp = 0.24 },
-			{ Kind = "DUNE", X = -84, Z = 26, Width = 54, Length = 60, Height = 5.5, Yaw = 25, CrestSway = 0.14, SlipSteep = 1.2 },
-			{ Kind = "DUNE", X = 86, Z = 18, Width = 56, Length = 62, Height = 6.0, Yaw = -22, CrestSway = 0.14, SlipSteep = 1.2 },
+			{ Kind = "DUNE", X = -8, Z = -64, Width = 148, Length = 132, Height = 19, Yaw = -16, CrestSway = 0.22, SlipSteep = 0.92, RippleAmp = 0.22 },
+			{ Kind = "DUNE", X = -84, Z = 26, Width = 54, Length = 60, Height = 5.5, Yaw = 25, CrestSway = 0.14, SlipSteep = 0.92 },
+			{ Kind = "DUNE", X = 86, Z = 18, Width = 56, Length = 62, Height = 6.0, Yaw = -22, CrestSway = 0.14, SlipSteep = 0.92 },
 		},
 		Basin = {X = 0, Y = 0, Z = 82, Width = 330, Depth = 88},
 		Crossing = {X = 0, Y = 10, Z = -20, Width = 48, Depth = 44},

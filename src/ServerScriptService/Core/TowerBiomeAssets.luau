@@ -2013,12 +2013,161 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					end
 				else
 					block("WaystoneFoot", V(3.8, 1.2, 3.8), V(wx, wy + 0.5, wz), vBasalt, Enum.Material.Basalt)
-					block("WaystoneShaft", V(2.7, 3.8, 2.7), V(wx, wy + 3.0, wz), vSand, Enum.Material.Sandstone)
-					block("WaystoneCap", V(3.2, 1.0, 3.2), V(wx, wy + 5.4, wz), vTerra, Enum.Material.Slate)
-					local ember = orb("WaystoneFlame", V(wx, wy + 7.4, wz), V(1.4, 2.1, 1.4), vAmber, Enum.Material.Neon)
-					if lit then pointLight(ember, vAmber, 0.75, 24) end
+					block("WaystoneShaft", V(2.7, 2.6, 2.7), V(wx, wy + 2.4, wz), vSand, Enum.Material.Sandstone)
+					block("WaystoneBand", V(2.5, 1.4, 2.5), V(wx, wy + 4.4, wz), vTerra, Enum.Material.Slate)
+					block("WaystoneCap", V(3.2, 1.0, 3.2), V(wx, wy + 5.6, wz), vSand, Enum.Material.Sandstone)
+					block("WaystoneCollar", V(2.6, 0.4, 2.6), V(wx, wy + 6.3, wz), vIron, Enum.Material.Metal)
+					for _, csx in { -1, 1 } do
+						for _, csz in { -1, 1 } do
+							local bar = block("WaystoneCageBar", V(0.24, 2.5, 0.24), V(wx + csx * 0.95, wy + 7.75, wz + csz * 0.95), vIron, Enum.Material.Metal)
+							bar.CanCollide = false
+						end
+					end
+					block("WaystoneFinial", V(2.2, 0.55, 2.2), V(wx, wy + 9.28, wz), vIron, Enum.Material.Metal)
+					local ember = orb("WaystoneFlame", V(wx, wy + 7.6, wz), V(1.2, 1.9, 1.2), vAmber, Enum.Material.Neon)
+					if lit then pointLight(ember, vAmber, 0.85, 26) end
 				end
 			end)
+		end
+
+		-- 2b. Central Dune Crest landmark: Varrash DuneWaystationRuins (Compass medallion, north Wayfinder Brazier
+		-- Obelisk & parapet, ruined banded colonnade bays, sun-canopy sails & spilled supply crates).
+		-- Every part stays north of LandingB (Z <= -18.5) or outside its X span (|X| >= 21.3) so PropClearance keeps it intact.
+		local crestX, crestY, crestZ = crossing.X, crossing.Y, crossing.Z
+		group("DuneWaystationRuins", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			-- Inset Varrash Sun-Compass floor medallion in northern Dune Crest courtyard (Z = -28, R = 7.2 -> north of Z = -17)
+			local compZ = crestZ - 8.5
+			local compY = crestY + 0.05
+			local cOut = cyl("DuneCompassOuter", V(crestX, compY, compZ), 7.2, 0.12, vSand, Enum.Material.Sandstone)
+			local cRing = cyl("DuneCompassRing", V(crestX, compY + 0.05, compZ), 4.9, 0.12, vTerra, Enum.Material.Slate)
+			local cHub = cyl("DuneCompassHub", V(crestX, compY + 0.10, compZ), 1.9, 0.12, vBasalt, Enum.Material.Basalt)
+			local rEW = block("DuneCompassRayEW", V(13.0, 0.10, 1.1), V(crestX, compY + 0.08, compZ), vSand, Enum.Material.Sandstone)
+			local rNS = block("DuneCompassRayNS", V(1.1, 0.10, 13.0), V(crestX, compY + 0.12, compZ), vSand, Enum.Material.Sandstone)
+			for _, fp in { cOut, cRing, cHub, rEW, rNS } do
+				fp.CanCollide = false
+			end
+
+			-- North rim Wayfinder Brazier Obelisk & stepped retaining parapet overlooking Sleeping Dune & Cinder Gate
+			local northZ = crestZ - 18.5
+			block("WayfinderPlinth", V(8.6, 1.8, 6.6), V(crestX, crestY + 0.9, northZ), vBasalt, Enum.Material.Basalt)
+			block("WayfinderTier", V(6.8, 1.4, 5.4), V(crestX, crestY + 2.5, northZ), vSand, Enum.Material.Sandstone)
+			block("WayfinderObeliskLower", V(3.6, 4.8, 3.6), V(crestX, crestY + 5.6, northZ), vTerra, Enum.Material.Slate)
+			block("WayfinderObeliskUpper", V(2.8, 5.2, 2.8), V(crestX, crestY + 10.6, northZ), vSand, Enum.Material.Sandstone)
+			block("WayfinderBrazierBowl", V(3.6, 1.2, 3.6), V(crestX, crestY + 13.7, northZ), vIron, Enum.Material.Metal)
+			local wfCore = orb("WayfinderBrazierFlame", V(crestX, crestY + 15.1, northZ), V(2.2, 2.5, 2.2), vAmber, Enum.Material.Neon)
+			pointLight(wfCore, vAmber, 1.25, 38)
+			local dust = Instance.new("ParticleEmitter")
+			dust.Name = "DuneCrestSandHaze"
+			dust.Color = ColorSequence.new(rgb(235, 198, 138))
+			dust.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2.5), NumberSequenceKeypoint.new(1, 6.0) })
+			dust.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.92), NumberSequenceKeypoint.new(0.4, 0.78), NumberSequenceKeypoint.new(1, 1) })
+			dust.Lifetime = NumberRange.new(2.5, 4.2)
+			dust.Rate = 4
+			dust.Speed = NumberRange.new(4, 9)
+			dust.EmissionDirection = Enum.NormalId.Right
+			dust.Parent = wfCore
+			for _, ps in { -1, 1 } do
+				block("WaystationNorthWallBase", V(10.0, 2.4, 2.6), V(crestX + ps * 10.6, crestY + 1.2, northZ), vBasalt, Enum.Material.Basalt)
+				block("WaystationNorthWallMid", V(9.8, 1.8, 2.4), V(crestX + ps * 10.6, crestY + 3.3, northZ), vTerra, Enum.Material.Slate)
+				block("WaystationNorthWallCap", V(10.2, 0.9, 2.8), V(crestX + ps * 10.6, crestY + 4.65, northZ), vSand, Enum.Material.Sandstone)
+			end
+
+			-- Flanking Banded Colonnade Pillars on terrace rim (|X| = 23.0 > 21.0 LandingB HW) & overhead sun-canopy sails (Z <= -19)
+			for _, ps in { -1, 1 } do
+				for _, pzOff in { -18.5, -2.5, 11.5 } do
+					local px = crestX + ps * 23.0
+					local pz = crestZ + pzOff
+					local tall = not (ps < 0 and pzOff < -10)
+					block("WaystationColFoot", V(3.2, 1.4, 3.2), V(px, crestY + 0.7, pz), vBasalt, Enum.Material.Basalt)
+					block("WaystationColDrum1", V(2.4, 3.8, 2.4), V(px, crestY + 3.3, pz), vSand, Enum.Material.Sandstone)
+					block("WaystationColDrum2", V(2.3, 2.8, 2.3), V(px, crestY + 6.6, pz), vTerra, Enum.Material.Slate)
+					if tall then
+						block("WaystationColDrum3", V(2.3, 3.6, 2.3), V(px, crestY + 9.8, pz), vSand, Enum.Material.Sandstone)
+						block("WaystationColCap", V(3.0, 1.2, 3.0), V(px, crestY + 12.2, pz), vSand, Enum.Material.Sandstone)
+					end
+				end
+			end
+			block("WaystationEastLintel", V(2.6, 2.0, 32.0), V(crestX + 23.0, crestY + 13.8, crestZ - 3.5), vSand, Enum.Material.Sandstone)
+			local sailE = block("WaystationSunSailEast", V(10.0, 0.35, 17.0), V(crestX + 18.2, crestY + 12.6, crestZ - 10.0), vCanvas, Enum.Material.Fabric)
+			sailE.CFrame = CFrame.new(origin + V(crestX + 18.2, crestY + 12.6, crestZ - 10.0)) * CFrame.Angles(0, 0, math.rad(14))
+			sailE.CanCollide = false
+			local sailW = block("WaystationSunSailWest", V(7.5, 0.35, 12.0), V(crestX - 18.8, crestY + 11.6, crestZ - 9.0), rgb(162, 114, 72), Enum.Material.Fabric)
+			sailW.CFrame = CFrame.new(origin + V(crestX - 18.8, crestY + 11.6, crestZ - 9.0)) * CFrame.Angles(math.rad(-8), 0, math.rad(-16))
+			sailW.CanCollide = false
+
+			-- Supply crates & terracotta amphorae tucked strictly north of Z = -18.5
+			for _, st in { { -16.5, -14.5, 0.25 }, { 16.5, -13.5, -0.35 }, { -18.5, -2.5, 0.4 }, { 18.5, -2.5, -0.2 } } do
+				local sx, sz, srot = crestX + st[1], crestZ + st[2], st[3]
+				local cr = block("WaystationSupplyCrate", V(2.8, 2.2, 2.6), V(sx, crestY + 1.1, sz), vWood, Enum.Material.Wood)
+				cr.CFrame = CFrame.new(origin + V(sx, crestY + 1.1, sz)) * CFrame.Angles(0, srot, 0)
+				cyl("WaystationAmphora", V(sx + (if st[1] > 0 then -2.2 else 2.2), crestY + 1.3, sz - 0.8), 1.3, 2.6, vTerra, Enum.Material.Slate)
+			end
+		end)
+
+		-- 2c. Mid-Basin Shattered Ruin Archway & Tilted Sandstone Monoliths in lane-verified open desert pockets
+		for _, cand in { { 52, -14 }, { 56, -24 }, { 48, 4 }, { 68, -28 }, { -52, -20 } } do
+			local ax, az = cand[1], cand[2]
+			if footprintClear(ax, az, 10, 6) then
+				local ay = ashenGroundAt(ax, az)
+				table.insert(reservedSpots, { ax, az, 16 })
+				group("BrokenMidArch", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local acf = CFrame.new(origin + V(ax, ay - 0.6, az)) * CFrame.Angles(0, math.rad(-28), 0)
+					for _, ps in { -1, 1 } do
+						local hPier = if ps < 0 then 14.5 else 9.5
+						local pb = block("MidArchPierBase", V(4.2, 3.2, 4.2), V(ax, ay, az), vBasalt, Enum.Material.Basalt)
+						pb.CFrame = acf * CFrame.new(ps * 7.5, 1.6, 0)
+						local ps1 = block("MidArchPierMid", V(3.4, hPier, 3.4), V(ax, ay, az), if ps < 0 then vSand else vTerra, Enum.Material.Sandstone)
+						ps1.CFrame = acf * CFrame.new(ps * 7.5, 3.2 + hPier * 0.5, 0)
+					end
+					local lintel = block("MidArchBrokenLintel", V(12.0, 2.4, 3.4), V(ax, ay, az), vTerra, Enum.Material.Slate)
+					lintel.CFrame = acf * CFrame.new(-2.8, 19.0, 0) * CFrame.Angles(0, 0, math.rad(-14))
+					local fallen = block("MidArchFallenVoussoir", V(6.0, 2.2, 3.2), V(ax, ay, az), vSand, Enum.Material.Sandstone)
+					fallen.CFrame = acf * CFrame.new(3.8, 1.1, 3.0) * CFrame.Angles(math.rad(12), math.rad(25), math.rad(18))
+				end)
+				break
+			end
+		end
+
+		local placedObs = 0
+		for _, ob in {
+			{ -52, -16, 14, -10 }, { 56, -78, -12, 16 }, { -4, -92, 10, -14 },
+			{ 44, -68, -14, 12 }, { -56, 4, 15, -12 }, { 42, 8, -12, 14 },
+		} do
+			if placedObs >= 3 then break end
+			local ox, oz, tiltX, tiltZ = ob[1], ob[2], ob[3], ob[4]
+			if footprintClear(ox, oz, 4.5, 4.5) then
+				placedObs += 1
+				local oy = ashenGroundAt(ox, oz)
+				table.insert(reservedSpots, { ox, oz, 10 })
+				group("TiltedSandstoneMonolith", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local ocf = CFrame.new(origin + V(ox, oy - 0.8, oz)) * CFrame.Angles(math.rad(tiltX), math.rad(ox), math.rad(tiltZ))
+					local b1 = block("ObeliskFooting", V(4.8, 3.0, 4.8), V(ox, oy, oz), vBasalt, Enum.Material.Basalt)
+					b1.CFrame = ocf * CFrame.new(0, 1.5, 0)
+					local b2 = block("ObeliskShaft", V(3.6, 10.5, 3.6), V(ox, oy, oz), vSand, Enum.Material.Sandstone)
+					b2.CFrame = ocf * CFrame.new(0, 8.2, 0)
+					local b3 = block("ObeliskBand", V(3.3, 2.4, 3.3), V(ox, oy, oz), vTerra, Enum.Material.Slate)
+					b3.CFrame = ocf * CFrame.new(0, 14.2, 0)
+				end)
+			end
+		end
+
+		-- Midground supply crate stashes flanking Ash Flats -> Dune Crest
+		for _, cs in { { -30, 26 }, { 30, 26 }, { -32, 54 }, { 32, 54 } } do
+			local cx, cz = cs[1], cs[2]
+			if footprintClear(cx, cz, 3.5, 3.5) then
+				local cy = ashenGroundAt(cx, cz)
+				table.insert(reservedSpots, { cx, cz, 7 })
+				group("CaravanSupplyStash", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local c1 = block("CaravanCrateA", V(3.2, 2.4, 2.8), V(cx, cy + 1.0, cz), vWood, Enum.Material.Wood)
+					c1.CFrame = CFrame.new(origin + V(cx, cy + 1.0, cz)) * CFrame.Angles(0, math.rad(cx * 2), 0)
+					local c2 = block("CaravanCrateB", V(2.2, 2.0, 2.2), V(cx + 2.0, cy + 0.9, cz - 1.4), vTerra, Enum.Material.Slate)
+					c2.CFrame = CFrame.new(origin + V(cx + 2.0, cy + 0.9, cz - 1.4)) * CFrame.Angles(0, math.rad(-25), 0)
+				end)
+			end
 		end
 
 		-- 3. Sleeping Dune Wreck: BuriedVarrash Caravan Wagon pitched into the windward west sand slope
@@ -2028,14 +2177,29 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			table.insert(reservedSpots, { wagX, wagZ, 22 })
 			group("BuriedWagon", function()
 				currentParent:SetAttribute("OnTerrain", true)
-				local wagCf = CFrame.new(wagX, wagY - 0.6, wagZ) * CFrame.Angles(0, math.rad(-38), 0)
+				local wagCf = CFrame.new(origin + V(wagX, wagY + 0.8, wagZ)) * CFrame.Angles(0, math.rad(-38), 0)
 				if KitProps.Has("BuriedWagon") then
-					kitAt("BuriedWagon", wagCf, 1.22 * scale, f11Override)
+					kitAt("BuriedWagon", CFrame.new(wagX, wagY - 0.2, wagZ) * CFrame.Angles(0, math.rad(-38), 0), 1.25 * scale, f11Override)
 				else
-					local bed = block("WagonBed", V(8.5, 1.6, 15.5), wagCf.Position + V(0, 2.5, 0), vWood, Enum.Material.Wood)
-					bed.CFrame = wagCf * CFrame.Angles(math.rad(12), 0, math.rad(-14))
-					local top = orb("WagonCanvas", wagCf.Position + V(0, 6.2, 0), V(8.8, 6.2, 15.0), vCanvas, Enum.Material.Fabric)
-					top.CFrame = wagCf * CFrame.Angles(math.rad(12), 0, math.rad(-14))
+					local tiltCf = wagCf * CFrame.Angles(math.rad(10), 0, math.rad(-15))
+					local bed = block("WagonBed", V(8.5, 1.4, 15.5), wagCf.Position, vWood, Enum.Material.Wood)
+					bed.CFrame = tiltCf
+					for _, side in { -1, 1 } do
+						local rail = block("WagonSideRail", V(0.7, 2.6, 15.0), wagCf.Position, vWood, Enum.Material.Wood)
+						rail.CFrame = tiltCf * CFrame.new(side * 3.9, 1.8, 0)
+						for _, wz in { -4.5, 4.5 } do
+							local wh = cyl("WagonWheel", wagCf.Position, 2.6, 0.7, vIron, Enum.Material.Metal)
+							wh.CFrame = tiltCf * CFrame.new(side * 4.6, -0.4, wz) * CFrame.Angles(0, math.pi / 2, 0)
+						end
+					end
+					for i = -2, 2 do
+						local hoop = block("WagonCanvasHoops", V(8.4, 5.2, 0.65), wagCf.Position, vWood, Enum.Material.Wood)
+						hoop.CFrame = tiltCf * CFrame.new(0, 4.2, i * 3.4)
+					end
+					local top = orb("WagonCanvasRoof", wagCf.Position, V(8.8, 5.8, 15.2), vCanvas, Enum.Material.Fabric)
+					top.CFrame = tiltCf * CFrame.new(0, 5.4, 0)
+					local spilled = block("WagonSpilledCrate", V(3.0, 2.2, 2.6), wagCf.Position, vWood, Enum.Material.Wood)
+					spilled.CFrame = wagCf * CFrame.new(-4.8, -0.4, 8.8) * CFrame.Angles(0.2, 0.5, 0.1)
 				end
 			end)
 		end
@@ -2359,9 +2523,31 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 						if anchor then pointLight(anchor, rgb(255, 155, 62), 1.5, 52) end
 					end
 				else
-					arch(gateAt, 38 * scale, 48 * scale, 10, rgb(188, 158, 116), Enum.Material.Sandstone, 0)
-					block("CinderGateRecess", V(22, 34 * scale, 6), gateAt + V(0, 17 * scale, -4), rgb(24, 20, 22), Enum.Material.Basalt)
-					local emberKey = orb("CinderGateFlameKeystone", gateAt + V(0, 50 * scale, 2), V(3.6, 5.4, 2.6), rgb(255, 165, 65), Enum.Material.Neon)
+					-- Stepped sandstone approach threshold, massive banded sandstone+terracotta piers, basalt doorway recess & flame keystone
+					for st = 0, 3 do
+						block("CinderGateStep", V((34 - st * 1.5) * scale, 1.2, 2.4), gateAt + V(0, 0.6 + st * 0.6, 9.5 - st * 2.0), if st % 2 == 0 then rgb(188, 158, 116) else rgb(175, 95, 65), Enum.Material.Sandstone)
+					end
+					for _, ps in { -1, 1 } do
+						local px = ps * 14.5 * scale
+						block("CinderGatePierBase", V(9.0 * scale, 5.0 * scale, 10.5 * scale), gateAt + V(px, 2.5 * scale, 0), rgb(40, 34, 36), Enum.Material.Basalt)
+						block("CinderGatePierLower", V(8.0 * scale, 8.0 * scale, 9.5 * scale), gateAt + V(px, 9.0 * scale, 0), rgb(188, 158, 116), Enum.Material.Sandstone)
+						block("CinderGatePierBand", V(8.2 * scale, 4.5 * scale, 9.7 * scale), gateAt + V(px, 15.2 * scale, 0), rgb(175, 95, 65), Enum.Material.Slate)
+						block("CinderGatePierUpper", V(7.8 * scale, 8.5 * scale, 9.2 * scale), gateAt + V(px, 21.7 * scale, 0), rgb(188, 158, 116), Enum.Material.Sandstone)
+						block("CinderGateCapital", V(9.2 * scale, 2.4 * scale, 10.2 * scale), gateAt + V(px, 27.1 * scale, 0), rgb(175, 95, 65), Enum.Material.Slate)
+					end
+					block("CinderGateRecess", V(22 * scale, 30 * scale, 4.5), gateAt + V(0, 15 * scale, -3.5), rgb(24, 20, 22), Enum.Material.Basalt)
+					local springY = 28.0 * scale
+					local archR = 13.8 * scale
+					for ai = 0, 10 do
+						local ang = (ai / 10) * math.pi
+						local ax = math.cos(ang) * archR
+						local ay = springY + math.sin(ang) * archR
+						local vCol = if ai % 2 == 0 then rgb(188, 158, 116) else rgb(175, 95, 65)
+						local vBlock = block("CinderGateVoussoir", V(4.8 * scale, 5.2 * scale, 9.0 * scale), gateAt + V(ax, ay, 0), vCol, Enum.Material.Sandstone)
+						vBlock.CFrame = CFrame.new(origin + gateAt + V(ax, ay, 0)) * CFrame.Angles(0, 0, ang - math.pi * 0.5)
+					end
+					block("CinderGateKeystoneHood", V(7.5 * scale, 8.5 * scale, 10.2 * scale), gateAt + V(0, springY + archR + 3.2 * scale, 0.8), rgb(175, 95, 65), Enum.Material.Slate)
+					local emberKey = orb("CinderGateFlameKeystone", gateAt + V(0, springY + archR + 3.5 * scale, 4.2), V(3.0, 4.8, 2.2), rgb(255, 165, 65), Enum.Material.Neon)
 					pointLight(emberKey, rgb(255, 155, 62), 1.5, 52)
 				end
 			end)

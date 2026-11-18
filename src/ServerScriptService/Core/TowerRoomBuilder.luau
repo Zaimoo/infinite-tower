@@ -895,11 +895,12 @@ function Builder.Build(id: number, generation: number): any
 				for i = 1, stones do
 					local stagger = if i % 2 == 0 then 1.4 else -1.4
 					local at = a:Lerp(b, (i - 0.5) / stones) + right * stagger
-					local stoneW = link.Width * (0.26 + ((i * 7) % 3) * 0.04)
-					local lipCol = if varrash then (if i % 2 == 0 then varrashBasalt else varrashSandstone) else flagstoneDark
+					local stoneW = link.Width * (if varrash then (0.34 + ((i * 5) % 3) * 0.05) else (0.26 + ((i * 7) % 3) * 0.04))
+					local lipCol = if varrash then (if i % 2 == 0 then Color3.fromRGB(134, 118, 96) else varrashSandstone) else flagstoneDark
 					local lipMat = if varrash then (if i % 2 == 0 then Enum.Material.Slate else Enum.Material.Sandstone) else Enum.Material.Limestone
-					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.45, 2.2), at, lipCol, lipMat)
-					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
+					local stoneH = if varrash then 0.28 else 0.45
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, stoneH, 2.5), at, lipCol, lipMat)
+					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, if varrash then 0.02 else 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
 				end
 			elseif varrash then
 				ramp.Color = varrashSandstone
@@ -1003,7 +1004,7 @@ function Builder.Build(id: number, generation: number): any
 				for i = 1, stones do
 					local stagger = if i % 2 == 0 then 1.4 else -1.4
 					local at = a:Lerp(b, (i - 0.5) / stones) + rRight * stagger
-					local stone = decor(model, "RampStepLip", Vector3.new(link.Width * 0.28, 0.45, 2.2), at, if varrash then varrashBasalt else flagstoneDark, if varrash then Enum.Material.Slate else Enum.Material.Limestone)
+					local stone = decor(model, "RampStepLip", Vector3.new(link.Width * 0.34, 0.28, 2.4), at, if varrash then Color3.fromRGB(134, 118, 96) else flagstoneDark, if varrash then Enum.Material.Slate else Enum.Material.Limestone)
 					stone.CFrame = CFrame.lookAt(at, at + rDelta) * CFrame.new(0, 0.06, 0)
 				end
 			end
@@ -1019,16 +1020,17 @@ function Builder.Build(id: number, generation: number): any
 	end
 	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme, field)
 
-	local vaultStep = if layout.Authored == "ashen:1" then 180 else 100
-	for x = -width / 2 + 50, width / 2 - 40, vaultStep do
-		for z = -depth / 2 + 50, depth / 2 - 40, vaultStep do
-			local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 42, z), theme.LightColor, Enum.Material.SmoothPlastic, 1)
-			local light = Instance.new("PointLight")
-			light.Range = 60
-			light.Brightness = 0.55
-			light.Color = theme.LightColor
-			light.Shadows = false
-			light.Parent = lamp
+	if layout.Authored ~= "ashen:1" then
+		for x = -width / 2 + 50, width / 2 - 40, 100 do
+			for z = -depth / 2 + 50, depth / 2 - 40, 100 do
+				local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 42, z), theme.LightColor, Enum.Material.SmoothPlastic, 1)
+				local light = Instance.new("PointLight")
+				light.Range = 60
+				light.Brightness = 0.55
+				light.Color = theme.LightColor
+				light.Shadows = false
+				light.Parent = lamp
+			end
 		end
 	end
 
