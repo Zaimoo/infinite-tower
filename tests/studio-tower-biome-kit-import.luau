@@ -161,10 +161,10 @@ return function(keepImported: boolean?): string
 					end
 				end
 				p.Anchored = true
-				p.CanCollide = false
-				p.CanQuery = false
+				p.CanCollide = true
+				p.CanQuery = true
 				p.CanTouch = false
-				p.CollisionFidelity = Enum.CollisionFidelity.Box
+				p.CollisionFidelity = Enum.CollisionFidelity.Default
 				p.RenderFidelity = Enum.RenderFidelity.Automatic
 				p.DoubleSided = false
 				for _, child in p:GetChildren() do

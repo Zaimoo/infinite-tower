@@ -1,0 +1,103 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CrevasseCartPillar": {
+      "Min": [
+        -5.143,
+        -0.545,
+        -6.004
+      ],
+      "Roles": {
+        "CRYSTAL": 336,
+        "METAL": 500,
+        "MOSS": 160,
+        "STONE": 240,
+        "WOOD": 900
+      },
+      "Size": [
+        10.374,
+        24.703,
+        14.64
+      ],
+      "Triangles": 2136
+    },
+    "FrozenBareTree": {
+      "Min": [
+        -6.862,
+        -1.41,
+        -4.426
+      ],
+      "Roles": {
+        "CRYSTAL": 120,
+        "MOSS": 260,
+        "WOOD": 380
+      },
+      "Size": [
+        14.817,
+        27.053,
+        9.674
+      ],
+      "Triangles": 760
+    },
+    "GlacierShrine": {
+      "Min": [
+        -3.8,
+        -0.948,
+        -3.8
+      ],
+      "Roles": {
+        "CRYSTAL": 52,
+        "GLOW": 84,
+        "MOSS": 80,
+        "STONE": 72,
+        "TRIM": 36
+      },
+      "Size": [
+        9.309,
+        12.131,
+        7.6
+      ],
+      "Triangles": 324
+    },
+    "SeracCluster": {
+      "Min": [
+        -9.751,
+        -1.158,
+        -6.584
+      ],
+      "Roles": {
+        "CRYSTAL": 288,
+        "GLOW": 32,
+        "MOSS": 80,
+        "STONE": 240
+      },
+      "Size": [
+        16.944,
+        30.762,
+        11.995
+      ],
+      "Triangles": 640
+    },
+    "TollShelterRuins": {
+      "Min": [
+        -10.326,
+        -1.094,
+        -8.653
+      ],
+      "Roles": {
+        "CRYSTAL": 80,
+        "METAL": 36,
+        "MOSS": 160,
+        "STONE": 72,
+        "WOOD": 216
+      },
+      "Size": [
+        20.526,
+        14.699,
+        15.653
+      ],
+      "Triangles": 564
+    }
+  },
+  "Unit": "studs"
+}

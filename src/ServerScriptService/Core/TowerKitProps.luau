@@ -116,8 +116,8 @@ function TowerKitProps.Place(parent: Instance, name: string, baseCF: CFrame, sca
 			p.Material = material
 			p.Transparency = transparency
 			p.Anchored = true
-			p.CanCollide = false
-			p.CanQuery = false
+			p.CanCollide = transparency < 0.5
+			p.CanQuery = p.CanCollide
 			p.CanTouch = false
 			p.CastShadow = shadows and role ~= "GLOW" and role ~= "CRYSTAL"
 			p.Parent = model

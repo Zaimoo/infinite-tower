@@ -235,6 +235,153 @@ test("Floor 15 is the hand-authored Colossus Dais: Elder Colossus body route, Sh
 	assert(totalMobs == 35, "Floor 15 keeps 35 live camp mobs plus the Boss (got " .. totalMobs .. ")")
 end)
 
+test("Floor 16 is the hand-authored Rimefall Approach: shoreline route and ice-floe chain across frozen lake", function()
+	local room = Layout.ForFloor(16)
+	assert(room.Authored == "frozen:1" and room.Name == "Rimefall Approach" and room.PathStyle == "WHITEGUARD")
+	assert(room.DirectTerrain == true and room.Masonry == "GLACIER_SLAB")
+	assert(room.Decks and room.Decks.FloeSouth and room.Decks.Crossing and room.Decks.FloeNorth)
+	assert(room.Suspended and room.Suspended.Links.Basin_FloeSouth and room.Suspended.Links.FloeSouth_Crossing and room.Suspended.Links.Crossing_EastGallery and room.Suspended.Links.Crossing_FloeNorth and room.Suspended.Links.FloeNorth_Apex)
+	assert(room.Bottom == 0 and #room.ReturnLinks == 0, "Floor 16 has no chasm")
+	assert(same(room, Layout.Get(1, 16)), "the authored floor 16 is not fixed")
+	assert(not same(room, Layout.Get(1)), "floor 16 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_WestGallery == "RAMP" and paths.WestGallery_Apex == "RAMP")
+	assert(paths.Basin_FloeSouth == "RAMP" and paths.FloeSouth_Crossing == "RAMP" and paths.Crossing_EastGallery == "RAMP" and paths.Crossing_FloeNorth == "RAMP" and paths.FloeNorth_Apex == "RAMP")
+	assert(room.Platforms.Basin.Name == "Snowfield" and room.Platforms.WestGallery.Name == "Hunters' Lodge")
+	assert(room.Platforms.FloeSouth.Name == "South Floe" and room.Platforms.Crossing.Name == "Heart Floe" and room.Platforms.EastGallery.Name == "Fisher's Hut" and room.Platforms.FloeNorth.Name == "North Floe")
+	assert(room.Platforms.Apex.Name == "Rimefall Shrine" and room.EliteCount == 1)
+	local routes = Layout.PatrolRoutes(1, 16)
+	assert(routes.BASIN_LOOP ~= nil and routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil)
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		assert(camp.Platform ~= "FloeSouth" and camp.Platform ~= "FloeNorth", "ExtraPlatforms hold no camps")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 16, "Floor 16 keeps 16 live camp mobs (got " .. totalMobs .. ")")
+end)
+
+test("Floor 17 is the hand-authored Frozen Barracks: street lattice converging on Armory and stairs to Commander's Hall", function()
+	local room = Layout.ForFloor(17)
+	assert(room.Authored == "frozen:2" and room.Name == "Frozen Barracks" and room.PathStyle == "WHITEGUARD")
+	assert(room.DirectTerrain == true and room.Masonry == "WHITEGUARD")
+	assert(room.Liquid and room.Liquid.Dry == true)
+	assert(room.Bottom == 0 and #room.ReturnLinks == 0, "Floor 17 has no chasm")
+	assert(same(room, Layout.Get(2, 17)), "the authored floor 17 is not fixed")
+	assert(not same(room, Layout.Get(2)), "floor 17 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_WestGallery == "RAMP" and paths.Basin_Crossing == "RAMP" and paths.Basin_EastGallery == "RAMP")
+	assert(paths.WestGallery_Crossing == "RAMP" and paths.EastGallery_Crossing == "RAMP")
+	assert(paths.WestGallery_Armory == "RAMP" and paths.Crossing_Armory == "RAMP" and paths.EastGallery_Armory == "RAMP")
+	assert(paths.Armory_Apex == "STAIRS" and paths.Crossing_Apex == nil, "Floor 17 climbs to Commander's Hall only via Armory stairs")
+	assert(room.Platforms.Basin.Name == "Parade Ground" and room.Platforms.WestGallery.Name == "West Barracks")
+	assert(room.Platforms.Crossing.Name == "Mess Hall" and room.Platforms.EastGallery.Name == "East Barracks & Kennels")
+	assert(room.Platforms.Armory.Name == "Armory" and room.Platforms.Apex.Name == "Commander's Hall" and room.EliteCount == 2)
+	local routes = Layout.PatrolRoutes(2, 17)
+	assert(routes.BASIN_LOOP ~= nil and routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil)
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		assert(camp.Platform ~= "Armory", "Armory holds no camp")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 22, "Floor 17 keeps 22 live camp mobs (got " .. totalMobs .. ")")
+end)
+
+test("Floor 18 is the hand-authored Shattered Iceway: glacier spine, twin crevasse bridges, East Moraine via Upper Iceway", function()
+	local room = Layout.ForFloor(18)
+	assert(room.Authored == "frozen:3" and room.Name == "Shattered Iceway" and room.PathStyle == "WHITEGUARD")
+	assert(room.DirectTerrain == true and room.Masonry == "GLACIER_SLAB")
+	assert(room.Decks and room.Decks.Crossing and room.Decks.UpperIceway)
+	assert(room.Suspended and room.Suspended.Links.Crossing_WestGallery and room.Suspended.Links.Crossing_EastGallery and room.Suspended.Links.EastGallery_UpperIceway)
+	assert(room.Bottom == -4 and #room.ReturnLinks == 2, "Floor 18 has twin crevasses and two Basin return ramps")
+	assert(same(room, Layout.Get(3, 18)), "the authored floor 18 is not fixed")
+	assert(not same(room, Layout.Get(3)), "floor 18 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_Crossing == "RAMP" and paths.Crossing_UpperIceway == "RAMP")
+	assert(paths.Crossing_WestGallery == "RAMP" and paths.Crossing_EastGallery == "RAMP")
+	assert(paths.EastGallery_UpperIceway == "RAMP" and paths.UpperIceway_Apex == "STAIRS" and paths.WestGallery_Apex == "RAMP")
+	assert(paths.EastGallery_Apex == nil, "Floor 18 East Moraine reaches Apex only via Upper Iceway")
+	assert(room.Platforms.Basin.Name == "Moraine Foot" and room.Platforms.Crossing.Name == "Lower Iceway")
+	assert(room.Platforms.UpperIceway.Name == "Upper Iceway" and room.Platforms.WestGallery.Name == "West Moraine")
+	assert(room.Platforms.EastGallery.Name == "East Moraine" and room.Platforms.Apex.Name == "Icefall Gate" and room.EliteCount == 3)
+	local routes = Layout.PatrolRoutes(3, 18)
+	assert(routes.BASIN_LOOP and routes.WEST_MORAINE and routes.ICEWAY_CROSS and routes.EAST_CLIMB)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil, "authored patrols replace generic gallery routes on Floor 18")
+	local totalMobs, upperElites = 0, 0
+	for _, camp in room.Camps do
+		assert(camp.Platform ~= "UpperIceway", "UpperIceway holds no camp")
+		if camp.Platform ~= "Apex" then
+			totalMobs += camp.Size
+			if camp.Elite and camp.Y > 0 then upperElites += 1 end
+		end
+	end
+	assert(upperElites >= 1, "Floor 18 places at least one Elite camp above entry level")
+	assert(totalMobs == 25, "Floor 18 keeps 25 live camp mobs (got " .. totalMobs .. ")")
+end)
+
+test("Floor 19 is the hand-authored Whiteguard Keep: separated cave and battlement viaduct routes meeting at Keep Hall", function()
+	local room = Layout.ForFloor(19)
+	assert(room.Authored == "frozen:4" and room.Name == "Whiteguard Keep" and room.PathStyle == "WHITEGUARD")
+	assert(room.DirectTerrain == true and room.Masonry == "WHITEGUARD_FORTRESS")
+	assert(room.Decks and room.Decks.Crossing and room.Decks.EastGallery and room.Decks.EastBastion and room.Decks.Apex)
+	assert(room.Suspended and room.Suspended.Links.Basin_Crossing)
+	assert(room.Bottom == -4 and #room.ReturnLinks == 2, "Floor 19 has chasm floor and two Basin return ramps")
+	assert(same(room, Layout.Get(4, 19)), "the authored floor 19 is not fixed")
+	assert(not same(room, Layout.Get(4)), "floor 19 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_Crossing == "RAMP" and paths.Crossing_EastGallery == "RAMP" and paths.EastGallery_EastBastion == "RAMP" and paths.EastBastion_Apex == "RAMP")
+	assert(paths.Basin_WestGallery == "RAMP" and paths.WestGallery_WestBastion == "RAMP" and paths.WestBastion_Apex == "RAMP")
+	assert(paths.Crossing_WestGallery == "RAMP", "Floor 19 middle Crossing connects to left WestGallery via viaduct ramp")
+	assert(paths.Basin_EastGallery == nil and paths.Crossing_Apex == nil and paths.WestGallery_EastGallery == nil,
+		"Floor 19 west cave route and east battlement route only connect via Crossing")
+	assert(room.Platforms.Basin.Name == "Siege Camp" and room.Platforms.Crossing.Name == "Viaduct Gate")
+	assert(room.Platforms.EastGallery.Name == "East Bailey" and room.Platforms.EastBastion.Name == "Whiteguard Tower")
+	assert(room.Platforms.WestGallery.Name == "Ice Cave Mouth" and room.Platforms.WestBastion.Name == "Crystal Grotto")
+	assert(room.Platforms.Apex.Name == "Keep Hall" and room.EliteCount == 4)
+	local routes = Layout.PatrolRoutes(4, 19)
+	assert(routes.BASIN_LOOP and routes.GALLERY_WEST and routes.GALLERY_EAST and routes.BASTION_RING and routes.VIADUCT,
+		"Floor 19 includes all generic routes plus VIADUCT")
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 35, "Floor 19 keeps 35 live camp mobs (got " .. totalMobs .. ")")
+end)
+
+test("Floor 20 is the hand-authored Frostbound Throne: symmetric cathedral nave, transepts, chapels, and royal stair", function()
+	local room = Layout.ForFloor(20)
+	assert(room.Authored == "frozen:5" and room.Name == "Frostbound Throne" and room.PathStyle == "WHITEGUARD")
+	assert(room.DirectTerrain == true and room.Masonry == "THRONE_HALL")
+	assert(room.Decks and room.Decks.Crossing and room.Decks.WestGallery and room.Decks.EastGallery and room.Decks.WestBastion and room.Decks.EastBastion and room.Decks.Apex)
+	assert(room.Suspended and room.Suspended.Links.Crossing_Apex and room.Suspended.Links.Crossing_WestGallery and room.Suspended.Links.Crossing_EastGallery)
+	assert(room.Bottom == -6 and #room.ReturnLinks == 2, "Floor 20 has chasm floor and two Basin return ramps")
+	assert(same(room, Layout.Get(5, 20)), "the authored floor 20 is not fixed")
+	assert(not same(room, Layout.Get(5)), "floor 20 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Crossing_Apex == "STAIRS", "Floor 20 Crossing -> Apex is the Royal Stair")
+	assert(paths.Crossing_WestGallery == "RAMP" and paths.Crossing_EastGallery == "RAMP", "Floor 20 has nave-to-aisle transepts")
+	assert(paths.Basin_Crossing == "RAMP" and paths.Basin_WestGallery == nil and paths.Basin_EastGallery == nil,
+		"Floor 20 Basin connects solely through the Antechamber Gate to Crossing")
+	assert(paths.WestGallery_WestBastion == "RAMP" and paths.EastGallery_EastBastion == "RAMP")
+	assert(paths.WestBastion_Apex == "RAMP" and paths.EastBastion_Apex == "RAMP")
+	assert(room.Platforms.Basin.Name == "Frozen Antechamber" and room.Platforms.Crossing.Name == "Nave of Kneeling Knights")
+	assert(room.Platforms.WestGallery.Name == "West Aisle" and room.Platforms.EastGallery.Name == "East Aisle")
+	assert(room.Platforms.WestBastion.Name == "West Chapel" and room.Platforms.EastBastion.Name == "East Chapel")
+	assert(room.Platforms.Apex.Name == "Frostbound Throne" and room.EliteCount == 4)
+	local routes = Layout.PatrolRoutes(5, 20)
+	assert(routes.BASIN_LOOP and routes.GALLERY_WEST and routes.GALLERY_EAST and routes.BASTION_RING and routes.TRANSEPT,
+		"Floor 20 includes generic routes plus TRANSEPT")
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 35, "Floor 20 keeps 35 live camp mobs (got " .. totalMobs .. ")")
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do

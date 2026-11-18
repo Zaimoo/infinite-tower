@@ -1,0 +1,163 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "FrozenAvalancheWave": {
+      "Min": [
+        -33.501,
+        -1.2,
+        -15.352
+      ],
+      "Roles": {
+        "CRYSTAL": 220,
+        "MOSS": 640,
+        "STONE": 252
+      },
+      "Size": [
+        68.344,
+        51.544,
+        29.545
+      ],
+      "Triangles": 1112
+    },
+    "GlacialUrnShrine": {
+      "Min": [
+        -4.2,
+        -0.5,
+        -4.2
+      ],
+      "Roles": {
+        "CRYSTAL": 48,
+        "GLOW": 36,
+        "METAL": 36,
+        "MOSS": 80,
+        "STONE": 184
+      },
+      "Size": [
+        8.4,
+        14.7,
+        8.4
+      ],
+      "Triangles": 384
+    },
+    "GothicPillarColonnade": {
+      "Min": [
+        -6.0,
+        -1.0,
+        -5.822
+      ],
+      "Roles": {
+        "CRYSTAL": 192,
+        "GLOW": 32,
+        "METAL": 100,
+        "MOSS": 160,
+        "STONE": 200
+      },
+      "Size": [
+        12.0,
+        48.951,
+        12.072
+      ],
+      "Triangles": 684
+    },
+    "IceCrystalBrazier": {
+      "Min": [
+        -3.8,
+        -0.4,
+        -4.485
+      ],
+      "Roles": {
+        "CRYSTAL": 48,
+        "GLOW": 80,
+        "METAL": 248,
+        "MOSS": 80,
+        "STONE": 28
+      },
+      "Size": [
+        7.6,
+        8.5,
+        8.285
+      ],
+      "Triangles": 484
+    },
+    "KneelingKnight": {
+      "Min": [
+        -3.073,
+        -0.153,
+        -4.277
+      ],
+      "Roles": {
+        "CRYSTAL": 72,
+        "GLOW": 12,
+        "METAL": 424,
+        "MOSS": 240,
+        "STONE": 104
+      },
+      "Size": [
+        6.212,
+        8.393,
+        7.168
+      ],
+      "Triangles": 852
+    },
+    "PermafrostCage": {
+      "Min": [
+        -5.4,
+        -0.6,
+        -5.4
+      ],
+      "Roles": {
+        "CRYSTAL": 87,
+        "GLOW": 36,
+        "METAL": 364,
+        "MOSS": 80,
+        "STONE": 56
+      },
+      "Size": [
+        10.8,
+        23.4,
+        10.8
+      ],
+      "Triangles": 623
+    },
+    "ShatteredRoseWindow": {
+      "Min": [
+        -12.084,
+        -0.8,
+        -3.749
+      ],
+      "Roles": {
+        "CRYSTAL": 160,
+        "GLOW": 36,
+        "MOSS": 160,
+        "STONE": 308
+      },
+      "Size": [
+        25.776,
+        41.567,
+        8.132
+      ],
+      "Triangles": 664
+    },
+    "ThroneOfIcicles": {
+      "Min": [
+        -12.21,
+        -1.0,
+        -9.3
+      ],
+      "Roles": {
+        "CRYSTAL": 184,
+        "GLOW": 36,
+        "METAL": 364,
+        "MOSS": 240,
+        "STONE": 108
+      },
+      "Size": [
+        25.054,
+        44.005,
+        19.3
+      ],
+      "Triangles": 932
+    }
+  },
+  "Unit": "studs"
+}

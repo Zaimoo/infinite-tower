@@ -311,6 +311,41 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 230, 220), Saturation = 0.14, ExposureCompensation = 0.04, BloomIntensity = 0.48,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.65,
 	},
+	-- Floor 16, Rimefall Approach: overcast whiteout morning. Flat bright cool winter light, thick white mist (camps kept clear) & pale ice bloom.
+	[16] = {
+		Ambient = c(102, 118, 136), OutdoorAmbient = c(154, 172, 192), ColorShift_Top = c(230, 240, 252), ColorShift_Bottom = c(126, 152, 180),
+		AtmosphereDensity = 0.38, AtmosphereColor = c(218, 230, 244), AtmosphereDecay = c(162, 184, 210), AtmosphereHaze = 1.65,
+		TintColor = c(240, 248, 255), Saturation = -0.10, Contrast = 0.06, ExposureCompensation = 0.12, BloomIntensity = 0.34,
+		SunRaysIntensity = 0.04, SunRaysSpread = 0.45,
+	},
+	-- Floor 17 (Frozen Barracks): clear, cold noon — crisp high contrast, sharp blue shadows, thin sky, sparkling frost.
+	[17] = {
+		Ambient = c(74, 102, 138), OutdoorAmbient = c(138, 168, 204), ColorShift_Top = c(240, 248, 255), ColorShift_Bottom = c(92, 128, 174),
+		AtmosphereDensity = 0.22, AtmosphereColor = c(206, 228, 252), AtmosphereDecay = c(138, 172, 214), AtmosphereHaze = 0.85,
+		TintColor = c(234, 245, 255), Saturation = 0.02, Contrast = 0.18, ExposureCompensation = 0.18, BloomIntensity = 0.44,
+		SunRaysIntensity = 0.12, SunRaysSpread = 0.35,
+	},
+	-- Floor 18 (Shattered Iceway): blizzard afternoon — dim diffuse storm light, blue-grey alpine haze, crisp silhouette contrast & camp readability at 120 studs.
+	[18] = {
+		Ambient = c(92, 108, 128), OutdoorAmbient = c(138, 156, 178), ColorShift_Top = c(212, 224, 240), ColorShift_Bottom = c(84, 106, 134),
+		AtmosphereDensity = 0.36, AtmosphereColor = c(194, 210, 228), AtmosphereDecay = c(134, 154, 178), AtmosphereHaze = 1.55,
+		TintColor = c(232, 242, 255), Saturation = -0.06, Contrast = 0.14, ExposureCompensation = 0.08, BloomIntensity = 0.32,
+		SunRaysIntensity = 0.04, SunRaysSpread = 0.40,
+	},
+	-- Floor 19 (Whiteguard Keep): twilight with aurora — deep blue-indigo ambient, emerald-violet horizon haze, rimelight crystal bloom.
+	[19] = {
+		Ambient = c(72, 92, 138), OutdoorAmbient = c(116, 140, 186), ColorShift_Top = c(138, 206, 198), ColorShift_Bottom = c(88, 92, 156),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(144, 174, 208), AtmosphereDecay = c(102, 114, 168), AtmosphereHaze = 1.25,
+		TintColor = c(226, 242, 255), Saturation = 0.08, Contrast = 0.12, ExposureCompensation = 0.14, BloomIntensity = 0.46,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.45,
+	},
+	-- Floor 20 (Frostbound Throne): frozen night — moonlit indigo cathedral, still crisp air, cyan Stillheart & ice crystal bloom.
+	[20] = {
+		Ambient = c(74, 88, 128), OutdoorAmbient = c(116, 134, 178), ColorShift_Top = c(146, 204, 212), ColorShift_Bottom = c(72, 82, 132),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(132, 160, 198), AtmosphereDecay = c(92, 108, 156), AtmosphereHaze = 1.05,
+		TintColor = c(226, 240, 255), Saturation = 0.04, Contrast = 0.16, ExposureCompensation = 0.16, BloomIntensity = 0.48,
+		SunRaysIntensity = 0.05, SunRaysSpread = 0.42,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

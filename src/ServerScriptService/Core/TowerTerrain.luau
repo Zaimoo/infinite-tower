@@ -65,6 +65,8 @@ TowerTerrain.MaterialColors = table.freeze({
 	[M.Sand] = Color3.fromRGB(154, 136, 108),
 	[M.Sandstone] = Color3.fromRGB(182, 148, 108),
 	[M.Basalt] = Color3.fromRGB(58, 52, 54),
+	[M.Snow] = Color3.fromRGB(240, 246, 254),
+	[M.Ice] = Color3.fromRGB(106, 174, 224),
 })
 local colorsApplied = false
 local function applyColors()
@@ -218,8 +220,48 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 						local meander = (feat.NoiseAmp or 8) * fbm(z / 55, 0, seed + 51, 2)
 						local dist = math.abs(x - (feat.X or 0) - meander)
 						if dist < feat.HalfWidth then
-							-- Deep wind-scoured obsidian canyon trench along the ravine spine
+							-- Deep wind-scoured canyon trench along the ravine spine
 							base = bottom
+							if feat.IceFloor and palette.LiquidSolid and dist < feat.HalfWidth * 0.62 then
+								kind = "POOL"
+							end
+						end
+					end
+				elseif feat.Kind == "GLACIER_SPINE" then
+					-- Raised, strata-banded glacier ridge running along the spine under elevated Iceway slabs
+					local z0, z1 = feat.ZStart or -152, feat.ZEnd or 68
+					if z >= z0 - 18 and z <= z1 + 18 then
+						local endFade = math.clamp(math.min(z - (z0 - 18), (z1 + 18) - z) / 22, 0, 1)
+						local meander = (feat.NoiseAmp or 5) * fbm(z / 44, 0, seed + 91, 2)
+						local hw = (feat.HalfWidth or 42) * (0.88 + 0.22 * fbm(z / 28, 0, seed + 97, 2))
+						local dist = math.abs(x - (feat.X or 0) - meander)
+						if dist < hw then
+							local u = dist / hw
+							local wallProfile = (1 - u ^ 1.8) ^ 0.72
+							local alongT = math.clamp((z1 - z) / math.max(1, z1 - z0), 0, 1)
+							local shelfH = (feat.BaseHeight or 12) + alongT * (feat.RiseHeight or 8)
+							local strata = math.sin(z * 0.26 + u * 2.4) * (feat.StrataAmp or 1.4) * (1 - u)
+							local hRidge = bottom + (shelfH * wallProfile + strata) * endFade
+							if hRidge > base then
+								base = hRidge
+								kind = "APRON"
+							end
+						end
+					end
+				elseif feat.Kind == "ICEFALL" then
+					-- Frozen cascade bank rising along a north cliff pocket behind Apex/Rimefall
+					local fx = x - (feat.X or 0)
+					local fz = z - (feat.Z or 0)
+					local hw = (feat.Width or 80) * 0.5
+					local hd = (feat.Depth or 32) * 0.5
+					if math.abs(fx) < hw and math.abs(fz) < hd then
+						local ux = 1 - (math.abs(fx) / hw) ^ 1.6
+						local uz = 1 - math.max(0, fz / hd)
+						local stepH = (feat.Height or 36) * ux * math.clamp(uz, 0, 1)
+						local warp = 1 + 0.18 * fbm(x / 18, z / 18, seed + 71, 2)
+						if bottom + stepH * warp > base then
+							base = bottom + stepH * warp
+							kind = "MOUNTAIN"
 						end
 					end
 				end
@@ -288,6 +330,25 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				local floorDip = if liquidCfg and liquidCfg.FloorDip then liquidCfg.FloorDip else 2.6
 				base = if palette.LiquidSolid then math.min(base, liquidLevel + 0.05) else base - (base - (bottom - floorDip)) * depth
 				kind = "POOL"
+				if palette.LiquidSolid and features then
+					for _, feat in features do
+						if feat.Kind == "PRESSURE_RIDGE" then
+							for _, seg in feat.Ridges or {} do
+								local dx, dz = seg.BX - seg.AX, seg.BZ - seg.AZ
+								local len = math.max(math.sqrt(dx * dx + dz * dz), 1e-3)
+								local t = math.clamp(((x - seg.AX) * dx + (z - seg.AZ) * dz) / (len * len), 0, 1)
+								local cx = seg.AX + dx * t + (seg.WarpAmp or 5) * math.sin(t * math.pi * 2)
+								local cz = seg.AZ + dz * t
+								local dLine = math.sqrt((x - cx) ^ 2 + (z - cz) ^ 2)
+								local halfW = seg.HalfWidth or 4.5
+								if dLine < halfW then
+									local crest = (1 - dLine / halfW) * (seg.Height or 2.0) * (0.75 + 0.25 * fbm(x / 12, z / 12, seed + 83, 2))
+									base = math.max(base, liquidLevel + crest)
+								end
+							end
+						end
+					end
+				end
 			end
 		end
 		return base, kind
