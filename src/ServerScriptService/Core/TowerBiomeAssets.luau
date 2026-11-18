@@ -4012,14 +4012,20 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end)
 
-		-- 2. Towering forward-leaning Glacier Serac Clusters (grounded on actual terrain height along East Moraine & crevasse rims)
+		-- 2. Towering forward-leaning Glacier Serac Clusters (grounded on actual terrain height along East Moraine, crevasses, and ascending toward Icefall Gate)
 		local seracSpots = {
-			{ x = 186, y = 4, z = -34, yaw = math.rad(-18), s = 1.28 * scale, light = true },
-			{ x = 184, y = 4, z = -104, yaw = math.rad(-26), s = 1.18 * scale, light = false },
-			{ x = -92, y = bottom, z = 32, yaw = math.rad(22), s = 1.12 * scale, light = false },
+			{ x = 186, y = 4, z = -34, yaw = math.rad(-22), s = 1.32 * scale, light = true },
+			{ x = 184, y = 4, z = -104, yaw = math.rad(-30), s = 1.24 * scale, light = false },
+			{ x = 104, y = 12, z = -158, yaw = math.rad(-38), s = 1.38 * scale, light = false },
+			{ x = 76, y = bottom, z = -126, yaw = math.rad(-28), s = 1.22 * scale, light = false },
+			{ x = -112, y = 12, z = -168, yaw = math.rad(38), s = 1.34 * scale, light = false },
+			{ x = -92, y = bottom, z = 32, yaw = math.rad(24), s = 1.15 * scale, light = false },
+			{ x = 96, y = bottom, z = 22, yaw = math.rad(-24), s = 1.18 * scale, light = false },
+			{ x = 58, y = 0, z = 44, yaw = math.rad(-32), s = 1.02 * scale, light = false },
 		}
 		for _, sc in seracSpots do
 			local sy = if field then math.max(sc.y, field.Height(sc.x, sc.z) + 1.5) else sc.y
+			local leanSign = if sc.x >= 0 then 1 else -1
 			group("SeracCluster", function()
 				currentParent:SetAttribute("OnTerrain", true)
 				if KitProps.Has("SeracCluster") then
@@ -4032,11 +4038,57 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					local gp = sc.light and mdl and mdl:FindFirstChildWhichIsA("BasePart")
 					if gp then pointLight(gp, cRimeGlow, 1.1, 44) end
 				else
-					local blades = { { 0, 36 * sc.s, 4.2, -0.26 }, { 5.2, 27 * sc.s, 3.4, -0.20 }, { -4.6, 21 * sc.s, 2.8, -0.30 } }
+					local blades = { { 0, 36 * sc.s, 4.0, 0.28 }, { -4.4 * leanSign, 27 * sc.s, 3.2, 0.22 }, { 4.0 * leanSign, 21 * sc.s, 2.6, 0.32 } }
 					for bi, b in blades do
 						local sp = block("GlacierSeracBlade", V(b[3], b[2], b[3] * 0.9), V(sc.x + b[1], sy + b[2] * 0.45, sc.z), if bi == 1 then cGlacier else rgb(168, 220, 246), Enum.Material.Ice, nil, 0.1)
-						sp.CFrame = CFrame.new(origin + V(sc.x + b[1], sy + b[2] * 0.45, sc.z)) * CFrame.Angles(0, sc.yaw, b[4])
+						sp.CFrame = CFrame.new(origin + V(sc.x + b[1], sy + b[2] * 0.45, sc.z)) * CFrame.Angles(math.rad(-8), sc.yaw, b[4] * leanSign)
 						if sc.light and bi == 1 then pointLight(sp, cRimeGlow, 1.1, 44) end
+					end
+				end
+			end)
+		end
+
+		-- 2b. Wind-blasted leafless FrozenBareTree snags framing Moraine Foot, outer moraines, and north approaches
+		local bareTreeSpots = {
+			{ x = -142, z = 178, yaw = 0.4, s = 1.08 * scale },
+			{ x = -156, z = 148, yaw = 1.7, s = 0.92 * scale },
+			{ x = -158, z = 96, yaw = 2.6, s = 0.96 * scale },
+			{ x = 142, z = 178, yaw = -0.7, s = 1.06 * scale },
+			{ x = 156, z = 148, yaw = -2.1, s = 0.90 * scale },
+			{ x = 158, z = 96, yaw = 1.1, s = 0.95 * scale },
+			{ x = -188, z = -76, yaw = 0.9, s = 0.92 * scale },
+			{ x = 188, z = -118, yaw = -1.2, s = 0.90 * scale },
+			{ x = -86, z = -194, yaw = 0.5, s = 1.08 * scale },
+			{ x = 86, z = -194, yaw = -0.8, s = 1.06 * scale },
+		}
+		for _, bt in bareTreeSpots do
+			local ty = if field then field.Height(bt.x, bt.z) + 1.4 else 0
+			group("FrozenBareTree", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				if KitProps.Has("FrozenBareTree") then
+					kitAt("FrozenBareTree", CFrame.new(bt.x, ty, bt.z) * CFrame.Angles(0, bt.yaw, 0), bt.s, {
+						WOOD = { Color = rgb(74, 62, 54), Material = Enum.Material.Wood },
+						MOSS = { Color = cSnow, Material = Enum.Material.Snow },
+						CRYSTAL = { Color = cGlacier, Material = Enum.Material.Ice, Transparency = 0.1 },
+					})
+				else
+					local ts = bt.s
+					local trunk = cyl("BareTreeTrunk", V(bt.x, ty + 10 * ts, bt.z), 1.2 * ts, 22 * ts, rgb(74, 62, 54), Enum.Material.Wood)
+					trunk.CFrame = CFrame.new(origin + V(bt.x, ty + 10 * ts, bt.z)) * CFrame.Angles(math.rad(5), bt.yaw, math.rad(-4)) * CFrame.Angles(0, 0, math.pi * 0.5)
+					local boughs = {
+						{ 0, 9.5, 0, -4.4, 4.2, -1.6, 0.52 },
+						{ 0, 12.0, 0, 4.8, 4.4, 1.4, 0.48 },
+						{ 0, 15.8, 0, -3.6, 4.0, 2.4, 0.40 },
+						{ 0, 17.5, 0, 3.8, 3.6, -2.2, 0.36 },
+					}
+					for _, bg in boughs do
+						local pA = V(bt.x + bg[1] * ts, ty + bg[2] * ts, bt.z + bg[3] * ts)
+						local off = CFrame.Angles(0, bt.yaw, 0) * V(bg[4] * ts, bg[5] * ts, bg[6] * ts)
+						beam("BareTreeBranch", pA, pA + off, bg[7] * ts, rgb(82, 68, 58), Enum.Material.Wood)
+					end
+					for _, rz in { 7.5, 13.5 } do
+						local ice = block("BareTreeRimeIce", V(0.85 * ts, 3.8 * ts, 0.85 * ts), V(bt.x, ty + rz * ts, bt.z - 0.9 * ts), cGlacier, Enum.Material.Ice, nil, 0.12)
+						ice.CFrame = CFrame.new(origin + V(bt.x, ty + rz * ts, bt.z - 0.9 * ts)) * CFrame.Angles(math.rad(-26), bt.yaw, 0)
 					end
 				end
 			end)
@@ -5111,15 +5163,14 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local function pick(list: { string }): string
 			return list[rand:NextInteger(1, #list)]
 		end
-		-- Groves (skipped on Floor 17 Frozen Barracks stone garrison; kept sparse and away from central crevasse sightline on Floor 18)
-		local groveCount = if layout.Authored == "frozen:2" then 0 elseif layout.Authored == "frozen:3" then 3 else math.round(eco.Groves * 1.5 * density)
+		-- Groves (skipped on Floor 17 barracks courtyard & Floor 18 winter-blasted terrain where FrozenBareTree stands instead)
+		local groveCount = if layout.Authored == "frozen:2" or layout.Authored == "frozen:3" then 0 else math.round(eco.Groves * 1.5 * density)
 		for _ = 1, groveCount do
 			local name = pick(eco.Trees)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2])
 			local r = radiusOf(name, s)
 			local x, y, z = search(r, function(kind, slope) return open(kind, slope) end, nil, nil, r * 0.35)
 			if not x then continue end
-			if layout.Authored == "frozen:3" and math.abs(x) < 125 and z < 115 then continue end
 			put("Grove", name, x, y, z, s, r, if isVarrash then 1.4 else nil)
 			local centre = V(x, y, z)
 			for _ = 1, rand:NextInteger(1, eco.Companions + 1) do
@@ -5163,15 +5214,16 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				if free(x, z, ur) then put("TerraceEdge", name, x, t.Y, z, us, ur, if isVarrash then 1.1 else 0.2) end
 			end
 		end
-		-- Trees climbing the mountain slopes (keep clear behind Icefall Gatehouse on Floor 18)
-		for _ = 1, math.round(eco.SlopeForestCount * 1.5 * density) do
+		-- Trees climbing the mountain slopes (skipped on Floor 18 winter-blasted slopes which use FrozenBareTree)
+		local slopeTreeCount = if layout.Authored == "frozen:3" then 0 else math.round(eco.SlopeForestCount * 1.5 * density)
+		for _ = 1, slopeTreeCount do
 			local name = pick(eco.SlopeForest)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2]) * 0.85
 			local r = radiusOf(name, s) * 0.7
 			local x, y, z = search(r, function(kind, slope, y)
 				return kind == "MOUNTAIN" and slope < 0.8 and y > field.Bottom + 6
 			end)
-			if x and not (layout.Authored == "frozen:3" and math.abs(x) < 76 and z < -195) then
+			if x then
 				put("SlopeTree", name, x, y, z, s, r, 1.2)
 			end
 		end

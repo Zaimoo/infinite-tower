@@ -21,6 +21,24 @@
       ],
       "Triangles": 2136
     },
+    "FrozenBareTree": {
+      "Min": [
+        -6.862,
+        -1.41,
+        -4.426
+      ],
+      "Roles": {
+        "CRYSTAL": 120,
+        "MOSS": 260,
+        "WOOD": 380
+      },
+      "Size": [
+        14.817,
+        27.053,
+        9.674
+      ],
+      "Triangles": 760
+    },
     "GlacierShrine": {
       "Min": [
         -3.8,
@@ -43,22 +61,22 @@
     },
     "SeracCluster": {
       "Min": [
-        -8.041,
-        -1.131,
+        -9.751,
+        -1.158,
         -6.584
       ],
       "Roles": {
-        "CRYSTAL": 240,
+        "CRYSTAL": 288,
         "GLOW": 32,
         "MOSS": 80,
         "STONE": 240
       },
       "Size": [
-        15.233,
-        29.744,
-        11.663
+        16.944,
+        30.762,
+        11.995
       ],
-      "Triangles": 592
+      "Triangles": 640
     },
     "TollShelterRuins": {
       "Min": [

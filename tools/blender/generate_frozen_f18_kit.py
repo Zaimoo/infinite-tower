@@ -159,13 +159,14 @@ def serac_cluster(t):
         rock_clean(stone, (sx, sy, sz), Matrix.Translation((bx, by, sz * 0.34 - 0.8)), seed=sd, roughness=0.24)
     rock_clean(moss, (14.8, 12.2, 3.0), Matrix.Translation((-0.6, 0.8, 0.6)), seed=107, roughness=0.20)
 
-    # 5 jagged canted glacier serac blades leaning forward-west (-X, -Y)
+    # 6 jagged canted glacier serac spike blades leaning forward-west (-X, -Y)
     blades = (
-        ((-1.2, 0.8, -0.4), (-6.4, -4.6, 28.5), 3.6, 0.45, 5),
-        ((2.2, 1.2, -0.4), (-2.6, -3.2, 23.8), 3.0, 0.35, 5),
-        ((-3.8, -0.8, -0.3), (-7.8, -4.8, 18.2), 2.4, 0.25, 5),
-        ((4.2, -1.0, -0.3), (1.0, -3.8, 14.8), 2.1, 0.22, 5),
-        ((0.4, 3.0, -0.3), (-2.8, 0.2, 16.5), 2.3, 0.25, 5),
+        ((-1.2, 0.8, -0.4), (-6.8, -5.0, 29.5), 3.6, 0.40, 5),
+        ((2.2, 1.2, -0.4), (-2.8, -3.4, 24.5), 3.0, 0.32, 5),
+        ((-3.8, -0.8, -0.3), (-8.2, -5.2, 18.8), 2.4, 0.22, 5),
+        ((4.2, -1.0, -0.3), (0.8, -4.0, 15.6), 2.1, 0.20, 5),
+        ((0.4, 3.0, -0.3), (-3.0, 0.0, 17.2), 2.3, 0.22, 5),
+        ((-5.2, 1.2, -0.3), (-9.6, -2.6, 12.8), 1.8, 0.16, 5),
     )
     for p0, p1, r0, r1, segs in blades:
         tapered_limb(crystal, p0, p1, r0, r1, segs=segs)
@@ -246,6 +247,47 @@ def toll_shelter_ruins(t):
     for ix in (-6.0, -3.5, -0.8, 2.2, 4.8):
         p_eave = roof_m @ Vector((ix, -5.1, -0.2))
         tapered_limb(crystal, p_eave, p_eave + Vector((0.0, 0.0, -3.2 - (abs(ix) % 2.1))), 0.34, 0.04, segs=5)
+
+
+@template("FrozenBareTree", WOOD=950, MOSS=350, CRYSTAL=500)
+def frozen_bare_tree(t):
+    """Wind-blasted leafless alpine deadwood tree with gnarled skeletal boughs, drifted snow collars, and encrusting ice spikes."""
+    wood, moss, crystal = t.bm("WOOD"), t.bm("MOSS"), t.bm("CRYSTAL")
+
+    # Flared gnarled roots anchored into snow/rock (-0.9 footing)
+    for rx, ry in ((-2.6, -1.4), (2.5, -1.6), (-1.4, 2.8), (1.8, 2.4)):
+        tapered_limb(wood, (rx * 1.4, ry * 1.4, -0.9), (rx * 0.28, ry * 0.28, 2.6), 0.72, 1.15, segs=6)
+    rock_clean(moss, (5.8, 5.4, 1.6), Matrix.Translation((0.0, 0.2, 0.2)), seed=301, roughness=0.22)
+
+    # Sinuous wind-leaned main trunk splitting upward (no foliage anywhere)
+    p0 = (0.0, 0.0, -0.8)
+    p1 = (0.4, -0.4, 6.2)
+    p2 = (0.9, -1.1, 13.4)
+    p3 = (1.5, -1.9, 20.6)
+    p4 = (2.1, -2.5, 25.4)
+    tapered_limb(wood, p0, p1, 1.65, 1.25, segs=7)
+    tapered_limb(wood, p1, p2, 1.25, 0.88, segs=7)
+    tapered_limb(wood, p2, p3, 0.88, 0.48, segs=6)
+    tapered_limb(wood, p3, p4, 0.48, 0.14, segs=5)
+
+    # Bare skeletal boughs & forked twigs reaching out
+    limbs = (
+        (p1, (-4.2, -2.0, 9.8), (-6.8, -3.4, 12.6), 0.62, 0.28, 0.08),
+        (p1, (4.8, 0.6, 10.2), (7.6, -0.6, 13.0), 0.58, 0.26, 0.08),
+        (p2, (-3.6, 2.8, 17.0), (-5.8, 3.8, 20.4), 0.50, 0.24, 0.07),
+        (p2, (5.2, -3.2, 17.6), (7.9, -4.6, 20.8), 0.48, 0.22, 0.07),
+        (p3, (-2.8, -3.8, 23.4), (-4.4, -5.2, 25.2), 0.34, 0.16, 0.06),
+        (p3, (4.2, 0.8, 23.8), (6.0, 0.4, 25.6), 0.32, 0.15, 0.06),
+    )
+    for base_pt, mid_pt, tip_pt, r0, r1, r2 in limbs:
+        tapered_limb(wood, base_pt, mid_pt, r0, r1, segs=6)
+        tapered_limb(wood, mid_pt, tip_pt, r1, r2, segs=5)
+        uvsphere(moss, r1 * 1.45, Matrix.Translation((mid_pt[0], mid_pt[1], mid_pt[2] + r1 * 0.8)), 5, 4)
+        tapered_limb(crystal, (mid_pt[0], mid_pt[1], mid_pt[2] - 0.1), (mid_pt[0] + 0.15, mid_pt[1] - 0.2, mid_pt[2] - 2.6), 0.24, 0.03, segs=4)
+
+    # Sharp windward ice-rime fins encrusting the north/left side of trunk
+    for rz, rlen in ((4.5, 4.2), (10.8, 3.8), (16.5, 3.2)):
+        tapered_limb(crystal, (-0.3, 0.9, rz), (-1.4, 2.2, rz + rlen), 0.55, 0.06, segs=5)
 
 
 def build_f18():
