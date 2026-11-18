@@ -3118,6 +3118,255 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end)
 			end
 		end
+	elseif layout.Authored == "ashen:5" then
+		-- Floor 15, Colossus Dais (ashen:5): Cinderhold's volcanic caldera over a cracked-lava lake.
+		-- The fallen Elder Colossus lies diagonally across the caldera: Fallen Hand -> forearm -> Elder's Chest
+		-- -> upper arm -> Shoulder on the west, with Broken Shield & Fallen Crown + Head on the east.
+		local cBasalt = rgb(40, 34, 38)
+		local cSand = rgb(176, 146, 108)
+		local cTerra = rgb(164, 86, 56)
+		local cBronze = rgb(78, 62, 54)
+		local cMagma = rgb(255, 114, 34)
+		local cEmber = rgb(255, 148, 48)
+		local cCloth = rgb(146, 134, 122)
+
+		local function f15GroundAt(x: number, z: number): number
+			for _, plat in layout.Platforms do
+				if math.abs(x - plat.X) <= plat.Width * 0.5 + 4 and math.abs(z - plat.Z) <= plat.Depth * 0.5 + 4 then
+					return plat.Y
+				end
+			end
+			return if field then math.max(field.Sample(x, z), bottom) else bottom
+		end
+
+		local cOverride = {
+			STONE = { Color = cBasalt, Material = Enum.Material.Basalt },
+			TRIM = { Color = cSand, Material = Enum.Material.Sandstone },
+			ALT = { Color = cTerra, Material = Enum.Material.Slate },
+			METAL = { Color = cBronze, Material = Enum.Material.Metal },
+			GLOW = { Color = cMagma, Material = Enum.Material.Neon },
+		}
+
+		-- 1. Cracked-lava Caldera Lake glowing veins across the lake bed (Y = liquidLevel + 0.14)
+		local lavaTopY = (field and field.LiquidLevel or -6.8) + 0.14
+		group("CalderaLavaSeams", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			for laneIdx, xs in { -115, 0, 115 } do
+				local prevPt = V(xs * 0.7, lavaTopY, -190)
+				for k = 1, 5 do
+					local t = k / 5
+					local nz = -190 + t * 295
+					local nx = xs * (0.75 + 0.25 * math.sin(t * math.pi)) + math.sin(nz * 0.04 + laneIdx) * 14
+					local nextPt = V(nx, lavaTopY, nz)
+					local seam = beam("CalderaMagmaCrack", prevPt, nextPt, 3.2, cMagma, Enum.Material.Neon)
+					if laneIdx == 0 and (k == 2 or k == 4) then
+						local em = Instance.new("ParticleEmitter")
+						em.Name = "CalderaRisingEmbers"
+						em.Color = ColorSequence.new(rgb(255, 152, 48), rgb(255, 64, 20))
+						em.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 0.15) })
+						em.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+						em.Lifetime = NumberRange.new(2.0, 3.6)
+						em.Rate = 5
+						em.Speed = NumberRange.new(7, 14)
+						em.Parent = seam
+					end
+					prevPt = nextPt
+				end
+			end
+		end)
+
+		-- 2. Fallen Hand (WestGallery -180, 6, 30): Giant open stone hand fingers curling up on outer west rim
+		local handPlat = layout.Platforms.WestGallery
+		local handX, handZ = handPlat.X - 50, handPlat.Z - 8
+		table.insert(reservedSpots, { handX, handZ, 26 })
+		group("ElderHandFingers", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local hy = math.min(f15GroundAt(handX, handZ), handPlat.Y)
+			local baseBot = math.max(bottom, hy - 8)
+			local plinthH = (hy - baseBot) + 3.5
+			block("ElderHandWristPlinth", V(24, plinthH, 44), V(handX, hy - plinthH * 0.5 + 1.4, handZ), cBasalt, Enum.Material.Basalt)
+			local hcf = CFrame.new(handX, hy - 0.6, handZ) * CFrame.Angles(0, -math.pi * 0.42, 0)
+			if KitProps.Has("ElderHandFingers") then
+				kitAt("ElderHandFingers", hcf, 1.12 * scale, cOverride)
+			else
+				for fIdx = -2, 2 do
+					local ang = fIdx * 0.24
+					local fx = math.sin(ang) * 18
+					local fz = -math.cos(ang) * 7
+					local fh = if fIdx == 0 then 24 else if math.abs(fIdx) == 1 then 21 else 16
+					local fp = hcf:PointToWorldSpace(V(fx, fh * 0.45, fz))
+					local finger = block("ElderStoneFinger", V(6.2, fh, 6.4), fp, cSand, Enum.Material.Sandstone)
+					finger.CFrame = CFrame.new(origin + fp) * CFrame.Angles(math.rad(-20), -math.pi * 0.42 + ang * 0.4, 0)
+				end
+			end
+		end)
+
+		-- 3. Forearm & Upper Arm stone ridge armor cradling WestGallery->Crossing and Crossing->WestBastion undersides
+		local armPairs = {
+			{ layout.Platforms.WestGallery, layout.Platforms.Crossing, "ElderForearmGuard" },
+			{ layout.Platforms.Crossing, layout.Platforms.WestBastion, "ElderUpperArmGuard" },
+		}
+		for _, ap in armPairs do
+			local pA, pB, kindName = ap[1], ap[2], ap[3]
+			group(kindName, function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local aPt = V(pA.X, pA.Y, pA.Z)
+				local bPt = V(pB.X, pB.Y, pB.Z)
+				local dir = (bPt - aPt)
+				local yaw = math.atan2(dir.X, dir.Z)
+				for _, frac in { 0.34, 0.50, 0.66 } do
+					local mid = aPt:Lerp(bPt, frac)
+					local cuff = block("ColossusArmBracer", V(33, 4.0, 11), mid - V(0, 4.4, 0), if frac == 0.50 then cTerra else cSand, Enum.Material.Sandstone)
+					cuff.CFrame = CFrame.new(origin + mid - V(0, 4.4, 0)) * CFrame.Angles(0, yaw, 0)
+					local pierH = math.max(4, mid.Y - bottom - 4.0)
+					local pier = block("ColossusArmPier", V(22, pierH, 10), V(mid.X, mid.Y - 4.4 - pierH * 0.5, mid.Z), cBasalt, Enum.Material.Basalt)
+					pier.CFrame = CFrame.new(origin + V(mid.X, mid.Y - 4.4 - pierH * 0.5, mid.Z)) * CFrame.Angles(0, yaw, 0)
+				end
+			end)
+		end
+
+		-- 4. Elder's Chest Ribs (-30, 10, -40): giant broken rib buttresses framing Crossing's open east flank
+		local cross = layout.Platforms.Crossing
+		group("ElderChestRibs", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			for _, rzOff in { -14, 0, 14 } do
+				local rx = cross.X + cross.Width * 0.5 + 7
+				local rz = cross.Z + rzOff
+				local ribH = (cross.Y - bottom) + 10
+				local rib = block("ElderChestRibPillar", V(7.0, ribH, 7.0), V(rx, cross.Y - ribH * 0.5 + 8.0, rz), cSand, Enum.Material.Sandstone)
+				rib.CFrame = CFrame.new(origin + V(rx, cross.Y - ribH * 0.5 + 8.0, rz)) * CFrame.Angles(0, 0, math.rad(16))
+			end
+		end)
+
+		-- 5. Broken Shield (EastGallery 180, 8, 20): massive tilted circular shield half-sunk in the lava shore
+		local shieldPlat = layout.Platforms.EastGallery
+		local shX, shZ = shieldPlat.X + 50, shieldPlat.Z - 2
+		table.insert(reservedSpots, { shX, shZ, 26 })
+		group("ElderShieldRim", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local sy = math.min(f15GroundAt(shX, shZ), shieldPlat.Y - 2)
+			local baseBot = math.max(bottom, sy - 8)
+			local plinthH = (sy - baseBot) + 3.0
+			block("ElderShieldCradle", V(24, plinthH, 34), V(shX, sy - plinthH * 0.5 + 1.2, shZ), cBasalt, Enum.Material.Basalt)
+			local scf = CFrame.new(shX, sy - 0.6, shZ) * CFrame.Angles(0, -math.pi * 0.35, 0)
+			if KitProps.Has("ElderShieldRim") then
+				local mdl = kitAt("ElderShieldRim", scf, 1.12 * scale, cOverride)
+				if mdl then
+					local glowPart = mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart")
+					if glowPart then pointLight(glowPart, cMagma, 1.3, 44) end
+				end
+			else
+				local disc = cyl("ElderShieldDisc", V(shX, sy + 9, shZ), 22, 4.2, cSand, Enum.Material.Sandstone)
+				disc.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 9, 0) * CFrame.Angles(math.rad(58), 0, 0)
+				local seam = block("ElderShieldCrackGlow", V(2.2, 26, 5.2), V(shX, sy + 9, shZ), cMagma, Enum.Material.Neon)
+				seam.CFrame = CFrame.new(origin) * scf * CFrame.new(0, 9, 0) * CFrame.Angles(math.rad(-32), 0, 0)
+			end
+		end)
+
+		-- 6. Shoulder Pauldron & Basalt Column Ring (WestBastion -150, 16, -150)
+		local shoulderPlat = layout.Platforms.WestBastion
+		local spX, spZ = shoulderPlat.X - 52, shoulderPlat.Z - 2
+		table.insert(reservedSpots, { spX, spZ, 26 })
+		group("ElderShoulderPauldron", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local spy = math.min(f15GroundAt(spX, spZ), shoulderPlat.Y)
+			local baseBot = math.max(bottom, spy - 8)
+			local plinthH = (spy - baseBot) + 4.0
+			block("ShoulderCradle", V(24, plinthH, 34), V(spX, spy - plinthH * 0.5 + 1.5, spZ), cBasalt, Enum.Material.Basalt)
+			local spcf = CFrame.new(spX, spy - 0.5, spZ) * CFrame.Angles(0, -math.pi * 0.42, 0)
+			if KitProps.Has("ElderShoulderPauldron") then
+				kitAt("ElderShoulderPauldron", spcf, 1.15 * scale, cOverride)
+			else
+				local dome = orb("ShoulderPauldronDome", V(spX + 3, spy + 10, spZ), V(24, 18, 28), cSand, Enum.Material.Sandstone)
+				dome.CFrame = CFrame.new(origin + V(spX + 3, spy + 10, spZ)) * CFrame.Angles(0, -math.pi * 0.42, math.rad(16))
+				for cIdx = -2, 2 do
+					local colH = 26 + ((math.abs(cIdx) + 1) % 3) * 10
+					cyl("ShoulderBasaltCol", V(spX - 8 + cIdx * 3, spy + colH * 0.5, spZ + cIdx * 7), 3.6, colH, cBasalt, Enum.Material.Basalt)
+				end
+			end
+		end)
+
+		-- 7. Fallen Crown & Elder Colossus Head (EastBastion 170, 14, -140)
+		local crownPlat = layout.Platforms.EastBastion
+		local crX, crZ = crownPlat.X + 52, crownPlat.Z - 6
+		local hdX, hdZ = crownPlat.X + 48, crownPlat.Z + 38
+		table.insert(reservedSpots, { crX, crZ, 26 })
+		table.insert(reservedSpots, { hdX, hdZ, 24 })
+		group("ElderCrownRing", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local cry = math.min(f15GroundAt(crX, crZ), crownPlat.Y)
+			local baseBot = math.max(bottom, cry - 8)
+			local plinthH = (cry - baseBot) + 3.5
+			block("CrownCradle", V(24, plinthH, 36), V(crX, cry - plinthH * 0.5 + 1.2, crZ), cBasalt, Enum.Material.Basalt)
+			local crcf = CFrame.new(crX, cry - 0.5, crZ) * CFrame.Angles(0, math.pi * 0.42, 0)
+			if KitProps.Has("ElderCrownRing") then
+				kitAt("ElderCrownRing", crcf, 1.08 * scale, cOverride)
+			else
+				for k = -3, 3 do
+					local sp = crcf:PointToWorldSpace(V(k * 6.5, 10 + (k % 2) * 3, -math.abs(k) * 2))
+					block("CrownSpike", V(4.6, 20 + (k % 2) * 5, 4.6), sp, cSand, Enum.Material.Sandstone)
+				end
+			end
+		end)
+		group("ElderColossusHead", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local hdy = math.min(f15GroundAt(hdX, hdZ), crownPlat.Y - 1)
+			local baseBot = math.max(bottom, hdy - 8)
+			local plinthH = (hdy - baseBot) + 3.5
+			block("HeadRubbleCradle", V(22, plinthH, 24), V(hdX, hdy - plinthH * 0.5 + 1.2, hdZ), cBasalt, Enum.Material.Basalt)
+			local hdcf = CFrame.new(hdX, hdy - 0.4, hdZ) * CFrame.Angles(0, math.pi * 0.28, 0)
+			if KitProps.Has("ElderColossusHead") then
+				local mdl = kitAt("ElderColossusHead", hdcf, 1.02 * scale, cOverride)
+				if mdl then
+					local glowPart = mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart")
+					if glowPart then pointLight(glowPart, cEmber, 0.9, 34) end
+				end
+			else
+				local headBlk = block("FallenColossusCranium", V(20, 15, 24), V(hdX, hdy + 7.5, hdZ), cSand, Enum.Material.Sandstone)
+				headBlk.CFrame = CFrame.new(origin) * hdcf * CFrame.new(0, 7.5, 0) * CFrame.Angles(math.rad(-22), 0, math.rad(18))
+			end
+		end)
+
+		-- 8. Hexagonal Basalt Column Clusters ringing the Colossus Dais flanks & Ash Caldera Foreground
+		local dais = layout.Platforms.Apex
+		for _, bc in {
+			{ dais.X - 84, dais.Z + 18, 22, 34 },
+			{ dais.X + 84, dais.Z + 18, 22, 34 },
+			{ dais.X - 82, dais.Z - 26, 24, 42 },
+			{ dais.X + 82, dais.Z - 26, 24, 42 },
+		} do
+			local cx, cz, baseY, colBaseH = bc[1], bc[2], bc[3], bc[4]
+			table.insert(reservedSpots, { cx, cz, 14 })
+			group("DaisBasaltColumns", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				for k = 0, 3 do
+					local a = k * 1.55 + cx * 0.05
+					local ox = math.cos(a) * 4.8
+					local oz = math.sin(a) * 4.8
+					local ch = colBaseH + (k % 3) * 8 + (baseY - bottom)
+					cyl("DaisHexColumn", V(cx + ox, bottom + ch * 0.5 - 1, cz + oz), 3.8 + (k % 2) * 0.8, ch, cBasalt, Enum.Material.Basalt)
+				end
+			end)
+		end
+
+		-- Foreground Basin Ash Raider outpost tents & ember vents along Caldera Floor
+		for _, fg in { { -54, 164, 0.35 }, { 56, 168, -0.42 } } do
+			local fx, fz, fyaw = fg[1], fg[2], fg[3]
+			if footprintClear(fx, fz, 10, 10) then
+				local fy = f15GroundAt(fx, fz)
+				table.insert(reservedSpots, { fx, fz, 14 })
+				group("CalderaOutpostCamp", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local tarp = block("OutpostAshTarp", V(14, 0.5, 11), V(fx, fy + 5.2, fz), cCloth, Enum.Material.Fabric)
+					tarp.CFrame = CFrame.new(origin + V(fx, fy + 5.2, fz)) * CFrame.Angles(math.rad(16), fyaw, 0)
+					for _, side in { -1, 1 } do
+						block("OutpostPole", V(0.7, 6.2, 0.7), V(fx + side * 5.2, fy + 2.8, fz), cBronze, Enum.Material.Wood)
+					end
+					local fireCore = orb("CalderaCampEmber", V(fx + 2.5, fy + 0.6, fz + 8), V(2.4, 1.2, 2.4), cEmber, Enum.Material.Neon)
+					pointLight(fireCore, cEmber, 0.9, 26)
+				end)
+			end
+		end
 	end
 
 	-- =========================================================================
@@ -3460,6 +3709,60 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("ThroneCorniceTrim", V(110, 3.0, 22), V(apex.X, apex.Y + 38 * scale - 4, throneZ + 2), fTerra, Enum.Material.Slate)
 				local brazier = orb("ThroneVeinBrazierGlow", V(apex.X, apex.Y + 28 * scale, throneZ + 4), V(5.5, 4.5, 4.5), fAmber, Enum.Material.Neon)
 				pointLight(brazier, fAmber, 1.6, 56)
+			end)
+		elseif layout.Authored == "ashen:5" then
+			-- Monumental Cinderhold Volcanic Vent & Eruption Column rising directly behind the Colossus Dais (clear of PortalSpots at apexBack + 12)
+			local cBasalt = rgb(38, 30, 34)
+			local cSand = rgb(176, 146, 108)
+			local cTerra = rgb(164, 86, 56)
+			local cMagma = rgb(255, 110, 28)
+			local ventPos = V(apex.X, apex.Y - 2, apexBack - 32)
+			group("CinderholdVent", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				block("CinderholdVentPlinth", V(110, (apex.Y - bottom) + 4, 48), V(ventPos.X, (apex.Y + bottom) * 0.5, ventPos.Z), cBasalt, Enum.Material.Basalt)
+				if KitProps.Has("CinderholdVent") then
+					local mdl = kitAt("CinderholdVent", CFrame.new(ventPos), 1.18 * scale, {
+						STONE = { Color = cBasalt, Material = Enum.Material.Basalt },
+						TRIM = { Color = cSand, Material = Enum.Material.Sandstone },
+						ALT = { Color = cTerra, Material = Enum.Material.Slate },
+						METAL = { Color = rgb(78, 62, 54), Material = Enum.Material.Metal },
+						GLOW = { Color = cMagma, Material = Enum.Material.Neon },
+					})
+					local glowPart = mdl and (mdl:FindFirstChild("GLOW") or mdl:FindFirstChildWhichIsA("BasePart"))
+					if glowPart then
+						pointLight(glowPart, cMagma, 2.2, 80)
+					end
+				else
+					-- Jagged caldera volcanic slopes + flanking dais colonnades + central eruption magma column
+					for k = 1, 9 do
+						local a = k * math.pi / 9
+						local peakH = (44 + math.sin(a) * 66) * scale
+						block("CinderholdCalderaSpire", V(22 * scale, peakH, 28 * scale), ventPos + V((k - 5) * 18 * scale, peakH * 0.5 - 4, -8), cBasalt, Enum.Material.Basalt)
+					end
+					for _, side in { -1, 1 } do
+						local wingX = apex.X + side * 48
+						local wingZ = apexBack - 8
+						for col = -1, 1 do
+							cyl("DaisColonnadePillar", V(wingX + col * 8, apex.Y + 14, wingZ), 2.1, 28, cSand, Enum.Material.Sandstone)
+						end
+						block("DaisColonnadeLintel", V(24, 3.2, 6), V(wingX, apex.Y + 29, wingZ), cTerra, Enum.Material.Slate)
+					end
+					local magmaCol = cyl("VentEruptionColumn", ventPos + V(0, 52 * scale, 2), 11 * scale, 108 * scale, cMagma, Enum.Material.Neon)
+					pointLight(magmaCol, cMagma, 2.2, 80)
+				end
+				local plumeAnchor = orb("VentAshPlumeAnchor", ventPos + V(0, 72 * scale, 0), V(4, 4, 4), cBasalt, Enum.Material.Slate, 1)
+				local ashPlume = Instance.new("ParticleEmitter")
+				ashPlume.Name = "CinderholdAshPlume"
+				ashPlume.Color = ColorSequence.new(rgb(255, 128, 42), rgb(44, 32, 32))
+				ashPlume.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 7), NumberSequenceKeypoint.new(1, 18) })
+				ashPlume.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
+				ashPlume.Lifetime = NumberRange.new(3.0, 5.0)
+				ashPlume.Rate = 6
+				ashPlume.Speed = NumberRange.new(12, 22)
+				ashPlume.Parent = plumeAnchor
+				for _, s in { -1, 1 } do
+					beam("VentEruptionGlowShaft", ventPos + V(s * 12, 92 * scale, 4), V(apex.X + s * 32, apex.Y + 4, apex.Z + 12), 11, rgb(255, 138, 62), Enum.Material.SmoothPlastic, 0.88)
+				end
 			end)
 		else
 			group("Volcano", function()
@@ -3973,6 +4276,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end, nil, nil, nil, true)
 			if x then
 				local sink = 2.5
+				local skip = false
 				if isVarrash then
 					local span = math.max(r * 1.5, 8)
 					local lowY = y
@@ -3982,8 +4286,11 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 						end
 					end
 					sink = math.max(2.5, (y - lowY) + 4.5)
+					skip = (y - lowY) > 6
 				end
-				put("Outcrop", name, x, y, z, s, r, sink)
+				if not skip then
+					put("Outcrop", name, x, y, z, s, r, sink)
+				end
 			end
 		end
 		-- Monoliths

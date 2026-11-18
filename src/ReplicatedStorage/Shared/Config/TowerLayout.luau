@@ -483,6 +483,67 @@ local AUTHORED: {[number]: any} = {
 			WestBastion = "West Kiln", EastBastion = "Signal Tower", Apex = "Sunscar Throne",
 		},
 	},
+	-- Floor 15, Colossus Dais (Ashen Dunes Boss Arena): Cinderhold's caldera around a cracked-lava lake.
+	-- Players cross the fallen Elder Colossus's body (Fallen Hand -> forearm -> Elder's Chest -> upper arm -> Shoulder)
+	-- or climb its Broken Shield & Fallen Crown, or take the exposed trade-road stairs to the 140x110 Colossus Dais.
+	[15] = {
+		Key = "ashen:5",
+		Name = "Colossus Dais",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Masonry = "VARRASH_DAIS",
+		Decks = {
+			Crossing = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, Apex = true },
+			Links = {
+				WestGallery_Crossing = true,
+				Crossing_WestBastion = true,
+				Crossing_Apex = true,
+				WestBastion_Apex = true,
+				EastBastion_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{
+				Kind = "CENOTE_LAGOON",
+				Z = -28, RX = 220, RZ = 165, NoiseScale = 58, NoiseAmp = 0.09, NoiseSeed = 91, Base = 0.30, Gain = 0.36,
+			},
+		},
+		Basin = { X = 0, Y = 0, Z = 176, Width = 480, Depth = 108 },
+		WestGallery = { X = -180, Y = 6, Z = 30, Width = 88, Depth = 80 },
+		Crossing = { X = -30, Y = 10, Z = -40, Width = 80, Depth = 64 },
+		EastGallery = { X = 180, Y = 8, Z = 20, Width = 88, Depth = 80 },
+		WestBastion = { X = -150, Y = 16, Z = -150, Width = 86, Depth = 80 },
+		EastBastion = { X = 170, Y = 14, Z = -140, Width = 86, Depth = 80 },
+		Apex = { X = 0, Y = 28, Z = -232, Width = 140, Depth = 110 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "WestGallery", "Crossing" },
+			{ "Basin", "EastGallery" },
+			{ "Crossing", "WestBastion" },
+			{ "EastGallery", "EastBastion" },
+			{ "WestBastion", "Apex" },
+			{ "EastBastion", "Apex" },
+			{ "Crossing", "Apex" },
+		},
+		Stairs = { Crossing_Apex = true },
+		Patrols = {
+			FOREARM = { "WestGallery", "Crossing", "WestBastion" },
+			SHIELD_CLIMB = { "EastGallery", "EastBastion" },
+			CROWN_RING = { "WestBastion", "Apex", "EastBastion" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Caldera Brink", Basin = "Caldera Floor", WestGallery = "Fallen Hand",
+			Crossing = "Elder's Chest", EastGallery = "Broken Shield",
+			WestBastion = "Shoulder", EastBastion = "Fallen Crown", Apex = "Colossus Dais",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

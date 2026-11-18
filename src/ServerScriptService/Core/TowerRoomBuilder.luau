@@ -255,7 +255,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -718,6 +718,71 @@ function Builder.Build(id: number, generation: number): any
 						local paver = decor(model, "VarrashFortressFlagstone", Vector3.new(8.5 + (k % 3) * 2.2, 0.10, 6.5 + ((k + 1) % 3) * 1.6), pPos, if k % 2 == 0 then varrashSandstone else sandStoneDark, Enum.Material.Sandstone)
 						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
 					end
+				elseif layout.Masonry == "VARRASH_DAIS" then
+					-- Colossus Dais (Floor 15): Crossing = Elder's Chest over lava lake (with open circular heart-cage well),
+					-- Apex = 140x110 stepped sandstone Boss Dais ringed by battered basalt cliff bolsters & hexagonal basalt columns.
+					local deepBottom = origin.Y + layout.Bottom - 7
+					local wallH = (origin.Y + terrace.Y) - deepBottom
+					local fortBasalt = Color3.fromRGB(44, 38, 42)
+					local sandStoneDark = Color3.fromRGB(152, 126, 94)
+					local deckThick = 3.2
+					slab.Size = Vector3.new(terrace.Width, deckThick, terrace.Depth)
+					slab.Position = Vector3.new(topCenter.X, topCenter.Y - deckThick / 2, topCenter.Z)
+					if name == "Crossing" then
+						-- Elder's Chest plate with central sunken heart-cage cavity glowing over the caldera lava
+						slab.Transparency = 1
+						local well = 18
+						local sideW = (terrace.Width - well) * 0.5
+						local wingZ = (terrace.Depth - well) * 0.5
+						for _, sx in { -1, 1 } do
+							decor(model, "ElderChestDeckSide", Vector3.new(sideW, deckThick, terrace.Depth), topCenter + Vector3.new(sx * (well * 0.5 + sideW * 0.5), -deckThick / 2, 0), varrashSandstone, Enum.Material.Sandstone)
+						end
+						for _, sz in { -1, 1 } do
+							decor(model, "ElderChestDeckSpan", Vector3.new(well, deckThick, wingZ), topCenter + Vector3.new(0, -deckThick / 2, sz * (well * 0.5 + wingZ * 0.5)), varrashSandstone, Enum.Material.Sandstone)
+						end
+						flatDisc("ElderHeartRim", topCenter + Vector3.new(0, 0.08, 0), well + 5.5, 0.25, fortBasalt, Enum.Material.Basalt)
+						flatDisc("ElderHeartGlass", topCenter + Vector3.new(0, -0.25, 0), well + 1.0, 0.35, Color3.fromRGB(224, 118, 34), Enum.Material.Glass, false)
+						decor(model, "ElderHeartCageCore", Vector3.new(10, 1.8, 10), topCenter + Vector3.new(0, -4.0, 0), Color3.fromRGB(255, 108, 28), Enum.Material.Neon)
+						-- Flanking basalt support piers anchored into the caldera floor
+						for _, sx in { -1, 1 } do
+							local cp = Vector3.new(topCenter.X + sx * 24, topCenter.Y - wallH / 2 - 0.16, topCenter.Z)
+							local pier = part(model, "ElderChestPier", Vector3.new(16, wallH - 0.16, terrace.Depth - 6), cp, fortBasalt, Enum.Material.Basalt, true)
+							pier.CanQuery = true
+							pier.CanTouch = false
+						end
+					else
+						-- Apex (Colossus Dais): solid flat sandstone arena floor with weathered ceremonial disc rings
+						slab.Color = varrashSandstone
+						slab.Material = Enum.Material.Sandstone
+						flatDisc("ColossusDaisOuterRing", topCenter + Vector3.new(0, 0.06, 0), math.min(terrace.Width, terrace.Depth) * 0.88, 0.10, sandStoneDark, Enum.Material.Sandstone)
+						flatDisc("ColossusDaisEmberSeam", topCenter + Vector3.new(0, 0.11, 0), math.min(terrace.Width, terrace.Depth) * 0.62, 0.08, Color3.fromRGB(168, 92, 62), Enum.Material.Slate)
+						flatDisc("ColossusDaisCenterDisc", topCenter + Vector3.new(0, 0.15, 0), math.min(terrace.Width, terrace.Depth) * 0.56, 0.08, varrashSandstone, Enum.Material.Sandstone)
+						for _, sx in { -1, 1 } do
+							local cp = Vector3.new(topCenter.X + sx * 44, topCenter.Y - wallH / 2 - 0.16, topCenter.Z)
+							local pier = part(model, "DaisSupportPier", Vector3.new(30, wallH - 0.16, terrace.Depth - 10), cp, fortBasalt, Enum.Material.Basalt, true)
+							pier.CanQuery = true
+							pier.CanTouch = false
+						end
+					end
+					-- Rugged battered basalt cliff outcrops hugging corners so stone platforms blend naturally into caldera rock
+					for _, sx in { -1, 1 } do
+						for _, sz in { -1, 1 } do
+							local outPos = Vector3.new(topCenter.X + sx * (terrace.Width * 0.47), topCenter.Y - wallH * 0.48 - 1.2, topCenter.Z + sz * (terrace.Depth * 0.43))
+							local boulder = decor(model, "BastionCliffOutcrop", Vector3.new(13, wallH * 0.92, 14), outPos, fortBasalt, Enum.Material.Basalt)
+							boulder.CFrame = CFrame.new(outPos) * CFrame.Angles(math.rad(sx * 4), math.rad(sx * 19 + sz * 21), math.rad(sz * 4))
+							local capPos = topCenter + Vector3.new(sx * (terrace.Width * 0.46), -0.45, sz * (terrace.Depth * 0.44))
+							local capStone = decor(model, "BastionRimStone", Vector3.new(12, 2.2, 12), capPos, sandStoneDark, Enum.Material.Sandstone)
+							capStone.CFrame = CFrame.new(capPos) * CFrame.Angles(0, math.rad(sx * 24 + sz * 16), 0)
+						end
+					end
+					for k = 1, 7 do
+						local ang = k * 1.9 + terrace.X * 0.02
+						local rx = math.cos(ang) * (terrace.Width * 0.34)
+						local rz = math.sin(ang) * (terrace.Depth * 0.32)
+						local pPos = topCenter + Vector3.new(rx, 0.19 + k * 0.03, rz)
+						local paver = decor(model, "VarrashFortressFlagstone", Vector3.new(8.5 + (k % 3) * 2.2, 0.10, 6.5 + ((k + 1) % 3) * 1.6), pPos, if k % 2 == 0 then varrashSandstone else sandStoneDark, Enum.Material.Sandstone)
+						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
+					end
 				else
 					slab.Color = solmereLimestone
 					slab.Material = Enum.Material.Limestone
@@ -801,7 +866,7 @@ function Builder.Build(id: number, generation: number): any
 		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
 		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
 		if isArchitecturalDeck(layout, terraceName) then
-			if isOrganicMasonry or layout.Masonry == "VARRASH_FORTRESS" then
+			if isOrganicMasonry or layout.Masonry == "VARRASH_FORTRESS" or layout.Masonry == "VARRASH_DAIS" then
 				-- Keep landing collider solid & flush atop organic/fortress decks without showing protruding rectangles.
 				disableTerrainProxyPart(p)
 				p.CanCollide = true
@@ -883,13 +948,15 @@ function Builder.Build(id: number, generation: number): any
 				local runner = decor(model, "GrandStairRunner", Vector3.new(link.Width * 0.36, 0.12, flat.Magnitude / steps + 0.2), Vector3.new(center.X, top + 0.08, center.Z), theme.AccentColor, theme.TrimMaterial)
 				runner.CFrame = CFrame.lookAt(runner.Position, runner.Position + flat)
 			end
-			if glassStair and isSuspendedLink(layout, link.Id) then
-				-- Black obsidian stringer keel underneath suspended glass stairs
-				local underStair = decor(model, "GlassStairUnderside", Vector3.new(link.Width - 3.0, 2.2, math.max(1, delta.Magnitude - 1.0)), mid, obsidianA, Enum.Material.Basalt)
-				underStair.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.1, 0)
-				for _, side in { -1, 1 } do
-					local seam = decor(model, "GlassStairSideVein", Vector3.new(0.5, 0.65, math.max(1, delta.Magnitude - 2.0)), mid + right * (side * (link.Width * 0.44)), amberInlay, Enum.Material.Glass, 0.2)
-					seam.CFrame = CFrame.lookAt(seam.Position, seam.Position + delta) * CFrame.new(0, -1.35, 0)
+			if (glassStair or layout.Masonry == "VARRASH_DAIS") and isSuspendedLink(layout, link.Id) then
+				-- Stringer keel underneath suspended stairs (obsidian on F13, basalt on F15 trade-road cut)
+				local underStair = decor(model, "GlassStairUnderside", Vector3.new(link.Width - 3.0, if glassStair then 2.2 else 3.2, math.max(1, delta.Magnitude - 1.0)), mid, obsidianA, Enum.Material.Basalt)
+				underStair.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, if glassStair then -2.1 else -2.6, 0)
+				if glassStair then
+					for _, side in { -1, 1 } do
+						local seam = decor(model, "GlassStairSideVein", Vector3.new(0.5, 0.65, math.max(1, delta.Magnitude - 2.0)), mid + right * (side * (link.Width * 0.44)), amberInlay, Enum.Material.Glass, 0.2)
+						seam.CFrame = CFrame.lookAt(seam.Position, seam.Position + delta) * CFrame.new(0, -1.35, 0)
+					end
 				end
 			end
 			if rootStair then
@@ -965,7 +1032,7 @@ function Builder.Build(id: number, generation: number): any
 						prevPt = nextPt
 					end
 				end
-			elseif isSuspendedLink(layout, link.Id) and varrash and layout.Masonry == "VARRASH_FORTRESS" then
+			elseif isSuspendedLink(layout, link.Id) and varrash and (layout.Masonry == "VARRASH_FORTRESS" or layout.Masonry == "VARRASH_DAIS") then
 				-- Floor 14 Sunscar Fortress bridges: weathered sandstone causeways with natural sand/stone blending,
 				-- subtle staggered paving (no harsh stripes), and battered basalt piers beside the lava, never in it.
 				local fortBasalt = Color3.fromRGB(48, 42, 46)
@@ -1167,7 +1234,7 @@ function Builder.Build(id: number, generation: number): any
 				local curbOffset = right * (side * (link.Width / 2 - 1.02))
 				local curbGroup = propGroup(model, "BridgeCurb")
 				local glassCurb = layout.Masonry == "VARRASH_GLASS" and visibleCurb
-				local fortCurb = layout.Masonry == "VARRASH_FORTRESS" and visibleCurb
+				local fortCurb = (layout.Masonry == "VARRASH_FORTRESS" or layout.Masonry == "VARRASH_DAIS") and visibleCurb
 				local curbCol = if not visibleCurb then theme.TrimColor elseif glassCurb then Color3.fromRGB(32, 26, 34) elseif varrash then varrashSandstone else flagstoneDark
 				local curbMat = if not visibleCurb then theme.TrimMaterial elseif glassCurb then Enum.Material.Slate elseif varrash then Enum.Material.Sandstone else Enum.Material.Limestone
 				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, curbCol, curbMat, if visibleCurb then nil else 1)

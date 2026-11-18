@@ -304,6 +304,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(236, 232, 248), Saturation = 0.10, ExposureCompensation = 0.05, BloomIntensity = 0.44,
 		SunRaysIntensity = 0.08, SunRaysSpread = 0.50,
 	},
+	-- Floor 15, Colossus Dais: volcanic eruption at Cinderhold's vent. Crimson sky, molten underglow from below, thick ash haze & strong vent bloom.
+	[15] = {
+		Ambient = c(86, 56, 58), OutdoorAmbient = c(124, 82, 74), ColorShift_Top = c(242, 114, 84), ColorShift_Bottom = c(255, 112, 38),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(178, 98, 86), AtmosphereDecay = c(122, 56, 46), AtmosphereHaze = 1.45,
+		TintColor = c(255, 230, 220), Saturation = 0.14, ExposureCompensation = 0.04, BloomIntensity = 0.48,
+		SunRaysIntensity = 0.14, SunRaysSpread = 0.65,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

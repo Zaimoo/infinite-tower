@@ -1,0 +1,126 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CinderholdVent": {
+      "Min": [
+        -44.2,
+        -1.524,
+        -50.0
+      ],
+      "Roles": {
+        "ALT": 270,
+        "GLOW": 274,
+        "METAL": 138,
+        "STONE": 386,
+        "TRIM": 280
+      },
+      "Size": [
+        88.96,
+        101.524,
+        84.0
+      ],
+      "Triangles": 1348
+    },
+    "ElderColossusHead": {
+      "Min": [
+        -13.597,
+        0.0,
+        -13.42
+      ],
+      "Roles": {
+        "ALT": 44,
+        "GLOW": 138,
+        "METAL": 44,
+        "STONE": 246,
+        "TRIM": 302
+      },
+      "Size": [
+        31.201,
+        33.998,
+        26.571
+      ],
+      "Triangles": 774
+    },
+    "ElderCrownRing": {
+      "Min": [
+        -32.991,
+        -0.045,
+        -7.673
+      ],
+      "Roles": {
+        "ALT": 180,
+        "GLOW": 249,
+        "METAL": 399,
+        "STONE": 755,
+        "TRIM": 180
+      },
+      "Size": [
+        61.558,
+        25.692,
+        24.398
+      ],
+      "Triangles": 1763
+    },
+    "ElderHandFingers": {
+      "Min": [
+        -23.551,
+        -1.8,
+        -15.167
+      ],
+      "Roles": {
+        "ALT": 44,
+        "GLOW": 138,
+        "METAL": 112,
+        "STONE": 360,
+        "TRIM": 736
+      },
+      "Size": [
+        56.327,
+        29.658,
+        27.232
+      ],
+      "Triangles": 1390
+    },
+    "ElderShieldRim": {
+      "Min": [
+        -24.689,
+        -0.456,
+        -15.781
+      ],
+      "Roles": {
+        "ALT": 138,
+        "GLOW": 76,
+        "METAL": 20,
+        "STONE": 855,
+        "TRIM": 88
+      },
+      "Size": [
+        49.389,
+        40.108,
+        28.791
+      ],
+      "Triangles": 1177
+    },
+    "ElderShoulderPauldron": {
+      "Min": [
+        -20.944,
+        -1.523,
+        -14.6
+      ],
+      "Roles": {
+        "ALT": 44,
+        "GLOW": 44,
+        "METAL": 44,
+        "STONE": 220,
+        "TRIM": 88
+      },
+      "Size": [
+        43.139,
+        53.423,
+        25.68
+      ],
+      "Triangles": 440
+    }
+  },
+  "Unit": "studs"
+}

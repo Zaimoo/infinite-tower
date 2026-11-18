@@ -202,6 +202,39 @@ test("Floor 14 is the hand-authored Sunscar Fortress: Kiln Gate chokepoint, Scar
 	assert(totalMobs == 35, "Floor 14 keeps 35 live camp mobs (got " .. totalMobs .. ")")
 end)
 
+test("Floor 15 is the hand-authored Colossus Dais: Elder Colossus body route, Shield & Crown flanks, Cinderhold Vent Dais", function()
+	local room = Layout.ForFloor(15)
+	assert(room.Authored == "ashen:5" and room.Name == "Colossus Dais" and room.PathStyle == "VARRASH")
+	assert(room.DirectTerrain == true and room.Masonry == "VARRASH_DAIS")
+	assert(room.Decks.Crossing and room.Decks.Apex and not room.Decks.WestGallery and not room.Decks.EastBastion)
+	assert(room.Suspended and room.Suspended.Platforms.Crossing and room.Suspended.Platforms.Apex and room.Suspended.Links.WestGallery_Crossing and room.Suspended.Links.Crossing_WestBastion and room.Suspended.Links.Crossing_Apex)
+	assert(room.Bottom == -6 and #room.ReturnLinks == 2, "Floor 15 keeps caldera chasm with two return ramps")
+	assert(same(room, Layout.Get(5, 15)), "the authored floor 15 is not fixed")
+	assert(not same(room, Layout.Get(5)), "floor 15 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_WestGallery == "RAMP" and paths.WestGallery_Crossing == "RAMP" and paths.Crossing_WestBastion == "RAMP")
+	assert(paths.Basin_EastGallery == "RAMP" and paths.EastGallery_EastBastion == "RAMP")
+	assert(paths.Crossing_Apex == "STAIRS" and paths.WestBastion_Apex == "RAMP" and paths.EastBastion_Apex == "RAMP")
+	assert(paths.WestGallery_WestBastion == nil, "Floor 15 climbs through Crossing instead of direct WestGallery->WestBastion")
+	assert(room.Platforms.Basin.Name == "Caldera Floor" and room.Platforms.WestGallery.Name == "Fallen Hand")
+	assert(room.Platforms.Crossing.Name == "Elder's Chest" and room.Platforms.EastGallery.Name == "Broken Shield")
+	assert(room.Platforms.WestBastion.Name == "Shoulder" and room.Platforms.EastBastion.Name == "Fallen Crown")
+	assert(room.Platforms.Apex.Name == "Colossus Dais" and room.EliteCount == 4)
+	local routes = Layout.PatrolRoutes(5, 15)
+	assert(routes.BASIN_LOOP and routes.FOREARM and routes.SHIELD_CLIMB and routes.CROWN_RING)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil, "authored patrols replace generic gallery routes on Floor 15")
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		if camp.Platform == "Apex" then
+			assert(camp.Boss == true, "Floor 15 Apex holds the Biome Boss")
+		else
+			totalMobs += camp.Size
+		end
+	end
+	assert(totalMobs == 35, "Floor 15 keeps 35 live camp mobs plus the Boss (got " .. totalMobs .. ")")
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do
@@ -214,7 +247,7 @@ test("Every floor but the authored ones reshapes its own layout, the same way ev
 			if p.Bend then bends += 1 end
 		end
 	end
-	assert(varied >= 41, "only " .. varied .. " of 49 floors are reshaped")
+	assert(varied >= 40, "only " .. varied .. " of 49 floors are reshaped")
 	assert(bends >= 15, "only " .. bends .. " winding paths")
 end)
 

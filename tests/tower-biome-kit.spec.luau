@@ -72,7 +72,7 @@ test("Every extra floor-specific template has a size, stands on the ground and u
 			assert(ROLES[role], name .. " uses unknown role " .. role)
 		end
 	end
-	assert(count >= 40, "expected Floor 2-5 and Floor 11-14 extra templates")
+	assert(count >= 45, "expected Floor 2-5 and Floor 11-15 extra templates")
 end)
 
 test("Every biome has an ecosystem built from kit templates", function()
@@ -152,6 +152,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[12] ~= nil, "floor 12 (Buried Caravan) has its afternoon sandstorm grade")
 	assert(Light.FloorGrades[13] ~= nil, "floor 13 (Glasswind Ravine) has its ravine dusk grade")
 	assert(Light.FloorGrades[14] ~= nil, "floor 14 (Sunscar Fortress) has its night kiln-glow grade")
+	assert(Light.FloorGrades[15] ~= nil, "floor 15 (Colossus Dais) has its volcanic eruption grade")
 	assert(Light.TowerPreset(2, 6) == Light.TowerPreset(2), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
