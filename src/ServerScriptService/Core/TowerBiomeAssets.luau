@@ -15,11 +15,21 @@ local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
+local CampExemptKinds = { RampArch = true, GlassArchSpan = true }
+
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
 function Assets.CampHitTest(origin: Vector3, layout: any): (BasePart) -> boolean
 	local campOffsets = { { 0, 0 }, { -18, 12 }, { 18, 12 }, { -12, -16 }, { 12, -16 } }
 	return function(inst: BasePart): boolean
+		local p: Instance? = inst
+		while p do
+			local kind = p:GetAttribute("PropKind")
+			if typeof(kind) == "string" and CampExemptKinds[kind] then
+				return false
+			end
+			p = p.Parent
+		end
 		local instPos = inst.Position
 		local half = inst.Size * 0.5
 		for _, camp in layout.Camps do
