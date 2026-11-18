@@ -338,6 +338,42 @@ local AUTHORED: {[number]: any} = {
 			WestGallery = "Toll House", EastGallery = "Watch Kiln", Apex = "Cinder Gate",
 		},
 	},
+	-- Floor 12, Buried Caravan (Ashen Dunes Expanded): a single switchback caravan road climbing from the
+	-- Wagon Circle entry through the colossal Sand-Strider Ribcage, across the buried Caravanserai Roof deck
+	-- with flush skylights, past the collapsed Spice Vault with burst saffron & crimson urns, up to the
+	-- tented Caravan Master's Tomb Pavilion off-centre east.
+	[12] = {
+		Key = "ashen:2",
+		Name = "Buried Caravan",
+		PathStyle = "VARRASH",
+		DirectTerrain = true,
+		Masonry = "VARRASH_DECK",
+		Decks = {
+			Crossing = true,
+		},
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			{ Kind = "DUNE", X = -85, Z = 42, Width = 80, Length = 90, Height = 9.0, Yaw = 24, CrestSway = 0.16, SlipSteep = 0.95 },
+			{ Kind = "DUNE", X = 148, Z = -82, Width = 110, Length = 100, Height = 13.0, Yaw = -28, CrestSway = 0.18, SlipSteep = 0.95 },
+			{ Kind = "DUNE", X = -125, Z = -148, Width = 115, Length = 95, Height = 14.0, Yaw = 18, CrestSway = 0.18, SlipSteep = 0.95 },
+		},
+		Basin = {X = 0, Y = 0, Z = 110, Width = 360, Depth = 96},
+		EastGallery = {X = 130, Y = 5, Z = 10, Width = 88, Depth = 76},
+		Crossing = {X = -10, Y = 9, Z = -30, Width = 70, Depth = 56},
+		WestGallery = {X = -130, Y = 12, Z = -80, Width = 88, Depth = 76},
+		Apex = {X = 40, Y = 14, Z = -170, Width = 104, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "EastGallery"},
+			{"EastGallery", "Crossing"},
+			{"Crossing", "WestGallery"},
+			{"WestGallery", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Caravan Brink", Basin = "Wagon Circle", EastGallery = "Strider's Ribs",
+			Crossing = "Caravanserai Roof", WestGallery = "Spice Vault", Apex = "Caravan Master's Tomb",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

@@ -1,0 +1,122 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CaravanseraiSkylight": {
+      "Min": [
+        -5.8,
+        0.005,
+        -5.8
+      ],
+      "Roles": {
+        "GLOW": 12,
+        "METAL": 889,
+        "STONE": 56,
+        "TRIM": 320
+      },
+      "Size": [
+        11.6,
+        1.665,
+        11.6
+      ],
+      "Triangles": 1277
+    },
+    "DesertCaravanWagon": {
+      "Min": [
+        -6.0,
+        -0.031,
+        -7.386
+      ],
+      "Roles": {
+        "FOLIAGE": 138,
+        "METAL": 450,
+        "MOSS": 80,
+        "WOOD": 1396
+      },
+      "Size": [
+        16.12,
+        8.767,
+        20.249
+      ],
+      "Triangles": 2064
+    },
+    "MasterTombPavilion": {
+      "Min": [
+        -18.057,
+        -0.002,
+        -12.026
+      ],
+      "Roles": {
+        "FOLIAGE": 162,
+        "GLOW": 250,
+        "GOLD": 448,
+        "METAL": 364,
+        "STONE": 326,
+        "TRIM": 526
+      },
+      "Size": [
+        36.139,
+        23.802,
+        24.226
+      ],
+      "Triangles": 2076
+    },
+    "SandStriderRibs": {
+      "Min": [
+        -19.871,
+        -0.478,
+        -26.322
+      ],
+      "Roles": {
+        "MOSS": 600,
+        "STONE": 849,
+        "TRIM": 2400
+      },
+      "Size": [
+        39.705,
+        30.619,
+        52.166
+      ],
+      "Triangles": 3849
+    },
+    "SandStriderSkull": {
+      "Min": [
+        -11.577,
+        -0.419,
+        -15.061
+      ],
+      "Roles": {
+        "MOSS": 80,
+        "STONE": 448,
+        "TRIM": 588
+      },
+      "Size": [
+        22.758,
+        16.174,
+        33.021
+      ],
+      "Triangles": 1116
+    },
+    "SpiceVaultRuins": {
+      "Min": [
+        -16.0,
+        -0.064,
+        -5.9
+      ],
+      "Roles": {
+        "ALT": 897,
+        "CORAL": 80,
+        "GOLD": 160,
+        "METAL": 300,
+        "STONE": 463,
+        "TRIM": 1003
+      },
+      "Size": [
+        32.443,
+        14.864,
+        22.991
+      ],
+      "Triangles": 2903
+    }
+  },
+  "Unit": "studs"
+}

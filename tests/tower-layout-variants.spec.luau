@@ -123,6 +123,28 @@ test("Floor 11 is the hand-authored Cinder Gate: Varrash dune crest lookout, Tol
 	assert(totalMobs == 16, "Floor 11 keeps 16 live camp mobs (got " .. totalMobs .. ")")
 end)
 
+test("Floor 12 is the hand-authored Buried Caravan: switchback trail, Caravanserai Roof deck, Spice Vault", function()
+	local room = Layout.ForFloor(12)
+	assert(room.Authored == "ashen:2" and room.Name == "Buried Caravan" and room.PathStyle == "VARRASH")
+	assert(room.DirectTerrain == true and room.Decks.Crossing == true and room.Masonry == "VARRASH_DECK")
+	assert(same(room, Layout.Get(2, 12)), "the authored floor 12 is not fixed")
+	assert(not same(room, Layout.Get(2)), "floor 12 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_EastGallery == "RAMP" and paths.EastGallery_Crossing == "RAMP")
+	assert(paths.Crossing_WestGallery == "RAMP" and paths.WestGallery_Apex == "RAMP")
+	assert(paths.Basin_WestGallery == nil and paths.Crossing_Apex == nil, "Floor 12 is a single switchback trail")
+	assert(room.Platforms.Basin.Name == "Wagon Circle" and room.Platforms.EastGallery.Name == "Strider's Ribs")
+	assert(room.Platforms.Crossing.Name == "Caravanserai Roof" and room.Platforms.WestGallery.Name == "Spice Vault")
+	assert(room.Platforms.Apex.Name == "Caravan Master's Tomb" and room.Platforms.Apex.X == 40)
+	assert(room.EliteCount == 2)
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 22, "Floor 12 keeps 22 live camp mobs (got " .. totalMobs .. ")")
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do

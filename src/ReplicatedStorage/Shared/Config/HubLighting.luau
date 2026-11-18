@@ -283,6 +283,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 248, 232), Saturation = 0.06, ExposureCompensation = 0.08, BloomIntensity = 0.34,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.65,
 	},
+	-- Floor 12, Buried Caravan: afternoon sandstorm. Diffuse amber light & dense ochre dust keeping camps readable at 120 studs.
+	[12] = {
+		Ambient = c(104, 82, 58), OutdoorAmbient = c(150, 118, 86), ColorShift_Top = c(255, 212, 150), ColorShift_Bottom = c(98, 68, 46),
+		AtmosphereDensity = 0.36, AtmosphereColor = c(228, 186, 134), AtmosphereDecay = c(156, 112, 72), AtmosphereHaze = 1.60,
+		TintColor = c(255, 238, 212), Saturation = 0.04, ExposureCompensation = 0.02, BloomIntensity = 0.38,
+		SunRaysIntensity = 0.22, SunRaysSpread = 0.75,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

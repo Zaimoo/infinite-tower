@@ -255,7 +255,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, KitCaravanseraiSkylight = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -595,6 +595,45 @@ function Builder.Build(id: number, generation: number): any
 							decor(model, "BastionMossPatch", Vector3.new(8.5, 0.10, 6.8), mPos, moss, Enum.Material.LeafyGrass)
 						end
 					end
+				elseif layout.Masonry == "VARRASH_DECK" then
+					-- Buried Caravanserai inn roof: solid sandstone deck projecting out of the desert slope with flush skylight grilles.
+					local deepBottom = origin.Y + layout.Bottom - 7
+					local wallH = (origin.Y + terrace.Y) - deepBottom
+					slab.Size = Vector3.new(terrace.Width, wallH, terrace.Depth)
+					slab.Position = Vector3.new(topCenter.X, topCenter.Y - wallH / 2, topCenter.Z)
+					slab.Color = varrashSandstone
+					slab.Material = Enum.Material.Sandstone
+					for _, sz in { -1, 1 } do
+						decor(model, "CaravanseraiCorniceZ", Vector3.new(terrace.Width + 2.4, 2.2, 2.0), topCenter + Vector3.new(0, -1.28, sz * (terrace.Depth / 2 + 0.35)), Color3.fromRGB(168, 138, 102), Enum.Material.Sandstone)
+						for px = -1, 1 do
+							decor(model, "CaravanseraiButtress", Vector3.new(3.6, wallH - 2.4, 2.8), origin + Vector3.new(terrace.X + px * (terrace.Width * 0.32), topCenter.Y - wallH / 2 - 1.2, terrace.Z + sz * (terrace.Depth / 2 + 0.4)), Color3.fromRGB(132, 114, 92), Enum.Material.Slate)
+						end
+					end
+					for _, sx in { -1, 1 } do
+						decor(model, "CaravanseraiCorniceX", Vector3.new(2.0, 2.2, math.max(1, terrace.Depth - 2.4)), topCenter + Vector3.new(sx * (terrace.Width / 2 + 0.35), -1.34, 0), Color3.fromRGB(168, 138, 102), Enum.Material.Sandstone)
+					end
+					if name == "Crossing" then
+						-- Two bronze-and-sandstone roof skylight grates set flush atop Caravanserai Roof (non-colliding inlay above Slab).
+						local resolveSkylight = KitProps.Resolver(floorSpec.BiomeId, theme)
+						for sIdx, sxOff in { -15, 15 } do
+							local skyPos = topCenter + Vector3.new(sxOff, 0.04, -2)
+							if KitProps.Has("CaravanseraiSkylight") then
+								KitProps.Place(model, "CaravanseraiSkylight", CFrame.new(skyPos) * CFrame.new(0, -1.22, 0), Vector3.one * 0.92, resolveSkylight, {
+									TRIM = { Color = varrashSandstone, Material = Enum.Material.Sandstone },
+									METAL = { Color = Color3.fromRGB(64, 54, 48), Material = Enum.Material.Metal },
+									STONE = { Color = Color3.fromRGB(36, 30, 32), Material = Enum.Material.Basalt },
+									GLOW = { Color = Color3.fromRGB(255, 155, 65), Material = Enum.Material.Neon },
+								})
+							else
+								decor(model, "CaravanseraiSkylightRim" .. sIdx, Vector3.new(11.0, 0.14, 11.0), skyPos + Vector3.new(0, 0.04, 0), varrashSandstone, Enum.Material.Sandstone)
+								decor(model, "CaravanseraiSkylightWell" .. sIdx, Vector3.new(8.2, 0.14, 8.2), skyPos + Vector3.new(0, 0.10, 0), Color3.fromRGB(48, 36, 30), Enum.Material.Basalt)
+								for g = -2, 2 do
+									decor(model, "CaravanseraiSkylightBar", Vector3.new(0.28, 0.12, 8.4), skyPos + Vector3.new(g * 1.5, 0.18, 0), Color3.fromRGB(64, 54, 48), Enum.Material.Metal)
+									decor(model, "CaravanseraiSkylightBarX", Vector3.new(8.4, 0.12, 0.28), skyPos + Vector3.new(0, 0.22, g * 1.5), Color3.fromRGB(64, 54, 48), Enum.Material.Metal)
+								end
+							end
+						end
+					end
 				else
 					slab.Color = solmereLimestone
 					slab.Material = Enum.Material.Limestone
@@ -684,9 +723,9 @@ function Builder.Build(id: number, generation: number): any
 				p.CanCollide = true
 				p.CanQuery = true
 			else
-				p.Color = solmereLimestone
-				p.Material = Enum.Material.Limestone
-				if isFortressStone then
+				p.Color = if varrash then varrashSandstone else solmereLimestone
+				p.Material = if varrash then Enum.Material.Sandstone else Enum.Material.Limestone
+				if isFortressStone or layout.Masonry == "VARRASH_DECK" then
 					-- Stack multiple landings on the same terrace by +0.03 so overlapping landings never z-fight,
 					-- and start at +0.05 above TraversalRamp (+0.01) and Slab (0.00) and below medallions/flagstones (+0.14+).
 					local tKey = terraceName or ""
@@ -694,8 +733,10 @@ function Builder.Build(id: number, generation: number): any
 					landingLayerByTerrace[tKey] = layer + 1
 					local topOff = -0.95 + layer * 0.03 -- height 2: top = +0.05, +0.08, +0.11...
 					p.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff, 0)
-					local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.6, 1.4, math.max(1, (b - a).Magnitude - 1.0)), (a + b) / 2, flagstoneDark, Enum.Material.Limestone)
-					under.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff - 1.75, 0)
+					if isFortressStone then
+						local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.6, 1.4, math.max(1, (b - a).Magnitude - 1.0)), (a + b) / 2, flagstoneDark, Enum.Material.Limestone)
+						under.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, topOff - 1.75, 0)
+					end
 				end
 			end
 		elseif natural then
@@ -1020,7 +1061,7 @@ function Builder.Build(id: number, generation: number): any
 	end
 	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme, field)
 
-	if layout.Authored ~= "ashen:1" then
+	if layout.Authored ~= "ashen:1" and layout.Authored ~= "ashen:2" then
 		for x = -width / 2 + 50, width / 2 - 40, 100 do
 			for z = -depth / 2 + 50, depth / 2 - 40, 100 do
 				local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 42, z), theme.LightColor, Enum.Material.SmoothPlastic, 1)

@@ -2306,6 +2306,229 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				end
 			end)
 		end
+	elseif layout.Authored == "ashen:2" then
+		-- Floor 12, Buried Caravan (ashen:2): foreground Wagon Circle with Ash Raider tarps & campfire,
+		-- colossal fossil Sand-StriderRibs straddling EastGallery -> Crossing ramp + SandStriderSkull beside it,
+		-- collapsed SpiceVaultRuins pouring saffron & crimson spice piles on the west bluff, cacti & dust devils.
+		local vSand = rgb(188, 158, 116)
+		local vBone = rgb(214, 200, 174)
+		local vBoneDark = rgb(142, 128, 108)
+		local vTerra = rgb(175, 95, 65)
+		local vBasalt = rgb(44, 38, 40)
+		local vIron = rgb(58, 52, 56)
+		local vAmber = rgb(255, 162, 62)
+		local vWood = rgb(124, 96, 68)
+		local vDeadWood = rgb(194, 182, 164)
+		local vCanvas = rgb(118, 114, 106)
+		local vDriftSand = rgb(154, 136, 108)
+		local vCrimson = rgb(178, 38, 34)
+		local vSaffron = rgb(232, 176, 36)
+		local vCactus = rgb(78, 112, 54)
+
+		local function f12GroundAt(x: number, z: number): number
+			for _, t in layout.Platforms do
+				if math.abs(x - t.X) <= t.Width / 2 and math.abs(z - t.Z) <= t.Depth / 2 then
+					return t.Y
+				end
+			end
+			return if field then math.max(field.Sample(x, z), bottom) else bottom
+		end
+
+		local f12Override = {
+			TRIM = { Color = vSand, Material = Enum.Material.Sandstone },
+			ALT = { Color = vTerra, Material = Enum.Material.Slate },
+			STONE = { Color = vBasalt, Material = Enum.Material.Basalt },
+			METAL = { Color = vIron, Material = Enum.Material.Metal },
+			GLOW = { Color = vAmber, Material = Enum.Material.Neon },
+			WOOD = { Color = vWood, Material = Enum.Material.Wood },
+			FOLIAGE = { Color = vCanvas, Material = Enum.Material.Fabric },
+			MOSS = { Color = vDriftSand, Material = Enum.Material.Sand },
+			GOLD = { Color = vSaffron, Material = Enum.Material.Sand },
+			CORAL = { Color = vCrimson, Material = Enum.Material.Sand },
+		}
+
+		-- 1. Sand-Strider Fossil Ribcage straddling EastGallery -> Crossing ramp (tagged RampArch so WalkwayHitTest exempts it)
+		local ribMid, ribYaw = spineMid("EastGallery", "Crossing")
+		table.insert(reservedSpots, { ribMid.X, ribMid.Z, 26 })
+		group("RampArch", function()
+			currentParent:SetAttribute("OnTerrain", true)
+			local ribCf = CFrame.new(ribMid.X, ribMid.Y - 1.6, ribMid.Z) * CFrame.Angles(0, ribYaw, 0)
+			if KitProps.Has("SandStriderRibs") then
+				kitAt("SandStriderRibs", ribCf, 1.08 * scale, {
+					TRIM = { Color = vBone, Material = Enum.Material.Limestone },
+					STONE = { Color = vBoneDark, Material = Enum.Material.Slate },
+					MOSS = { Color = vDriftSand, Material = Enum.Material.Sand },
+				})
+			else
+				for r = -3, 3 do
+					local offZ = r * 6.5
+					local arcH = 26 - math.abs(r) * 1.1
+					local segCf = ribCf * CFrame.new(0, 0, offZ)
+					for _, ps in { -1, 1 } do
+						local foot = segCf * CFrame.new(ps * 17.5, -1, 0)
+						local crown = segCf * CFrame.new(ps * 2.2, arcH, 0)
+						beam("StriderRibArch", foot.Position, crown.Position, 2.2, vBone, Enum.Material.Limestone)
+					end
+				end
+			end
+		end)
+
+		-- Giant Sand-Strider Skull resting beside Strider's Ribs on the eastern dune shoulder
+		local skX, skZ = 176, 46
+		if footprintClear(skX, skZ, 12, 12) then
+			local skY = f12GroundAt(skX, skZ)
+			table.insert(reservedSpots, { skX, skZ, 22 })
+			group("SandStriderSkull", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local skCf = CFrame.new(skX, skY - 0.6, skZ) * CFrame.Angles(0, math.rad(-142), 0)
+				if KitProps.Has("SandStriderSkull") then
+					kitAt("SandStriderSkull", skCf, 1.15 * scale, {
+						TRIM = { Color = vBone, Material = Enum.Material.Limestone },
+						STONE = { Color = vBasalt, Material = Enum.Material.Basalt },
+						MOSS = { Color = vDriftSand, Material = Enum.Material.Sand },
+					})
+				else
+					orb("StriderCranium", skCf.Position + V(0, 6, 0), V(16, 12, 22), vBone, Enum.Material.Limestone)
+					orb("StriderSnout", skCf.Position + V(-6, 4, 8), V(9, 7, 14), vBone, Enum.Material.Limestone)
+				end
+			end)
+		end
+
+		-- 2. Wagon Circle defensive ring of Varrash wagons, awnings, campfire & spilled barrels (Basin)
+		local wagonSpots = {
+			{ -52, 146, 24 }, { 52, 144, -26 },
+			{ -58, 76, 142 }, { -160, 74, 88 },
+		}
+		for _, ws in wagonSpots do
+			local wx, wz, wyaw = ws[1], ws[2], ws[3]
+			if footprintClear(wx, wz, 9, 9) then
+				local wy = f12GroundAt(wx, wz)
+				table.insert(reservedSpots, { wx, wz, 16 })
+				group("DesertCaravanWagon", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local wcf = CFrame.new(wx, wy - 0.2, wz) * CFrame.Angles(0, math.rad(wyaw), 0)
+					if KitProps.Has("DesertCaravanWagon") then
+						kitAt("DesertCaravanWagon", wcf, 1.12 * scale, f12Override)
+					else
+						local bed = block("CaravanWagonBed", V(7.5, 2.2, 14.0), V(wx, wy + 2.4, wz), vWood, Enum.Material.Wood)
+						bed.CFrame = CFrame.new(origin + V(wx, wy + 2.4, wz)) * CFrame.Angles(0, math.rad(wyaw), 0)
+						local awning = block("CaravanWagonTarp", V(8.0, 0.4, 13.0), V(wx, wy + 6.4, wz), vCanvas, Enum.Material.Fabric)
+						awning.CFrame = CFrame.new(origin + V(wx, wy + 6.4, wz)) * CFrame.Angles(0, math.rad(wyaw), math.rad(-14))
+					end
+				end)
+			end
+		end
+
+		-- Nomad Campfire pit + Ash Raider tarp tent inside west-center Wagon Circle (outside BasinCauseway & BASIN_WEST camp)
+		local cfX, cfZ = -52, 112
+		if footprintClear(cfX, cfZ, 8, 8) then
+			local cfY = f12GroundAt(cfX, cfZ)
+			table.insert(reservedSpots, { cfX, cfZ, 12 })
+			group("WagonCircleCampfire", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				for k = 1, 7 do
+					local a = k * (math.pi * 2 / 7)
+					block("CampfireStone", V(1.6, 1.1, 1.4), V(cfX + math.cos(a) * 3.2, cfY + 0.45, cfZ + math.sin(a) * 3.2), vBasalt, Enum.Material.Basalt)
+				end
+				local fireGlow = orb("CampfireEmbers", V(cfX, cfY + 0.85, cfZ), V(2.8, 1.4, 2.8), vAmber, Enum.Material.Neon)
+				pointLight(fireGlow, vAmber, 1.3, 36)
+				local smoke = Instance.new("ParticleEmitter")
+				smoke.Name = "CampfireSmoke"
+				smoke.Color = ColorSequence.new(rgb(215, 168, 118))
+				smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.4), NumberSequenceKeypoint.new(1, 5.2) })
+				smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.72), NumberSequenceKeypoint.new(1, 1) })
+				smoke.Lifetime = NumberRange.new(2.0, 3.6)
+				smoke.Rate = 5
+				smoke.Speed = NumberRange.new(3, 6)
+				smoke.Parent = fireGlow
+			end)
+		end
+
+		-- 3. Collapsed Spice Vault & Burst Crimson/Saffron Spice Urns on the western cliff overlook (WestGallery)
+		local svX, svZ = -164, -120
+		if footprintClear(svX, svZ, 16, 12) then
+			local svY = f12GroundAt(svX, svZ)
+			table.insert(reservedSpots, { svX, svZ, 26 })
+			group("SpiceVaultRuins", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local svCf = CFrame.new(svX, svY - 0.5, svZ) * CFrame.Angles(0, math.rad(36), 0)
+				if KitProps.Has("SpiceVaultRuins") then
+					kitAt("SpiceVaultRuins", svCf, 1.2 * scale, f12Override)
+				else
+					block("SpiceVaultWall", V(30, 13, 3.5), svCf.Position + V(0, 6.5, 0), vSand, Enum.Material.Sandstone)
+					orb("SpiceSpillCrimson", svCf.Position + V(-4, 0.6, 8), V(9, 1.8, 9), vCrimson, Enum.Material.Sand)
+					orb("SpiceSpillSaffron", svCf.Position + V(6, 0.6, 9), V(8, 1.6, 8), vSaffron, Enum.Material.Sand)
+				end
+			end)
+		end
+
+		-- Additional foreground spice spill clusters flanking WestGallery approach
+		for spIdx, sp in { { -92, -118, true }, { -168, -42, false } } do
+			local sx, sz, isRed = sp[1], sp[2], sp[3]
+			if footprintClear(sx, sz, 6, 6) then
+				local sy = f12GroundAt(sx, sz)
+				table.insert(reservedSpots, { sx, sz, 10 })
+				group("BurstSpiceUrn" .. spIdx, function()
+					currentParent:SetAttribute("OnTerrain", true)
+					local urn = orb("ToppledSpiceAmphora", V(sx, sy + 1.5, sz), V(4.2, 4.2, 6.2), vTerra, Enum.Material.Slate)
+					urn.CFrame = CFrame.new(origin + V(sx, sy + 1.5, sz)) * CFrame.Angles(math.rad(72), math.rad(sx), 0)
+					orb("SpicePowderPile", V(sx + 2.8, sy + 0.45, sz + 3.2), V(8.5, 1.5, 7.5), if isRed then vCrimson else vSaffron, Enum.Material.Sand)
+				end)
+			end
+		end
+
+		-- 4. Swirling Desert Dust Devils + Green Saguaro Desert Cacti & Pale Dead Snags
+		for dIdx, dd in { { -88, -16, 1.0 }, { 172, -116, 1.15 } } do
+			local dx, dz, ds = dd[1], dd[2], dd[3]
+			local dy = f12GroundAt(dx, dz)
+			table.insert(reservedSpots, { dx, dz, 14 })
+			group("SandstormDustDevil" .. dIdx, function()
+				currentParent:SetAttribute("OnTerrain", true)
+				local funnel = cyl("DustDevilFunnel", V(dx, dy + 24 * ds, dz), 5.5 * ds, 50 * ds, rgb(224, 188, 138), Enum.Material.SmoothPlastic, 0.88)
+				local emitter = Instance.new("ParticleEmitter")
+				emitter.Name = "GlasswindSandSwirl"
+				emitter.Color = ColorSequence.new(rgb(232, 194, 142))
+				emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 6 * ds), NumberSequenceKeypoint.new(1, 16 * ds) })
+				emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.90), NumberSequenceKeypoint.new(0.45, 0.72), NumberSequenceKeypoint.new(1, 1) })
+				emitter.Lifetime = NumberRange.new(2.2, 3.8)
+				emitter.Rate = 6
+				emitter.Speed = NumberRange.new(8, 16)
+				emitter.RotSpeed = NumberRange.new(-90, 90)
+				emitter.Parent = funnel
+			end)
+		end
+
+		for _, cac in { { 146, 152, 1.0 }, { 166, 114, 1.15 }, { -162, 142, 0.9 } } do
+			local cx, cz, cs = cac[1], cac[2], cac[3]
+			if footprintClear(cx, cz, 4, 4) then
+				local cy = f12GroundAt(cx, cz)
+				table.insert(reservedSpots, { cx, cz, 7 })
+				group("SaguaroCactusCluster", function()
+					currentParent:SetAttribute("OnTerrain", true)
+					cyl("CactusTrunk", V(cx, cy + 4.5 * cs, cz), 1.05 * cs, 9.5 * cs, vCactus, Enum.Material.Grass)
+					for _, ps in { -1, 1 } do
+						local hOff = if ps < 0 then 3.2 * cs else 4.8 * cs
+						local arm = block("CactusArmH", V(3.0 * cs, 1.3 * cs, 1.3 * cs), V(cx + ps * 1.8 * cs, cy + hOff, cz), vCactus, Enum.Material.Grass)
+						arm.CanCollide = false
+						cyl("CactusArmV", V(cx + ps * 3.1 * cs, cy + hOff + 2.0 * cs, cz), 0.72 * cs, 4.2 * cs, vCactus, Enum.Material.Grass)
+					end
+				end)
+			end
+		end
+
+		for _, snag in { { -162, 22, 0.95 }, { 174, -46, 0.9 }, { -122, -162, 0.85 } } do
+			local sx, sz, ss = snag[1], snag[2], snag[3]
+			local sy = f12GroundAt(sx, sz)
+			table.insert(reservedSpots, { sx, sz, 12 })
+			group("BleachedDesertSnag", function()
+				currentParent:SetAttribute("OnTerrain", true)
+				if KitProps.Has("DeadTree") then
+					kitAt("DeadTree", CFrame.new(sx, sy - 0.5, sz) * CFrame.Angles(0, math.rad(sx), 0), ss, { WOOD = { Color = vDeadWood, Material = Enum.Material.Wood } })
+				else
+					beam("DeadSnagTrunk", V(sx, sy, sz), V(sx + 2, sy + 20 * ss, sz - 1), 2.8 * ss, vDeadWood, Enum.Material.Wood)
+				end
+			end)
+		end
 	end
 
 	-- =========================================================================
@@ -2330,6 +2553,19 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				local cz = backdrop.Z + math.abs(i % 3) * 6 - 4
 				local ch = (58 + ((math.abs(i) * 13) % 24)) * scale
 				block("ColumnarBasaltCliff", V(24.5, ch, 28), V(cx, apex.Y + ch * 0.5 - 12, cz), rgb(38, 34, 36), Enum.Material.Basalt)
+			end
+		end)
+	elseif layout.Authored == "ashen:2" then
+		-- Stratified terracotta & ochre sandstone canyon cliffs rising behind Caravan Master's Tomb and Spice Vault
+		group("VarrashStrataCliffs", function()
+			for i = -8, 8 do
+				local cx = i * 25
+				if math.abs(cx - apex.X) < 34 then continue end
+				local cz = backdrop.Z + (math.abs(i % 3) * 6) - 6
+				local ch = (54 + ((math.abs(i) * 11) % 22)) * scale
+				block("StrataCliffBasalt", V(25.5, 16 * scale, 30), V(cx, apex.Y + 4 * scale - 10, cz), rgb(52, 44, 44), Enum.Material.Basalt)
+				block("StrataCliffOchre", V(24.8, 18 * scale, 28), V(cx, apex.Y + 21 * scale - 10, cz), rgb(172, 134, 96), Enum.Material.Sandstone)
+				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
 	else
@@ -2549,6 +2785,33 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					block("CinderGateKeystoneHood", V(7.5 * scale, 8.5 * scale, 10.2 * scale), gateAt + V(0, springY + archR + 3.2 * scale, 0.8), rgb(175, 95, 65), Enum.Material.Slate)
 					local emberKey = orb("CinderGateFlameKeystone", gateAt + V(0, springY + archR + 3.5 * scale, 4.2), V(3.0, 4.8, 2.2), rgb(255, 165, 65), Enum.Material.Neon)
 					pointLight(emberKey, rgb(255, 155, 62), 1.5, 52)
+				end
+			end)
+		elseif layout.Authored == "ashen:2" then
+			-- Tented Caravan Master's Tomb Pavilion behind Apex PortalSpots (Z = -222, clear of -198 PortalSpots)
+			local tombAt = V(apex.X, apex.Y, apex.Z - apex.Depth / 2 - 14)
+			group("MasterTombPavilion", function()
+				if KitProps.Has("MasterTombPavilion") then
+					local mdl = kitAt("MasterTombPavilion", CFrame.new(tombAt), 1.25 * scale, {
+						TRIM = { Color = rgb(188, 158, 116), Material = Enum.Material.Sandstone },
+						STONE = { Color = rgb(44, 38, 40), Material = Enum.Material.Basalt },
+						FOLIAGE = { Color = rgb(124, 118, 108), Material = Enum.Material.Fabric },
+						GOLD = { Color = gold, Material = Enum.Material.Metal },
+						METAL = { Color = rgb(58, 52, 56), Material = Enum.Material.Metal },
+						GLOW = { Color = rgb(255, 162, 62), Material = Enum.Material.Neon },
+					})
+					if mdl then
+						local anchor = mdl:FindFirstChildWhichIsA("BasePart")
+						if anchor then pointLight(anchor, rgb(255, 160, 62), 1.4, 48) end
+					end
+				else
+					block("TombPodium", V(34 * scale, 4, 24 * scale), tombAt + V(0, 2, 0), rgb(188, 158, 116), Enum.Material.Sandstone)
+					for _, ps in { -1, 1 } do
+						block("TombPillar", V(2.4, 16 * scale, 2.4), tombAt + V(ps * 12 * scale, 10 * scale, 8), rgb(188, 158, 116), Enum.Material.Sandstone)
+					end
+					block("TombCanopy", V(28 * scale, 1.2, 20 * scale), tombAt + V(0, 19 * scale, 0), rgb(124, 118, 108), Enum.Material.Fabric)
+					local tombLight = orb("TombLanternCore", tombAt + V(0, 8, 10), V(2.5, 3.5, 2.5), rgb(255, 162, 62), Enum.Material.Neon)
+					pointLight(tombLight, rgb(255, 160, 62), 1.4, 48)
 				end
 			end)
 		else
