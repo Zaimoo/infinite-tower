@@ -612,16 +612,16 @@ function Builder.Build(id: number, generation: number): any
 							cornerPier.CanTouch = false
 						end
 					end
-					-- Scattered weathered flagstones & moss edge beds flush on terrace deck
+					-- Scattered weathered flagstones & moss edge beds flush on terrace deck (above TraversalLanding +0.02)
 					for k = 1, 6 do
 						local ang = k * 2.1 + terrace.X * 0.02
 						local rx = math.cos(ang) * (terrace.Width * 0.28)
 						local rz = math.sin(ang) * (terrace.Depth * 0.26)
-						local pPos = topCenter + Vector3.new(rx, 0.04, rz)
+						local pPos = topCenter + Vector3.new(rx, 0.10, rz)
 						local paver = decor(model, "BastionFlagstone", Vector3.new(9 + (k % 3) * 3, 0.14, 7 + ((k + 1) % 3) * 2), pPos, if k % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
 						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
 						if k % 2 == 1 then
-							local mPos = topCenter + Vector3.new(rx * 1.32, 0.05, rz * 1.32)
+							local mPos = topCenter + Vector3.new(rx * 1.32, 0.11, rz * 1.32)
 							decor(model, "BastionMossPatch", Vector3.new(10, 0.14, 8), mPos, moss, Enum.Material.LeafyGrass)
 						end
 					end
@@ -715,9 +715,11 @@ function Builder.Build(id: number, generation: number): any
 				p.Color = solmereLimestone
 				p.Material = Enum.Material.Limestone
 				if layout.Authored == "verdant:4" then
-					-- Avoid flat corner protrusion above moss/pavers; keep collision seamless
-					p.Transparency = 1
-					p.CastShadow = false
+					-- Keep every Floor 4 landing solid & visible (diagonal ramps leave 5-15 stud gaps outside terrace corners
+					-- bridged solely by LandingB); rest top at +0.02 under +0.10 flagstones and give underside stonework.
+					p.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -0.98, 0)
+					local under = decor(model, "LandingStoneUnderside", Vector3.new(pad.Width - 1.2, 2.2, (b - a).Magnitude - 0.6), (a + b) / 2, flagstoneDark, Enum.Material.Limestone)
+					under.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -2.08, 0)
 				end
 			end
 		elseif natural then
@@ -792,13 +794,25 @@ function Builder.Build(id: number, generation: number): any
 			structure(ramp,link.Id)
 			if isSuspendedLink(layout, link.Id) and layout.Authored == "verdant:4" then
 				-- Floor 4 Solmere mossy limestone fortress bridges & wall-walks across the moat/courtyard:
-				-- solid weathered stone deck continuing cleanly onto both landings, with flagstones & hanging vines.
+				-- solid weathered stone deck continuing cleanly onto both landings, with bank abutments, flagstones & hanging vines.
 				ramp.Color = solmereLimestone
 				ramp.Material = Enum.Material.Limestone
 				local landA = origin + Vector3.new(link.LandingA.AX, link.LandingA.AY, link.LandingA.AZ)
 				local landB = origin + Vector3.new(link.LandingB.BX, link.LandingB.BY, link.LandingB.BZ)
-				local stoneA = a:Lerp(landA, 0.78)
-				local stoneB = b:Lerp(landB, 0.78)
+				-- Anchor moat bridges leaving the grassy Outer Ward bank (From == "Basin") on a solid battered stone abutment down into the moat bed
+				if link.From == "Basin" then
+					local deepBottom = origin.Y + layout.Bottom - 7
+					local abutH = math.max(6, a.Y - deepBottom)
+					local abutAt = a:Lerp(landA, 0.25)
+					local abut = part(model, "BridgeBankAbutment", Vector3.new(link.Width + 4, abutH, 12), Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.04, abutAt.Z), flagstoneDark, Enum.Material.Limestone)
+					abut.CFrame = CFrame.lookAt(Vector3.new(abutAt.X, a.Y - abutH / 2 - 0.04, abutAt.Z), Vector3.new(b.X, a.Y - abutH / 2 - 0.04, b.Z))
+					abut.CanQuery = true
+					abut.CanTouch = false
+				end
+				local underRamp = decor(model, "BridgeStoneUnderside", Vector3.new(link.Width - 1.4, 2.2, delta.Magnitude + 1.0), mid, flagstoneDark, Enum.Material.Limestone)
+				underRamp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.06, 0)
+				local stoneA = a:Lerp(landA, 0.45)
+				local stoneB = b:Lerp(landB, 0.65)
 				local fullStoneLen = (stoneB - stoneA).Magnitude
 				local stones = math.max(3, math.floor((fullStoneLen - 2) / 4.2))
 				for i = 1, stones do
@@ -807,7 +821,7 @@ function Builder.Build(id: number, generation: number): any
 					local at = stoneA:Lerp(stoneB, t) + right * stagger
 					local stoneW = link.Width * (0.48 + ((i * 5) % 4) * 0.05)
 					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.22, 3.2), at, if i % 2 == 0 then flagstone else flagstoneDark, Enum.Material.Limestone)
-					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.05, 0) * CFrame.Angles(0, math.rad(((i * 17) % 12) - 6), 0)
+					stone.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.08, 0) * CFrame.Angles(0, math.rad(((i * 17) % 12) - 6), 0)
 				end
 				-- Coiling strangler vine cables & hanging tendrils along bridge shoulders
 				local segs = math.clamp(math.floor(delta.Magnitude / 18), 2, 5)
@@ -936,15 +950,16 @@ function Builder.Build(id: number, generation: number): any
 		-- Natural floors: a trodden path over a land bridge, with no lanterns or viaduct piers. The curbs stay,
 		-- invisible, so heroes keep the same railing they always had. Floor 3 bridges dress curbless with organic root rails.
 		if natural then
-			local visibleCurb = solmere and (not grassyPaths or layout.Authored == "verdant:4")
+			local visibleCurb = solmere and (isSuspendedLink(layout, link.Id) or not grassyPaths)
+			local curbLen = if isSuspendedLink(layout, link.Id) and layout.Authored == "verdant:4" then math.max(1, delta.Magnitude + 4) else math.max(1, delta.Magnitude - 4)
 			for _, side in { -1, 1 } do
 				local curbOffset = right * (side * (link.Width / 2 - 1.1))
 				local curbGroup = propGroup(model, "BridgeCurb")
-				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, math.max(1,delta.Magnitude-4)), mid + curbOffset, if visibleCurb then flagstoneDark else theme.TrimColor, if visibleCurb then Enum.Material.Limestone else theme.TrimMaterial, if visibleCurb then nil else 1)
+				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, curbLen), mid + curbOffset, if visibleCurb then flagstoneDark else theme.TrimColor, if visibleCurb then Enum.Material.Limestone else theme.TrimMaterial, if visibleCurb then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
 				if visibleCurb then
 					-- A visible Solmere kerb: limestone with a cushion of moss on top.
-					local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.6, 0.5, math.max(1, delta.Magnitude - 5)), mid + curbOffset, moss, Enum.Material.Grass)
+					local cap = decor(curbGroup, "BridgeKerbMoss", Vector3.new(2.6, 0.5, math.max(1, curbLen - 1)), mid + curbOffset, moss, Enum.Material.Grass)
 					cap.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.05, 0)
 				end
 			end
