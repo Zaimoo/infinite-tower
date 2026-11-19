@@ -9,6 +9,8 @@
 local MaterialService = game:GetService("MaterialService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local HubLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HubLayout"))
+
 local EnvironmentSpawner = {}
 
 export type TextureIdSet = {
@@ -63,7 +65,7 @@ EnvironmentSpawner.DefaultGroundTextures = {
 }
 
 local CASTLE_GROUND_VERSION = 4
-local HUB_GROUND_VERSION = 3
+local HUB_GROUND_VERSION = 4
 
 local EXPECTED_HEIGHTS = {
 	HeroOakTree = 17.0,
@@ -772,7 +774,7 @@ function EnvironmentSpawner.SpawnHubCommonsGround(parent: Instance, hubCentreCF:
 			local isFloor = desc.Name == "HubCommons_MeadowFloor"
 			configurePathPart(desc, if isFloor then Enum.AlphaMode.Opaque else Enum.AlphaMode.Transparency)
 			local sa = desc:FindFirstChildWhichIsA("SurfaceAppearance", true)
-			if sa and sa:IsA("SurfaceAppearance") then
+			if sa and sa:IsA("SurfaceAppearance") and sa.ColorMap == "" then
 				local texSet = if isFloor
 					then EnvironmentSpawner.DefaultGroundTextures.MeadowGrass
 					else EnvironmentSpawner.DefaultGroundTextures.HubPathWeathering
@@ -1235,6 +1237,25 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 		end
 	end
 
+	local function resolveHubOrigin(commons: Instance): Vector3
+		local anchor = commons:FindFirstChild("CommonsCentreAnchor", true)
+		if anchor and anchor:IsA("BasePart") then
+			return Vector3.new(anchor.Position.X, anchor.Position.Y + anchor.Size.Y * 0.5, anchor.Position.Z)
+		end
+		local mainSurf: BasePart? = nil
+		for _, d in commons:GetDescendants() do
+			if d:IsA("BasePart") and d.Name == "CommonsSurface" then
+				if not mainSurf or d.Size.X > mainSurf.Size.X then
+					mainSurf = d
+				end
+			end
+		end
+		if mainSurf then
+			return Vector3.new(mainSurf.Position.X, mainSurf.Position.Y + mainSurf.Size.Y * 0.5, mainSurf.Position.Z)
+		end
+		return HubLayout.HubCentre
+	end
+
 	local hasHeroPond = EnvironmentSpawner.HasTemplate("HeroBridgePond")
 	if hasHeroPond then
 		local LEGACY_POOL_PARTS: { [string]: boolean } = {
@@ -1255,10 +1276,8 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 				then root
 				else root:FindFirstChild("MastersCommons", true)
 			if commons then
-				local surf = commons:FindFirstChild("CommonsSurface", true)
-				local surfTopY = if surf and surf:IsA("BasePart")
-					then (surf.Position.Y + surf.Size.Y * 0.5)
-					else 12.0
+				local hubBase = resolveHubOrigin(commons)
+				local surfTopY = hubBase.Y
 				local poolFolder = commons:FindFirstChild("ReflectingPool")
 				if poolFolder then
 					local alreadyUpgraded = false
@@ -1273,8 +1292,8 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 						local waterPart = poolFolder:FindFirstChild("PoolWater") or poolFolder:FindFirstChild("PoolFloor")
 						if waterPart and waterPart:IsA("BasePart") then
 							centerPos = Vector3.new(waterPart.Position.X, surfTopY, waterPart.Position.Z)
-						elseif surf and surf:IsA("BasePart") then
-							centerPos = Vector3.new(surf.Position.X, surfTopY, surf.Position.Z - 160)
+						else
+							centerPos = Vector3.new(hubBase.X, surfTopY, hubBase.Z - 160)
 						end
 						-- Destroy only primitive pool/bridge pieces, preserving upgraded WeepingWillowTrees
 						for _, ch in poolFolder:GetChildren() do
@@ -1299,32 +1318,28 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 			then root
 			else root:FindFirstChild("MastersCommons", true)
 		if commons then
-			local surf = commons:FindFirstChild("CommonsSurface", true)
-			if surf and surf:IsA("BasePart") then
-				local surfTopY = surf.Position.Y + surf.Size.Y * 0.5
-				local hubBase = Vector3.new(surf.Position.X, surfTopY, surf.Position.Z)
-				upgraded += pruneDeadEndNorthPath(commons, hubBase)
-				local pondsFolder = commons:FindFirstChild("NaturalPonds")
-				for _, spec in ipairs(HUB_POND_SPECS) do
-					if EnvironmentSpawner.HasTemplate(spec.template) then
-						local alreadyExists = false
-						for _, desc in commons:GetDescendants() do
-							if desc:GetAttribute("BlenderEnvAsset") == spec.template then
-								alreadyExists = true
-								break
-							end
+			local hubBase = resolveHubOrigin(commons)
+			upgraded += pruneDeadEndNorthPath(commons, hubBase)
+			local pondsFolder = commons:FindFirstChild("NaturalPonds")
+			for _, spec in ipairs(HUB_POND_SPECS) do
+				if EnvironmentSpawner.HasTemplate(spec.template) then
+					local alreadyExists = false
+					for _, desc in commons:GetDescendants() do
+						if desc:GetAttribute("BlenderEnvAsset") == spec.template then
+							alreadyExists = true
+							break
 						end
-						if not alreadyExists then
-							if not pondsFolder then
-								local nf = Instance.new("Folder")
-								nf.Name = "NaturalPonds"
-								nf.Parent = commons
-								pondsFolder = nf
-							end
-							local pondCF = CFrame.new(hubBase + spec.offset)
-							EnvironmentSpawner.SpawnPond(spec.template, pondsFolder :: Instance, pondCF, spec.scale, spec.yaw, spec.modelName)
-							upgraded += 1
+					end
+					if not alreadyExists then
+						if not pondsFolder then
+							local nf = Instance.new("Folder")
+							nf.Name = "NaturalPonds"
+							nf.Parent = commons
+							pondsFolder = nf
 						end
+						local pondCF = CFrame.new(hubBase + spec.offset)
+						EnvironmentSpawner.SpawnPond(spec.template, pondsFolder :: Instance, pondCF, spec.scale, spec.yaw, spec.modelName)
+						upgraded += 1
 					end
 				end
 			end
@@ -1374,24 +1389,14 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 				then root
 				else root:FindFirstChild("MastersCommons", true)
 			if commons then
-				local mainSurf: BasePart? = nil
-				for _, d in commons:GetDescendants() do
-					if d:IsA("BasePart") and d.Name == "CommonsSurface" then
-						if not mainSurf or d.Size.X > mainSurf.Size.X then
-							mainSurf = d
-						end
+				local hubBase = resolveHubOrigin(commons)
+				local existingGround = commons:FindFirstChild("HubCommons_Ground")
+				if not (existingGround and existingGround:GetAttribute("GroundVersion") == HUB_GROUND_VERSION) then
+					if existingGround then
+						existingGround:Destroy()
 					end
-				end
-				if mainSurf then
-					local surfTopY = mainSurf.Position.Y + mainSurf.Size.Y * 0.5
-					local existingGround = commons:FindFirstChild("HubCommons_Ground")
-					if not (existingGround and existingGround:GetAttribute("GroundVersion") == HUB_GROUND_VERSION) then
-						if existingGround then
-							existingGround:Destroy()
-						end
-						EnvironmentSpawner.SpawnHubCommonsGround(commons, CFrame.new(mainSurf.Position.X, surfTopY, mainSurf.Position.Z))
-						upgraded += 1
-					end
+					EnvironmentSpawner.SpawnHubCommonsGround(commons, CFrame.new(hubBase))
+					upgraded += 1
 				end
 			end
 		end

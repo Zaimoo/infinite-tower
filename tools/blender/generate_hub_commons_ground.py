@@ -73,6 +73,11 @@ POND_BASINS = [
     (-52.1, 233.1, 14.0, 10.5),    # RockeryKoiPond
 ]
 
+# Runesmith's Anvil chasm hole at HubLayout.ReforgeStation (-100, -160)
+REFORGE_HOLE_X = -100.0
+REFORGE_HOLE_Z = -160.0
+REFORGE_HOLE_RADIUS = 22.0
+
 PLOT_BRIDGE_LENGTH = 40.0
 PLOT_FRONT_DEPTH = 168.0
 PLOT_SPACING = 208.0
@@ -269,6 +274,16 @@ def generate_path_weathering_textures() -> tuple[Path, Path, Path]:
         segments.append((lx, lz, ux * (DAIS_EDGE + 2.0), uz * (DAIS_EDGE + 2.0), 8.0))
     segments.append((10.0, 118.0, 86.0, 156.0, 8.0))
     segments.append((0.0, HUB_HALF_Z, 0.0, DAIS_EDGE + 2.0, 14.0))
+    # Runesmith's Anvil bridge approach dirt-wear (from chasm rim at r=22 out to r=34 toward Dais (0,0))
+    anvil_len = math.hypot(-REFORGE_HOLE_X, -REFORGE_HOLE_Z)
+    aux, auz = -REFORGE_HOLE_X / anvil_len, -REFORGE_HOLE_Z / anvil_len
+    segments.append((
+        REFORGE_HOLE_X + aux * (REFORGE_HOLE_RADIUS + 1.5),
+        REFORGE_HOLE_Z + auz * (REFORGE_HOLE_RADIUS + 1.5),
+        REFORGE_HOLE_X + aux * (REFORGE_HOLE_RADIUS + 12.0),
+        REFORGE_HOLE_Z + auz * (REFORGE_HOLE_RADIUS + 12.0),
+        3.6,
+    ))
 
     for ax, az, bx, bz, half_w in segments:
         dx, dz = bx - ax, bz - az
@@ -278,14 +293,17 @@ def generate_path_weathering_textures() -> tuple[Path, Path, Path]:
         min_path_d = np.minimum(min_path_d, d)
 
     outside_dais = np.clip((d_dais - 54.0) / 3.0, 0.0, 1.0)
+    d_anvil_hole = np.hypot(rx - REFORGE_HOLE_X, rz - REFORGE_HOLE_Z)
+    anvil_rim = np.clip(1.0 - np.abs(d_anvil_hole - (REFORGE_HOLE_RADIUS + 2.2) + wobble * 0.45) / 5.5, 0.0, 1.0) * np.clip((d_anvil_hole - (REFORGE_HOLE_RADIUS - 0.5)) / 2.5, 0.0, 1.0)
     path_shoulder = np.clip(1.0 - np.abs(min_path_d - 1.8 + wobble * 0.55) / 6.2, 0.0, 1.0) * outside_dais
-    shoulder_w = np.maximum(dais_rim, path_shoulder)
+    shoulder_w = np.maximum(np.maximum(dais_rim, path_shoulder), anvil_rim * 0.85)
 
-    # 3. Fade smoothly near outer rounded rectangle rim & pond margins
+    # 3. Fade smoothly near outer rounded rectangle rim, pond margins & Runesmith chasm hole
     pond_mask = np.ones((R, R), dtype=np.float32)
     for px, pz, rx_r, rz_r in POND_BASINS:
         pd = np.hypot((rx - px) / rx_r, (rz - pz) / rz_r)
         pond_mask *= np.clip((pd - 0.85) / 0.30, 0.0, 1.0)
+    pond_mask *= np.clip((d_anvil_hole - (REFORGE_HOLE_RADIUS - 0.5)) / 2.2, 0.0, 1.0)
 
     cx, cz = HUB_HALF_X - OUTER_CORNER_RADIUS, HUB_HALF_Z - OUTER_CORNER_RADIUS
     qx = np.maximum(np.abs(rx) - cx, 0.0)
@@ -430,6 +448,16 @@ def _build_rounded_rect_sheet(
     r = OUTER_CORNER_RADIUS - inset
     nx, nz = 48, 64
 
+    # Window in the 10-stud grid enclosing the Runesmith's Anvil chasm hole at (-100, -160)
+    hole_ix0, hole_ix1 = 11, 17
+    hole_iz0, hole_iz1 = 13, 19
+
+    def set_top_uv(loop: bmesh.types.BMLoop, co: Vector) -> None:
+        if island_uv:
+            loop[uv].uv = ((co.x + HUB_HALF_X) / (2.0 * HUB_HALF_X), (co.y + HUB_HALF_Z) / (2.0 * HUB_HALF_Z))
+        else:
+            loop[uv].uv = ((co.x + hx) / TILE_STUDS, (co.y + hz) / TILE_STUDS)
+
     grid: list[list[bmesh.types.BMVert]] = []
     for iz in range(nz + 1):
         rz_raw = -hz + (2.0 * hz) * (iz / nz)
@@ -443,19 +471,51 @@ def _build_rounded_rect_sheet(
 
     for iz in range(nz):
         for ix in range(nx):
+            if hole_ix0 <= ix < hole_ix1 and hole_iz0 <= iz < hole_iz1:
+                continue
             v00, v10, v11, v01 = grid[iz][ix], grid[iz][ix + 1], grid[iz + 1][ix + 1], grid[iz + 1][ix]
             pts = {v.co.to_tuple(3) for v in (v00, v01, v11, v10)}
             if len(pts) < 3:
                 continue
             f = bm.faces.new([v00, v01, v11, v10])
             f.smooth = True
-            for vert, loop in zip((v00, v01, v11, v10), f.loops):
-                if island_uv:
-                    u = (vert.co.x + HUB_HALF_X) / (2.0 * HUB_HALF_X)
-                    v = (vert.co.y + HUB_HALF_Z) / (2.0 * HUB_HALF_Z)
-                    loop[uv].uv = (u, v)
-                else:
-                    loop[uv].uv = ((vert.co.x + hx) / TILE_STUDS, (vert.co.y + hz) / TILE_STUDS)
+            for loop in f.loops:
+                set_top_uv(loop, loop.vert.co)
+
+    # Stitch the 24 boundary grid vertices around the 60x60 window to a 24-gon circle of R = REFORGE_HOLE_RADIUS
+    ring_grid_verts: list[bmesh.types.BMVert] = []
+    for ix in range(hole_ix0, hole_ix1):
+        ring_grid_verts.append(grid[hole_iz0][ix])
+    for iz in range(hole_iz0, hole_iz1):
+        ring_grid_verts.append(grid[iz][hole_ix1])
+    for ix in range(hole_ix1, hole_ix0, -1):
+        ring_grid_verts.append(grid[hole_iz1][ix])
+    for iz in range(hole_iz1, hole_iz0, -1):
+        ring_grid_verts.append(grid[iz][hole_ix0])
+
+    hole_top_verts: list[bmesh.types.BMVert] = []
+    hole_top_pts: list[tuple[float, float]] = []
+    for gv in ring_grid_verts:
+        gx, gz = gv.co.x, -gv.co.y
+        dx, dz = gx - REFORGE_HOLE_X, gz - REFORGE_HOLE_Z
+        dist = max(1e-4, math.hypot(dx, dz))
+        cx_h = REFORGE_HOLE_X + (dx / dist) * REFORGE_HOLE_RADIUS
+        cz_h = REFORGE_HOLE_Z + (dz / dist) * REFORGE_HOLE_RADIUS
+        hole_top_pts.append((cx_h, cz_h))
+        hole_top_verts.append(bm.verts.new(rbx_to_blender(cx_h, base_y, cz_h)))
+
+    n_hole = len(ring_grid_verts)
+    for k in range(n_hole):
+        kn = (k + 1) % n_hole
+        fh = bm.faces.new([ring_grid_verts[k], hole_top_verts[k], hole_top_verts[kn], ring_grid_verts[kn]])
+        fh.smooth = True
+        for loop in fh.loops:
+            set_top_uv(loop, loop.vert.co)
+
+    # Remove unused interior grid vertices inside the cutout window
+    for v in list(bm.verts):
+        if len(v.link_faces) == 0:
+            bm.verts.remove(v)
 
     bm.faces.ensure_lookup_table()
     bm.normal_update()
@@ -498,6 +558,26 @@ def _build_rounded_rect_sheet(
             c = fs.calc_center_median()
             if fs.normal.x * c.x + fs.normal.y * c.y < 0.0:
                 fs.normal_flip()
+
+        # Inner chasm hole rim skirt (normals face inward toward hole center)
+        hole_bot_verts = [bm.verts.new(rbx_to_blender(px, SKIRT_BOTTOM_Y, pz)) for px, pz in hole_top_pts]
+        hole_c_bl = rbx_to_blender(REFORGE_HOLE_X, 0.0, REFORGE_HOLE_Z)
+        inner_skirt_faces = []
+        for k in range(n_hole):
+            kn = (k + 1) % n_hole
+            fi = bm.faces.new([hole_top_verts[k], hole_bot_verts[k], hole_bot_verts[kn], hole_top_verts[kn]])
+            fi.smooth = False
+            for loop in fi.loops:
+                co = loop.vert.co
+                loop[uv].uv = ((co.x + co.y) / TILE_STUDS, co.z / TILE_STUDS)
+            inner_skirt_faces.append(fi)
+        bm.normal_update()
+        for fi in inner_skirt_faces:
+            c = fi.calc_center_median()
+            to_center_x = hole_c_bl.x - c.x
+            to_center_y = hole_c_bl.y - c.y
+            if fi.normal.x * to_center_x + fi.normal.y * to_center_y < 0.0:
+                fi.normal_flip()
 
     bm.normal_update()
     assert all(f.normal.z > 0.5 for f in top_faces), f"{name}: top face normal inverted"

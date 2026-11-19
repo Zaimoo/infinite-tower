@@ -1,0 +1,476 @@
+{
+  "TemplateId": "runesmith_sanctuary",
+  "FBX": "RunesmithSanctuary.fbx",
+  "AxisForward": "Z",
+  "AxisUp": "Y",
+  "Triangles": 47796,
+  "HoleRadius": 22.0,
+  "PlatformRadius": 13.5,
+  "PlatformTopY": 4.55,
+  "BridgeZHubEnd": -27.6,
+  "BridgeZPlatEnd": -9.6,
+  "Parts": [
+    {
+      "Name": "Anvil_BasePlate",
+      "SubCollection": "RunesmithAnvil",
+      "Offset": [
+        0.0,
+        5.29,
+        0.0
+      ],
+      "Size": [
+        6.36,
+        1.14,
+        4.4
+      ],
+      "Material": "Metal",
+      "Color": [
+        50,
+        56,
+        66
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://130481348519256"
+    },
+    {
+      "Name": "Anvil_Body",
+      "SubCollection": "RunesmithAnvil",
+      "Offset": [
+        -1.135,
+        7.38,
+        0.0
+      ],
+      "Size": [
+        9.97,
+        3.12,
+        3.18
+      ],
+      "Material": "Metal",
+      "Color": [
+        70,
+        76,
+        88
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://88389544370988"
+    },
+    {
+      "Name": "Anvil_MoltenCore",
+      "SubCollection": "RunesmithAnvil",
+      "Offset": [
+        0.0,
+        6.7,
+        0.0
+      ],
+      "Size": [
+        1.6623,
+        1.3262,
+        2.2
+      ],
+      "Material": "Neon",
+      "Color": [
+        255,
+        110,
+        18
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://118610774039981"
+    },
+    {
+      "Name": "Anvil_SideRunes",
+      "SubCollection": "RunesmithAnvil",
+      "Offset": [
+        -0.0155,
+        8.2781,
+        0.0
+      ],
+      "Size": [
+        4.6892,
+        0.5165,
+        3.04
+      ],
+      "Material": "Neon",
+      "Color": [
+        255,
+        148,
+        32
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://71283009954327"
+    },
+    {
+      "Name": "Anvil_TopSigil",
+      "SubCollection": "RunesmithAnvil",
+      "Offset": [
+        0.0,
+        8.95,
+        0.0
+      ],
+      "Size": [
+        3.18,
+        0.095,
+        2.28
+      ],
+      "Material": "Neon",
+      "Color": [
+        250,
+        184,
+        52
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://126717310945972"
+    },
+    {
+      "Name": "Platform_TopFlagstones",
+      "SubCollection": "FloatingPlatform",
+      "Offset": [
+        -0.3656,
+        4.16,
+        0.294
+      ],
+      "Size": [
+        26.5505,
+        1.12,
+        26.0268
+      ],
+      "Material": "Slate",
+      "Color": [
+        104,
+        100,
+        94
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://114088479666930"
+    },
+    {
+      "Name": "Platform_RimShelves",
+      "SubCollection": "FloatingPlatform",
+      "Offset": [
+        -0.056,
+        4.0,
+        1.001
+      ],
+      "Size": [
+        28.3727,
+        1.8237,
+        26.9484
+      ],
+      "Material": "Slate",
+      "Color": [
+        76,
+        74,
+        72
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://104380361824895"
+    },
+    {
+      "Name": "Platform_RockSpire",
+      "SubCollection": "FloatingPlatform",
+      "Offset": [
+        0.4031,
+        -7.197,
+        -0.5087
+      ],
+      "Size": [
+        26.1431,
+        22.606,
+        27.7075
+      ],
+      "Material": "Slate",
+      "Color": [
+        68,
+        66,
+        70
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://138706315724765"
+    },
+    {
+      "Name": "Ring_LowerStone",
+      "SubCollection": "FloatingRingsAndChains",
+      "Offset": [
+        -0.0237,
+        21.4868,
+        -0.0367
+      ],
+      "Size": [
+        23.173,
+        2.5772,
+        23.0282
+      ],
+      "Material": "Slate",
+      "Color": [
+        94,
+        98,
+        108
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://108166405024386"
+    },
+    {
+      "Name": "Ring_LowerRunes",
+      "SubCollection": "FloatingRingsAndChains",
+      "Offset": [
+        0.0,
+        21.6323,
+        0.0
+      ],
+      "Size": [
+        23.4875,
+        1.8049,
+        23.2414
+      ],
+      "Material": "Neon",
+      "Color": [
+        74,
+        204,
+        255
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://113383019070547"
+    },
+    {
+      "Name": "Ring_UpperStone",
+      "SubCollection": "FloatingRingsAndChains",
+      "Offset": [
+        -0.0,
+        28.5943,
+        -0.0083
+      ],
+      "Size": [
+        33.3823,
+        3.4792,
+        33.2815
+      ],
+      "Material": "Slate",
+      "Color": [
+        94,
+        98,
+        108
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://130445989100296"
+    },
+    {
+      "Name": "Ring_UpperRunes",
+      "SubCollection": "FloatingRingsAndChains",
+      "Offset": [
+        0.0,
+        28.7997,
+        0.0297
+      ],
+      "Size": [
+        33.2838,
+        2.554,
+        33.2244
+      ],
+      "Material": "Neon",
+      "Color": [
+        74,
+        204,
+        255
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://82269875732367"
+    },
+    {
+      "Name": "Chains_Iron_Front",
+      "SubCollection": "FloatingRingsAndChains",
+      "Offset": [
+        0.0,
+        12.4706,
+        -7.4953
+      ],
+      "Size": [
+        16.2776,
+        16.0998,
+        1.2869
+      ],
+      "Material": "Metal",
+      "Color": [
+        56,
+        60,
+        68
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://100807141442247"
+    },
+    {
+      "Name": "Chains_Iron_Back",
+      "SubCollection": "FloatingRingsAndChains",
+      "Offset": [
+        0.0,
+        12.4706,
+        7.4953
+      ],
+      "Size": [
+        16.2776,
+        16.0998,
+        1.2869
+      ],
+      "Material": "Metal",
+      "Color": [
+        56,
+        60,
+        68
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://96892816556974"
+    },
+    {
+      "Name": "Chains_Iron_Upper",
+      "SubCollection": "FloatingRingsAndChains",
+      "Offset": [
+        0.0,
+        24.8727,
+        -0.0127
+      ],
+      "Size": [
+        28.8825,
+        4.9644,
+        23.6656
+      ],
+      "Material": "Metal",
+      "Color": [
+        56,
+        60,
+        68
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://136115709656220"
+    },
+    {
+      "Name": "Bridge_WalkwayDeck",
+      "SubCollection": "SanctuaryBridge",
+      "Offset": [
+        0.0,
+        2.1794,
+        -18.6312
+      ],
+      "Size": [
+        5.7,
+        5.4214,
+        18.1424
+      ],
+      "Material": "Cobblestone",
+      "Color": [
+        116,
+        112,
+        98
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://121829800795491"
+    },
+    {
+      "Name": "Bridge_StoneAbutments",
+      "SubCollection": "SanctuaryBridge",
+      "Offset": [
+        0.0,
+        4.7912,
+        -18.4
+      ],
+      "Size": [
+        8.1528,
+        9.9777,
+        18.986
+      ],
+      "Material": "Slate",
+      "Color": [
+        128,
+        122,
+        106
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://95271054529383"
+    },
+    {
+      "Name": "Bridge_StoneMoss",
+      "SubCollection": "SanctuaryBridge",
+      "Offset": [
+        0.0,
+        2.5647,
+        -18.4
+      ],
+      "Size": [
+        8.1272,
+        5.5907,
+        18.964
+      ],
+      "Material": "Grass",
+      "Color": [
+        86,
+        104,
+        52
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://82578150444807"
+    },
+    {
+      "Name": "Bridge_IronLattice",
+      "SubCollection": "SanctuaryBridge",
+      "Offset": [
+        -0.0008,
+        3.861,
+        -18.1171
+      ],
+      "Size": [
+        6.6075,
+        6.7567,
+        11.1214
+      ],
+      "Material": "Metal",
+      "Color": [
+        132,
+        94,
+        62
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://83947912992609"
+    },
+    {
+      "Name": "Bridge_CanopyRings",
+      "SubCollection": "SanctuaryBridge",
+      "Offset": [
+        0.0,
+        6.7277,
+        -18.1
+      ],
+      "Size": [
+        6.3543,
+        11.0895,
+        10.1822
+      ],
+      "Material": "Metal",
+      "Color": [
+        132,
+        94,
+        62
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://132923601898995"
+    },
+    {
+      "Name": "Hub_ChasmWall",
+      "SubCollection": "ChasmRim",
+      "Offset": [
+        -0.0595,
+        -8.1584,
+        -0.066
+      ],
+      "Size": [
+        48.603,
+        18.4831,
+        48.9258
+      ],
+      "Material": "Basalt",
+      "Color": [
+        44,
+        44,
+        50
+      ],
+      "Collidable": false,
+      "MeshId": "rbxassetid://125671504006243"
+    }
+  ]
+}

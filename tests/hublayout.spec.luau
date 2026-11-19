@@ -200,8 +200,9 @@ end)
 
 test("Runesmith's Anvil mirrors the Raid Portal west of the pool, clear of the paths, the pool and the orchard", function()
 	local s, p = Hub.ReforgeStation, Hub.RaidPortal
-	local footprint = 16 * s.Scale -- the anvil's dais radius
+	local footprint = (s.ClearRadius or 28) * s.Scale -- chasm rim + bridge abutment clearance radius
 	assert(s.X == -p.X and s.Z == p.Z, "the anvil mirrors the Raid Portal across the pool")
+	assert(s.HoleRadius == 22 and s.PlatformRadius == 13.5 and s.PlatformElevation > 0, "sanctuary chasm and elevated platform dimensions must be defined")
 	assert(math.abs(s.X) + footprint <= Hub.HubHalfX - 20 and math.abs(s.Z) + footprint <= Hub.HubHalfZ - 20, "anvil must sit inside the Commons")
 	assert(math.abs(s.X) - footprint > 8 + 4, "anvil blocks the north path")
 	for i = 1, N do

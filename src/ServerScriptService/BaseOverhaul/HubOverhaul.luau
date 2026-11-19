@@ -30,7 +30,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 41 -- Bump to force a rebuild of baked geometry (41: gothic Blender leaderboard monument plaza)
+HubOverhaul.Version = 42 -- Bump to force a rebuild of baked geometry (42: Runesmith Sanctuary chasm hole in Hub Commons)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
