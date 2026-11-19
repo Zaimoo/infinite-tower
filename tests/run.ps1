@@ -137,6 +137,7 @@ $modulePaths = @(
     'ServerScriptService/Combat/HeroCombatMovement.luau',
     'ServerScriptService/Core/TowerTraversal.luau',
     'ServerScriptService/Core/TowerNavigationGraph.luau',
+    'ServerScriptService/Core/TowerTerrain.luau',
     'ServerScriptService/Core/NavigationRecovery.luau',
     'ServerScriptService/Core/NavigationQueue.luau',
     'ServerScriptService/Combat/SquadMovement.luau',

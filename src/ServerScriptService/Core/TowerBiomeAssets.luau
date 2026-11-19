@@ -58,7 +58,7 @@ end
 
 -- Prop kinds that hang in the air by design (rings, chains, gears, sky pieces); the settle pass skips them.
 Assets.AirborneKinds = table.freeze({
-	Ring = true, Chain = true, Cogwheel = true, Orrery = true, Eclipse = true, CavernSkylight = true,
+	Ring = true, Chain = true, Cogwheel = true, Orrery = true, Eclipse = true, CavernSkylight = true, CeilingRoots = true,
 	GalaxyPortal = true, LotusPortal = true, CorruptionCrescent = true, AirborneVineCable = true,
 })
 
@@ -375,10 +375,16 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	local function mushroom(at: Vector3, mScale: number, corrupted: boolean)
+		local rotKeep = layout.Authored == "fungal:9"
+		local heartHollow = layout.Authored == "fungal:10"
 		if kitOn then
 			group("Mushroom", function()
 				kitAt("GiantMushroom", CFrame.new(at) * CFrame.Angles(0, yawAt(at), 0), mScale, if corrupted
 					then { CAP = { Color = rgb(138, 36, 118) }, GLOW = { Color = rgb(235, 75, 185) } }
+					elseif rotKeep
+					then { CAP = { Color = rgb(96, 48, 172) }, GLOW = { Color = rgb(182, 245, 74) }, BULB = { Color = rgb(212, 255, 96) } }
+					elseif heartHollow
+					then { CAP = { Color = rgb(92, 44, 182) }, GLOW = { Color = rgb(96, 245, 255) }, BULB = { Color = rgb(224, 132, 255) }, STEM = { Color = rgb(214, 204, 236) } }
 					else { CAP = { Color = rgb(68, 48, 168) }, GLOW = { Color = rgb(95, 245, 235) } })
 			end)
 			return
@@ -386,9 +392,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		group("Mushroom", function()
 			local stemH = 30 * mScale
 			local capR = 24 * mScale
-			local capColor = if corrupted then rgb(138, 36, 118) else rgb(68, 48, 168)
-			local spotColor = if corrupted then rgb(255, 95, 195) else rgb(115, 225, 255)
-			local gillColor = if corrupted then rgb(235, 75, 185) else rgb(95, 245, 235)
+			local capColor = if corrupted then rgb(138, 36, 118) elseif rotKeep then rgb(96, 48, 172) elseif heartHollow then rgb(92, 44, 182) else rgb(68, 48, 168)
+			local spotColor = if corrupted then rgb(255, 95, 195) elseif rotKeep then rgb(212, 255, 96) elseif heartHollow then rgb(224, 132, 255) else rgb(115, 225, 255)
+			local gillColor = if corrupted then rgb(235, 75, 185) elseif rotKeep then rgb(182, 245, 74) elseif heartHollow then rgb(96, 245, 255) else rgb(95, 245, 235)
 			local tiltX = (at.X > 0 and -1 or 1) * 4 * mScale
 			local mid = at + V(tiltX * 0.5, stemH * 0.5, 0)
 			local top = at + V(tiltX, stemH, 0)
@@ -5001,6 +5007,338 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 	end
 
+	-- Floor 6, Sporelit Entry (Fungal Hollow): the edge of the Veinweb in the Velmari lamp-masons' outer quarry.
+	-- The Elder Cap rises from its island in the glowpool and hides the Apex; the oculus over the Skylight Dais
+	-- drops a cyan shaft through a fringe of roots, and a crown of caps grows on the cliff above it. The
+	-- Veinspan is an arched slate bridge over the east pool; the Chanters keep a candle altar on their terrace,
+	-- the Skitters lay their eggs against the warren's cliff, and Lantern Spores gather by the crystals. Kit
+	-- meshes from fungal_f6_kit where imported (KitProps.Has), part-built fallbacks otherwise.
+	-- Floor 7, Mycelium Galleries: the lamp-galleries strung with the Veinweb's nets (fungal_f7_kit).
+	-- Every hand-authored Fungal floor shares the palette, helpers, crystals, oculus and bridge arches below.
+	local fungalFloor = if type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 7) == "fungal:"
+		then tonumber(string.sub(layout.Authored, 8)) else nil
+	if fungalFloor then
+		local violet = rgb(92, 52, 176)
+		local slate = rgb(62, 56, 94)
+		local slateDark = rgb(42, 38, 66)
+		local cobble = rgb(96, 74, 138)
+		local cyan = rgb(95, 245, 235)
+		local bulbViolet = rgb(196, 112, 255)
+		local teal = rgb(96, 236, 214)
+		local capOverride = { CAP = { Color = violet }, STEM = { Color = rgb(176, 170, 206) }, MOSS = { Color = rgb(58, 50, 96), Material = Enum.Material.Grass } }
+		local crystalOverride = { CRYSTAL = { Color = teal, Material = Enum.Material.Glass, Transparency = 0.25 }, STONE = { Color = slate, Material = Enum.Material.Slate } }
+		local liquid = if field then field.LiquidLevel else bottom
+		-- Ground under a spot: a terrace's walking plane, else the terrain (or the chasm floor).
+		local function groundY(x: number, z: number): number
+			for _, t in layout.Platforms do
+				if math.abs(x - t.X) <= t.Width / 2 and math.abs(z - t.Z) <= t.Depth / 2 then
+					return t.Y
+				end
+			end
+			return if field then (field.Sample(x, z)) else bottom
+		end
+		-- The current prop group sits on the terrain's own surface (the settle pass leaves it alone).
+		local function onTerrain()
+			if currentParent ~= kit then currentParent:SetAttribute("OnTerrain", true) end
+		end
+		local function yawToward(from: Vector3, to: Vector3): number
+			return math.atan2(to.X - from.X, to.Z - from.Z)
+		end
+		-- Teal crystal spires (the Lantern Spores' light).
+		local function crystal(at: Vector3, s: number, yaw: number)
+			group("PoolCrystal", function()
+				onTerrain()
+				if not kitAt("CrystalSpire", CFrame.new(at + V(0, -0.8, 0)) * CFrame.Angles(0.06, yaw, -0.04), s, crystalOverride) then
+					spire(at, 44 * s, 18 * s, teal, cyan, true)
+				end
+			end)
+			table.insert(reservedSpots, { at.X, at.Z, 22 * s + 2 })
+		end
+		-- A Velmari lamp-post; a dead one has a dark bulb and dull gill-lines.
+		local deadLamp = { BULB = { Color = rgb(58, 48, 72), Material = Enum.Material.SmoothPlastic }, GLOW = { Color = rgb(44, 70, 80), Material = Enum.Material.SmoothPlastic } }
+		-- A Lampkeeper's lamp burns a warm flame (the only warm light besides the Chanters' candles).
+		local flameWarm = rgb(255, 170, 92)
+		local warmLamp = { BULB = { Color = flameWarm, Material = Enum.Material.Neon }, GLOW = { Color = rgb(255, 206, 140), Material = Enum.Material.Neon } }
+		local function lampPost(at: Vector3, yaw: number, s: number, dead: boolean?, warm: boolean?)
+			group("VelmariLampPost", function()
+				local o = if dead then deadLamp elseif warm then warmLamp else nil
+				if not kitAt("VelmariLampPost", CFrame.new(at) * CFrame.Angles(0, yaw, 0), s, o) then
+					block("LampPostShaft", V(1.4, 10 * s, 1.4), at + V(0, 5 * s, 0), slate, Enum.Material.Slate)
+					orb("LampPostBulb", at + V(0, 10.6 * s, 0), V(1.6, 2, 1.6) * s, if dead then rgb(58, 48, 72) elseif warm then flameWarm else bulbViolet, if dead then Enum.Material.SmoothPlastic else Enum.Material.Neon)
+				end
+			end)
+		end
+		-- The Lampkeepers' sign, chalked on a rock: a gill-wheel with one long ray pointing the way up. `yaw`
+		-- turns its face (front +Z) toward whoever walks past.
+		local chalk = rgb(226, 222, 232)
+		local function chalkSign(at: Vector3, yaw: number, s: number?)
+			group("ChalkSign", function()
+				onTerrain()
+				local sc = s or 1.2
+				if not kitAt("ChalkSign", CFrame.new(at) * CFrame.Angles(0, yaw, 0), sc, { ALT = { Color = chalk, Material = Enum.Material.SmoothPlastic }, STONE = { Color = slate, Material = Enum.Material.Slate } }) then
+					local cf = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+					local stone = block("ChalkSignRock", V(3, 2.6, 1.8) * sc, V(0, 0, 0), slate, Enum.Material.Slate)
+					stone.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 1.3 * sc, 0)
+					local ray = block("ChalkSignRay", V(0.12, 1.4, 0.05) * sc, V(0, 0, 0), chalk, Enum.Material.SmoothPlastic)
+					ray.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 1.9 * sc, 0.92 * sc)
+					local wheel = cyl("ChalkSignWheel", V(0, 0, 0), 0.5 * sc, 0.05, chalk, Enum.Material.SmoothPlastic)
+					wheel.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 1.3 * sc, 0.92 * sc) * CFrame.Angles(0, math.pi / 2, 0)
+				end
+			end)
+		end
+		-- Glowing pad-caps floating on a pool at the water line (the settle pass leaves them there), kept out
+		-- from under the bridge deck.
+		local function padCaps(cx: number, cz: number, rMin: number, rMax: number, count: number, seed: number)
+			if not field then return end
+			local cross = layout.Platforms.Crossing
+			local rand = Random.new(seed)
+			local pads = 0
+			for _ = 1, count * 12 do
+				if pads >= count then break end
+				local a, r = rand:NextNumber(0, math.pi * 2), rand:NextNumber(rMin, rMax)
+				local x, z = cx + math.cos(a) * r, cz + math.sin(a) * r * 1.05
+				local y, kind = field.Sample(x, z)
+				local underDeck = math.abs(x - cross.X) < cross.Width / 2 + 3 and math.abs(z - cross.Z) < cross.Depth / 2 + 3
+				if kind == "POOL" and y < liquid - 0.8 and not underDeck then
+					pads += 1
+					group("PadCap", function()
+						onTerrain()
+						local at = V(x, liquid - 0.15, z)
+						local padCap = if fungalFloor == 9 then rgb(96, 48, 172) elseif fungalFloor == 10 then rgb(92, 44, 182) else rgb(70, 46, 140)
+						local padGlow = if fungalFloor == 9 then rgb(182, 245, 74) elseif fungalFloor == 10 then rgb(112, 245, 255) else cyan
+						if not kitAt("PadCap", CFrame.new(at) * CFrame.Angles(0, a, 0), rand:NextNumber(0.8, 1.6), { CAP = { Color = padCap }, GLOW = { Color = padGlow, Material = Enum.Material.Neon } }) then
+							cyl("PadCapDisc", at + V(0, 0.2, 0), 2.2, 0.4, padCap, Enum.Material.SmoothPlastic)
+							cyl("PadCapGlowRim", at + V(0, 0.45, 0), 1.8, 0.1, padGlow, Enum.Material.Neon)
+						end
+					end)
+				end
+			end
+		end
+
+		if fungalFloor == 6 then
+		-- 1. The Elder Cap on its island, with a companion clutch of caps and one cyan light under the gills.
+		local island = (layout.Terrain and layout.Terrain.Islands and layout.Terrain.Islands[1]) or { X = 0, Z = -34, R = 26 }
+		-- Six studs east of the island's centre: the cap's glow (gills, roots and tendrils in one mesh) then clears
+		-- the shoulder of the west ramp to the dais.
+		local capAt = V(island.X + 6, groundY(island.X + 6, island.Z), island.Z)
+		group("ElderCap", function()
+			onTerrain()
+			local placed = kitAt("ElderCap", CFrame.new(capAt + V(0, -0.6, 0)) * CFrame.Angles(0, math.rad(20), 0), 1, capOverride)
+			if not placed then
+				mushroom(capAt, 2.9, false)
+			end
+			local glow = orb("ElderCapGillGlow", capAt + V(0, 70, 0), V(2, 2, 2), cyan, Enum.Material.SmoothPlastic, 1)
+			pointLight(glow, cyan, 1.6, 90)
+			for k = 1, 3 do
+				local a = k * 2.1 + 0.4
+				local at = V(capAt.X + math.cos(a) * 15, 0, capAt.Z + math.sin(a) * 15)
+				at = V(at.X, groundY(at.X, at.Z), at.Z)
+				if not kitAt("MushroomCluster", CFrame.new(at) * CFrame.Angles(0, a, 0), 1.6 + 0.3 * k, capOverride) then
+					mushroom(at, 0.3 + 0.05 * k, false)
+				end
+			end
+		end)
+		table.insert(reservedSpots, { capAt.X, capAt.Z, island.R + 8 })
+
+		-- Teal crystal spires rising out of the glowpool round the island, and a stand of them beside the
+		-- Glowpool Shore's east camp.
+		for _, c in { { 44, -60, 0.42, 0.6 }, { -40, -6, 0.36, 2.2 }, { 30, 12, 0.3, 4.1 }, { -46, -70, 0.3, 1.1 }, { 10, -86, 0.26, 3.3 } } do
+			crystal(V(c[1], groundY(c[1], c[2]), c[2]), c[3], c[4])
+		end
+		for _, c in { { 150, 124, 0.38, 0.4 }, { 158, 102, 0.3, 2.6 }, { 138, 132, 0.24, 4.4 } } do
+			crystal(V(c[1], groundY(c[1], c[2]), c[2]), c[3], c[4])
+		end
+
+		-- Glowing pad-caps floating on the glowpool round the island.
+		padCaps(island.X, island.Z, 28, 58, 14, 606)
+		end -- floor 6 (Elder Cap, glowpool)
+
+		-- 2. The oculus (Floor 6: over the Skylight Dais; Floor 7: over the Netted Isle): a fringe of dangling
+		-- roots round its rim (Floor 7: glowing threads, the nets' drip) and a pale cyan shaft that fades out
+		-- above every camp band under it, so camp clearance leaves it.
+		local sky = layout.Skylight
+		if sky then
+			group("CavernSkylight", function()
+				local rimY = h - 0.5
+				for k = 0, 9 do
+					local a = (k + 0.5) * math.pi * 2 / 10
+					local at = V(sky.X + math.cos(a) * (sky.Radius + 3), 0, sky.Z + math.sin(a) * (sky.Radius + 3))
+					local facing = math.atan2(sky.X - at.X, sky.Z - at.Z)
+					local fringeH = KitProps.Size("HangingRootFringe").Y
+					local base = V(at.X, rimY - fringeH + 1.5, at.Z)
+					local fringe = if fungalFloor == 7
+						then { WOOD = { Color = rgb(150, 236, 240), Material = Enum.Material.SmoothPlastic, Transparency = 0.25 }, MOSS = { Color = rgb(196, 112, 255), Material = Enum.Material.Neon } }
+						elseif fungalFloor == 9
+						then { WOOD = { Color = rgb(40, 32, 44) }, MOSS = { Color = rgb(70, 88, 62) }, GLOW = { Color = rgb(172, 238, 78) } }
+						elseif fungalFloor == 10
+						then { WOOD = { Color = rgb(216, 206, 242), Material = Enum.Material.Fabric }, MOSS = { Color = rgb(112, 242, 255), Material = Enum.Material.Neon }, GLOW = { Color = rgb(214, 116, 255), Material = Enum.Material.Neon } }
+						else { WOOD = { Color = rgb(40, 32, 44) }, MOSS = { Color = rgb(70, 92, 120) } }
+					if not kitAt("HangingRootFringe", CFrame.new(base) * CFrame.Angles(0, facing, 0), 1.05, fringe) then
+						for j = -2, 2 do
+							local top = V(at.X, rimY, at.Z) + V(math.cos(a + math.pi / 2), 0, math.sin(a + math.pi / 2)) * (j * 6)
+							local rootCol = if fungalFloor == 10 then rgb(216, 206, 242) else rgb(40, 32, 44)
+							local rootMat = if fungalFloor == 10 then Enum.Material.Fabric else Enum.Material.Wood
+							beam("SkylightHangingRoot", top, top - V(0, 14 + (j % 3) * 7, 0), 1.6, rootCol, rootMat)
+						end
+					end
+				end
+				local shaftTop = h - 2
+				local shaftBottom = math.max(apex.Y, crossing.Y) + 26
+				local shaftColor = if fungalFloor == 9 then rgb(176, 232, 128) elseif fungalFloor == 10 then rgb(138, 244, 255) else rgb(176, 238, 255)
+				local shaft = cyl("SkylightShaftBeam", V(sky.X, (shaftTop + shaftBottom) / 2, sky.Z), sky.Radius * 0.62, shaftTop - shaftBottom, shaftColor, Enum.Material.SmoothPlastic, 0.9)
+				shaft.CFrame = CFrame.new(origin + V(sky.X, (shaftTop + shaftBottom) / 2, sky.Z)) * CFrame.Angles(0, 0, math.pi / 2)
+			end)
+		end
+
+		-- 3. The Crown Cluster (Floor 6): colossal caps growing on the cliff above and behind the dais, framed
+		-- by the oculus. Each stands where the cliff is (the field), sized to the headroom under the vault.
+		if fungalFloor == 6 then group("CrownCluster", function()
+			onTerrain()
+			for i, c in { { -34, -201, 1.35 }, { 30, -199, 1.15 }, { -86, -196, 0.85 }, { 84, -194, 0.8 }, { 2, -206, 0.95 } } do
+				local y = groundY(c[1], c[2])
+				local headroom = h - 8 - y
+				local s = math.min(c[3], headroom / 50)
+				if s > 0.35 then
+					if not kitAt("GiantMushroom", CFrame.new(c[1], y - 1, c[2]) * CFrame.Angles(0, i * 1.3, 0), s, capOverride) then
+						mushroom(V(c[1], y, c[2]), s, false)
+					end
+				end
+			end
+		end) end
+
+		-- 4. A bridge deck (`Terrain.DeckThickness`; Floor 6's Veinspan): arched slate piers under the deck,
+		-- standing in its pool, with arch rings on both faces (Floor 6 adds a parapet and corner lamp-posts).
+		local cross = layout.Platforms.Crossing
+		local deckBottom = cross.Y - ((layout.Terrain and layout.Terrain.DeckThickness and layout.Terrain.DeckThickness.Crossing) or 3)
+		local bed = if field then field.Bottom - 3 else bottom
+		local xW, xE = cross.X - cross.Width / 2, cross.X + cross.Width / 2
+		local zN, zS = cross.Z - cross.Depth / 2, cross.Z + cross.Depth / 2
+		if layout.Terrain and layout.Terrain.DeckThickness and layout.Terrain.DeckThickness.Crossing then group("VeinspanArches", function()
+			-- Piers stand across the deck's short side, spaced along its long side (Floor 6's Veinspan runs
+			-- north-south, Floor 8's aqueduct east-west), with arch rings on both long faces.
+			local alongZ = cross.Depth >= cross.Width
+			local long, short = if alongZ then cross.Depth else cross.Width, if alongZ then cross.Width else cross.Depth
+			local count = math.max(3, math.floor((long - 8) / 26) + 1)
+			local piers = {}
+			for i = 0, count - 1 do
+				table.insert(piers, -long / 2 + 4 + (long - 8) * i / (count - 1))
+			end
+			local function at(a: number, b: number, y: number): Vector3
+				-- a: along the long side, b: across it (both relative to the deck's centre)
+				return if alongZ then V(cross.X + b, y, cross.Z + a) else V(cross.X + a, y, cross.Z + b)
+			end
+			local pierH = deckBottom - bed
+			for _, pa in piers do
+				local pier = block("VeinspanArchPier", if alongZ then V(short - 2, pierH, 6) else V(6, pierH, short - 2), at(pa, 0, (deckBottom + bed) / 2), slateDark, Enum.Material.Slate)
+				pier.CastShadow = true
+			end
+			for i = 1, #piers - 1 do
+				local mid = (piers[i] + piers[i + 1]) / 2
+				local span = math.abs(piers[i + 1] - piers[i]) - 6
+				for _, sb in { -short / 2 + 0.6, short / 2 - 0.6 } do
+					-- Crowns 1.5 under the deck, below any camp's band on the deck (camp clearance would take them).
+					ring("VeinspanArchRing", at(mid, sb, deckBottom - span * 0.5 - 1.5), span * 0.5, 2.2, cobble, Enum.Material.Cobblestone,
+						if alongZ then CFrame.Angles(0, math.pi / 2, 0) else CFrame.identity, 0, math.pi, 10)
+				end
+			end
+			-- The Veinweb climbing the piers.
+			for _, pa in piers do
+				for _, sb in { -1, 1 } do
+					local foot = at(pa + 3.2, sb * (short / 2 - 8), bed + 0.5)
+					local cf = if alongZ then CFrame.new(foot) else CFrame.new(foot) * CFrame.Angles(0, math.pi / 2, 0)
+					if not kitAt("MyceliumVein", cf, 0.45, { STEM = { Color = rgb(150, 140, 190) } }) then
+						beam("MyceliumVein", foot, foot + V(0, pierH - 2, 0), 0.6, cyan, Enum.Material.Neon)
+					end
+				end
+			end
+		end) end
+		if fungalFloor == 6 then
+		-- Each wall is its own prop, and stops short of the landings at the bridge's ends (the stair from the
+		-- warren lands on the south of the deck, the steps to the dais leave from its west side).
+		local function wall(ax: number, az: number, bx: number, bz: number)
+			group("VeinspanParapet", function()
+				local a, b = V(ax, cross.Y + 1.5, az), V(bx, cross.Y + 1.5, bz)
+				local p = block("VeinspanParapetWall", V(1.6, 3, (b - a).Magnitude), (a + b) / 2, slate, Enum.Material.Slate)
+				p.CFrame = CFrame.lookAt(origin + (a + b) / 2, origin + b)
+				local cap = block("VeinspanParapetCap", V(2.2, 0.5, (b - a).Magnitude + 0.6), (a + b) / 2 + V(0, 1.7, 0), cobble, Enum.Material.Cobblestone)
+				cap.CFrame = CFrame.lookAt(origin + (a + b) / 2 + V(0, 1.7, 0), origin + b + V(0, 1.7, 0))
+			end)
+		end
+		wall(xE - 0.8, zS - 26, xE - 0.8, zN + 2) -- east side, north of the stair's landing
+		wall(xW + 24, zN + 0.8, xE - 2, zN + 0.8) -- north end
+		wall(xW + 0.8, zS - 2, xW + 0.8, zS - 12) -- west side, south of the steps to the dais
+		for _, c in { { xW + 3, zS - 3 }, { xE - 3, zN + 3 } } do
+			local at = V(c[1], cross.Y, c[2])
+			lampPost(at, yawToward(at, V(cross.X, cross.Y, cross.Z)), 1.1)
+		end
+		-- Lamp-posts guarding the arrival ramp at the Glowpool Shore's edge.
+		for _, sx in { -1, 1 } do
+			lampPost(V(sx * 30, basin.Y, basin.Z + basin.Depth / 2 - 6), math.pi, 1.2)
+		end
+
+		-- 5. The Chanters' candle altar in the far corner of their terrace, facing its camp.
+		local west = layout.Platforms.WestGallery
+		local altarAt = V(west.X - west.Width / 2 + 12, west.Y, west.Z - west.Depth / 2 + 10)
+		group("CandleAltar", function()
+			local yaw = yawToward(altarAt, V(west.X, west.Y, west.Z))
+			if not kitAt("CandleAltar", CFrame.new(altarAt) * CFrame.Angles(0, yaw, 0), 1, { TRIM = { Color = slate, Material = Enum.Material.Slate } }) then
+				local cf = CFrame.new(altarAt) * CFrame.Angles(0, yaw, 0)
+				for i, size in { V(15, 1.4, 11), V(11.6, 1.4, 8), V(8.2, 1.4, 5.2) } do
+					local step = block("AltarDaisStep", size, V(0, 0, 0), slate, Enum.Material.Slate)
+					step.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 0.7 + 1.4 * (i - 1), -(i - 1))
+				end
+				local wheel = cyl("AltarGillWheel", V(0, 0, 0), 3, 0.6, rgb(118, 78, 215), Enum.Material.Slate)
+				wheel.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 9, -4) * CFrame.Angles(0, math.pi / 2, 0)
+				for k = 1, 10 do
+					orb("AltarCandleFlame", cf:PointToWorldSpace(V(((k % 5) - 2) * 2.6, 1.6 + 1.4 * (k % 2), 3 - (k % 3))), V(0.4, 0.7, 0.4), rgb(255, 198, 122), Enum.Material.Neon)
+				end
+			end
+			local glow = orb("AltarCandleGlow", altarAt + V(0, 4, 0), V(1, 1, 1), rgb(255, 198, 122), Enum.Material.SmoothPlastic, 1)
+			pointLight(glow, rgb(255, 190, 110), 1.2, 30)
+		end)
+		table.insert(reservedSpots, { altarAt.X, altarAt.Z, 12 })
+
+		-- 6. The Skitter Warren: egg-sacs against the cliff along the warren's east edge, and grazed veins (dull,
+		-- their bulbs eaten) on the ground nearby.
+		local east = layout.Platforms.EastGallery
+		for i, c in { { east.X + east.Width / 2 - 6, east.Z - 26 }, { east.X + east.Width / 2 - 5, east.Z + 30 }, { east.X + east.Width / 2 - 14, east.Z - 34 } } do
+			group("EggSacCluster", function()
+				onTerrain()
+				local at = V(c[1], east.Y, c[2])
+				if not kitAt("EggSacCluster", CFrame.new(at) * CFrame.Angles(0, i * 2.2, 0), 1.1 + 0.15 * i, { CRYSTAL = { Color = rgb(200, 176, 236), Material = Enum.Material.Glass, Transparency = 0.35 } }) then
+					for k = 1, 5 do
+						orb("EggSac", at + V((k % 3 - 1) * 1.8, 1.4 + (k % 2) * 1.2, (k % 2) * 1.6 - 0.8), V(2.2, 2.8, 2.2), rgb(200, 176, 236), Enum.Material.Glass, 0.35)
+					end
+				end
+			end)
+			table.insert(reservedSpots, { c[1], c[2], 6 })
+		end
+		for i, c in { { east.X - 6, east.Z + east.Depth / 2 + 10 }, { 150, 70 } } do
+			group("GrazedVein", function()
+				onTerrain()
+				local at = V(c[1], groundY(c[1], c[2]) + 0.1, c[2])
+				kitAt("MyceliumVein", CFrame.new(at) * CFrame.Angles(-math.pi / 2, i * 1.7, 0), 0.6, { GLOW = { Color = rgb(40, 70, 82), Material = Enum.Material.SmoothPlastic } })
+			end)
+		end
+
+		-- 7. Falls from the north-west and north-east cliffs into their pools, each set against the cliff face
+		-- (found from the field) and facing into the room, away from every ramp.
+		if field then
+			for _, f in { { X = -168, Z = -92, Dir = 1 }, { X = 172, Z = -64, Dir = -1 } } do
+				local x = f.X
+				for _ = 1, 24 do
+					local nx = x - f.Dir * 2
+					if field.Height(nx, f.Z) > liquid + 34 or math.abs(nx) > w / 2 - 4 then break end
+					x = nx
+				end
+				local top = math.min(field.Height(x - f.Dir * 2, f.Z), liquid + 40)
+				waterfall(V(x + f.Dir * 1.5, liquid - 0.4, f.Z), 12, top - liquid, rgb(86, 196, 210), if f.Dir > 0 then math.pi / 2 else -math.pi / 2)
+			end
+		end
+		end -- floor 6 (parapets, lamps, altar, warren, falls)
+
+	end
+
 	-- =========================================================================
 	-- 5. MONUMENTAL NORTH APEX CITADEL / TEMPLE / PORTAL & OVERHEAD SKY SPECTACLE
 	-- =========================================================================
@@ -5010,7 +5348,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- stand on ground instead of hanging over the chasm.
 	local apexBack = apex.Z - apex.Depth / 2
 	local shelfDepth = apexBack + d / 2
-	if shelfDepth > 1 and layout.Authored ~= "frozen:1" then
+	if shelfDepth > 1 and layout.Authored ~= "frozen:1" and not (layout.Terrain and layout.Terrain.NoApexShelf) then
 		block("ApexShelfMassif", V(w - 60, apex.Y - bottom, shelfDepth + 2), V(0, (apex.Y + bottom) / 2, -d / 2 + shelfDepth / 2), cliffColor, cliffMat)
 	end
 
@@ -5041,7 +5379,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then
 		-- Floors 16-20 own their north horizon backdrops directly.
 	else
-		for _, s in { -1, 1 } do
+		-- Authored Fungal floors have their own backdrop: the cavern wall itself (Floor 6's Crown Cluster grows on it).
+		for _, s in if fungalFloor then {} else { -1, 1 } do
 			local wingX = s * (apex.Width * 0.5 + 38)
 			group("CitadelWing", function()
 				block("NorthCitadelWingCliff", V(68, 76 * scale, 44), backdrop + V(wingX, 28 * scale, 4), cliffColor, cliffMat)
@@ -5197,7 +5536,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 		end
 
-	elseif biome == "fungal_hollow" then
+	elseif biome == "fungal_hollow" and not fungalFloor then
 		mushroom(backdrop + V(0, 0, -4), 2.25 * scale, false)
 		for _, s in { -1, 1 } do
 			mushroom(backdrop + V(s * 54 * scale, -4, 12), 1.55 * scale, false)
@@ -6095,7 +6434,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local rand = Random.new(floorId * 7919 + 13)
 		local placed: { { number } } = table.clone(reservedSpots)
 		local function radiusOf(name: string, s: number): number
-			local t = Kit.Templates[name]
+			local t = Kit.Templates[name] or Kit.ExtraTemplates[name]
 			return if t then math.max(t.Size.X, t.Size.Z) * 0.5 * s * (Kit.RefScale[name] or 1) * 0.6 else 4
 		end
 		-- r keeps props apart; laneR (default r) keeps them off walkways: a tree's canopy may overhang a path
@@ -6170,20 +6509,33 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 			return nil, 0, 0
 		end
+		local rotEcoMix = { CAP = { Color = rgb(142, 198, 62) }, GLOW = { Color = rgb(162, 88, 245), Material = Enum.Material.Neon }, BULB = { Color = rgb(188, 118, 255), Material = Enum.Material.Neon } }
+		local heartEcoMix = { CAP = { Color = rgb(148, 48, 198) }, GLOW = { Color = rgb(206, 104, 255), Material = Enum.Material.Neon }, BULB = { Color = rgb(120, 248, 255), Material = Enum.Material.Neon }, STEM = { Color = rgb(222, 212, 242) } }
+		local ecoPlacedIdx = 0
 		local function put(propKind: string, name: string, x: number, y: number, z: number, s: number, r: number, sink: number?)
 			table.insert(placed, { x, z, r })
+			ecoPlacedIdx += 1
+			local isScatterFungi = name == "GiantMushroom" or name == "MushroomCluster" or name == "GlowcapTuftA" or name == "GlowcapTuftB"
+			local o = if layout.Authored == "fungal:9" and ecoPlacedIdx % 2 == 1 and isScatterFungi
+				then rotEcoMix
+				elseif layout.Authored == "fungal:10" and ecoPlacedIdx % 2 == 1 and isScatterFungi
+				then heartEcoMix
+				else nil
 			group(propKind, function()
 				-- Placed on the terrain's own surface: the settle pass leaves it alone (TowerPropClearance).
 				currentParent:SetAttribute("OnTerrain", true)
 				local tilt = CFrame.Angles(rand:NextNumber(-0.05, 0.05), rand:NextNumber(0, math.pi * 2), rand:NextNumber(-0.05, 0.05))
-				kitAt(name, CFrame.new(x, y - (sink or 0.4), z) * tilt, s)
+				kitAt(name, CFrame.new(x, y - (sink or 0.4), z) * tilt, s, o)
 			end)
 		end
 		local function pick(list: { string }): string
 			return list[rand:NextInteger(1, #list)]
 		end
 		-- Groves (skipped on Floor 17 barracks, Floor 18 bare-tree glacier, Floor 19 siege fortress, and Floor 20 throne hall)
-		local groveCount = if layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then 0 else math.round(eco.Groves * 1.5 * density)
+		-- An authored floor can thin its groves (Floor 6: one giant, the Elder Cap, not a forest of them).
+		local td = layout.Terrain or {}
+		local groveScale = td.GroveScale or 1
+		local groveCount = if layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then 0 else math.round(eco.Groves * 1.5 * density * groveScale)
 		for _ = 1, groveCount do
 			local name = pick(eco.Trees)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2])
@@ -6290,6 +6642,56 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			local r = radiusOf(name, s)
 			local x, y, z = search(r, function(kind, slope) return kind == "CHASM" and slope < 0.3 end)
 			if x then put("Monolith", name, x, y, z, s, r, 0.6) end
+		end
+		-- Ground cover (an authored floor's GroundCover templates, e.g. Fungal glowcap turf and spore-moss): the
+		-- biome's "grass", dense and cheap, over open ground, terrace lawns, banks and island crowns. Small, so it
+		-- keeps only its own radius from other props; never in a camp or on a walkway.
+		local cover = td.GroundCover
+		if cover and #cover > 0 and Kit.ExtraTemplates[cover[1]] and KitProps.Has(cover[1]) then
+			local count = 0
+			for _ = 1, td.GroundCoverCount or 0 do
+				local name = pick(cover)
+				local gs = rand:NextNumber(0.8, 1.5)
+				local gr = radiusOf(name, gs) * 0.8
+				local gx, gy, gz = search(gr, function(kind, slope)
+					return (kind == "CHASM" or kind == "LAWN" or kind == "APRON" or kind == "ISLAND" or kind == "MOUNTAIN") and slope < 0.9
+				end)
+				if gx then
+					put("GroundCover", name, gx, gy, gz, gs, gr, 0.15)
+					count += 1
+				end
+			end
+			kit:SetAttribute("GroundCoverProps", count)
+		end
+		-- Veins on the cliffs (an authored floor's CliffVeins): the Veinweb's nerves laid against the steep
+		-- mountain faces, leaning back with the slope and facing down it, into the room.
+		if (td.CliffVeins or 0) > 0 and KitProps.Has("MyceliumVein") then
+			local veins = 0
+			for _ = 1, td.CliffVeins * 3 do
+				if veins >= td.CliffVeins then break end
+				local vs = rand:NextNumber(0.7, 1.3)
+				local vr = 9 * vs
+				local vx, vy, vz = search(vr, function(kind, slope, y)
+					return kind == "MOUNTAIN" and slope > 0.9 and slope < 4 and y > field.Bottom + 4 and y < h - 40
+				end)
+				if vx then
+					local gx = field.Height(vx + 2, vz) - field.Height(vx - 2, vz)
+					local gz = field.Height(vx, vz + 2) - field.Height(vx, vz - 2)
+					local down = V(-gx, 0, -gz)
+					if down.Magnitude > 1e-3 then
+						down = down.Unit
+						local lean = math.atan(1 / math.max(V(gx, 0, gz).Magnitude / 4, 0.2))
+						table.insert(placed, { vx, vz, vr })
+						veins += 1
+						group("CliffVein", function()
+							currentParent:SetAttribute("OnTerrain", true)
+							local at = V(vx, vy - 3, vz) - down * 0.8
+							kitAt("MyceliumVein", CFrame.lookAt(at, at - down) * CFrame.Angles(-lean, 0, 0), vs)
+						end)
+					end
+				end
+			end
+			kit:SetAttribute("CliffVeinProps", veins)
 		end
 		kit:SetAttribute("EcosystemProps", #placed)
 	end
