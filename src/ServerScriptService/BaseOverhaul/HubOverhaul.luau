@@ -30,7 +30,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 47 -- Bump to force a rebuild of baked geometry (47: Quarter-disk Commons corners & rim rock clear of Runesmith chasm)
+HubOverhaul.Version = 48 -- Bump to force a rebuild of baked geometry (48: Rebake Hub with HubCobblePaths curved roads and Gothic bridges)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
@@ -403,12 +403,16 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 	removeExtraPlots(plotsFolder)
 	local existingContainer = Workspace:FindFirstChild("BaseOverhaulGeometry")
+	local existingCommons = if existingContainer then existingContainer:FindFirstChild("MastersCommons") else nil
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local hasCobbleHydrator = assets ~= nil and assets:FindFirstChild("HubPathMeshHydrator") ~= nil
 	local plot1 = plotsFolder:FindFirstChild("Plot_1")
 	local alreadyBaked = existingContainer ~= nil
 		and existingContainer:GetAttribute("OverhaulVersion") == OVERHAUL_VERSION
 		and existingContainer:FindFirstChild("CentralCrimsonTower") ~= nil
 		and existingContainer:FindFirstChild("BackgroundFloatingIslets") ~= nil
-		and existingContainer:FindFirstChild("MastersCommons") ~= nil
+		and existingCommons ~= nil
+		and (not hasCobbleHydrator or existingCommons:FindFirstChild("HubCobblePaths") ~= nil)
 		and plot1 ~= nil
 		and plot1:FindFirstChild("FloatingFortressIsland") ~= nil
 		and plotsFolder:FindFirstChild("Plot_" .. Config.IslandCount) ~= nil
