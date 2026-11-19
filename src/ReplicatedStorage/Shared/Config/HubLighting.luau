@@ -298,6 +298,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.34, AtmosphereColor = c(84, 100, 164), AtmosphereDecay = c(56, 40, 112), AtmosphereHaze = 1.2,
 		TintColor = c(232, 240, 255), Saturation = 0.3, ExposureCompensation = -0.02, BloomIntensity = 0.6,
 	},
+	-- Floor 9, Rotcap Keep: sickly rot. Yellow-green tint mixed into the violet, thick murky air, stronger
+	-- contrast and bloom on the yellow-green rot glows; no warm light anywhere on the floor.
+	[9] = {
+		Ambient = c(56, 42, 82), OutdoorAmbient = c(84, 98, 62), ColorShift_Top = c(196, 248, 88), ColorShift_Bottom = c(118, 52, 176),
+		AtmosphereDensity = 0.44, AtmosphereColor = c(96, 118, 72), AtmosphereDecay = c(78, 42, 118), AtmosphereHaze = 1.8,
+		TintColor = c(232, 248, 204), Contrast = 0.14, Saturation = 0.22, ExposureCompensation = -0.06, BloomIntensity = 0.58,
+	},
 	-- Floor 11, Cinder Gate: searing white-hot desert noon, crisp pale mirage haze over dark volcanic ash & ochre sandstone.
 	[11] = {
 		Ambient = c(96, 84, 72), OutdoorAmbient = c(154, 138, 118), ColorShift_Top = c(255, 244, 214), ColorShift_Bottom = c(98, 72, 54),

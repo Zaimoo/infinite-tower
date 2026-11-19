@@ -1,0 +1,153 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BrokenBarricade": {
+      "Min": [
+        -7.655,
+        -0.294,
+        -2.311
+      ],
+      "Roles": {
+        "BULB": 300,
+        "CAP": 360,
+        "GLOW": 228,
+        "MOSS": 80,
+        "STEM": 48,
+        "TRIM": 132,
+        "WOOD": 584
+      },
+      "Size": [
+        16.205,
+        5.624,
+        5.312
+      ],
+      "Triangles": 1732
+    },
+    "OssuaryBones": {
+      "Min": [
+        -6.307,
+        -0.35,
+        -6.435
+      ],
+      "Roles": {
+        "ALT": 1032,
+        "BULB": 300,
+        "CAP": 576,
+        "GLOW": 384,
+        "MOSS": 80,
+        "STEM": 112
+      },
+      "Size": [
+        12.019,
+        8.172,
+        11.958
+      ],
+      "Triangles": 2484
+    },
+    "RotMyceliumWeb": {
+      "Min": [
+        -7.693,
+        -0.3,
+        -6.858
+      ],
+      "Roles": {
+        "BULB": 500,
+        "CAP": 432,
+        "GLOW": 456,
+        "MOSS": 80,
+        "STEM": 80
+      },
+      "Size": [
+        14.126,
+        5.099,
+        13.281
+      ],
+      "Triangles": 1548
+    },
+    "RotVat": {
+      "Min": [
+        -3.902,
+        -0.25,
+        -3.451
+      ],
+      "Roles": {
+        "BULB": 400,
+        "CAP": 360,
+        "GLOW": 264,
+        "MOSS": 80,
+        "TRIM": 892,
+        "WOOD": 62
+      },
+      "Size": [
+        7.655,
+        5.561,
+        7.276
+      ],
+      "Triangles": 2058
+    },
+    "RotcapCluster": {
+      "Min": [
+        -5.974,
+        -0.3,
+        -5.094
+      ],
+      "Roles": {
+        "BULB": 500,
+        "CAP": 840,
+        "GLOW": 552,
+        "MOSS": 80,
+        "STEM": 160
+      },
+      "Size": [
+        12.268,
+        9.205,
+        9.643
+      ],
+      "Triangles": 2132
+    },
+    "RotcapTower": {
+      "Min": [
+        -9.226,
+        -0.35,
+        -7.776
+      ],
+      "Roles": {
+        "ACCENT": 288,
+        "BULB": 300,
+        "CAP": 504,
+        "GLOW": 660,
+        "MOSS": 80,
+        "STEM": 180,
+        "TRIM": 396
+      },
+      "Size": [
+        17.051,
+        23.54,
+        15.977
+      ],
+      "Triangles": 2408
+    },
+    "VelmariBanner": {
+      "Min": [
+        -2.7,
+        0.0,
+        -1.3
+      ],
+      "Roles": {
+        "ALT": 152,
+        "CAP": 120,
+        "FOLIAGE": 144,
+        "GLOW": 156,
+        "TRIM": 64,
+        "WOOD": 46
+      },
+      "Size": [
+        5.532,
+        15.0,
+        3.01
+      ],
+      "Triangles": 682
+    }
+  },
+  "Unit": "studs"
+}
