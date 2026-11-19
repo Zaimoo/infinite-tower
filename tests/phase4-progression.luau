@@ -567,4 +567,53 @@ test("Phase 5: store summon packs become Gems for players restricted from paid r
 	end
 end)
 
+test("Guide: Ready your squad does not repeat after Squad or Clear, and respects Later", function()
+	local GuideLessons = require(nodes["ServerScriptService.Core.GuideLessons"])
+	local ArtifactCatalog = require(nodes["ReplicatedStorage.Shared.Config.ArtifactCatalog"])
+	local state = Onboarding.NewState()
+	local guide = Onboarding.EnsureGuide(state)
+	local profile: any = {
+		Onboarding = state, Unlocks = { Forge = true },
+		Currencies = { Gold = 0, Gems = 0 },
+		Heroes = {
+			a = { UUID = "a", Archetype = "Vanguard", Assignment = "BENCHED", Stars = 1, Level = 1 },
+		},
+		Artifacts = {},
+	}
+	local context: any = { Chain = "v5", Floor = 0, Ready = false, Carrying = false, CanRaid = false, Now = 100, PitLesson = function() return nil end }
+
+	-- Before Squad is done, an empty squad with a rested bench hero teaches the core Squad step.
+	assert(GuideLessons.Select(profile, context).Id == "Squad")
+
+	-- Without a spare rested hero before Squad/Clear, Ready can show once and can be snoozed with Later.
+	profile.Heroes.a.ComaUntilTimestamp = 200
+	assert(GuideLessons.Select(profile, context).Id == "Ready")
+	guide.Snoozed.Ready = 1000
+	assert(GuideLessons.Select(profile, context) == nil, "Later suppresses Ready")
+	guide.Snoozed.Ready = nil
+
+	-- Once Squad is completed, emptying the squad pauses Visit without repeating Ready.
+	guide.Facts.Squad = true
+	profile.Heroes.a.ComaUntilTimestamp = 0
+	assert(GuideLessons.Select(profile, context) == nil, "Ready must not repeat after Squad is done")
+	context.Ready = true
+	assert(GuideLessons.Select(profile, context).Id == "Visit", "Visit resumes once a hero is placed")
+
+	-- After Clear is completed, emptying the squad or wiping never triggers Ready, Raid, or Climb,
+	-- while non-combat Hub lessons still appear normally.
+	guide.Facts.Clear = true
+	guide.Facts.Return = true
+	context.Ready = false
+	context.CanRaid = true
+	assert(GuideLessons.Select(profile, context) == nil, "Ready and Raid do not fire on an empty squad after Clear")
+	context.Floor = 1
+	assert(GuideLessons.Select(profile, context) == nil, "Climb does not fire without a ready squad")
+	context.Ready = true
+	assert(GuideLessons.Select(profile, context).Id == "Climb", "Climb returns once a hero is ready")
+	context.Ready = false
+	context.Floor = 0
+	profile.Currencies.Gold = ArtifactCatalog.Banner.Cost1X
+	assert(GuideLessons.Select(profile, context).Id == "Roll", "non-combat Hub lessons still run")
+end)
+
 print(string.format("phase4-progression: %d tests passed", passed))

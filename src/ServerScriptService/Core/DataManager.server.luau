@@ -1727,6 +1727,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		end
 		local maxSlots = DataManager.MaxSquadSlots(profile)
 		local swappedCount = 0
+		local deployedAny = false
 
 		-- 1. Bench any deployed hero still in a Coma
 		for _, h in pairs(profile.Heroes) do
@@ -1761,10 +1762,14 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 				if bestHero then
 					bestHero.Assignment = slotName
 					swappedCount += 1
+					deployedAny = true
 				end
 			end
 		end
 
+		if deployedAny then
+			OnboardingService.Report(player, "SquadDeployed")
+		end
 		DataManager.SyncProfile(player)
 		DataManager.SendToast(player, string.format("Squad rotated|%d swapped", swappedCount), "SUCCESS")
 		return true, "Auto-swapped exhausted heroes"

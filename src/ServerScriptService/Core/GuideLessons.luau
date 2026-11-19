@@ -158,12 +158,18 @@ local function selectLesson(profile: any, context: Context): Lesson?
 	if atHub and open(Config.Summon) and canSummon(profile) then return Config.Summon end
 	-- v4: step 1's Gems pay for one pull on A Star's Arrival, the banner worth saving for.
 	if v4 and atHub and facts.Summon and open(Config.Limited) and canSummonLimited(profile) then return Config.Limited end
-	-- No hero fit to fight: nothing else can happen until one is placed (also after a wipe).
+	if atHub and open(Config.Squad) and open(Config.Clear) and spareHero(profile, now) then return Config.Squad end
+	-- No hero fit to fight: only nudge once before the squad tutorial / Floor 1 is done (and allow
+	-- Later to dismiss it). Afterward, pause pre-Floor-1 Tower cues until a hero is placed rather
+	-- than repeating "Ready your squad" whenever the player empties their squad or wipes.
 	if not context.Ready then
-		if atHub then return Config.Ready end
-		return nil
+		if atHub and open(Config.Squad) and open(Config.Clear) and available(Config.Ready) then
+			return Config.Ready
+		end
+		if open(Config.Clear) then
+			return nil
+		end
 	end
-	if atHub and open(Config.Squad) and spareHero(profile, now) then return Config.Squad end
 	if open(Config.Clear) then
 		if context.Floor == 1 then return Config.Clear end
 		return if atHub then Config.Visit else nil
@@ -178,7 +184,7 @@ local function selectLesson(profile: any, context: Context): Lesson?
 	if rival and facts.Clear then
 		if open(Config.Steal) then
 			if context.RivalRelic then return Config.Steal end
-			if context.Floor == 1 and not context.Carrying and available(Config.Climb) then return Config.Climb end
+			if context.Floor == 1 and context.Ready and not context.Carrying and available(Config.Climb) then return Config.Climb end
 		elseif open(Config.Duel) and context.RivalActive then
 			return Config.Duel
 		end
@@ -208,7 +214,7 @@ local function selectLesson(profile: any, context: Context): Lesson?
 
 	-- Conditional --------------------------------------------------------------------------------
 	if pit == "Promotion" and available(Config.Promotion) then return Config.Promotion end
-	if facts.Clear and context.CanRaid and available(Config.Raid) then return Config.Raid end
+	if facts.Clear and context.Ready and context.CanRaid and available(Config.Raid) then return Config.Raid end
 	if unlocks.Forge and available(Config.Upgrade) then
 		local artifact = upgradeCandidate(profile)
 		if artifact then
