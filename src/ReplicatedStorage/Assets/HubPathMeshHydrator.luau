@@ -22,9 +22,29 @@ local HubPathMeshHydrator = {}
 
 local COBBLE_COLOR = Color3.fromRGB(116, 112, 98)
 
+local PLOT_BRIDGE_PARTS = {
+	{ shard = "Hub_PlotBridgeDeck", suffix = "_CobbleMesh" },
+	{ shard = "Hub_PlotBridgeParapets", suffix = "_GothicParapets" },
+	{ shard = "Hub_PlotBridgeSpires", suffix = "_HangingSpires" },
+}
+
+local PLOT_BRIDGE_SHARD_SET: { [string]: boolean } = {}
+for _, entry in ipairs(PLOT_BRIDGE_PARTS) do
+	PLOT_BRIDGE_SHARD_SET[entry.shard] = true
+end
+
+local MATERIAL_BY_NAME: { [string]: Enum.Material } = {
+	Cobblestone = Enum.Material.Cobblestone,
+	Slate = Enum.Material.Slate,
+	Grass = Enum.Material.Grass,
+	Rock = Enum.Material.Rock,
+}
+
 -- Strong references so Roblox does not GC EditableMeshes backing live MeshParts.
 local activeEditableMeshes: { [Instance]: any } = {}
 local activeTemplateMeshes: { [string]: any } = {}
+local publishedTemplateCache: { [string]: MeshPart } = {}
+local IMPORTER_FIX = CFrame.Angles(0, math.pi, 0)
 
 local function isEditMode(): boolean
 	return RunService:IsStudio() and not RunService:IsRunning()
@@ -66,13 +86,19 @@ local function computeTemplateCorrectionCF(template: Instance): CFrame
 	return CFrame.identity
 end
 
-local function applyBridgeSurfaceStyle(part: BasePart, name: string?)
+local function applyBridgeSurfaceStyle(part: BasePart, shard: HubPathShard?, name: string?)
 	if name then
 		part.Name = name
 	end
-	part.Material = Enum.Material.Cobblestone
+	if shard then
+		part.Material = MATERIAL_BY_NAME[shard.material] or Enum.Material.Cobblestone
+		local c = shard.color
+		part.Color = Color3.fromRGB(c[1], c[2], c[3])
+	else
+		part.Material = Enum.Material.Cobblestone
+		part.Color = COBBLE_COLOR
+	end
 	part.MaterialVariant = ""
-	part.Color = COBBLE_COLOR
 	part.Anchored = true
 	part.CanCollide = false
 	part.CanQuery = false
@@ -165,7 +191,7 @@ local function createHydratedMeshPartFromShard(shard: HubPathShard, worldCF: CFr
 	end
 
 	activeEditableMeshes[meshPart] = em
-	applyBridgeSurfaceStyle(meshPart, displayName or shard.name)
+	applyBridgeSurfaceStyle(meshPart, shard, displayName or shard.name)
 	meshPart.Size = Vector3.new(shard.size[1], shard.size[2], shard.size[3])
 	meshPart.CFrame = worldCF
 	meshPart:SetAttribute("HubPathShard", shard.partName)
@@ -176,14 +202,44 @@ local function createHydratedMeshPartFromShard(shard: HubPathShard, worldCF: CFr
 	return meshPart
 end
 
-local function cloneImportedTemplatePart(template: Instance, partName: string, targetCF: CFrame, displayName: string?, parent: Instance): MeshPart?
+local function clonePublishedMeshPart(shard: HubPathShard, worldCF: CFrame, displayName: string?, parent: Instance): MeshPart?
+	local meshIds = HubPathMeshData.MeshIds
+	local meshId = if meshIds then meshIds[shard.partName] else nil
+	if not meshId or meshId == "" then
+		return nil
+	end
+
+	local cached = publishedTemplateCache[shard.partName]
+	if not cached then
+		local ok, created = pcall(function()
+			return AssetService:CreateMeshPartAsync(Content.fromUri(meshId))
+		end)
+		if ok and created and created:IsA("MeshPart") then
+			cached = created
+			publishedTemplateCache[shard.partName] = cached
+		end
+	end
+	if not cached then
+		return nil
+	end
+
+	local clone = cached:Clone()
+	clone:ClearAllChildren()
+	applyBridgeSurfaceStyle(clone, shard, displayName or shard.name)
+	clone.Size = Vector3.new(shard.size[1], shard.size[2], shard.size[3])
+	clone.CFrame = worldCF * IMPORTER_FIX
+	clone.Parent = parent
+	return clone
+end
+
+local function cloneImportedTemplatePart(template: Instance, partName: string, shard: HubPathShard?, targetCF: CFrame, displayName: string?, parent: Instance): MeshPart?
 	local found = template:FindFirstChild(partName, true)
 	if not found or not found:IsA("MeshPart") then
 		return nil
 	end
 	local clone = found:Clone()
 	clone:ClearAllChildren()
-	applyBridgeSurfaceStyle(clone, displayName or partName)
+	applyBridgeSurfaceStyle(clone, shard, displayName or partName)
 	clone.CFrame = targetCF
 	clone.Parent = parent
 	return clone
@@ -196,22 +252,22 @@ function HubPathMeshHydrator.HydratePendingClientParts(root: Instance): number
 		if desc:IsA("MeshPart") then
 			local shardName = desc:GetAttribute("HubPathShard")
 			if typeof(shardName) == "string" and shardName ~= "" then
+				local shard = HubPathMeshData.ByPartName[shardName]
 				-- Skip if already serialized with valid mesh geometry (Edit-mode bake or published asset)
 				if desc.MeshSize.Magnitude > 0.05 then
 					activeEditableMeshes[desc] = true
-					applyBridgeSurfaceStyle(desc)
+					applyBridgeSurfaceStyle(desc, shard)
 					continue
 				end
 				if template then
 					local found = template:FindFirstChild(shardName, true)
 					if found and found:IsA("MeshPart") then
 						desc:ApplyMesh(found)
-						applyBridgeSurfaceStyle(desc)
+						applyBridgeSurfaceStyle(desc, shard)
 						hydrated += 1
 						continue
 					end
 				end
-				local shard = HubPathMeshData.ByPartName[shardName]
 				if shard and isEditMode() then
 					local em = buildEditableMeshFromShard(shard)
 					if em then
@@ -224,7 +280,7 @@ function HubPathMeshHydrator.HydratePendingClientParts(root: Instance): number
 						end)
 						if ok then
 							activeEditableMeshes[desc] = em
-							applyBridgeSurfaceStyle(desc)
+							applyBridgeSurfaceStyle(desc, shard)
 							hydrated += 1
 						end
 					end
@@ -249,11 +305,11 @@ function HubPathMeshHydrator.BuildHubPaths(parent: Instance, originCF: CFrame): 
 	local templatePivot = if template and template:IsA("Model") then template:GetPivot() else CFrame.identity
 
 	for _, shard in ipairs(HubPathMeshData.Shards) do
-		if shard.partName == "Hub_PlotBridgeDeck" then
-			-- Cache an invisible baked bridge template inside HubCobblePaths in Edit mode
-			-- so BridgeBuilder.Build() can clone it at runtime when FBX is not yet imported.
+		if PLOT_BRIDGE_SHARD_SET[shard.partName] then
+			-- Cache invisible baked bridge templates inside HubCobblePaths in Edit mode
+			-- so BridgeBuilder.Build() can clone them at runtime before FBX import.
 			if not template and isEditMode() then
-				local bakedBridge = createHydratedMeshPartFromShard(shard, originCF * CFrame.new(0, -25, 0), "_BakedBridgeTemplate", model)
+				local bakedBridge = createHydratedMeshPartFromShard(shard, originCF * CFrame.new(0, -30, 0), "_Baked_" .. shard.partName, model)
 				if bakedBridge then
 					bakedBridge.Transparency = 1
 					bakedBridge.CastShadow = false
@@ -267,8 +323,14 @@ function HubPathMeshHydrator.BuildHubPaths(parent: Instance, originCF: CFrame): 
 			local found = template:FindFirstChild(shard.partName, true)
 			if found and found:IsA("MeshPart") then
 				local targetCF = originCF * corrCF * templatePivot:ToObjectSpace(found.CFrame)
-				placed = cloneImportedTemplatePart(template, shard.partName, targetCF, shard.name, model)
+				placed = cloneImportedTemplatePart(template, shard.partName, shard, targetCF, shard.name, model)
 			end
+		end
+
+		if not placed then
+			local ctr = shard.center
+			local worldCF = originCF * CFrame.new(ctr[1], ctr[2], ctr[3])
+			placed = clonePublishedMeshPart(shard, worldCF, shard.name, model)
 		end
 
 		if not placed then
@@ -282,47 +344,71 @@ function HubPathMeshHydrator.BuildHubPaths(parent: Instance, originCF: CFrame): 
 	return model
 end
 
-function HubPathMeshHydrator.BuildPlotBridgeDeck(parent: Instance, bridgeCF: CFrame, bridgeName: string?): BasePart?
-	local shard = HubPathMeshData.ByPartName["Hub_PlotBridgeDeck"]
-	if not shard then
-		return nil
-	end
-
-	local visualName = if bridgeName then (bridgeName .. "_CobbleMesh") else "Hub_PlotBridgeDeck"
+function HubPathMeshHydrator.BuildPlotBridgeDeck(parent: Instance, bridgeCF: CFrame, bridgeName: string?): (BasePart?, boolean)
+	local baseName = bridgeName or "Hub_PlotBridge"
 	local template = getStudioImportTemplate()
-	if template then
-		local found = template:FindFirstChild("Hub_PlotBridgeDeck", true)
-		if found and found:IsA("MeshPart") then
-			local corrCF = computeTemplateCorrectionCF(template)
-			local templatePivot = if template:IsA("Model") then template:GetPivot() else CFrame.identity
-			local relCF = corrCF * templatePivot:ToObjectSpace(found.CFrame)
-			local targetCF = bridgeCF * relCF.Rotation * CFrame.new(0, relCF.Position.Y, 0)
-			return cloneImportedTemplatePart(template, "Hub_PlotBridgeDeck", targetCF, visualName, parent)
-		end
-	end
+	local corrCF = if template then computeTemplateCorrectionCF(template) else CFrame.identity
+	local templatePivot = if template and template:IsA("Model") then template:GetPivot() else CFrame.identity
 
-	local ctr = shard.center
-	local created = createHydratedMeshPartFromShard(shard, bridgeCF * CFrame.new(ctr[1], ctr[2], ctr[3]), visualName, parent)
-	if created then
-		return created
-	end
-
-	-- Runtime fallback before FBX import: clone the baked Edit-mode template kept in MastersCommons.HubCobblePaths
 	local bog = Workspace:FindFirstChild("BaseOverhaulGeometry")
 	local mc = bog and bog:FindFirstChild("MastersCommons")
 	local hcp = mc and mc:FindFirstChild("HubCobblePaths")
-	local bakedTemplate = hcp and hcp:FindFirstChild("_BakedBridgeTemplate")
-	if bakedTemplate and bakedTemplate:IsA("MeshPart") then
-		local clone = bakedTemplate:Clone()
-		clone:ClearAllChildren()
-		clone.Transparency = 0
-		applyBridgeSurfaceStyle(clone, visualName)
-		clone.CFrame = bridgeCF * CFrame.new(ctr[1], ctr[2], ctr[3])
-		clone.Parent = parent
-		return clone
+
+	local primaryDeck: BasePart? = nil
+	local hasParapets = false
+
+	for _, entry in ipairs(PLOT_BRIDGE_PARTS) do
+		local shard = HubPathMeshData.ByPartName[entry.shard]
+		if not shard then
+			continue
+		end
+
+		local visualName = baseName .. entry.suffix
+		local placed: BasePart? = nil
+
+		if template then
+			local found = template:FindFirstChild(entry.shard, true)
+			if found and found:IsA("MeshPart") then
+				local relCF = corrCF * templatePivot:ToObjectSpace(found.CFrame)
+				local targetCF = bridgeCF * relCF
+				placed = cloneImportedTemplatePart(template, entry.shard, shard, targetCF, visualName, parent)
+			end
+		end
+
+		if not placed then
+			local ctr = shard.center
+			placed = clonePublishedMeshPart(shard, bridgeCF * CFrame.new(ctr[1], ctr[2], ctr[3]), visualName, parent)
+		end
+
+		if not placed then
+			local ctr = shard.center
+			placed = createHydratedMeshPartFromShard(shard, bridgeCF * CFrame.new(ctr[1], ctr[2], ctr[3]), visualName, parent)
+		end
+
+		if not placed and hcp then
+			local bakedTemplate = hcp:FindFirstChild("_Baked_" .. entry.shard)
+			if bakedTemplate and bakedTemplate:IsA("MeshPart") then
+				local ctr = shard.center
+				local clone = bakedTemplate:Clone()
+				clone:ClearAllChildren()
+				clone.Transparency = 0
+				applyBridgeSurfaceStyle(clone, shard, visualName)
+				clone.CFrame = bridgeCF * CFrame.new(ctr[1], ctr[2], ctr[3])
+				clone.Parent = parent
+				placed = clone
+			end
+		end
+
+		if placed then
+			if entry.shard == "Hub_PlotBridgeDeck" then
+				primaryDeck = placed
+			elseif entry.shard == "Hub_PlotBridgeParapets" then
+				hasParapets = true
+			end
+		end
 	end
 
-	return nil
+	return primaryDeck, hasParapets
 end
 
 return HubPathMeshHydrator

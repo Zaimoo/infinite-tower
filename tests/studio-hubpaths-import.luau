@@ -3,7 +3,7 @@
 -- Paste/run in Roblox Studio Command Bar after File > Import 3D of:
 --   assets/models/environment/HubCobblePaths.fbx
 -- It normalizes the imported Model into ReplicatedStorage.Assets.Environment.HubCobblePaths,
--- applies the exact Runesmith bridge stone material/color, and rebuilds the Hub paths & bridges.
+-- applies each part's Runesmith/castle material & color, and rebuilds the Hub paths and fantasy bridges.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -22,9 +22,14 @@ imported.Parent = env
 
 for _, desc in imported:GetDescendants() do
 	if desc:IsA("BasePart") then
-		desc.Material = Enum.Material.Cobblestone
+		if desc.Name == "Hub_PlotBridgeParapets" or desc.Name == "Hub_PlotBridgeSpires" then
+			desc.Material = Enum.Material.Slate
+			desc.Color = Color3.fromRGB(104, 106, 110)
+		else
+			desc.Material = Enum.Material.Cobblestone
+			desc.Color = Color3.fromRGB(116, 112, 98)
+		end
 		desc.MaterialVariant = ""
-		desc.Color = Color3.fromRGB(116, 112, 98)
 		desc.Anchored = true
 		desc.CanCollide = false
 		desc.CanQuery = false
@@ -39,4 +44,4 @@ local BridgeBuilder = require(baseOverhaul:WaitForChild("BridgeBuilder"))
 
 HubOverhaul.Build(true)
 BridgeBuilder.Build()
-print("[studio-hubpaths-import] Applied imported HubCobblePaths meshes across Hub paths and IslandTowerBridges.")
+print("[studio-hubpaths-import] Applied imported HubCobblePaths & Fantasy Castle Bridge meshes across Hub and IslandTowerBridges.")

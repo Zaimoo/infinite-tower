@@ -53,16 +53,20 @@ function B.Build()
 		local cf = CFrame.lookAt((a + b) / 2, b)
 		local len = (b - a).Magnitude + 1
 		local deck = part(n, Vector3.new(w, 2, len), cf * CFrame.new(0, -1, 0), false)
+		local hideRailsForGothicBridge = false
 		if sanctuary then
 			deck.Color, deck.Material = SANCTUARY_DECK.Color, SANCTUARY_DECK.Material
 			deck.MaterialVariant = ""
 			if string.sub(n, 1, 13) == "IslandBridge_" and deck.Parent then
 				local hydrator = getHubPathHydrator()
 				if hydrator and type(hydrator.BuildPlotBridgeDeck) == "function" then
-					local visual = hydrator.BuildPlotBridgeDeck(deck.Parent, deck.CFrame, n)
+					local visual, hasParapets = hydrator.BuildPlotBridgeDeck(deck.Parent, deck.CFrame, n)
 					if visual then
 						deck.Transparency = 1
 						deck.CastShadow = false
+					end
+					if hasParapets then
+						hideRailsForGothicBridge = true
 					end
 				end
 			end
@@ -76,6 +80,10 @@ function B.Build()
 				local rail = part(n .. "_Rail", Vector3.new(1, 4, rLen), rCf * CFrame.new(side * (w / 2 - 0.5), 2, 0), true)
 				if sanctuary then
 					rail.Color, rail.Material = SANCTUARY_RAIL.Color, SANCTUARY_RAIL.Material
+					if hideRailsForGothicBridge then
+						rail.Transparency = 1
+						rail.CastShadow = false
+					end
 				end
 			end
 		end

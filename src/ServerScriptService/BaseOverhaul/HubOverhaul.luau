@@ -30,7 +30,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 44 -- Bump to force a rebuild of baked geometry (44: Blender Hub cobble paths & plot bridges with raised side curbs)
+HubOverhaul.Version = 46 -- Bump to force a rebuild of baked geometry (46: Published Blender MeshIds + unified bridge stone color)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
