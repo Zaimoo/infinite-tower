@@ -1,0 +1,25 @@
+{
+  "runesmith_sanctuary": {
+    "Anvil_BasePlate": "rbxassetid://95772396846244",
+    "Anvil_Body": "rbxassetid://134101149388765",
+    "Anvil_MoltenCore": "rbxassetid://84372518610697",
+    "Anvil_SideRunes": "rbxassetid://84487479337904",
+    "Anvil_TopSigil": "rbxassetid://138293463504789",
+    "Bridge_CanopyRings": "rbxassetid://120214754451897",
+    "Bridge_IronLattice": "rbxassetid://73450787290193",
+    "Bridge_StoneAbutments": "rbxassetid://89709035527651",
+    "Bridge_StoneMoss": "rbxassetid://127525689036190",
+    "Bridge_WalkwayDeck": "rbxassetid://134598133991040",
+    "Chains_Iron_Back": "rbxassetid://134581269663959",
+    "Chains_Iron_Front": "rbxassetid://133593272998317",
+    "Chains_Iron_Upper": "rbxassetid://71468422744254",
+    "Hub_ChasmWall": "rbxassetid://101866566487749",
+    "Platform_RimShelves": "rbxassetid://126884890238391",
+    "Platform_RockSpire": "rbxassetid://95842503675611",
+    "Platform_TopFlagstones": "rbxassetid://73730248193740",
+    "Ring_LowerRunes": "rbxassetid://139955338771830",
+    "Ring_LowerStone": "rbxassetid://129504371297530",
+    "Ring_UpperRunes": "rbxassetid://72298022136782",
+    "Ring_UpperStone": "rbxassetid://102958844588508"
+  }
+}

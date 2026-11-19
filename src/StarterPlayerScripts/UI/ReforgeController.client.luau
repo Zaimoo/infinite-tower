@@ -7,8 +7,11 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Assets = ReplicatedStorage:WaitForChild("Assets")
+local RunesmithMeshHydrator = require(Assets:WaitForChild("RunesmithMeshHydrator"))
 local Config = require(Shared:WaitForChild("Config"):WaitForChild("ReforgeConfig"))
 local ArtifactCatalog = require(Shared.Config:WaitForChild("ArtifactCatalog"))
 local Balance = require(Shared.Config:WaitForChild("StatBalance"))
@@ -287,4 +290,30 @@ end)
 profileSync.OnClientEvent:Connect(function()
 	-- HUDController patches _G.CurrentProfile on the same event; read it after that.
 	if gui.Enabled then task.defer(render) end
+end)
+
+-- Hydrate any EditableMesh Runesmith Sanctuary parts locally on the client before Roblox MeshIds are uploaded.
+local function bindStationHydration(station: Instance)
+	RunesmithMeshHydrator.HydratePendingClientParts(station)
+	station.DescendantAdded:Connect(function(desc)
+		if desc:IsA("BasePart") and desc:GetAttribute("PendingBlenderRunesmithMesh") == true then
+			task.defer(function()
+				if desc.Parent then
+					RunesmithMeshHydrator.HydratePendingClientParts(station)
+				end
+			end)
+		end
+	end)
+end
+
+task.spawn(function()
+	local existing = Workspace:FindFirstChild("ReforgeStation")
+	if existing then
+		bindStationHydration(existing)
+	end
+	Workspace.ChildAdded:Connect(function(child)
+		if child.Name == "ReforgeStation" then
+			bindStationHydration(child)
+		end
+	end)
 end)

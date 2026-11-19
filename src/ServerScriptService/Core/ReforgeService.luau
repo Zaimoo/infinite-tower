@@ -16,6 +16,7 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config.ReforgeConfig)
 local HubLayout = require(ReplicatedStorage.Shared.Config.HubLayout)
 local Rules = require(ReplicatedStorage.Shared.Util.ReforgeRules)
+local RunesmithMeshHydrator = require(ReplicatedStorage.Assets.RunesmithMeshHydrator)
 
 export type Dependencies = {
 	GetProfile: (Player) -> any,
@@ -66,13 +67,34 @@ local function handle(player: Player, action: any, uuid: any, choice: any): any
 end
 
 --------------------------------------------------------------------------------------------------------
--- The station: a stone dais with an anvil, a rune brazier and two standing stones, built at
--- HubLayout.ReforgeStationCFrame(). Plain parts, so it needs no uploaded assets and no hub rebake.
+-- The station: Blender-authored Runesmith Sanctuary built at HubLayout.ReforgeStationCFrame()
+-- (chasm rim, mossy-stone & iron-lattice arch bridge, elevated floating platform, concentric
+-- rune rings + chains, and the Runesmith's Anvil), paired with smooth walkable colliders.
 --------------------------------------------------------------------------------------------------------
-local STONE = Color3.fromRGB(92, 88, 98)
-local DARK_STONE = Color3.fromRGB(58, 54, 64)
-local IRON = Color3.fromRGB(46, 46, 52)
-local RUNE = Color3.fromRGB(255, 170, 70)
+local RUNE = Color3.fromRGB(255, 148, 32)
+local GOLD_GLOW = Color3.fromRGB(255, 210, 100)
+local ARCANE_BLUE = Color3.fromRGB(80, 200, 255)
+
+local HOLE_RADIUS = 36.0
+local PLAT_RADIUS = 16.0
+local PLAT_TOP_Y = 5.40
+local BRIDGE_Z_HUB_END = -42.5
+local BRIDGE_Z_HUB_PIER = -37.8
+local BRIDGE_Z_PLAT_PIER = -14.8
+local BRIDGE_Z_PLAT_END = -11.6
+local BRIDGE_HALF_W = 3.60
+
+local function bridgeDeckY(z: number): number
+	if z <= BRIDGE_Z_HUB_PIER then
+		local tIn = math.clamp((z - BRIDGE_Z_HUB_END) / (BRIDGE_Z_HUB_PIER - BRIDGE_Z_HUB_END), 0, 1)
+		return 0.08 + 1.07 * tIn
+	end
+	if z >= BRIDGE_Z_PLAT_PIER then
+		return PLAT_TOP_Y
+	end
+	local t = (z - BRIDGE_Z_HUB_PIER) / (BRIDGE_Z_PLAT_PIER - BRIDGE_Z_HUB_PIER)
+	return 1.15 + (PLAT_TOP_Y - 1.15) * t + 1.65 * math.sin(math.pi * t)
+end
 
 local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material, shape: Enum.PartType?): Part
 	local p = Instance.new("Part")
@@ -90,11 +112,19 @@ local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, c
 	return p
 end
 
+local function collider(parent: Instance, name: string, size: Vector3, cf: CFrame, shape: Enum.PartType?): Part
+	local p = part(parent, name, size, cf, Color3.new(0.5, 0.5, 0.5), Enum.Material.SmoothPlastic, shape)
+	p.Transparency = 1
+	p.CastShadow = false
+	return p
+end
+
 local function decor(p: Part): Part
 	p.CanCollide = false
 	p.CanQuery = false
 	p.CanTouch = false
 	p.CastShadow = false
+	p.Massless = true
 	return p
 end
 
@@ -107,56 +137,93 @@ function ReforgeService.BuildStation(parent: Instance): (Model, ProximityPrompt)
 	model.Name = "ReforgeStation"
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- the prompt and its effects arrive together
 
-	-- Two-step round dais (cylinders lie along X, so turn them upright).
+	-- 1. Visual Blender sanctuary meshes (imported MeshParts -> MeshId -> EditableMesh fallback)
+	local visualFolder = Instance.new("Folder")
+	visualFolder.Name = "SanctuaryMeshes"
+	visualFolder.Parent = model
+	RunesmithMeshHydrator.BuildSanctuary(visualFolder, origin, s)
+
+	-- 2. Smooth walkable & safety colliders matching the Blender geometry
+	local colFolder = Instance.new("Folder")
+	colFolder.Name = "SanctuaryColliders"
+	colFolder.Parent = model
+
 	local upright = CFrame.Angles(0, 0, math.rad(90))
-	part(model, "DaisBase", Vector3.new(1.2 * s, 32 * s, 32 * s), origin * CFrame.new(0, 0.6 * s, 0) * upright, DARK_STONE, Enum.Material.Slate, Enum.PartType.Cylinder)
-	part(model, "DaisTop", Vector3.new(1.2 * s, 24 * s, 24 * s), origin * CFrame.new(0, 1.8 * s, 0) * upright, STONE, Enum.Material.Cobblestone, Enum.PartType.Cylinder)
-	local ring = decor(part(model, "RuneRing", Vector3.new(0.2 * s, 22 * s, 22 * s), origin * CFrame.new(0, 2.45 * s, 0) * upright, RUNE, Enum.Material.Neon, Enum.PartType.Cylinder))
-	ring.Transparency = 0.55
-	part(model, "RuneRingInset", Vector3.new(0.25 * s, 20.5 * s, 20.5 * s), origin * CFrame.new(0, 2.5 * s, 0) * upright, STONE, Enum.Material.Cobblestone, Enum.PartType.Cylinder)
+	local deckHeight = 1.6 * s
+	collider(colFolder, "PlatformDeckCollider", Vector3.new(deckHeight, PLAT_RADIUS * 2 * s, PLAT_RADIUS * 2 * s), origin * CFrame.new(0, (PLAT_TOP_Y - 0.8) * s, 0) * upright, Enum.PartType.Cylinder)
+	collider(colFolder, "AnvilCollider", Vector3.new(6.8 * s, 4.4 * s, 4.6 * s), origin * CFrame.new(-0.3 * s, (PLAT_TOP_Y + 2.2) * s, 0))
 
-	-- The anvil: stump, waist, face and horn.
-	local top = origin * CFrame.new(0, 2.4 * s, 0)
-	part(model, "AnvilStump", Vector3.new(4.6 * s, 2.4 * s, 4.6 * s), top * CFrame.new(0, 1.2 * s, 0), Color3.fromRGB(96, 66, 42), Enum.Material.Wood)
-	part(model, "AnvilWaist", Vector3.new(2.4 * s, 1.6 * s, 1.8 * s), top * CFrame.new(0, 3.2 * s, 0), IRON, Enum.Material.Metal)
-	local face = part(model, "AnvilFace", Vector3.new(5.6 * s, 1.2 * s, 2.4 * s), top * CFrame.new(0, 4.6 * s, 0), IRON, Enum.Material.Metal)
-	local horn = part(model, "AnvilHorn", Vector3.new(2.6 * s, 0.9 * s, 0.9 * s), top * CFrame.new(-3.9 * s, 4.7 * s, 0) * CFrame.Angles(0, 0, math.rad(-8)), IRON, Enum.Material.Metal)
-	horn.Shape = Enum.PartType.Cylinder
-	local glow = decor(part(model, "AnvilGlow", Vector3.new(4.8 * s, 0.1 * s, 1.6 * s), face.CFrame * CFrame.new(0, 0.62 * s, 0), RUNE, Enum.Material.Neon))
-	glow.Transparency = 0.35
-
-	-- A hammer resting on the face.
-	part(model, "HammerHandle", Vector3.new(0.35 * s, 0.35 * s, 3.4 * s), face.CFrame * CFrame.new(1.2 * s, 0.8 * s, 0.4 * s) * CFrame.Angles(0, math.rad(25), 0), Color3.fromRGB(110, 76, 48), Enum.Material.Wood)
-	part(model, "HammerHead", Vector3.new(1.4 * s, 0.8 * s, 0.8 * s), face.CFrame * CFrame.new(1.9 * s, 0.85 * s, -1.0 * s) * CFrame.Angles(0, math.rad(25), 0), IRON, Enum.Material.Metal)
-
-	-- The rune brazier behind the anvil.
-	local brazier = origin * CFrame.new(0, 2.4 * s, 7.5 * s)
-	part(model, "BrazierLeg", Vector3.new(1.2 * s, 3.6 * s, 1.2 * s), brazier * CFrame.new(0, 1.8 * s, 0), IRON, Enum.Material.Metal)
-	local bowl = part(model, "BrazierBowl", Vector3.new(1.4 * s, 4.2 * s, 4.2 * s), brazier * CFrame.new(0, 4.1 * s, 0) * upright, IRON, Enum.Material.Metal, Enum.PartType.Cylinder)
-	local coals = decor(part(model, "BrazierCoals", Vector3.new(0.3 * s, 3.4 * s, 3.4 * s), bowl.CFrame * CFrame.new(0.6 * s, 0, 0), RUNE, Enum.Material.Neon, Enum.PartType.Cylinder))
-	local fire = Instance.new("Fire")
-	fire.Heat = 9
-	fire.Size = 5 * s
-	fire.Color = RUNE
-	fire.SecondaryColor = Color3.fromRGB(255, 90, 40)
-	fire.Parent = coals
-	local light = Instance.new("PointLight")
-	light.Color = RUNE
-	light.Range = 22 * s
-	light.Brightness = 1.6
-	light.Shadows = false
-	light.Parent = coals
-
-	-- Two rune stones flanking the dais.
-	for side = -1, 1, 2 do
-		local stoneCf = origin * CFrame.new(side * 11 * s, 2.4 * s, 4 * s)
-		part(model, "RuneStone", Vector3.new(2.2 * s, 7 * s, 1.4 * s), stoneCf * CFrame.new(0, 3.5 * s, 0) * CFrame.Angles(0, math.rad(side * 12), math.rad(side * 3)), DARK_STONE, Enum.Material.Slate)
-		local mark = decor(part(model, "RuneMark", Vector3.new(0.8 * s, 3.4 * s, 0.1 * s), stoneCf * CFrame.new(0, 4.2 * s, -0.72 * s) * CFrame.Angles(0, math.rad(side * 12), math.rad(side * 3)), RUNE, Enum.Material.Neon))
-		mark.Transparency = 0.2
+	local bridgeSteps = 22
+	for i = 1, bridgeSteps do
+		local z0 = BRIDGE_Z_HUB_END + (BRIDGE_Z_PLAT_END - BRIDGE_Z_HUB_END) * ((i - 1) / bridgeSteps)
+		local z1 = BRIDGE_Z_HUB_END + (BRIDGE_Z_PLAT_END - BRIDGE_Z_HUB_END) * (i / bridgeSteps)
+		local y0, y1 = bridgeDeckY(z0), bridgeDeckY(z1)
+		local dz, dy = z1 - z0, y1 - y0
+		local segLen = math.sqrt(dz * dz + dy * dy) + 0.16
+		local pitch = math.atan2(dy, dz)
+		local deckCf = origin * CFrame.new(0, ((y0 + y1) * 0.5 - 0.36) * s, ((z0 + z1) * 0.5) * s) * CFrame.Angles(-pitch, 0, 0)
+		collider(colFolder, "BridgeRampCollider_" .. i, Vector3.new(BRIDGE_HALF_W * 2 * s, 0.72 * s, segLen * s), deckCf)
+		for _, side in { -1, 1 } do
+			collider(colFolder, "BridgeRailCollider_" .. i .. "_" .. (if side < 0 then "L" else "R"), Vector3.new(0.7 * s, 3.8 * s, segLen * s), deckCf * CFrame.new(side * (BRIDGE_HALF_W + 0.35) * s, 2.0 * s, 0))
+		end
 	end
 
-	-- Invisible trigger with the prompt, and the floating sign above it.
-	local trigger = decor(part(model, "ReforgeTrigger", Vector3.new(8 * s, 6 * s, 8 * s), top * CFrame.new(0, 3 * s, 0), RUNE, Enum.Material.SmoothPlastic))
+	-- Ring of chasm wall colliders around the R = 36 hole (leaving the -Z bridge throat open)
+	local rimSegments = 24
+	local rimStepAngle = math.tau / rimSegments
+	local rimChord = 2 * HOLE_RADIUS * math.tan(rimStepAngle * 0.5) + 1.2
+	for i = 0, rimSegments - 1 do
+		local ang = i * rimStepAngle
+		local rx = math.sin(ang) * (HOLE_RADIUS + 0.5)
+		local rz = -math.cos(ang) * (HOLE_RADIUS + 0.5)
+		if not (rz < -HOLE_RADIUS * 0.72 and math.abs(rx) < 4.5) then
+			local wallCf = CFrame.lookAt((origin * CFrame.new(rx * s, -10.5 * s, rz * s)).Position, (origin * CFrame.new(0, -10.5 * s, 0)).Position)
+			collider(colFolder, "ChasmWallCollider_" .. i, Vector3.new(rimChord * s, 21 * s, 1.6 * s), wallCf)
+		end
+	end
+
+	-- 3. Ambient forge & arcane rune lights + anvil molten ember particles
+	local forgeAnchor = decor(part(model, "ForgeEmberAnchor", Vector3.new(1.5 * s, 0.5 * s, 1.5 * s), origin * CFrame.new(0, (PLAT_TOP_Y + 2.0) * s, -1.6 * s), RUNE, Enum.Material.SmoothPlastic))
+	forgeAnchor.Transparency = 1
+	local forgeLight = Instance.new("PointLight")
+	forgeLight.Color = RUNE
+	forgeLight.Range = 24 * s
+	forgeLight.Brightness = 1.8
+	forgeLight.Shadows = false
+	forgeLight.Parent = forgeAnchor
+
+	local embers = Instance.new("ParticleEmitter")
+	embers.Name = "AnvilForgeEmbers"
+	embers.Texture = "rbxassetid://243660364"
+	embers.Color = ColorSequence.new(GOLD_GLOW, RUNE)
+	embers.LightEmission = 1
+	embers.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.18 * s),
+		NumberSequenceKeypoint.new(0.6, 0.12 * s),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	embers.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	embers.Lifetime = NumberRange.new(1.0, 2.2)
+	embers.Rate = 10
+	embers.Speed = NumberRange.new(1.2, 3.0)
+	embers.SpreadAngle = Vector2.new(45, 45)
+	embers.Acceleration = Vector3.new(0, 2.2, 0)
+	embers.Parent = forgeAnchor
+
+	local ringAnchor = decor(part(model, "RingGlowAnchor", Vector3.new(1, 1, 1), origin * CFrame.new(0, 26.8 * s, 0), ARCANE_BLUE, Enum.Material.SmoothPlastic))
+	ringAnchor.Transparency = 1
+	local ringLight = Instance.new("PointLight")
+	ringLight.Color = ARCANE_BLUE
+	ringLight.Range = 42 * s
+	ringLight.Brightness = 1.6
+	ringLight.Shadows = false
+	ringLight.Parent = ringAnchor
+
+	-- 4. Invisible trigger with the [F] prompt and floating sign over the elevated anvil
+	local trigger = decor(part(model, "ReforgeTrigger", Vector3.new(9 * s, 6 * s, 9 * s), origin * CFrame.new(0, (PLAT_TOP_Y + 3.2) * s, 0), RUNE, Enum.Material.SmoothPlastic))
 	trigger.Transparency = 1
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = Config.PromptName
@@ -169,7 +236,7 @@ function ReforgeService.BuildStation(parent: Instance): (Model, ProximityPrompt)
 
 	local anchor = Instance.new("Attachment")
 	anchor.Name = "SignAnchor"
-	anchor.Position = Vector3.new(0, 9 * s, 0)
+	anchor.Position = Vector3.new(0, 6.2 * s, 0)
 	anchor.Parent = trigger
 	local board = Instance.new("BillboardGui")
 	board.Name = "ReforgeSign"

@@ -346,10 +346,73 @@ local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuild
 	local f = folder("Ground", model)
 	local hx, hz, r = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
 	local th = cfg.TopThickness
+	local midW = hx - r -- 180
 
-	-- Solid rounded rectangle: a full-length middle slab, a side slab each way between the corners, and four
-	-- corner discs. The slabs meet edge to edge; the discs overlap them, so they sit a few hundredths lower.
-	local first = makePart({ Name = "CommonsSurface", Size = Vector3.new((hx - r) * 2, th, hz * 2), CFrame = root * CFrame.new(0, -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
+	-- Centre anchor so model:GetPivot() stays anchored at exact HubCentre regardless of cutout slab splits
+	local anchor = makePart({
+		Name = "CommonsCentreAnchor",
+		Size = Vector3.new(2, th, 2),
+		CFrame = root * CFrame.new(0, -th * 0.5, 0),
+		Color = GRASS,
+		Material = Enum.Material.Grass,
+		Decorative = true,
+		Parent = f,
+	})
+	anchor.Transparency = 1
+
+	-- Middle region [-midW, +midW] x [-hz, +hz] split cleanly around the Runesmith's Anvil chasm cutout
+	local reforge = HubLayout.ReforgeStation
+	local ax, az = reforge.X, reforge.Z
+	local hr = (reforge :: any).HoleRadius or 22
+	local x0, x1 = ax - hr, ax + hr
+	local z0, z1 = az - hr, az + hr
+
+	local function groundSlab(name: string, minX: number, maxX: number, minZ: number, maxZ: number)
+		local w, d = maxX - minX, maxZ - minZ
+		if w <= 0.1 or d <= 0.1 then
+			return
+		end
+		makePart({
+			Name = name,
+			Size = Vector3.new(w, th, d),
+			CFrame = root * CFrame.new((minX + maxX) * 0.5, -th * 0.5, (minZ + maxZ) * 0.5),
+			Color = GRASS,
+			Material = Enum.Material.Grass,
+			Parent = f,
+		})
+	end
+
+	groundSlab("CommonsSurface_West", -midW, x0, -hz, hz)
+	groundSlab("CommonsSurface_East", x1, midW, -hz, hz)
+	groundSlab("CommonsSurface_North", x0, x1, -hz, z0)
+	groundSlab("CommonsSurface_South", x0, x1, z1, hz)
+
+	-- 4 tangent corner wedges filling the square-to-circle spandrels outside R = hr
+	local leg = hr * (2 - math.sqrt(2))
+	for _, c in { { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 } } do
+		local sx, sz = c[1], c[2]
+		local cx, cz = ax + sx * hr, az + sz * hr
+		local center = (root * CFrame.new(cx - sx * leg * 0.5, -th * 0.5, cz - sz * leg * 0.5)).Position
+		local yAxis: Vector3
+		local zAxis: Vector3
+		if sx * sz > 0 then
+			yAxis = root:VectorToWorldSpace(Vector3.new(-sx, 0, 0))
+			zAxis = root:VectorToWorldSpace(Vector3.new(0, 0, sz))
+		else
+			yAxis = root:VectorToWorldSpace(Vector3.new(0, 0, -sz))
+			zAxis = root:VectorToWorldSpace(Vector3.new(sx, 0, 0))
+		end
+		local xAxis = yAxis:Cross(zAxis)
+		makeWedge({
+			Name = "CommonsSurface_HoleSpandrel",
+			Size = Vector3.new(th, leg, leg),
+			CFrame = CFrame.fromMatrix(center, xAxis, yAxis, zAxis),
+			Color = GRASS,
+			Material = Enum.Material.Grass,
+			Parent = f,
+		})
+	end
+
 	for _, side in { -1, 1 } do
 		makePart({ Name = "CommonsSurface", Size = Vector3.new(r, th, (hz - r) * 2), CFrame = root * CFrame.new(side * (hx - r * 0.5), -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
 	end
@@ -363,14 +426,19 @@ local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuild
 		makePart({ Name = "OuterKerb", Size = Vector3.new(len + 0.6, th - 0.1, 6), CFrame = edgeCF(root, x - nx * 2.9, z - nz * 2.9, nx, nz, -0.3 - layerDrop(kerbIndex)) * CFrame.new(0, -(th - 0.1) * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
 	end, 12)
 
-	-- Rocky underside: chunks around the rim and a tapered mass under the middle
+	-- Rocky underside: chunks around the rim and tapered masses clear of the Runesmith chasm column
 	local under = folder("RockyUnderside", f)
 	walkRoundedRect(hx - 50, hz - 50, r - 40, 90, function(x, z, nx, nz)
+		if (x - ax) ^ 2 + (z - az) ^ 2 < (hr + 46) ^ 2 then
+			return
+		end
 		rockChunk(under, edgeCF(root, x, z, nx, nz, 0), rng:NextNumber(70, 95), 90, rng:NextNumber(50, 80), rng)
 	end)
-	rockChunk(under, root, hx * 1.6, hz * 1.6, 160, rng)
+	rockChunk(under, root * CFrame.new(60, 0, 0), 260, 480, 160, rng)
+	rockChunk(under, root * CFrame.new(-130, 0, 110), 120, 340, 120, rng)
+	rockChunk(under, root * CFrame.new(-130, 0, -276), 110, 52, 95, rng)
 
-	return first
+	return anchor
 end
 
 --============================================================================
@@ -657,6 +725,7 @@ local function buildGarden(model: Model, root: CFrame, rng: Random)
 	local hx, hz, r = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
 	local inset, step = 22, 38
 	local placed = 0
+	local placedTrees: { { number } } = {}
 	for gx = -hx + inset, hx - inset, step do
 		for gz = -hz + inset, hz - inset, step do
 			local x, z = gx + rng:NextNumber(-7, 7), gz + rng:NextNumber(-7, 7)
@@ -676,12 +745,27 @@ local function buildGarden(model: Model, root: CFrame, rng: Random)
 				local roll = rng:NextNumber()
 				if roll < 0.4 then
 					oakTree(f, base, rng)
+					table.insert(placedTrees, { x, z })
 				elseif roll < 0.65 then
 					pineTree(f, base, rng)
+					table.insert(placedTrees, { x, z })
 				elseif roll < 0.82 then
-					flowerBed(f, base, FLOWERS[(placed % #FLOWERS) + 1])
+					-- Keep the NW Runesmith sanctuary lawn free of rectangular flower beds
+					if not (x < -40 and z < -105) then
+						flowerBed(f, base, FLOWERS[(placed % #FLOWERS) + 1])
+					end
 				end
 			end
+		end
+	end
+
+	-- Keep the pine tree relocated cleanly outside the enlarged Runesmith chasm rim
+	for _, spot in { { -166, -218 }, { -126, -240 }, { -92, -228 } } do
+		local sx, sz = spot[1], spot[2]
+		if not nearAny(sx, sz, clear, 2) and not nearAny(sx, sz, placedTrees, 26) then
+			local pos = (root * CFrame.new(sx, 0, sz)).Position
+			pineTree(f, CFrame.new(pos) * CFrame.Angles(0, 0.4, 0), rng)
+			break
 		end
 	end
 end

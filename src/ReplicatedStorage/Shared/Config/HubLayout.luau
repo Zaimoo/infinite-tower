@@ -54,9 +54,20 @@ function HubLayout.RaidPortalLanding(): Vector3
 	local ahead = cf.Position + cf.LookVector * 34
 	return Vector3.new(ahead.X, HubLayout.IslandSurfaceY + 3.5, ahead.Z)
 end
--- Runesmith's Anvil (Weapon Reforge, GDD §7.6): the Raid Portal's mirror on the west side of the Reflecting
--- Pool, facing the island centre. Hub-local; ClearRadius keeps the garden scatter off its dais.
-HubLayout.ReforgeStation = { X = -100, Z = -160, Scale = 1.0, ClearRadius = 26 }
+-- Runesmith's Anvil (Weapon Reforge, GDD §7.6): west/northwest Commons sector between the Plot 3 & Plot 4
+-- paths, facing the island centre. Hub-local; ClearRadius keeps scatter off the R=36 chasm rim and bridge.
+HubLayout.ReforgeStation = {
+	X = -126,
+	Z = -190,
+	Scale = 1.0,
+	ClearRadius = 44,
+	HoleRadius = 36,
+	PlatformRadius = 16.0,
+	PlatformElevation = 5.40,
+	BridgeHubZ = -42.5,
+	BridgePlatformZ = -11.6,
+	BridgeHalfWidth = 3.60,
+}
 function HubLayout.ReforgeStationCFrame(): CFrame
 	local p = HubLayout.ReforgeStation
 	return CFrame.lookAt(HubLayout.HubPoint(p.X, p.Z), HubLayout.HubPoint(0, 0)) -- LookVector faces the island centre
