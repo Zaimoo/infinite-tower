@@ -868,7 +868,7 @@ New players are walked through every feature once, in a fixed order, and held to
 | Lesson | Appears when | Reward |
 | :--- | :--- | :--- |
 | Bank your relic | carrying a relic (takes priority over everything) | |
-| Ready your squad | no hero in the squad is fit to fight (also after a wipe) | |
+| Ready your squad | no hero in the squad is fit to fight before the Set your squad / Floor 1 tutorial is done (never repeats after) | |
 | Promote a hero | a squad hero is at its level cap (Lv.10) and the promotion is affordable | 100 Gems |
 | Join the raid | the Raid Portal is open and the player can enter | |
 | Upgrade a weapon | donors and Gold for a star promotion are in hand | 100 Gems |

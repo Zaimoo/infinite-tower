@@ -181,6 +181,7 @@ function OnboardingService.Init(dependencies: Dependencies)
 					telemetry(player, "GuideSkipped", lessonId, chainId)
 				end
 			end
+			guide.Facts.Ready = true
 			OnboardingService.Push(player, true)
 			dependencies.SyncProfile(player)
 		elseif guide and guide.Enabled and action == "Snooze" and type(id) == "string"
@@ -513,6 +514,7 @@ function OnboardingService.UnlockAll(player: Player)
 	profile.Onboarding.StepIndex = #Onboarding.Steps + 1
 	profile.Onboarding.StepProgress = 0
 	for _, lesson in GuideConfig.Ordered do profile.Onboarding.Guide.Facts[lesson.Id] = true end
+	profile.Onboarding.Guide.Facts.Ready = true
 	profile.Unlocks.Facilities, profile.Unlocks.FortressTree, profile.Unlocks.Pit = true, true, true
 	OnboardingService.Push(player)
 end
