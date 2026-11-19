@@ -810,6 +810,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	if not isHero and not enemySpec and meta and (meta.MobType == "WORLD_BOSS" or meta.MobType == "RIFT_BOSS") then theme = BillboardThemes.Mob.BIOME_BOSS end
 
 	local hl = Instance.new("Highlight")
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
 	hl.FillColor = bodyColor
 	hl.OutlineColor = theme.Accent:Lerp(Color3.new(1, 1, 1), if isHero then 0.45 else 0.2)
 	hl.FillTransparency = 1

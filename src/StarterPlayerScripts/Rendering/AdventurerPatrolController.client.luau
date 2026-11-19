@@ -325,6 +325,7 @@ local function createHeroVisual(
 
 	local hl = Instance.new("Highlight")
 	hl.Name = "OutskirtsHeroHighlight"
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
 	hl.FillColor = Color3.fromRGB(255, 245, 210)
 	hl.FillTransparency = 1
 	hl.OutlineTransparency = 1
@@ -576,6 +577,7 @@ local function realizeMobModel(director: PlotDirector, origin: CFrame, mob: MobV
 
 	local hl = Instance.new("Highlight")
 	hl.Name = "OutskirtsMobHighlight"
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
 	hl.FillColor = Color3.fromRGB(245, 255, 200)
 	hl.FillTransparency = 1
 	hl.OutlineTransparency = 1
