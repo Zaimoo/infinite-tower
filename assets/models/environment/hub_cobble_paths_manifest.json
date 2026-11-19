@@ -1,0 +1,325 @@
+{
+  "fbx": "assets/models/environment/HubCobblePaths.fbx",
+  "uvScaleCobble": 0.25,
+  "uvScaleParapetSlate": 0.16,
+  "uvScaleSpireSlate": 0.14,
+  "curbWidth": 0.56,
+  "curbProudHeight": 0.38,
+  "parts": [
+    {
+      "name": "Hub_GateSpoke_1",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        -136.9117,
+        0.31,
+        122.9878
+      ],
+      "size": [
+        201.1765,
+        0.82,
+        186.0243
+      ],
+      "triCount": 996,
+      "vertCount": 504
+    },
+    {
+      "name": "Hub_GateSpoke_2",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        -146.25,
+        0.31,
+        0.0
+      ],
+      "size": [
+        182.5,
+        0.82,
+        16.0
+      ],
+      "triCount": 132,
+      "vertCount": 72
+    },
+    {
+      "name": "Hub_GateSpoke_3",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        -136.9117,
+        0.31,
+        -122.9878
+      ],
+      "size": [
+        201.1765,
+        0.82,
+        186.0243
+      ],
+      "triCount": 996,
+      "vertCount": 504
+    },
+    {
+      "name": "Hub_GateSpoke_4",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        -60.6957,
+        0.31,
+        -183.6671
+      ],
+      "size": [
+        102.6085,
+        0.82,
+        267.6658
+      ],
+      "triCount": 996,
+      "vertCount": 504
+    },
+    {
+      "name": "Hub_GateSpoke_5",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        60.6957,
+        0.31,
+        -183.6671
+      ],
+      "size": [
+        102.6085,
+        0.82,
+        267.6658
+      ],
+      "triCount": 996,
+      "vertCount": 504
+    },
+    {
+      "name": "Hub_GateSpoke_6",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        136.9117,
+        0.31,
+        -122.9878
+      ],
+      "size": [
+        201.1765,
+        0.82,
+        186.0243
+      ],
+      "triCount": 996,
+      "vertCount": 504
+    },
+    {
+      "name": "Hub_GateSpoke_7",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        146.25,
+        0.31,
+        0.0
+      ],
+      "size": [
+        182.5,
+        0.82,
+        16.0
+      ],
+      "triCount": 132,
+      "vertCount": 72
+    },
+    {
+      "name": "Hub_GateSpoke_8",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        136.9117,
+        0.31,
+        122.9878
+      ],
+      "size": [
+        201.1765,
+        0.82,
+        186.0243
+      ],
+      "triCount": 996,
+      "vertCount": 504
+    },
+    {
+      "name": "Hub_PilgrimsWay",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        0.0,
+        0.31,
+        186.75
+      ],
+      "size": [
+        28.0,
+        0.82,
+        266.5
+      ],
+      "triCount": 208,
+      "vertCount": 112
+    },
+    {
+      "name": "Hub_SpurPath",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        45.8648,
+        0.31,
+        132.8092
+      ],
+      "size": [
+        64.2036,
+        0.82,
+        43.507
+      ],
+      "triCount": 148,
+      "vertCount": 80
+    },
+    {
+      "name": "Hub_PlazaApronDeck",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        85.3289,
+        0.84,
+        155.2587
+      ],
+      "size": [
+        70.8966,
+        0.78,
+        67.5254
+      ],
+      "triCount": 240,
+      "vertCount": 128
+    },
+    {
+      "name": "Hub_OverlookTerraceTop",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        -150.0,
+        5.11,
+        280.0
+      ],
+      "size": [
+        52.8,
+        0.62,
+        36.0
+      ],
+      "triCount": 88,
+      "vertCount": 48
+    },
+    {
+      "name": "Hub_PlotBridgeDeck",
+      "material": "Cobblestone",
+      "colorRGB": [
+        116,
+        112,
+        98
+      ],
+      "center": [
+        0.0,
+        0.435,
+        0.0
+      ],
+      "size": [
+        18.0,
+        2.37,
+        58.0
+      ],
+      "triCount": 228,
+      "vertCount": 120
+    },
+    {
+      "name": "Hub_PlotBridgeParapets",
+      "material": "Slate",
+      "colorRGB": [
+        104,
+        106,
+        110
+      ],
+      "center": [
+        0.0,
+        -2.38,
+        -4.175
+      ],
+      "size": [
+        20.4,
+        20.34,
+        50.35
+      ],
+      "triCount": 6244,
+      "vertCount": 3288
+    },
+    {
+      "name": "Hub_PlotBridgeSpires",
+      "material": "Slate",
+      "colorRGB": [
+        104,
+        106,
+        110
+      ],
+      "center": [
+        0.002,
+        -16.75,
+        -4.144
+      ],
+      "size": [
+        19.8833,
+        22.6,
+        50.0208
+      ],
+      "triCount": 900,
+      "vertCount": 510
+    }
+  ]
+}

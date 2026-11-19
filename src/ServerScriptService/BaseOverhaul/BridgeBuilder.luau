@@ -32,19 +32,44 @@ function B.Build()
 		return p
 	end
 
-	-- Plot bridges belong to the hopeful fortress side: pale warm stone and cream marble rails
-	local SANCTUARY_DECK = { Color = Color3.fromRGB(168, 156, 138), Material = Enum.Material.Cobblestone }
+	-- Plot bridges belong to the hopeful fortress side: Runesmith bridge deck cobble with cream marble rails
+	local SANCTUARY_DECK = { Color = Color3.fromRGB(116, 112, 98), Material = Enum.Material.Cobblestone }
 	local SANCTUARY_RAIL = { Color = Color3.fromRGB(226, 216, 192), Material = Enum.Material.Marble }
 	-- A plot bridge's ends rest on the island's grass and the Commons ground. A deck flush with them
 	-- (both at IslandSurfaceY) z-fights, so the deck sits this much higher: too little to feel underfoot.
 	local PLOT_DECK_LIFT = Vector3.new(0, 0.1, 0)
 
+	local function getHubPathHydrator(): any
+		local rs = game:GetService("ReplicatedStorage")
+		local assets = rs:FindFirstChild("Assets")
+		local mod = assets and assets:FindFirstChild("HubPathMeshHydrator")
+		if mod and mod:IsA("ModuleScript") then
+			return require(mod)
+		end
+		return nil
+	end
+
 	local function span(n: string, a: Vector3, b: Vector3, w: number, rails: boolean, railInset: number?, railEndInset: number?, sanctuary: boolean?)
 		local cf = CFrame.lookAt((a + b) / 2, b)
 		local len = (b - a).Magnitude + 1
 		local deck = part(n, Vector3.new(w, 2, len), cf * CFrame.new(0, -1, 0), false)
+		local hideRailsForGothicBridge = false
 		if sanctuary then
 			deck.Color, deck.Material = SANCTUARY_DECK.Color, SANCTUARY_DECK.Material
+			deck.MaterialVariant = ""
+			if string.sub(n, 1, 13) == "IslandBridge_" and deck.Parent then
+				local hydrator = getHubPathHydrator()
+				if hydrator and type(hydrator.BuildPlotBridgeDeck) == "function" then
+					local visual, hasParapets = hydrator.BuildPlotBridgeDeck(deck.Parent, deck.CFrame, n)
+					if visual then
+						deck.Transparency = 1
+						deck.CastShadow = false
+					end
+					if hasParapets then
+						hideRailsForGothicBridge = true
+					end
+				end
+			end
 		end
 		if rails then
 			local rA = if railInset then a + (b - a).Unit * railInset else a
@@ -55,6 +80,10 @@ function B.Build()
 				local rail = part(n .. "_Rail", Vector3.new(1, 4, rLen), rCf * CFrame.new(side * (w / 2 - 0.5), 2, 0), true)
 				if sanctuary then
 					rail.Color, rail.Material = SANCTUARY_RAIL.Color, SANCTUARY_RAIL.Material
+					if hideRailsForGothicBridge then
+						rail.Transparency = 1
+						rail.CastShadow = false
+					end
 				end
 			end
 		end
