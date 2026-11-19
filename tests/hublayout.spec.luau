@@ -213,6 +213,9 @@ test("Runesmith's Anvil sits in the NW sector west of the pool, clear of the pat
 	local poolZ, poolReach = -160, (26 + 2) * 1.3
 	assert(math.sqrt(s.X ^ 2 + (s.Z - poolZ) ^ 2) - footprint > poolReach + 20, "anvil crowds the Reflecting Pool")
 	assert(math.sqrt((s.X + 192) ^ 2 + (s.Z + 75) ^ 2) - footprint > 54, "anvil crowds the west orchard")
+	-- NW corner outer quadrant (X <= -(HubHalfX - OuterCornerRadius), Z <= -(HubHalfZ - OuterCornerRadius)) must stay strictly outside the chasm hole
+	local cornerX, cornerZ = -(Hub.HubHalfX - Hub.OuterCornerRadius), -(Hub.HubHalfZ - Hub.OuterCornerRadius)
+	assert(math.sqrt((s.X - cornerX) ^ 2 + (s.Z - cornerZ) ^ 2) > s.HoleRadius + 20, "NW corner quadrant boundary must stay well clear of the chasm hole")
 end)
 
 test("Leaderboard Plaza sits in the eastern promenade wedge clear of Pilgrim's Way, the Dais, and Plot 8's path", function()
