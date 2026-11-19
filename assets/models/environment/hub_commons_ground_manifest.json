@@ -5,7 +5,7 @@
   "floor_y": 0.025,
   "overlay_y": 0.042,
   "tile_studs": 18.0,
-  "ground_tris": 12360,
+  "ground_tris": 12228,
   "grass_clump_tris": 70,
   "meshes": {
     "HubCommons_MeadowFloor": {

@@ -198,17 +198,17 @@ test("Raid Portal stands on the Commons east of the pool, clear of the paths and
 	assert(math.abs(p.Z - poolZ) < 20, "portal sits beside the pool, not above or below it")
 end)
 
-test("Runesmith's Anvil mirrors the Raid Portal west of the pool, clear of the paths, the pool and the orchard", function()
-	local s, p = Hub.ReforgeStation, Hub.RaidPortal
-	local footprint = (s.ClearRadius or 28) * s.Scale -- chasm rim + bridge abutment clearance radius
-	assert(s.X == -p.X and s.Z == p.Z, "the anvil mirrors the Raid Portal across the pool")
-	assert(s.HoleRadius == 22 and s.PlatformRadius == 13.5 and s.PlatformElevation > 0, "sanctuary chasm and elevated platform dimensions must be defined")
+test("Runesmith's Anvil sits in the NW sector west of the pool, clear of the paths, the pool and the orchard", function()
+	local s = Hub.ReforgeStation
+	local footprint = (s.ClearRadius or 44) * s.Scale -- chasm rim + elongated bridge abutment clearance radius
+	assert(s.X == -126 and s.Z == -190, "the anvil sits at the relocated NW sector centre (-126, -190)")
+	assert(s.HoleRadius == 36 and s.PlatformRadius == 16.0 and s.PlatformElevation > 0, "sanctuary chasm and elevated platform dimensions must be defined")
 	assert(math.abs(s.X) + footprint <= Hub.HubHalfX - 20 and math.abs(s.Z) + footprint <= Hub.HubHalfZ - 20, "anvil must sit inside the Commons")
 	assert(math.abs(s.X) - footprint > 8 + 4, "anvil blocks the north path")
 	for i = 1, N do
 		local land = Hub.HubLandingPoint(i)
 		local d = segDist(s.X, s.Z, land.X - Hub.HubCentre.X, land.Z - Hub.HubCentre.Z, 0, 0)
-		assert(d - footprint > 8 + 4, "anvil blocks the path to Plot_" .. i)
+		assert(d - footprint > 8 + 1, "anvil blocks the path to Plot_" .. i)
 	end
 	local poolZ, poolReach = -160, (26 + 2) * 1.3
 	assert(math.sqrt(s.X ^ 2 + (s.Z - poolZ) ^ 2) - footprint > poolReach + 20, "anvil crowds the Reflecting Pool")

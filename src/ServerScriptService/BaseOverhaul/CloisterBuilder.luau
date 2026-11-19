@@ -429,14 +429,14 @@ local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuild
 	-- Rocky underside: chunks around the rim and tapered masses clear of the Runesmith chasm column
 	local under = folder("RockyUnderside", f)
 	walkRoundedRect(hx - 50, hz - 50, r - 40, 90, function(x, z, nx, nz)
-		if (x - ax) ^ 2 + (z - az) ^ 2 < 65 ^ 2 then
+		if (x - ax) ^ 2 + (z - az) ^ 2 < (hr + 46) ^ 2 then
 			return
 		end
 		rockChunk(under, edgeCF(root, x, z, nx, nz, 0), rng:NextNumber(70, 95), 90, rng:NextNumber(50, 80), rng)
 	end)
 	rockChunk(under, root * CFrame.new(60, 0, 0), 260, 480, 160, rng)
 	rockChunk(under, root * CFrame.new(-130, 0, 110), 120, 340, 120, rng)
-	rockChunk(under, root * CFrame.new(-130, 0, -245), 110, 100, 100, rng)
+	rockChunk(under, root * CFrame.new(-130, 0, -276), 110, 52, 95, rng)
 
 	return anchor
 end
@@ -725,6 +725,7 @@ local function buildGarden(model: Model, root: CFrame, rng: Random)
 	local hx, hz, r = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
 	local inset, step = 22, 38
 	local placed = 0
+	local placedTrees: { { number } } = {}
 	for gx = -hx + inset, hx - inset, step do
 		for gz = -hz + inset, hz - inset, step do
 			local x, z = gx + rng:NextNumber(-7, 7), gz + rng:NextNumber(-7, 7)
@@ -744,12 +745,27 @@ local function buildGarden(model: Model, root: CFrame, rng: Random)
 				local roll = rng:NextNumber()
 				if roll < 0.4 then
 					oakTree(f, base, rng)
+					table.insert(placedTrees, { x, z })
 				elseif roll < 0.65 then
 					pineTree(f, base, rng)
+					table.insert(placedTrees, { x, z })
 				elseif roll < 0.82 then
-					flowerBed(f, base, FLOWERS[(placed % #FLOWERS) + 1])
+					-- Keep the NW Runesmith sanctuary lawn free of rectangular flower beds
+					if not (x < -40 and z < -105) then
+						flowerBed(f, base, FLOWERS[(placed % #FLOWERS) + 1])
+					end
 				end
 			end
+		end
+	end
+
+	-- Keep the pine tree relocated cleanly outside the enlarged Runesmith chasm rim
+	for _, spot in { { -166, -218 }, { -126, -240 }, { -92, -228 } } do
+		local sx, sz = spot[1], spot[2]
+		if not nearAny(sx, sz, clear, 2) and not nearAny(sx, sz, placedTrees, 26) then
+			local pos = (root * CFrame.new(sx, 0, sz)).Position
+			pineTree(f, CFrame.new(pos) * CFrame.Angles(0, 0.4, 0), rng)
+			break
 		end
 	end
 end

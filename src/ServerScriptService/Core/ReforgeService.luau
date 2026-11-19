@@ -75,24 +75,25 @@ local RUNE = Color3.fromRGB(255, 148, 32)
 local GOLD_GLOW = Color3.fromRGB(255, 210, 100)
 local ARCANE_BLUE = Color3.fromRGB(80, 200, 255)
 
-local HOLE_RADIUS = 22.0
-local PLAT_RADIUS = 13.5
-local PLAT_TOP_Y = 4.55
-local BRIDGE_Z_HUB_END = -27.6
-local BRIDGE_Z_HUB_PIER = -23.8
-local BRIDGE_Z_PLAT_PIER = -12.4
-local BRIDGE_Z_PLAT_END = -9.6
+local HOLE_RADIUS = 36.0
+local PLAT_RADIUS = 16.0
+local PLAT_TOP_Y = 5.40
+local BRIDGE_Z_HUB_END = -42.5
+local BRIDGE_Z_HUB_PIER = -37.8
+local BRIDGE_Z_PLAT_PIER = -14.8
+local BRIDGE_Z_PLAT_END = -11.6
+local BRIDGE_HALF_W = 3.60
 
 local function bridgeDeckY(z: number): number
 	if z <= BRIDGE_Z_HUB_PIER then
 		local tIn = math.clamp((z - BRIDGE_Z_HUB_END) / (BRIDGE_Z_HUB_PIER - BRIDGE_Z_HUB_END), 0, 1)
-		return 0.08 + 0.92 * tIn
+		return 0.08 + 1.07 * tIn
 	end
 	if z >= BRIDGE_Z_PLAT_PIER then
 		return PLAT_TOP_Y
 	end
 	local t = (z - BRIDGE_Z_HUB_PIER) / (BRIDGE_Z_PLAT_PIER - BRIDGE_Z_HUB_PIER)
-	return 1.00 + (PLAT_TOP_Y - 1.00) * t + 1.05 * math.sin(math.pi * t)
+	return 1.15 + (PLAT_TOP_Y - 1.15) * t + 1.65 * math.sin(math.pi * t)
 end
 
 local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material, shape: Enum.PartType?): Part
@@ -152,32 +153,32 @@ function ReforgeService.BuildStation(parent: Instance): (Model, ProximityPrompt)
 	collider(colFolder, "PlatformDeckCollider", Vector3.new(deckHeight, PLAT_RADIUS * 2 * s, PLAT_RADIUS * 2 * s), origin * CFrame.new(0, (PLAT_TOP_Y - 0.8) * s, 0) * upright, Enum.PartType.Cylinder)
 	collider(colFolder, "AnvilCollider", Vector3.new(6.8 * s, 4.4 * s, 4.6 * s), origin * CFrame.new(-0.3 * s, (PLAT_TOP_Y + 2.2) * s, 0))
 
-	local bridgeSteps = 14
+	local bridgeSteps = 22
 	for i = 1, bridgeSteps do
 		local z0 = BRIDGE_Z_HUB_END + (BRIDGE_Z_PLAT_END - BRIDGE_Z_HUB_END) * ((i - 1) / bridgeSteps)
 		local z1 = BRIDGE_Z_HUB_END + (BRIDGE_Z_PLAT_END - BRIDGE_Z_HUB_END) * (i / bridgeSteps)
 		local y0, y1 = bridgeDeckY(z0), bridgeDeckY(z1)
 		local dz, dy = z1 - z0, y1 - y0
-		local segLen = math.sqrt(dz * dz + dy * dy) + 0.14
+		local segLen = math.sqrt(dz * dz + dy * dy) + 0.16
 		local pitch = math.atan2(dy, dz)
-		local deckCf = origin * CFrame.new(0, ((y0 + y1) * 0.5 - 0.31) * s, ((z0 + z1) * 0.5) * s) * CFrame.Angles(-pitch, 0, 0)
-		collider(colFolder, "BridgeRampCollider_" .. i, Vector3.new(5.6 * s, 0.62 * s, segLen * s), deckCf)
+		local deckCf = origin * CFrame.new(0, ((y0 + y1) * 0.5 - 0.36) * s, ((z0 + z1) * 0.5) * s) * CFrame.Angles(-pitch, 0, 0)
+		collider(colFolder, "BridgeRampCollider_" .. i, Vector3.new(BRIDGE_HALF_W * 2 * s, 0.72 * s, segLen * s), deckCf)
 		for _, side in { -1, 1 } do
-			collider(colFolder, "BridgeRailCollider_" .. i .. "_" .. (if side < 0 then "L" else "R"), Vector3.new(0.6 * s, 3.6 * s, segLen * s), deckCf * CFrame.new(side * 3.15 * s, 1.9 * s, 0))
+			collider(colFolder, "BridgeRailCollider_" .. i .. "_" .. (if side < 0 then "L" else "R"), Vector3.new(0.7 * s, 3.8 * s, segLen * s), deckCf * CFrame.new(side * (BRIDGE_HALF_W + 0.35) * s, 2.0 * s, 0))
 		end
 	end
 
-	-- Ring of chasm wall colliders around the R = 22 hole (leaving the -Z bridge throat open)
-	local rimSegments = 16
+	-- Ring of chasm wall colliders around the R = 36 hole (leaving the -Z bridge throat open)
+	local rimSegments = 24
 	local rimStepAngle = math.tau / rimSegments
-	local rimChord = 2 * HOLE_RADIUS * math.tan(rimStepAngle * 0.5) + 1.0
+	local rimChord = 2 * HOLE_RADIUS * math.tan(rimStepAngle * 0.5) + 1.2
 	for i = 0, rimSegments - 1 do
 		local ang = i * rimStepAngle
 		local rx = math.sin(ang) * (HOLE_RADIUS + 0.5)
 		local rz = -math.cos(ang) * (HOLE_RADIUS + 0.5)
-		if not (rz < -HOLE_RADIUS * 0.72 and math.abs(rx) < 3.6) then
-			local wallCf = CFrame.lookAt((origin * CFrame.new(rx * s, -8.5 * s, rz * s)).Position, (origin * CFrame.new(0, -8.5 * s, 0)).Position)
-			collider(colFolder, "ChasmWallCollider_" .. i, Vector3.new(rimChord * s, 17 * s, 1.4 * s), wallCf)
+		if not (rz < -HOLE_RADIUS * 0.72 and math.abs(rx) < 4.5) then
+			local wallCf = CFrame.lookAt((origin * CFrame.new(rx * s, -10.5 * s, rz * s)).Position, (origin * CFrame.new(0, -10.5 * s, 0)).Position)
+			collider(colFolder, "ChasmWallCollider_" .. i, Vector3.new(rimChord * s, 21 * s, 1.6 * s), wallCf)
 		end
 	end
 
@@ -212,11 +213,11 @@ function ReforgeService.BuildStation(parent: Instance): (Model, ProximityPrompt)
 	embers.Acceleration = Vector3.new(0, 2.2, 0)
 	embers.Parent = forgeAnchor
 
-	local ringAnchor = decor(part(model, "RingGlowAnchor", Vector3.new(1, 1, 1), origin * CFrame.new(0, 24.5 * s, 0), ARCANE_BLUE, Enum.Material.SmoothPlastic))
+	local ringAnchor = decor(part(model, "RingGlowAnchor", Vector3.new(1, 1, 1), origin * CFrame.new(0, 26.8 * s, 0), ARCANE_BLUE, Enum.Material.SmoothPlastic))
 	ringAnchor.Transparency = 1
 	local ringLight = Instance.new("PointLight")
 	ringLight.Color = ARCANE_BLUE
-	ringLight.Range = 36 * s
+	ringLight.Range = 42 * s
 	ringLight.Brightness = 1.6
 	ringLight.Shadows = false
 	ringLight.Parent = ringAnchor

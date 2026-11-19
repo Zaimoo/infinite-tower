@@ -73,10 +73,10 @@ POND_BASINS = [
     (-52.1, 233.1, 14.0, 10.5),    # RockeryKoiPond
 ]
 
-# Runesmith's Anvil chasm hole at HubLayout.ReforgeStation (-100, -160)
-REFORGE_HOLE_X = -100.0
-REFORGE_HOLE_Z = -160.0
-REFORGE_HOLE_RADIUS = 22.0
+# Runesmith's Anvil chasm hole at HubLayout.ReforgeStation (-126, -190)
+REFORGE_HOLE_X = -126.0
+REFORGE_HOLE_Z = -190.0
+REFORGE_HOLE_RADIUS = 36.0
 
 PLOT_BRIDGE_LENGTH = 40.0
 PLOT_FRONT_DEPTH = 168.0
@@ -274,15 +274,15 @@ def generate_path_weathering_textures() -> tuple[Path, Path, Path]:
         segments.append((lx, lz, ux * (DAIS_EDGE + 2.0), uz * (DAIS_EDGE + 2.0), 8.0))
     segments.append((10.0, 118.0, 86.0, 156.0, 8.0))
     segments.append((0.0, HUB_HALF_Z, 0.0, DAIS_EDGE + 2.0, 14.0))
-    # Runesmith's Anvil bridge approach dirt-wear (from chasm rim at r=22 out to r=34 toward Dais (0,0))
+    # Runesmith's Anvil bridge approach dirt-wear (from chasm rim at r=36 out to r=49 toward Dais (0,0))
     anvil_len = math.hypot(-REFORGE_HOLE_X, -REFORGE_HOLE_Z)
     aux, auz = -REFORGE_HOLE_X / anvil_len, -REFORGE_HOLE_Z / anvil_len
     segments.append((
-        REFORGE_HOLE_X + aux * (REFORGE_HOLE_RADIUS + 1.5),
-        REFORGE_HOLE_Z + auz * (REFORGE_HOLE_RADIUS + 1.5),
-        REFORGE_HOLE_X + aux * (REFORGE_HOLE_RADIUS + 12.0),
-        REFORGE_HOLE_Z + auz * (REFORGE_HOLE_RADIUS + 12.0),
-        3.6,
+        REFORGE_HOLE_X + aux * (REFORGE_HOLE_RADIUS + 1.0),
+        REFORGE_HOLE_Z + auz * (REFORGE_HOLE_RADIUS + 1.0),
+        REFORGE_HOLE_X + aux * (REFORGE_HOLE_RADIUS + 13.0),
+        REFORGE_HOLE_Z + auz * (REFORGE_HOLE_RADIUS + 13.0),
+        4.2,
     ))
 
     for ax, az, bx, bz, half_w in segments:
@@ -448,9 +448,9 @@ def _build_rounded_rect_sheet(
     r = OUTER_CORNER_RADIUS - inset
     nx, nz = 48, 64
 
-    # Window in the 10-stud grid enclosing the Runesmith's Anvil chasm hole at (-100, -160)
-    hole_ix0, hole_ix1 = 11, 17
-    hole_iz0, hole_iz1 = 13, 19
+    # Window in the 10-stud grid enclosing the R=36 Runesmith's Anvil chasm hole at (-126, -190)
+    hole_ix0, hole_ix1 = 7, 16
+    hole_iz0, hole_iz1 = 8, 18
 
     def set_top_uv(loop: bmesh.types.BMLoop, co: Vector) -> None:
         if island_uv:

@@ -88,7 +88,7 @@ local function buildCircleExclusions(): { CircleExclusion }
 		{ x = -52.1, z = 233.1, r = 20 }, -- RockeryKoiPond
 		{ x = 157, z = 43.4, r = 18 }, -- SteppingStreamPond
 		{ x = HubLayout.RaidPortal.X, z = HubLayout.RaidPortal.Z, r = 20 },
-		{ x = HubLayout.ReforgeStation.X, z = HubLayout.ReforgeStation.Z, r = 28.5 },
+		{ x = HubLayout.ReforgeStation.X, z = HubLayout.ReforgeStation.Z, r = ((HubLayout.ReforgeStation :: any).ClearRadius or 44) + 1.5 },
 	}
 	local c = HubLayout.HubCentre
 	for i = 1, HubLayout.PlotCount do

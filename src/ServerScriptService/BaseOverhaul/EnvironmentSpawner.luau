@@ -65,7 +65,7 @@ EnvironmentSpawner.DefaultGroundTextures = {
 }
 
 local CASTLE_GROUND_VERSION = 4
-local HUB_GROUND_VERSION = 4
+local HUB_GROUND_VERSION = 5
 
 local EXPECTED_HEIGHTS = {
 	HeroOakTree = 17.0,

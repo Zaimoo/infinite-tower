@@ -58,21 +58,21 @@ PREVIEW_DIR = Path(
 MAX_TRIS_PER_PART = 9500
 
 # Spatial layout constants (1 Blender meter = 1 Roblox stud)
-HOLE_RADIUS = 22.0
-PLAT_RADIUS = 13.5
-PLAT_TOP_Y = 4.55
-ANVIL_PLINTH_TOP_Y = 4.72
+HOLE_RADIUS = 36.0
+PLAT_RADIUS = 16.0
+PLAT_TOP_Y = 5.40
+ANVIL_PLINTH_TOP_Y = 5.58
 
-LOWER_RING_Y = 21.5
-LOWER_RING_R = 10.6
-UPPER_RING_Y = 28.6
-UPPER_RING_R = 15.4
+LOWER_RING_Y = 23.0
+LOWER_RING_R = 12.4
+UPPER_RING_Y = 30.5
+UPPER_RING_R = 17.8
 
-BRIDGE_Z_HUB_END = -27.6
-BRIDGE_Z_HUB_PIER = -23.8
-BRIDGE_Z_PLAT_PIER = -12.4
-BRIDGE_Z_PLAT_END = -9.6
-BRIDGE_HALF_W = 2.85
+BRIDGE_Z_HUB_END = -42.5
+BRIDGE_Z_HUB_PIER = -37.8
+BRIDGE_Z_PLAT_PIER = -14.8
+BRIDGE_Z_PLAT_END = -11.6
+BRIDGE_HALF_W = 3.60
 
 
 def r2b(p: tuple[float, float, float] | Vector) -> Vector:
@@ -745,45 +745,45 @@ def build_floating_platform(root_col: bpy.types.Collection, pal: dict[str, bpy.t
     rng = random.Random(7701)
 
     bm_slabs = bmesh.new()
-    outer_pts = _rock_circle_pts(PLAT_RADIUS, 26, seed=101, radial_jitter=0.07, front_notch_flatten=True)
-    add_xz_prism(bm_slabs, outer_pts, PLAT_TOP_Y - 0.95, PLAT_TOP_Y - 0.18, bevel=0.14)
+    outer_pts = _rock_circle_pts(PLAT_RADIUS, 30, seed=101, radial_jitter=0.07, front_notch_flatten=True)
+    add_xz_prism(bm_slabs, outer_pts, PLAT_TOP_Y - 1.05, PLAT_TOP_Y - 0.18, bevel=0.14)
 
-    n_pie = 10
+    n_pie = 12
     for i in range(n_pie):
         a0 = math.tau * i / n_pie + 0.02
         a1 = math.tau * (i + 1) / n_pie - 0.02
-        r_in = 4.2 + rng.uniform(-0.3, 0.3)
-        r_out = PLAT_RADIUS - 0.3 + rng.uniform(-0.5, 0.4)
+        r_in = 4.5 + rng.uniform(-0.3, 0.3)
+        r_out = PLAT_RADIUS - 0.35 + rng.uniform(-0.5, 0.4)
         poly: list[tuple[float, float]] = []
         for a in (a0, (a0 + a1) * 0.5, a1):
             x, z = math.sin(a) * r_out, -math.cos(a) * r_out
-            if z < -PLAT_RADIUS * 0.72 and abs(x) < 4.6:
-                z = max(z, -PLAT_RADIUS + 1.0)
+            if z < -PLAT_RADIUS * 0.72 and abs(x) < 5.6:
+                z = max(z, -PLAT_RADIUS + 1.2)
             poly.append((x, z))
         for a in (a1, a0):
             poly.append((math.sin(a) * r_in, -math.cos(a) * r_in))
         top_y = PLAT_TOP_Y + rng.uniform(-0.04, 0.04)
-        add_xz_prism(bm_slabs, poly, PLAT_TOP_Y - 0.45, top_y, bevel=0.08)
+        add_xz_prism(bm_slabs, poly, PLAT_TOP_Y - 0.50, top_y, bevel=0.08)
 
-    apron_pts = _rock_circle_pts(5.2, 12, seed=202, radial_jitter=0.05)
+    apron_pts = _rock_circle_pts(6.0, 12, seed=202, radial_jitter=0.05)
     add_xz_prism(bm_slabs, apron_pts, PLAT_TOP_Y - 0.25, PLAT_TOP_Y + 0.02, bevel=0.06)
     plinth_pts = [
-        (-3.6, -2.5), (3.6, -2.5), (4.0, 0.0), (3.6, 2.5), (-3.6, 2.5), (-4.0, 0.0)
+        (-3.9, -2.7), (3.9, -2.7), (4.3, 0.0), (3.9, 2.7), (-3.9, 2.7), (-4.3, 0.0)
     ]
     add_xz_prism(bm_slabs, plinth_pts, PLAT_TOP_Y - 0.1, ANVIL_PLINTH_TOP_Y, bevel=0.07)
     commit_bmesh("Platform_TopFlagstones", bm_slabs, col, pal["plat_slab"], smooth_angle_deg=32.0)
 
     bm_dark = bmesh.new()
-    for i in range(14):
-        a = math.tau * i / 14 + 0.2
+    for i in range(16):
+        a = math.tau * i / 16 + 0.2
         if abs(math.sin(a)) < 0.28 and -math.cos(a) < -0.5:
             continue
-        rx = math.sin(a) * (PLAT_RADIUS - 0.8)
-        rz = -math.cos(a) * (PLAT_RADIUS - 0.8)
+        rx = math.sin(a) * (PLAT_RADIUS - 0.9)
+        rz = -math.cos(a) * (PLAT_RADIUS - 0.9)
         add_box(
             bm_dark,
-            (rx, PLAT_TOP_Y - 0.55, rz),
-            (rng.uniform(3.2, 5.2), rng.uniform(0.9, 1.4), rng.uniform(2.6, 3.8)),
+            (rx, PLAT_TOP_Y - 0.62, rz),
+            (rng.uniform(3.6, 5.8), rng.uniform(1.0, 1.5), rng.uniform(3.0, 4.2)),
             rot_deg=(rng.uniform(-6, 6), math.degrees(a), rng.uniform(-6, 6)),
             bevel=0.14,
         )
@@ -791,14 +791,14 @@ def build_floating_platform(root_col: bpy.types.Collection, pal: dict[str, bpy.t
 
     bm_spire = bmesh.new()
     strata = [
-        (3.65, 13.0, 0.12),
-        (1.60, 11.4, 0.16),
-        (-1.20, 9.2, 0.18),
-        (-4.50, 7.2, 0.20),
-        (-8.20, 5.2, 0.22),
-        (-12.0, 3.3, 0.24),
-        (-15.6, 1.7, 0.22),
-        (-18.5, 0.25, 0.05),
+        (4.35, 15.4, 0.12),
+        (1.90, 13.6, 0.16),
+        (-1.40, 11.2, 0.18),
+        (-5.20, 8.8, 0.20),
+        (-9.60, 6.4, 0.22),
+        (-14.2, 4.1, 0.24),
+        (-18.6, 2.0, 0.22),
+        (-22.0, 0.30, 0.05),
     ]
     n_rad = 18
     tmp_spire = bmesh.new()
@@ -826,15 +826,15 @@ def build_floating_platform(root_col: bpy.types.Collection, pal: dict[str, bpy.t
     merge_bmesh(bm_spire, tmp_spire)
     tmp_spire.free()
 
-    for rib_i in range(9):
-        a = math.tau * rib_i / 9 + rng.uniform(-0.15, 0.15)
-        r_mid = rng.uniform(5.8, 8.8)
-        y_mid = rng.uniform(-7.5, 0.5)
-        h_rib = rng.uniform(5.5, 9.5)
+    for rib_i in range(11):
+        a = math.tau * rib_i / 11 + rng.uniform(-0.15, 0.15)
+        r_mid = rng.uniform(6.8, 10.6)
+        y_mid = rng.uniform(-9.0, 0.8)
+        h_rib = rng.uniform(6.5, 11.2)
         add_box(
             bm_spire,
             (math.sin(a) * r_mid, y_mid, -math.cos(a) * r_mid),
-            (rng.uniform(2.6, 4.2), h_rib, rng.uniform(2.4, 3.8)),
+            (rng.uniform(3.0, 4.8), h_rib, rng.uniform(2.8, 4.2)),
             rot_deg=(rng.uniform(-14, 14), math.degrees(a), rng.uniform(-14, 14)),
             bevel=0.18,
         )
@@ -1005,7 +1005,7 @@ def build_floating_rings_and_chains(
     for deg in (45.0, 315.0):
         a = math.radians(deg)
         cx, cz = math.sin(a) * LOWER_RING_R, -math.cos(a) * LOWER_RING_R
-        add_chain(bm_chains_front, Vector((cx, LOWER_RING_Y - 1.18, cz)), Vector((cx, PLAT_TOP_Y + 0.06, cz)), link_pitch=0.72)
+        add_chain(bm_chains_front, Vector((cx, LOWER_RING_Y - 1.18, cz)), Vector((cx, PLAT_TOP_Y + 0.06, cz)), link_pitch=0.78)
         add_box(bm_chains_front, (cx, PLAT_TOP_Y + 0.08, cz), (0.95, 0.22, 0.95), rot_deg=(0, deg, 0), bevel=0.04)
     commit_bmesh("Chains_Iron_Front", bm_chains_front, col, pal["chain_iron"], all_smooth=True)
 
@@ -1013,7 +1013,7 @@ def build_floating_rings_and_chains(
     for deg in (135.0, 225.0):
         a = math.radians(deg)
         cx, cz = math.sin(a) * LOWER_RING_R, -math.cos(a) * LOWER_RING_R
-        add_chain(bm_chains_back, Vector((cx, LOWER_RING_Y - 1.18, cz)), Vector((cx, PLAT_TOP_Y + 0.06, cz)), link_pitch=0.72)
+        add_chain(bm_chains_back, Vector((cx, LOWER_RING_Y - 1.18, cz)), Vector((cx, PLAT_TOP_Y + 0.06, cz)), link_pitch=0.78)
         add_box(bm_chains_back, (cx, PLAT_TOP_Y + 0.08, cz), (0.95, 0.22, 0.95), rot_deg=(0, deg, 0), bevel=0.04)
     commit_bmesh("Chains_Iron_Back", bm_chains_back, col, pal["chain_iron"], all_smooth=True)
 
@@ -1023,13 +1023,13 @@ def build_floating_rings_and_chains(
         a_lo = math.radians(deg + (24.0 if deg < 180 else -24.0))
         p_up = Vector((math.sin(a_up) * (UPPER_RING_R - 0.6), UPPER_RING_Y - 1.55, -math.cos(a_up) * (UPPER_RING_R - 0.6)))
         p_lo = Vector((math.sin(a_lo) * (LOWER_RING_R + 0.2), LOWER_RING_Y + 1.15, -math.cos(a_lo) * (LOWER_RING_R + 0.2)))
-        add_chain(bm_chains_upper, p_up, p_lo, link_pitch=0.74, link_w=0.24, wire_r=0.085)
+        add_chain(bm_chains_upper, p_up, p_lo, link_pitch=0.84, link_w=0.26, wire_r=0.088)
 
     for deg in (90.0, 270.0):
         a = math.radians(deg)
         p_up = Vector((math.sin(a) * (UPPER_RING_R - 1.2), UPPER_RING_Y - 1.45, -math.cos(a) * (UPPER_RING_R - 1.2)))
         p_lo = Vector((math.sin(a) * (LOWER_RING_R + 0.4), LOWER_RING_Y + 1.15, -math.cos(a) * (LOWER_RING_R + 0.4)))
-        add_chain(bm_chains_upper, p_up, p_lo, link_pitch=0.72, link_w=0.24, wire_r=0.085)
+        add_chain(bm_chains_upper, p_up, p_lo, link_pitch=0.82, link_w=0.26, wire_r=0.088)
     commit_bmesh("Chains_Iron_Upper", bm_chains_upper, col, pal["chain_iron"], all_smooth=True)
 
 
@@ -1040,11 +1040,11 @@ def build_floating_rings_and_chains(
 def bridge_deck_y(z: float) -> float:
     if z <= BRIDGE_Z_HUB_PIER:
         t_in = max(0.0, min(1.0, (z - BRIDGE_Z_HUB_END) / (BRIDGE_Z_HUB_PIER - BRIDGE_Z_HUB_END)))
-        return 0.08 + 0.92 * t_in
+        return 0.08 + 1.07 * t_in
     if z >= BRIDGE_Z_PLAT_PIER:
         return PLAT_TOP_Y
     t = (z - BRIDGE_Z_HUB_PIER) / (BRIDGE_Z_PLAT_PIER - BRIDGE_Z_HUB_PIER)
-    return 1.00 + (PLAT_TOP_Y - 1.00) * t + 1.05 * math.sin(math.pi * t)
+    return 1.15 + (PLAT_TOP_Y - 1.15) * t + 1.65 * math.sin(math.pi * t)
 
 
 def _add_finial_pillar(
@@ -1140,9 +1140,9 @@ def build_sanctuary_bridge(root_col: bpy.types.Collection, pal: dict[str, bpy.ty
     col = get_col("SanctuaryBridge", root_col)
 
     bm_deck = bmesh.new()
-    n_span = 22
+    n_span = 34
     hw = BRIDGE_HALF_W
-    deck_t = 0.62
+    deck_t = 0.72
     for i in range(n_span):
         z0 = BRIDGE_Z_HUB_END + (BRIDGE_Z_PLAT_END - BRIDGE_Z_HUB_END) * (i / n_span)
         z1 = BRIDGE_Z_HUB_END + (BRIDGE_Z_PLAT_END - BRIDGE_Z_HUB_END) * ((i + 1) / n_span)
@@ -1155,21 +1155,30 @@ def build_sanctuary_bridge(root_col: bpy.types.Collection, pal: dict[str, bpy.ty
         pitch = -math.degrees(math.atan2(dy, dz))
         add_box(bm_deck, (0.0, ym - deck_t * 0.5, zm), (hw * 2.0, deck_t, seg_len), rot_deg=(pitch, 0, 0), bevel=0.04)
         for sx in (-1.0, 1.0):
-            add_box(bm_deck, (sx * (hw - 0.24), ym + 0.16, zm), (0.48, 0.36, seg_len), rot_deg=(pitch, 0, 0), bevel=0.03)
+            add_box(bm_deck, (sx * (hw - 0.28), ym + 0.18, zm), (0.56, 0.40, seg_len), rot_deg=(pitch, 0, 0), bevel=0.03)
     commit_bmesh("Bridge_WalkwayDeck", bm_deck, col, pal["bridge_deck"], smooth_angle_deg=35.0)
 
     bm_stone = bmesh.new()
     bm_moss = bmesh.new()
     for sx in (-1.0, 1.0):
-        px = sx * (hw + 0.42)
-        _add_finial_pillar(bm_stone, bm_moss, px, -0.20, -27.2, width=1.10, height=2.85)
-        _add_finial_pillar(bm_stone, bm_moss, px, 0.0, -23.8, width=1.28, height=4.45)
-        _add_sloped_wing_wall(bm_stone, bm_moss, px, -27.2, -0.20, 1.95, -23.8, 0.0, 3.15)
+        px = sx * (hw + 0.48)
+        _add_finial_pillar(bm_stone, bm_moss, px, -0.20, -41.9, width=1.25, height=3.10)
+        _add_finial_pillar(bm_stone, bm_moss, px, 0.0, BRIDGE_Z_HUB_PIER, width=1.45, height=4.80)
+        _add_sloped_wing_wall(bm_stone, bm_moss, px, -41.9, -0.20, 2.15, BRIDGE_Z_HUB_PIER, 0.0, 3.45, thickness=0.88)
 
-        _add_finial_pillar(bm_stone, bm_moss, px, PLAT_TOP_Y - 0.55, -12.4, width=1.28, height=4.50)
-        _add_finial_pillar(bm_stone, bm_moss, px, PLAT_TOP_Y - 0.25, -9.6, width=1.10, height=3.05)
+        _add_finial_pillar(bm_stone, bm_moss, px, PLAT_TOP_Y - 0.65, BRIDGE_Z_PLAT_PIER, width=1.45, height=4.85)
+        _add_finial_pillar(bm_stone, bm_moss, px, PLAT_TOP_Y - 0.25, BRIDGE_Z_PLAT_END, width=1.25, height=3.30)
         _add_sloped_wing_wall(
-            bm_stone, bm_moss, px, -12.4, PLAT_TOP_Y - 0.55, PLAT_TOP_Y + 3.05, -9.6, PLAT_TOP_Y - 0.25, PLAT_TOP_Y + 2.00
+            bm_stone,
+            bm_moss,
+            px,
+            BRIDGE_Z_PLAT_PIER,
+            PLAT_TOP_Y - 0.65,
+            PLAT_TOP_Y + 3.35,
+            BRIDGE_Z_PLAT_END,
+            PLAT_TOP_Y - 0.25,
+            PLAT_TOP_Y + 2.20,
+            thickness=0.88,
         )
 
     commit_bmesh("Bridge_StoneAbutments", bm_stone, col, pal["bridge_stone"], smooth_angle_deg=35.0)
@@ -1180,25 +1189,25 @@ def build_sanctuary_bridge(root_col: bpy.types.Collection, pal: dict[str, bpy.ty
     z_a = BRIDGE_Z_HUB_PIER + 0.25
     z_b = BRIDGE_Z_PLAT_PIER - 0.25
     span_z = z_b - z_a
-    samples = 48
+    samples = 56
 
     for sx in (-1.0, 1.0):
-        rx_base = sx * (hw + 0.18)
+        rx_base = sx * (hw + 0.20)
         rail_pts = [
-            Vector((rx_base, bridge_deck_y(z_a + span_z * (k / samples)) + 2.55, z_a + span_z * (k / samples)))
+            Vector((rx_base, bridge_deck_y(z_a + span_z * (k / samples)) + 2.85, z_a + span_z * (k / samples)))
             for k in range(samples + 1)
         ]
-        add_swept_tube(bm_lattice, rail_pts, radius=0.145, segs=8, closed=False)
+        add_swept_tube(bm_lattice, rail_pts, radius=0.17, segs=8, closed=False)
 
         chord_pts = [
             Vector((
                 rx_base,
-                bridge_deck_y(z_a + span_z * (k / samples)) - 0.45 - 1.55 * math.sin(math.pi * k / samples),
+                bridge_deck_y(z_a + span_z * (k / samples)) - 0.55 - 2.10 * math.sin(math.pi * k / samples),
                 z_a + span_z * (k / samples),
             ))
             for k in range(samples + 1)
         ]
-        add_swept_tube(bm_lattice, chord_pts, radius=0.22, segs=8, closed=False)
+        add_swept_tube(bm_lattice, chord_pts, radius=0.25, segs=8, closed=False)
 
         wave_a_pts = []
         wave_b_pts = []
@@ -1207,22 +1216,22 @@ def build_sanctuary_bridge(root_col: bpy.types.Collection, pal: dict[str, bpy.ty
             zz = z_a + span_z * t
             yd = bridge_deck_y(zz)
             env = math.sin(math.pi * t) ** 0.35
-            ya = yd + 0.95 + (1.45 * math.sin(t * math.pi * 6.0) + 0.15) * env
-            yb = yd + 0.55 + (1.85 * math.sin(t * math.pi * 6.0 + math.pi) - 0.55) * env
-            xa = rx_base + sx * 0.12 * math.cos(t * math.pi * 6.0)
-            xb = rx_base - sx * 0.12 * math.cos(t * math.pi * 6.0)
+            ya = yd + 1.05 + (1.65 * math.sin(t * math.pi * 8.0) + 0.15) * env
+            yb = yd + 0.60 + (2.05 * math.sin(t * math.pi * 8.0 + math.pi) - 0.65) * env
+            xa = rx_base + sx * 0.14 * math.cos(t * math.pi * 8.0)
+            xb = rx_base - sx * 0.14 * math.cos(t * math.pi * 8.0)
             wave_a_pts.append(Vector((xa, ya, zz)))
             wave_b_pts.append(Vector((xb, yb, zz)))
-        add_swept_tube(bm_lattice, wave_a_pts, radius=0.135, segs=7, closed=False)
-        add_swept_tube(bm_lattice, wave_b_pts, radius=0.155, segs=7, closed=False)
+        add_swept_tube(bm_lattice, wave_a_pts, radius=0.155, segs=7, closed=False)
+        add_swept_tube(bm_lattice, wave_b_pts, radius=0.175, segs=7, closed=False)
 
         z_mid = (z_a + z_b) * 0.5
         y_mid_deck = bridge_deck_y(z_mid)
         loop_pts: list[Vector] = []
-        loop_segs = 44
-        loop_rz = 4.95
-        loop_ry_up = 8.15
-        loop_ry_dn = 2.65
+        loop_segs = 52
+        loop_rz = 7.40
+        loop_ry_up = 10.20
+        loop_ry_dn = 3.20
         for k in range(loop_segs):
             ang = math.tau * k / loop_segs
             sa, ca = math.sin(ang), math.cos(ang)
@@ -1230,7 +1239,7 @@ def build_sanctuary_bridge(root_col: bpy.types.Collection, pal: dict[str, bpy.ty
             y_off = sa * (loop_ry_up if sa >= 0 else loop_ry_dn)
             lean_x = -sx * max(0.0, y_off) * 0.18
             loop_pts.append(Vector((rx_base + lean_x, y_mid_deck + 0.15 + y_off, z_mid + z_off)))
-        add_swept_tube(bm_canopy, loop_pts, radius=0.15, segs=9, closed=True)
+        add_swept_tube(bm_canopy, loop_pts, radius=0.18, segs=9, closed=True)
 
     commit_bmesh("Bridge_IronLattice", bm_lattice, col, pal["bridge_iron"], all_smooth=True)
     commit_bmesh("Bridge_CanopyRings", bm_canopy, col, pal["bridge_iron"], all_smooth=True)
@@ -1248,14 +1257,14 @@ def build_chasm_rim(root_col: bpy.types.Collection, pal: dict[str, bpy.types.Mat
     # Closed thick annular rocky cliff wall lining the chasm perimeter from lawn level down into void.
     # Inner face sits slightly inside HOLE_RADIUS (21.55 < 22.0) at the top to shield any meadow skirt gap.
     wall_levels = [
-        (0.20, HOLE_RADIUS - 0.78, 0.12),
-        (-1.60, HOLE_RADIUS - 0.65, 0.18),
-        (-4.40, HOLE_RADIUS - 0.15, 0.25),
-        (-8.20, HOLE_RADIUS + 0.35, 0.35),
-        (-12.6, HOLE_RADIUS + 0.80, 0.40),
-        (-17.4, HOLE_RADIUS + 1.25, 0.35),
+        (0.22, HOLE_RADIUS - 0.85, 0.14),
+        (-2.00, HOLE_RADIUS - 0.68, 0.22),
+        (-5.50, HOLE_RADIUS - 0.15, 0.30),
+        (-10.2, HOLE_RADIUS + 0.40, 0.38),
+        (-15.8, HOLE_RADIUS + 0.85, 0.42),
+        (-22.0, HOLE_RADIUS + 1.25, 0.38),
     ]
-    n_wall = 32
+    n_wall = 44
     tmp_cliff = bmesh.new()
     in_rings: list[list[bmesh.types.BMVert]] = []
     out_rings: list[list[bmesh.types.BMVert]] = []
@@ -1267,12 +1276,12 @@ def build_chasm_rim(root_col: bpy.types.Collection, pal: dict[str, bpy.types.Mat
             r_in = wr + rng.uniform(-jit, jit)
             # Keep the top cliff lip flush below bridge approach deck
             sx, cz = math.sin(a), -math.cos(a)
-            if wy > -0.5 and cz < -0.72 and abs(sx * r_in) < 4.4:
-                y_cur = -0.15
+            if wy > -0.5 and cz < -0.72 and abs(sx * r_in) < 5.2:
+                y_cur = -0.20
             else:
                 y_cur = wy
             r_in_ring.append(tmp_cliff.verts.new(r2b((sx * r_in, y_cur, cz * r_in))))
-            r_out = r_in + 1.15
+            r_out = r_in + 1.20
             r_out_ring.append(tmp_cliff.verts.new(r2b((sx * r_out, y_cur, cz * r_out))))
         in_rings.append(r_in_ring)
         out_rings.append(r_out_ring)
@@ -1293,17 +1302,17 @@ def build_chasm_rim(root_col: bpy.types.Collection, pal: dict[str, bpy.types.Mat
     merge_bmesh(bm_wall, tmp_cliff)
     tmp_cliff.free()
 
-    for i in range(44):
-        a = math.tau * i / 44 + rng.uniform(-0.025, 0.025)
-        r_off = HOLE_RADIUS + rng.uniform(-0.20, 0.55)
+    for i in range(64):
+        a = math.tau * i / 64 + rng.uniform(-0.020, 0.020)
+        r_off = HOLE_RADIUS + rng.uniform(-0.25, 0.65)
         rx = math.sin(a) * r_off
         rz = -math.cos(a) * r_off
-        if rz < -HOLE_RADIUS * 0.72 and abs(rx) < 4.4:
+        if rz < -HOLE_RADIUS * 0.72 and abs(rx) < 5.4:
             continue
         add_box(
             bm_wall,
-            (rx, rng.uniform(-0.22, 0.22), rz),
-            (rng.uniform(2.8, 4.5), rng.uniform(0.95, 1.45), rng.uniform(1.8, 2.9)),
+            (rx, rng.uniform(-0.24, 0.28), rz),
+            (rng.uniform(3.2, 5.2), rng.uniform(1.05, 1.65), rng.uniform(2.0, 3.3)),
             rot_deg=(rng.uniform(-9, 9), -math.degrees(a) + rng.uniform(-16, 16), rng.uniform(-9, 9)),
             bevel=0.18,
         )
