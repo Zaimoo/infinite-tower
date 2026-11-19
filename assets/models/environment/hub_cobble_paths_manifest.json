@@ -1,0 +1,209 @@
+{
+  "fbx": "assets/models/environment/HubCobblePaths.fbx",
+  "material": "Cobblestone",
+  "colorRGB": [
+    116,
+    112,
+    98
+  ],
+  "uvScale": 0.25,
+  "curbWidth": 0.56,
+  "curbProudHeight": 0.38,
+  "parts": [
+    {
+      "name": "Hub_GateSpoke_1",
+      "center": [
+        -96.5242,
+        0.31,
+        89.4033
+      ],
+      "size": [
+        286.9516,
+        0.82,
+        263.1935
+      ],
+      "triCount": 220,
+      "vertCount": 116
+    },
+    {
+      "name": "Hub_GateSpoke_2",
+      "center": [
+        -92.3882,
+        0.31,
+        0.0
+      ],
+      "size": [
+        295.2235,
+        0.82,
+        26.0
+      ],
+      "triCount": 244,
+      "vertCount": 128
+    },
+    {
+      "name": "Hub_GateSpoke_3",
+      "center": [
+        -96.5242,
+        0.31,
+        -89.4033
+      ],
+      "size": [
+        286.9516,
+        0.82,
+        263.1935
+      ],
+      "triCount": 220,
+      "vertCount": 116
+    },
+    {
+      "name": "Hub_GateSpoke_4",
+      "center": [
+        -46.1661,
+        0.31,
+        -132.5086
+      ],
+      "size": [
+        141.6678,
+        0.82,
+        374.9829
+      ],
+      "triCount": 220,
+      "vertCount": 116
+    },
+    {
+      "name": "Hub_GateSpoke_5",
+      "center": [
+        46.1661,
+        0.31,
+        -132.5086
+      ],
+      "size": [
+        141.6678,
+        0.82,
+        374.9829
+      ],
+      "triCount": 220,
+      "vertCount": 116
+    },
+    {
+      "name": "Hub_GateSpoke_6",
+      "center": [
+        96.5242,
+        0.31,
+        -89.4033
+      ],
+      "size": [
+        286.9516,
+        0.82,
+        263.1935
+      ],
+      "triCount": 220,
+      "vertCount": 116
+    },
+    {
+      "name": "Hub_GateSpoke_7",
+      "center": [
+        92.3882,
+        0.31,
+        0.0
+      ],
+      "size": [
+        295.2235,
+        0.82,
+        26.0
+      ],
+      "triCount": 244,
+      "vertCount": 128
+    },
+    {
+      "name": "Hub_GateSpoke_8",
+      "center": [
+        96.5242,
+        0.31,
+        89.4033
+      ],
+      "size": [
+        286.9516,
+        0.82,
+        263.1935
+      ],
+      "triCount": 220,
+      "vertCount": 116
+    },
+    {
+      "name": "Hub_PilgrimsWay",
+      "center": [
+        0.0,
+        0.31,
+        186.75
+      ],
+      "size": [
+        28.0,
+        0.82,
+        266.5
+      ],
+      "triCount": 208,
+      "vertCount": 112
+    },
+    {
+      "name": "Hub_SpurPath",
+      "center": [
+        45.8648,
+        0.31,
+        132.8092
+      ],
+      "size": [
+        64.2036,
+        0.82,
+        43.507
+      ],
+      "triCount": 148,
+      "vertCount": 80
+    },
+    {
+      "name": "Hub_PlazaApronDeck",
+      "center": [
+        85.3289,
+        0.84,
+        155.2587
+      ],
+      "size": [
+        70.8966,
+        0.78,
+        67.5254
+      ],
+      "triCount": 240,
+      "vertCount": 128
+    },
+    {
+      "name": "Hub_OverlookTerraceTop",
+      "center": [
+        -150.0,
+        5.11,
+        280.0
+      ],
+      "size": [
+        52.8,
+        0.62,
+        36.0
+      ],
+      "triCount": 88,
+      "vertCount": 48
+    },
+    {
+      "name": "Hub_PlotBridgeDeck",
+      "center": [
+        0.0,
+        0.19,
+        0.0
+      ],
+      "size": [
+        18.0,
+        2.38,
+        58.0
+      ],
+      "triCount": 148,
+      "vertCount": 80
+    }
+  ]
+}

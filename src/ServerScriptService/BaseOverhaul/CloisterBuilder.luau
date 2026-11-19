@@ -44,7 +44,39 @@ CloisterBuilder.Config = {
 local GRASS = Color3.fromRGB(64, 92, 52)
 local SLATE = Color3.fromRGB(58, 62, 68)
 local SLATE_DARK = Color3.fromRGB(40, 42, 48)
-local COBBLE = Color3.fromRGB(92, 88, 84)
+local COBBLE = Color3.fromRGB(116, 112, 98)
+local activeHubCobbleMeshes = false
+
+local function getHubPathHydrator(): any
+	local rs = game:GetService("ReplicatedStorage")
+	local assets = rs:FindFirstChild("Assets")
+	local mod = assets and assets:FindFirstChild("HubPathMeshHydrator")
+	if mod and mod:IsA("ModuleScript") then
+		return require(mod)
+	end
+	return nil
+end
+
+local function applyCobbleColliderStyle(part: BasePart, model: Instance?)
+	local hasMeshes = activeHubCobbleMeshes or (model ~= nil and model:FindFirstChild("HubCobblePaths") ~= nil)
+	if not hasMeshes then
+		local cur: Instance? = part.Parent
+		for _ = 1, 3 do
+			if not cur then
+				break
+			end
+			if cur:FindFirstChild("HubCobblePaths") then
+				hasMeshes = true
+				break
+			end
+			cur = cur.Parent
+		end
+	end
+	if hasMeshes then
+		part.Transparency = 1
+		part.CastShadow = false
+	end
+end
 local MARBLE = Color3.fromRGB(200, 196, 188)
 local STATUE = Color3.fromRGB(222, 218, 208)
 local CRIMSON = Color3.fromRGB(145, 28, 38)
@@ -450,12 +482,20 @@ local function buildEdges(model: Model, root: CFrame, cfg: typeof(CloisterBuilde
 
 	-- Cobbled paths from every landing to the dais. Neighbouring paths cross near the dais, so each sits at
 	-- its own height to avoid z-fighting. (The last entry is the Pilgrim's Way, built by the terrace.)
+	activeHubCobbleMeshes = false
+	local hydrator = getHubPathHydrator()
+	if hydrator and type(hydrator.BuildHubPaths) == "function" then
+		local cobbleModel = hydrator.BuildHubPaths(model, root)
+		activeHubCobbleMeshes = cobbleModel ~= nil and #cobbleModel:GetChildren() > 0
+	end
+
 	local walk = folder("GardenPaths", model)
 	local paths = gardenPaths()
 	for i = 1, #paths - 1 do
 		local p = paths[i]
-		local t = 0.24 + (i % 3) * 0.03
-		flatStrip("GardenPath", root, p[1], p[2], p[3], p[4], p[5], t * 0.5, t, if i % 2 == 0 then COBBLE else COBBLE:Lerp(SLATE, 0.2), Enum.Material.Cobblestone, walk)
+		local t = 0.34
+		local gp = flatStrip("GardenPath", root, p[1], p[2], p[3], p[4], p[5], t * 0.5, t, COBBLE, Enum.Material.Cobblestone, walk)
+		applyCobbleColliderStyle(gp, model)
 	end
 end
 
@@ -471,7 +511,8 @@ local function buildLandings(model: Model, root: CFrame, cfg: typeof(CloisterBui
 		local g = folder("Gate_" .. index, landings)
 		g:SetAttribute("PlotIndex", index)
 		local apron = edgeCF(root, land.X - c.X - slot.DX * 8, land.Z - c.Z - slot.DZ * 8, slot.DX, slot.DZ, 0)
-		makePart({ Name = "Apron", Size = Vector3.new(26, 0.36, 16), CFrame = apron * CFrame.new(0, 0.18, 0), Color = COBBLE, Material = Enum.Material.Cobblestone, Decorative = true, Parent = g })
+		local apronPart = makePart({ Name = "Apron", Size = Vector3.new(26, 0.34, 16), CFrame = apron * CFrame.new(0, 0.17, 0), Color = COBBLE, Material = Enum.Material.Cobblestone, Decorative = true, Parent = g })
+		applyCobbleColliderStyle(apronPart)
 		local rune = cylinderY("GateRune", 4, 0.1, 0.32, apron, CYAN, Enum.Material.Neon, true, g)
 		rune.Transparency = 0.35
 		for _, side in { -1, 1 } do
@@ -495,7 +536,8 @@ local function buildGrandTerrace(model: Model, root: CFrame)
 	local f = folder("PilgrimsWay", model)
 	local hz = HubLayout.HubHalfZ
 	local w = HubLayout.BoulevardWidth
-	flatStrip("Boulevard", root, 0, hz, 0, DAIS_EDGE, w, 0.18, 0.36, COBBLE, Enum.Material.Cobblestone, f)
+	local blvd = flatStrip("Boulevard", root, 0, hz, 0, DAIS_EDGE, w, 0.17, 0.34, COBBLE, Enum.Material.Cobblestone, f)
+	applyCobbleColliderStyle(blvd)
 	flatStrip("CrimsonRunner", root, 0, hz, 0, -50, 10, 0.4, 0.06, CRIMSON, Enum.Material.Granite, f)
 	makePart({
 		Name = "HubArrival",
@@ -972,7 +1014,8 @@ local function buildPavilion(model: Model, root: CFrame)
 
 	-- Low stepped gothic stone apron (no walls or roof blocking sightlines)
 	makePart({ Name = "PlazaApronBase", Size = Vector3.new(78, 0.5, 30), CFrame = p * CFrame.new(0, 0.25, -1), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
-	makePart({ Name = "PlazaApronDeck", Size = Vector3.new(73, 0.4, 25), CFrame = p * CFrame.new(0, 0.65, -1), Color = SLATE, Material = Enum.Material.Cobblestone, Parent = f })
+	local deckPart = makePart({ Name = "PlazaApronDeck", Size = Vector3.new(73, 0.4, 25), CFrame = p * CFrame.new(0, 0.65, -1), Color = COBBLE, Material = Enum.Material.Cobblestone, Parent = f })
+	applyCobbleColliderStyle(deckPart)
 	-- Raised centerpiece plinth step under Top Power so it stands taller than the wings
 	makePart({ Name = "CenterMonolithStep", Size = Vector3.new(26, 0.6, 12), CFrame = p * CFrame.new(0, 1.15, 0.5), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
 
@@ -1042,7 +1085,8 @@ local function buildOverlook(model: Model, root: CFrame)
 	local t = root -- -Z toward the hub, +Z toward the tower
 	local h = 4
 	makePart({ Name = "TerraceBlock", Size = Vector3.new(44, h, 30), CFrame = t * CFrame.new(0, h * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
-	makePart({ Name = "TerraceTop", Size = Vector3.new(44, 0.2, 30), CFrame = t * CFrame.new(0, h + 0.1, 0), Color = COBBLE, Material = Enum.Material.Cobblestone, Decorative = true, Parent = f })
+	local topPart = makePart({ Name = "TerraceTop", Size = Vector3.new(44, 0.2, 30), CFrame = t * CFrame.new(0, h + 0.1, 0), Color = COBBLE, Material = Enum.Material.Cobblestone, Decorative = true, Parent = f })
+	applyCobbleColliderStyle(topPart)
 	-- 16-long ramps at both ends (14°, within the 15° slope rule)
 	local run = 16
 	local ang = math.atan(h / run)

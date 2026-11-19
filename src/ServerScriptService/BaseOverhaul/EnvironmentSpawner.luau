@@ -291,8 +291,13 @@ function EnvironmentSpawner.ApplyGroundMaterials(targetRoots: { Instance }): boo
 				-- Neutralize strong vertex color tint so PBR ground albedo reads crisply
 				desc.Color = Color3.fromRGB(232, 238, 224)
 			elseif hasCobble and mat == Enum.Material.Cobblestone then
-				desc.MaterialVariant = "HubMedievalCobble"
-				desc.Color = Color3.fromRGB(224, 224, 220)
+				if n == "GardenPath" or n == "Boulevard" or n == "Apron" or n == "PlazaApronDeck" or n == "TerraceTop" or string.sub(n, 1, 13) == "IslandBridge_" then
+					desc.MaterialVariant = ""
+					desc.Color = Color3.fromRGB(116, 112, 98)
+				else
+					desc.MaterialVariant = "HubMedievalCobble"
+					desc.Color = Color3.fromRGB(224, 224, 220)
+				end
 			elseif hasEarth and mat == Enum.Material.Ground then
 				desc.MaterialVariant = "HubForestEarth"
 				desc.Color = Color3.fromRGB(228, 218, 206)
