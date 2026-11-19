@@ -8,7 +8,8 @@
 -- A hero in range of its target used to stand still. It now picks one manoeuvre at a time:
 --   EVADE   leave an enemy Special or Signature telegraph before it lands (basic attacks are
 --           taken), at most once per archetype dodge cooldown
---   KITE    a ranged hero backs away from a mob that closed in, staying inside its own range
+--   KITE    a ranged hero backs away from a mob that closed in, staying inside its own range,
+--           slower than most mobs walk and at most once per KITE_COOLDOWN
 --   FLANK   a melee hero takes its own slot on a ring round the target (Strikers go for the back)
 --   SPREAD  a ranged hero sidesteps off an ally it is stacked on
 -- Manoeuvres only run between a hero's own attacks (CombatSimulation holds it for the wind-up),
@@ -61,6 +62,7 @@ export type Input = {
 	LeashRadius: number?,
 	EvadeOnly: boolean?, -- skip positioning: the hero is busy or out of range
 	EvadeOnCooldown: boolean?, -- the hero dodged recently (Profile.EvadeCooldown): it takes this hit
+	KiteOnCooldown: boolean?, -- the hero kited recently (KITE_COOLDOWN): it stands and fights
 }
 
 export type Plan = {
@@ -78,22 +80,25 @@ export type Profile = {
 
 -- Heroes with at least this much reach fight from range: they kite and spread instead of flanking.
 HeroCombatMovement.RANGED_MIN_RANGE = 14.0
--- A telegraph is noticed this long after its wind-up starts.
-HeroCombatMovement.EVADE_REACTION = 0.2
+-- A telegraph is noticed this long after its wind-up starts, so quick Specials land before heroes react.
+HeroCombatMovement.EVADE_REACTION = 0.4
 -- Studs of clearance past the edge of a telegraph.
 HeroCombatMovement.EVADE_MARGIN = 1.6
 -- Extra angle past an arc's edge, in radians.
 HeroCombatMovement.EVADE_ARC_MARGIN = 0.22
 -- Share of the time left that an escape may use; the rest covers a tick of latency.
-HeroCombatMovement.EVADE_TIME_BUDGET = 0.85
-HeroCombatMovement.EVADE_SPEED = 1.0
-HeroCombatMovement.KITE_SPEED = 0.8
+HeroCombatMovement.EVADE_TIME_BUDGET = 0.7
+HeroCombatMovement.EVADE_SPEED = 0.85
+-- Mobs walk 7-12 studs/s. Kiting at 0.5 of a hero's 20 lets a Regular catch up instead of chasing forever.
+HeroCombatMovement.KITE_SPEED = 0.5
 HeroCombatMovement.SHUFFLE_SPEED = 0.55
 -- A ranged hero backs off when a mob is inside AttackRange * KITE_TRIGGER (clamped).
 HeroCombatMovement.KITE_TRIGGER = 0.35
 HeroCombatMovement.KITE_TRIGGER_MIN = 6.0
-HeroCombatMovement.KITE_TRIGGER_MAX = 11.0
-HeroCombatMovement.KITE_STEP = 8.0
+HeroCombatMovement.KITE_TRIGGER_MAX = 9.0
+HeroCombatMovement.KITE_STEP = 5.0
+-- Seconds from the start of one kite until the next may start: in between, a mob that closed in gets its hits.
+HeroCombatMovement.KITE_COOLDOWN = 4.0
 -- Kiting and spreading never leave this share of the hero's own range.
 HeroCombatMovement.RANGE_BAND = 0.9
 -- Melee ring radius as a share of attack range, and the spacing kept along it.
@@ -110,16 +115,16 @@ HeroCombatMovement.MAX_HEIGHT_GAP = 11.0 -- AttackTimeline.Contains ignores targ
 -- When Signatures or several Elites' Specials come closer together than the dodge cooldown, a
 -- hero whose dodge is spent takes the next one: with the Vanguard down, camps and bosses can kill the squad.
 -- The Striker, the most agile, sets the floor; every other archetype waits longer between dodges.
-HeroCombatMovement.EVADE_COOLDOWN_MIN = 8.5
+HeroCombatMovement.EVADE_COOLDOWN_MIN = 14
 local PROFILES: { [string]: Profile } = {
 	Vanguard = { Evades = false, Ring = "GUARD", EvadeCooldown = 0 },
 	Berserker = { Evades = false, Ring = "NEAREST", EvadeCooldown = 0 },
-	Striker = { Evades = true, Ring = "BACK", EvadeCooldown = 8.5 },
-	Marksman = { Evades = true, Ring = "NEAREST", EvadeCooldown = 10.5 },
-	Scholar = { Evades = true, Ring = "NEAREST", EvadeCooldown = 11.5 },
-	Healer = { Evades = true, Ring = "NEAREST", EvadeCooldown = 12.5 },
+	Striker = { Evades = true, Ring = "BACK", EvadeCooldown = 14 },
+	Marksman = { Evades = true, Ring = "NEAREST", EvadeCooldown = 18 },
+	Scholar = { Evades = true, Ring = "NEAREST", EvadeCooldown = 20 },
+	Healer = { Evades = true, Ring = "NEAREST", EvadeCooldown = 22 },
 }
-local DEFAULT_PROFILE: Profile = { Evades = true, Ring = "NEAREST", EvadeCooldown = 10.5 }
+local DEFAULT_PROFILE: Profile = { Evades = true, Ring = "NEAREST", EvadeCooldown = 18 }
 
 function HeroCombatMovement.Profile(archetype: string?): Profile
 	return (archetype and PROFILES[archetype]) or DEFAULT_PROFILE
@@ -453,7 +458,7 @@ function HeroCombatMovement.Plan(input: Input): Plan?
 		return nil
 	end
 	if HeroCombatMovement.IsRanged(input.AttackRange) then
-		return planKite(input) or planSpread(input)
+		return (if input.KiteOnCooldown then nil else planKite(input)) or planSpread(input)
 	end
 	return planFlank(input, profile)
 end

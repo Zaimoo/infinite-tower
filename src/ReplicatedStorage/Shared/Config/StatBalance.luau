@@ -150,30 +150,46 @@ function B.GetFloorStats(floor: number, role: string): any?
 end
 
 -- Floors 1-9 scale tower fights below the legacy reference: Floor 1 fits the starter pair, Floors 5-9 a
--- developing squad with a Rare. From Floor 10 tower fights use the reference curve unchanged. The Floor 10
--- entry only shapes the interpolation for floors 6-9.
+-- developing squad. The Floor 10 entry only shapes the interpolation for floors 6-9.
+-- Raised x1.5 HP and x1.25 ATK (on top of TowerDifficulty) once the first ten-pull guaranteed a Superior:
+-- the old values were playtested against a Rare-led pair and the Superior made the first biome trivial.
 local towerCombatScale = {
-	{ Floor = 1, HP = 0.15, ATK = 0.14 },
-	{ Floor = 2, HP = 0.16, ATK = 0.21 },
-	{ Floor = 3, HP = 0.18, ATK = 0.33 },
-	{ Floor = 4, HP = 0.20, ATK = 0.42 },
-	{ Floor = 5, HP = 0.21, ATK = 0.53 },
-	{ Floor = 10, HP = 0.085, ATK = 0.37 },
+	{ Floor = 1, HP = 0.225, ATK = 0.175 },
+	{ Floor = 2, HP = 0.24, ATK = 0.26 },
+	{ Floor = 3, HP = 0.27, ATK = 0.41 },
+	{ Floor = 4, HP = 0.30, ATK = 0.52 },
+	{ Floor = 5, HP = 0.32, ATK = 0.66 },
+	{ Floor = 10, HP = 0.13, ATK = 0.46 },
 }
+-- Every tower floor (1-50) multiplies the curve by this, so enemies outpace the anchor squads a little:
+-- the guaranteed first-pull Superior and promoted squads were clearing floors faster than intended.
+-- The ATK bump tapers off from AtkTaperFrom to nothing at Floor 50, whose boss is already tuned to the
+-- full 7-star squad's survival (4 hits). Raids read GetFloorStats directly and are not affected.
+B.TowerDifficulty = table.freeze({ HP = 1.35, ATK = 1.2, AtkTaperFrom = 40 })
+function B.TowerDifficultyAt(floor: number): (number, number)
+	local d = B.TowerDifficulty
+	local share = math.clamp((50 - floor) / (50 - d.AtkTaperFrom), 0, 1)
+	return d.HP, 1 + (d.ATK - 1) * share
+end
 
 function B.GetTowerFloorStats(floor: number, role: string): any?
 	local stats = B.GetFloorStats(floor, role)
-	if not stats or floor >= B.CurveStartFloor then return stats end
-	for i = 2, #towerCombatScale do
-		local upper = towerCombatScale[i]
-		if floor <= upper.Floor then
-			local lower = towerCombatScale[i - 1]
-			local t = (floor - lower.Floor) / (upper.Floor - lower.Floor)
-			stats.MaxHP = math.round(stats.MaxHP * lower.HP * (upper.HP / lower.HP) ^ t)
-			stats.ATK = math.max(1, math.round(stats.ATK * lower.ATK * (upper.ATK / lower.ATK) ^ t))
-			break
+	if not stats then return nil end
+	local hpScale, atkScale = B.TowerDifficultyAt(floor)
+	if floor < B.CurveStartFloor then
+		for i = 2, #towerCombatScale do
+			local upper = towerCombatScale[i]
+			if floor <= upper.Floor then
+				local lower = towerCombatScale[i - 1]
+				local t = (floor - lower.Floor) / (upper.Floor - lower.Floor)
+				hpScale *= lower.HP * (upper.HP / lower.HP) ^ t
+				atkScale *= lower.ATK * (upper.ATK / lower.ATK) ^ t
+				break
+			end
 		end
 	end
+	stats.MaxHP = math.round(stats.MaxHP * hpScale)
+	stats.ATK = math.max(1, math.round(stats.ATK * atkScale))
 	return stats
 end
 return table.freeze(B)
