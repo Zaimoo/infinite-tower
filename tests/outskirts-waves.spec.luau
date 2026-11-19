@@ -100,4 +100,81 @@ test("All Outskirts gatehouse, defender, trail, campfire, and treeline spawn way
 	end
 end)
 
+test("IsLocalPointInOutskirts and ClampToOutskirts enforce southern wilderness bounds", function()
+	assert(not OutskirtsRules.IsLocalPointInOutskirts(Vector3.new(12, 0, 50)), "Courtyard north of wall must not be in Outskirts")
+	assert(not OutskirtsRules.IsLocalPointInOutskirts(Vector3.new(12, 0, 59)), "Dividing wall zone Z=59 must not be in Outskirts")
+	assert(not OutskirtsRules.IsLocalPointInOutskirts(Vector3.new(12, 25, 110)), "Far above Outskirts must be rejected")
+	assert(OutskirtsRules.IsLocalPointInOutskirts(Vector3.new(12, 0, 96)), "Guard Post center must be inside Outskirts")
+
+	local clamped = OutskirtsRules.ClampToOutskirts(Vector3.new(200, 5, 20))
+	local cb = OutskirtsRules.SquadSkirmish.ClampBounds
+	assert(clamped.X == cb.MaxX and clamped.Z == cb.MinZ and clamped.Y == 0, "ClampToOutskirts must clamp into OutskirtsGrounds")
+end)
+
+test("ResolveSquadAttackRange handles unarmed melee fallback and ranged/melee bounds", function()
+	local unarmedRange, unarmedRanged = OutskirtsRules.ResolveSquadAttackRange(30, "UNARMED")
+	assert(unarmedRange == 5.0 and not unarmedRanged, "Unarmed must use close melee range")
+
+	local bowRange, bowRanged = OutskirtsRules.ResolveSquadAttackRange(30, "BOW")
+	assert(bowRange == 30 and bowRanged, "Bow should preserve ranged distance")
+
+	local shortStaffRange, staffRanged = OutskirtsRules.ResolveSquadAttackRange(12, "STAFF")
+	assert(shortStaffRange == 22 and staffRanged, "Ranged weapon should clamp to min 22")
+
+	local swordRange, swordRanged = OutskirtsRules.ResolveSquadAttackRange(6, "SWORD_SHIELD")
+	assert(swordRange == 6 and not swordRanged, "Melee weapon should preserve melee range")
+end)
+
+test("ResolveMeleeStandoff fans squad slots cleanly within Outskirts bounds", function()
+	local mobPos = Vector3.new(12, 0, 120)
+	local heroPos = Vector3.new(12, 0, 105)
+	local p1 = OutskirtsRules.ResolveMeleeStandoff(mobPos, heroPos, 1, 6)
+	local p2 = OutskirtsRules.ResolveMeleeStandoff(mobPos, heroPos, 2, 6)
+	local p3 = OutskirtsRules.ResolveMeleeStandoff(mobPos, heroPos, 3, 6)
+	inBounds(p1, "Standoff[1]")
+	inBounds(p2, "Standoff[2]")
+	inBounds(p3, "Standoff[3]")
+	assert((p1 - p2).Magnitude > 1.5 and (p2 - p3).Magnitude > 3.0, "Melee standoffs should fan out around the target")
+end)
+
+test("PickSquadTargetMob respects engage/leash radius, hysteresis, and building threat priority", function()
+	local anchor = Vector3.new(12, 0, 108)
+	local hero = Vector3.new(12, 0, 110)
+	local mobs = {
+		[1] = { Id = 1, Spawned = true, DeathAt = nil, LocalPos = Vector3.new(12, 0, 124), AttackingBuilding = false, TargetsBuildingFirst = false },
+		[2] = { Id = 2, Spawned = true, DeathAt = nil, LocalPos = Vector3.new(12, 0, 121), AttackingBuilding = false, TargetsBuildingFirst = false },
+		[3] = { Id = 3, Spawned = false, DeathAt = nil, LocalPos = Vector3.new(12, 0, 112), AttackingBuilding = false, TargetsBuildingFirst = false },
+		[4] = { Id = 4, Spawned = true, DeathAt = 10, LocalPos = Vector3.new(12, 0, 112), AttackingBuilding = false, TargetsBuildingFirst = false },
+		[5] = { Id = 5, Spawned = true, DeathAt = nil, LocalPos = Vector3.new(12, 0, 152), AttackingBuilding = false, TargetsBuildingFirst = false },
+	}
+	-- Keeps locked mob #1 within hysteresis margin (3 studs diff < 8)
+	local kept = OutskirtsRules.PickSquadTargetMob(hero, anchor, 1, mobs)
+	assert(kept and kept.Id == 1, "Should hold locked target within hysteresis margin")
+
+	-- Without lock, picks nearest spawned alive mob (#2) within EngageRadius (ignores unspawned #3, dead #4, far #5)
+	local fresh = OutskirtsRules.PickSquadTargetMob(hero, anchor, nil, mobs)
+	assert(fresh and fresh.Id == 2, "Should pick nearest live spawned mob within EngageRadius")
+
+	-- Raider attacking Guard Post overrides lock via threat bonus
+	mobs[6] = { Id = 6, Spawned = true, DeathAt = nil, LocalPos = Vector3.new(12, 0, 122), AttackingBuilding = true, TargetsBuildingFirst = true }
+	local urgent = OutskirtsRules.PickSquadTargetMob(hero, anchor, 1, mobs)
+	assert(urgent and urgent.Id == 6, "Should switch to raider actively attacking Building_GuardPost")
+end)
+
+test("ResolveReturnGoal steers through the rear gatehouse when returning into the courtyard", function()
+	local gate = OutskirtsRules.SquadSkirmish.GatehouseReturnPoint
+	local anchorCourtyard = Vector3.new(-20, 0, 30)
+	local farSouthWest = Vector3.new(-30, 0, 110)
+	local wp = OutskirtsRules.ResolveReturnGoal(farSouthWest, anchorCourtyard)
+	assert((wp - gate).Magnitude < 0.01, "Returning from deep Outskirts to courtyard should route via gatehouse threshold")
+
+	local atGate = Vector3.new(14, 0, 66)
+	local wp2 = OutskirtsRules.ResolveReturnGoal(atGate, anchorCourtyard)
+	assert((wp2 - anchorCourtyard).Magnitude < 0.01, "Once at gatehouse threshold, hero should head straight to squad anchor")
+
+	local anchorOutskirts = Vector3.new(20, 0, 100)
+	local wp3 = OutskirtsRules.ResolveReturnGoal(farSouthWest, anchorOutskirts)
+	assert((wp3 - anchorOutskirts).Magnitude < 0.01, "Returning inside Outskirts should head directly to squad anchor")
+end)
+
 print("Outskirts wave tests: " .. passed .. " passed, 0 failed")

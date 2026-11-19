@@ -64,6 +64,7 @@ local HeroSockets = require(HeroRig:WaitForChild("HeroSockets"))
 local HeroClips = require(HeroRig:WaitForChild("HeroClips"))
 local ArchetypeCombatSkills = require(Shared.Config:WaitForChild("ArchetypeCombatSkills"))
 local SkillCutscene = require(script.Parent:WaitForChild("SkillCutscene"))
+local OutskirtsSquadBridge = require(script.Parent:WaitForChild("OutskirtsSquadBridge"))
 
 local AudioFolder = script.Parent.Parent:WaitForChild("Audio")
 local AudioManager = require(AudioFolder:WaitForChild("AudioManager"))
@@ -338,6 +339,40 @@ local function castPoint(rig: Model, name: string): Vector3?
 end
 
 local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
+	if cue and cue.IsOutskirtsCosmetic then
+		return {
+			HeroId = meta and meta.TemplateId,
+			WeaponType = animator.WeaponType,
+			Cue = cue,
+			Origin = shotOrigin(rig),
+			OriginOf = function(name: string): Vector3?
+				if not rig.Parent then
+					return nil
+				end
+				return castPoint(rig, name)
+			end,
+			Target = cue.OutskirtsTargetFn,
+			Self = cue.OutskirtsSelfFn,
+			Allies = cue.OutskirtsAlliesFn,
+			RecentHits = nil,
+			Rig = rig,
+			Enemies = cue.OutskirtsEnemiesFn,
+			Blink = function(position: Vector3, yaw: number, from: number, to: number)
+				local node = VisualNodesByNetId[cue.NetId] :: any
+				if node then
+					local blinks = node.Blinks or {}
+					table.insert(blinks, { Position = position, Yaw = yaw, From = from, To = to })
+					node.Blinks = blinks
+				end
+			end,
+			Twin = nil,
+			Now = Workspace:GetServerTimeNow(),
+			Shake = nil,
+			Sfx = function(soundKey: string, pos: Vector3, delaySeconds: number?, pitch: number?, volumeScale: number?)
+				playCombatSfx(soundKey, pos, delaySeconds, pitch, (volumeScale or 1) * 0.75)
+			end,
+		}
+	end
 	local targetNetId = cue.TargetNetId
 	local ownerUserId = meta and meta.OwnerUserId
 	return {
@@ -468,18 +503,22 @@ local function playSkillCue(node: any, animator: any, cue: any, elapsed: number)
 			local torso = rig:FindFirstChild("UpperTorso")
 			return if torso and torso:IsA("BasePart") then torso.Position else node.RootPart.Position
 		end
+		local feetPos = if cue.OutskirtsSelfFn then cue.OutskirtsSelfFn() else node.CurrentPos
 		local own = meta ~= nil and meta.OwnerUserId == LocalPlayer.UserId
-		local shake = if own then function(magnitude: number)
+		local shake = if own and not cue.IsOutskirtsCosmetic then function(magnitude: number)
 			if not SkillCutscene.Shake(magnitude) then
 				CombatFeedback:ScreenShake(magnitude)
 			end
 		end else nil
+		local sfxFn = if cue.IsOutskirtsCosmetic then function(soundKey: string, pos: Vector3, delaySeconds: number?, pitch: number?, volumeScale: number?)
+			playCombatSfx(soundKey, pos, delaySeconds, pitch, (volumeScale or 1) * 0.75)
+		end else playCombatSfx
 		local strikeAt = clipCue.StartServerTime + clipCue.ReleaseSeconds
 		local ok, err = pcall(function()
 			if SkillVfx.PlayWindup(WindupVfxPool, {
 				HeroId = meta and meta.TemplateId,
 				WeaponType = animator.WeaponType,
-				Feet = node.CurrentPos,
+				Feet = feetPos,
 				Chest = chest,
 				Tip = function(): Vector3?
 					return castPoint(rig, "STAFF_TIP")
@@ -488,17 +527,17 @@ local function playSkillCue(node: any, animator: any, cue: any, elapsed: number)
 				StartAt = cue.StartServerTime,
 				EndAt = strikeAt,
 				Lite = not own,
-				Sfx = playCombatSfx,
+				Sfx = sfxFn,
 				Shake = shake,
 			}) then
 				SkillVfx.PlayWindupRelease(WindupVfxPool, {
 					HeroId = meta and meta.TemplateId,
 					WeaponType = animator.WeaponType,
-					Feet = node.CurrentPos,
+					Feet = feetPos,
 					Chest = chest,
 					Height = height,
 					At = strikeAt,
-					Sfx = playCombatSfx,
+					Sfx = sfxFn,
 					Shake = shake,
 				}, Workspace:GetServerTimeNow())
 			end
@@ -905,6 +944,12 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 				if not ok then
 					warn(`CombatVfx: attack effect failed: {err}`)
 				end
+				if action.Data.OutskirtsOnRelease then
+					local okHit, errHit = pcall(action.Data.OutskirtsOnRelease, Workspace:GetServerTimeNow())
+					if not okHit then
+						warn(`OutskirtsSkirmish: release callback failed: {errHit}`)
+					end
+				end
 			elseif marker == "Charge" and action.Data then
 				local ok, err = pcall(playChargeVfx, rig, animator, meta, action.Data)
 				if not ok then
@@ -965,6 +1010,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 end
 
 local function clearView()
+ OutskirtsSquadBridge.ClearAll()
  CombatFeedback:Clear()
  CombatVfxPool:Clear()
  WindupVfxPool:Clear()
@@ -1137,7 +1183,7 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
    if not new or not old or new.EntityGeneration~=old.EntityGeneration then
     if not new and node.EnemyRig then
      Actions.Tombstones[ActionState.Key(old)]=true;retireVisual(id,Workspace:GetServerTimeNow())
-    else EnemyAnimation.Cancel(node);node.Model:Destroy();VisualNodesByNetId[id]=nil end
+    else OutskirtsSquadBridge.ClearHero(id);EnemyAnimation.Cancel(node);node.Model:Destroy();VisualNodesByNetId[id]=nil end
     EntitySequences[id]=nil
    end
   end
@@ -1205,6 +1251,7 @@ local function stepRender(dt: number)
 	local alpha = math.clamp(dt * 12.0, 0, 1)
 	local camera = Workspace.CurrentCamera
 	local camPos = if camera then camera.CFrame.Position else nil
+	local floorId = if View then (View.FloorId or 0) else 0
 	for _, node in pairs(VisualNodesByNetId) do
 		local n = node :: any
 		local yaw = node.GoalYaw
@@ -1225,7 +1272,17 @@ local function stepRender(dt: number)
 			node.CurrentYaw += diff * math.clamp(dt * 12, 0, 1)
 			yaw = node.CurrentYaw
 		end
-		local camDist = if camPos then (node.CurrentPos - camPos).Magnitude else 0
+		local override = if node.IsHero and floorId == 0 then OutskirtsSquadBridge.GetOverride(node.NetId) else nil
+		if override and (node.StateEnum ~= 1 or node.HpPermille <= 0 or node.WasKnockedOut) then
+			OutskirtsSquadBridge.ClearHero(node.NetId)
+			override = nil
+		end
+		if not override and n.PendingSkillCue and n.PendingSkillCue.IsOutskirtsCosmetic then
+			n.PendingSkillCue = nil
+		end
+		local renderPos = if override then override.VisualPos else node.CurrentPos
+		local renderYaw = if override then override.VisualYaw else yaw
+		local camDist = if camPos then (renderPos - camPos).Magnitude else 0
 		local highlight = node.Highlight
 		if highlight and highlight.Enabled and camDist > HIGHLIGHT_DISTANCE then
 			highlight.Enabled = false
@@ -1241,7 +1298,7 @@ local function stepRender(dt: number)
 		end
 		n.LodAccum = 0
 		local bodyH = (node :: any).RootHeight or node.IsHero and HeroRigSpec.GROUND_OFFSET or (node.RootPart.Size.Y * 0.5)
-		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, yaw, 0)
+		local cf = CFrame.new(renderPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, renderYaw, 0)
 		-- A skill effect (Nyx's Mirror Step) can draw the hero somewhere else for a moment; the
 		-- server position, and everything that reads it, is untouched.
 		-- Positions may sit above the ground (a blink into the air). The latest blink that has
@@ -1270,19 +1327,39 @@ local function stepRender(dt: number)
 			EnemyAnimation.Step(node,stepDt,serverNow)
 		elseif animator then
 			debug.profilebegin("HeroAnimator.Step")
-			-- Hysteresis: positions arrive at 5 Hz, so the lerp gap dips below any single
-			-- threshold between snapshots. Start walking on a clear gap and keep walking until
-			-- the hero has been still for MOVE_GRACE, so Move/Idle do not flicker every frame.
-			local gap = (node.GoalPos - node.CurrentPos).Magnitude
-			local now = os.clock()
-			if gap > MOVE_START_GAP or ((node :: any).WalkingUntil and gap > MOVE_KEEP_GAP) then
-				(node :: any).WalkingUntil = now + MOVE_GRACE
-			end
-			local walking = ((node :: any).WalkingUntil or 0) > now
 			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)
-			-- StateEnum 5: a duel's winner posing through the outro (CombatSimulation VICTORY).
-			local cheering = node.StateEnum == 5 and not isKnockedOut
-			animator:SetLocomotion(if isKnockedOut then "Coma" elseif cheering then "Victory" elseif walking then "Move" else "Idle")
+			local walking = false
+			local moveSpeedScale = 1.0
+			if override then
+				local req = override.PendingAttack
+				if req then
+					override.PendingAttack = nil
+					if not isKnockedOut then
+						if req.Tier == 3 then
+							playSkillCue(node, animator, req.Cue, 0)
+						else
+							animator:PlayAction(req.ActionState, req.CastSeconds, 0, req.Cue)
+						end
+					end
+				end
+				walking = override.Walking
+				moveSpeedScale = if walking then math.clamp(override.MoveSpeedScale or 1.0, 1.0, 2.2) else 1.0
+				animator:SetLocomotion(if isKnockedOut then "Coma" elseif walking then "Move" else "Idle")
+			else
+				-- Hysteresis: positions arrive at 5 Hz, so the lerp gap dips below any single
+				-- threshold between snapshots. Start walking on a clear gap and keep walking until
+				-- the hero has been still for MOVE_GRACE, so Move/Idle do not flicker every frame.
+				local gap = (node.GoalPos - node.CurrentPos).Magnitude
+				local now = os.clock()
+				if gap > MOVE_START_GAP or ((node :: any).WalkingUntil and gap > MOVE_KEEP_GAP) then
+					(node :: any).WalkingUntil = now + MOVE_GRACE
+				end
+				walking = ((node :: any).WalkingUntil or 0) > now
+				-- StateEnum 5: a duel's winner posing through the outro (CombatSimulation VICTORY).
+				local cheering = node.StateEnum == 5 and not isKnockedOut
+				animator:SetLocomotion(if isKnockedOut then "Coma" elseif cheering then "Victory" elseif walking then "Move" else "Idle")
+				moveSpeedScale = if walking then math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2) else 1.0
+			end
 			-- A Skill opens with its wind-up; its own clip starts once the wind-up's time is up.
 			local pendingSkill = (node :: any).PendingSkillCue
 			if pendingSkill and serverNow >= pendingSkill.StartServerTime then
@@ -1292,12 +1369,23 @@ local function stepRender(dt: number)
 					animator:PlayAction("AttackSkill", pendingSkill.CastSeconds, into, pendingSkill)
 				end
 			end
-			local moveSpeedScale = if walking then math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2) else 1.0
 			animator:Step(stepDt, moveSpeedScale)
 			debug.profileend()
 		else
 			n.AnimSpeedScale = math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2)
 			ArtPackVisuals.Animate(node, stepDt, os.clock())
+		end
+		if highlight then
+			if override and os.clock() < override.HitFlashUntil and camDist <= HIGHLIGHT_DISTANCE then
+				highlight.FillColor = Color3.fromRGB(255, 245, 210)
+				highlight.FillTransparency = 0.55
+				highlight.Enabled = true
+				n.OutskirtsFlashing = true
+			elseif n.OutskirtsFlashing then
+				highlight.FillTransparency = 1
+				highlight.Enabled = false
+				n.OutskirtsFlashing = false
+			end
 		end
 		if node.IsHero then
 			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)

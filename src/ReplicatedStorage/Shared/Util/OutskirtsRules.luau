@@ -115,6 +115,29 @@ OutskirtsRules.DefaultArchetypeWeapons = table.freeze({
 	Healer = "TOME",
 })
 
+OutskirtsRules.RangedWeapons = table.freeze({
+	BOW = true,
+	STAFF = true,
+	TOME = true,
+})
+
+OutskirtsRules.SquadSkirmish = table.freeze({
+	EngageRadius = 36,
+	LeashRadius = 44,
+	HysteresisMargin = 8,
+	SprintDisengageDistance = 16,
+	ReturnSnapDistance = 85,
+	ReturnArriveDistance = 0.65,
+	GatehouseReturnPoint = Vector3.new(14, 0, 66),
+	ClampBounds = table.freeze({
+		MinX = -72,
+		MaxX = 72,
+		MinZ = 65,
+		MaxZ = 154,
+	}),
+	AttackCycle = table.freeze({ 1, 1, 2, 1, 3 }),
+})
+
 -- Exact east-west wilderness dirt trail curve from OutskirtsEnvironmentBuilder.
 function OutskirtsRules.TrailZ(x: number): number
 	return 110 + math.sin(x * 0.055) * 8 + math.cos(x * 0.11) * 3
@@ -263,6 +286,125 @@ end
 
 function OutskirtsRules.DefaultWeaponForArchetype(archetype: string?): string
 	return OutskirtsRules.DefaultArchetypeWeapons[archetype or ""] or "SWORD_SHIELD"
+end
+
+local function flatDist(a: Vector3, b: Vector3): number
+	local dx = a.X - b.X
+	local dz = a.Z - b.Z
+	return math.sqrt(dx * dx + dz * dz)
+end
+
+-- Returns true when a plot-local position lies inside the southern Outskirts wilderness (south of the Z=57 dividing wall).
+function OutskirtsRules.IsLocalPointInOutskirts(localPos: Vector3): boolean
+	local b = OutskirtsRules.Bounds
+	return localPos.X >= b.MinX
+		and localPos.X <= b.MaxX
+		and localPos.Z >= b.MinZ
+		and localPos.Z <= b.MaxZ
+		and math.abs(localPos.Y) <= 10
+end
+
+-- Clamps a plot-local position onto OutskirtsGrounds so skirmishing heroes stay clear of the dividing wall and island edges.
+function OutskirtsRules.ClampToOutskirts(localPos: Vector3): Vector3
+	local c = OutskirtsRules.SquadSkirmish.ClampBounds
+	return Vector3.new(
+		math.clamp(localPos.X, c.MinX, c.MaxX),
+		0,
+		math.clamp(localPos.Z, c.MinZ, c.MaxZ)
+	)
+end
+
+-- Resolves visual skirmish range and ranged flag for a squad hero from its weapon type and catalog attack range.
+function OutskirtsRules.ResolveSquadAttackRange(seedAttackRange: number?, weaponType: string?): (number, boolean)
+	local w = weaponType or "UNARMED"
+	if w == "UNARMED" then
+		return 5.0, false
+	end
+	local isRanged = OutskirtsRules.RangedWeapons[w] == true
+	local raw = if type(seedAttackRange) == "number" and seedAttackRange == seedAttackRange then seedAttackRange else 6
+	if isRanged then
+		return math.clamp(raw, 22, 32), true
+	end
+	return math.clamp(raw, 4.8, 7.5), false
+end
+
+-- Computes a slot-spread melee standoff position around a mob inside Outskirts bounds so squadmates fan out.
+function OutskirtsRules.ResolveMeleeStandoff(
+	mobLocalPos: Vector3,
+	heroLocalPos: Vector3,
+	slotIndex: number,
+	desiredRange: number
+): Vector3
+	local dx = heroLocalPos.X - mobLocalPos.X
+	local dz = heroLocalPos.Z - mobLocalPos.Z
+	local baseAngle = if (dx * dx + dz * dz) > 1e-4 then math.atan2(dz, dx) else -math.pi * 0.5
+	local slot = math.clamp(math.floor(slotIndex or 1), 1, 5)
+	-- Spread slots symmetrically around the approach vector: 0, +38, -38, +76, -76 deg.
+	local slotOffsets = { 0, 0.66, -0.66, 1.32, -1.32 }
+	local angle = baseAngle + (slotOffsets[slot] or 0)
+	local radius = math.max(3.6, desiredRange * 0.85)
+	local raw = Vector3.new(
+		mobLocalPos.X + math.cos(angle) * radius,
+		0,
+		mobLocalPos.Z + math.sin(angle) * radius
+	)
+	return OutskirtsRules.ClampToOutskirts(raw)
+end
+
+-- Picks the best live Outskirts mob within engage/leash radius of the squad hero's anchor, with target-lock hysteresis.
+function OutskirtsRules.PickSquadTargetMob(
+	heroLocalPos: Vector3,
+	anchorLocalPos: Vector3,
+	currentTargetId: number?,
+	mobs: { [number]: any }
+): any?
+	local cfg = OutskirtsRules.SquadSkirmish
+	local currentMob = if currentTargetId then mobs[currentTargetId] else nil
+	local currentValid = currentMob ~= nil
+		and currentMob.Spawned == true
+		and currentMob.DeathAt == nil
+		and flatDist(anchorLocalPos, currentMob.LocalPos) <= cfg.LeashRadius
+
+	local function scoreMob(mob: any): number
+		local dist = flatDist(heroLocalPos, mob.LocalPos)
+		local threatBonus = if mob.AttackingBuilding then -18 elseif mob.TargetsBuildingFirst then -6 else 0
+		return dist + threatBonus
+	end
+
+	local bestMob: any? = if currentValid then currentMob else nil
+	local bestScore = if currentValid then scoreMob(currentMob) else math.huge
+
+	for id, mob in pairs(mobs) do
+		if mob.Spawned and mob.DeathAt == nil then
+			local anchorDist = flatDist(anchorLocalPos, mob.LocalPos)
+			if anchorDist <= cfg.EngageRadius then
+				local score = scoreMob(mob)
+				if bestMob == nil then
+					bestMob = mob
+					bestScore = score
+				elseif id ~= currentTargetId then
+					local margin = if currentValid and bestMob == currentMob then cfg.HysteresisMargin else 0
+					if score + margin < bestScore then
+						bestMob = mob
+						bestScore = score
+					end
+				end
+			end
+		end
+	end
+
+	return bestMob
+end
+
+-- Steers a returning hero through the rear gatehouse threshold when crossing back north of the Z=57 dividing wall.
+function OutskirtsRules.ResolveReturnGoal(currentLocalPos: Vector3, anchorLocalPos: Vector3): Vector3
+	local gate = OutskirtsRules.SquadSkirmish.GatehouseReturnPoint
+	if currentLocalPos.Z > 64 and anchorLocalPos.Z < 60 then
+		if math.abs(currentLocalPos.X - gate.X) > 8 or currentLocalPos.Z > 70 then
+			return gate
+		end
+	end
+	return anchorLocalPos
 end
 
 return table.freeze(OutskirtsRules)

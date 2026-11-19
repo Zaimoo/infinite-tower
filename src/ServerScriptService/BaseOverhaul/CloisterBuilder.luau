@@ -445,11 +445,41 @@ local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuild
 		})
 	end
 
+	-- Builds a true 90-degree outer corner quarter-disk using disjoint radial right-triangle wedges so
+	-- corners never protrude inward past |X| = hx - r or |Z| = hz - r into the Runesmith chasm cutout.
+	local function buildQuarterCorner(qx: number, qz: number, segments: number)
+		local cx, cz = qx * (hx - r), qz * (hz - r)
+		local originPos = (root * CFrame.new(cx, -th * 0.5, cz)).Position
+		local stepAngle = (math.pi * 0.5) / segments
+		local alt = r * math.cos(stepAngle * 0.5)
+		local halfBase = r * math.sin(stepAngle * 0.5)
+
+		for i = 1, segments do
+			local am = (i - 0.5) * stepAngle
+			local u = root:VectorToWorldSpace(Vector3.new(qx * math.cos(am), 0, qz * math.sin(am)))
+			local v = Vector3.new(-u.Z, 0, u.X)
+			for _, side in { -1, 1 } do
+				local center = originPos + u * (alt * 0.5) + v * (side * halfBase * 0.5)
+				local yAxis = v * side
+				local zAxis = u
+				local xAxis = yAxis:Cross(zAxis)
+				makeWedge({
+					Name = "CommonsCorner",
+					Size = Vector3.new(th, halfBase, alt),
+					CFrame = CFrame.fromMatrix(center, xAxis, yAxis, zAxis),
+					Color = GRASS,
+					Material = Enum.Material.Grass,
+					Parent = f,
+				})
+			end
+		end
+	end
+
 	for _, side in { -1, 1 } do
 		makePart({ Name = "CommonsSurface", Size = Vector3.new(r, th, (hz - r) * 2), CFrame = root * CFrame.new(side * (hx - r * 0.5), -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
 	end
 	for _, q in { { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 } } do
-		cylinderY("CommonsCorner", r, th, -0.06, root * CFrame.new(q[1] * (hx - r), 0, q[2] * (hz - r)), GRASS, Enum.Material.Grass, false, f)
+		buildQuarterCorner(q[1], q[2], 12)
 	end
 	-- Stone kerb along the outer edge, standing 0.1 proud of the grass so their side faces never coincide
 	local kerbIndex = 0
@@ -461,7 +491,7 @@ local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuild
 	-- Rocky underside: chunks around the rim and tapered masses clear of the Runesmith chasm column
 	local under = folder("RockyUnderside", f)
 	walkRoundedRect(hx - 50, hz - 50, r - 40, 90, function(x, z, nx, nz)
-		if (x - ax) ^ 2 + (z - az) ^ 2 < (hr + 46) ^ 2 then
+		if (x - ax) ^ 2 + (z - az) ^ 2 < (hr + 68) ^ 2 then
 			return
 		end
 		rockChunk(under, edgeCF(root, x, z, nx, nz, 0), rng:NextNumber(70, 95), 90, rng:NextNumber(50, 80), rng)
