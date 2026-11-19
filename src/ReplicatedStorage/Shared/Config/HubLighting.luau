@@ -291,6 +291,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.42, AtmosphereColor = c(76, 64, 138), AtmosphereDecay = c(44, 28, 96), AtmosphereHaze = 1.6,
 		TintColor = c(226, 226, 255), Saturation = 0.26, ExposureCompensation = -0.12, BloomIntensity = 0.6,
 	},
+	-- Floor 8, Blooming Chasm: full bloom, the brightest Fungal floor. Strong cyan from the wide oculus, mist
+	-- rising from the chasm, gills and crystals at their most saturated (the Lampkeepers' Rest is the one warm pool).
+	[8] = {
+		Ambient = c(54, 52, 102), OutdoorAmbient = c(76, 74, 132), ColorShift_Top = c(150, 240, 255), ColorShift_Bottom = c(112, 62, 172),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(84, 100, 164), AtmosphereDecay = c(56, 40, 112), AtmosphereHaze = 1.2,
+		TintColor = c(232, 240, 255), Saturation = 0.3, ExposureCompensation = -0.02, BloomIntensity = 0.6,
+	},
 	-- Floor 11, Cinder Gate: searing white-hot desert noon, crisp pale mirage haze over dark volcanic ash & ochre sandstone.
 	[11] = {
 		Ambient = c(96, 84, 72), OutdoorAmbient = c(154, 138, 118), ColorShift_Top = c(255, 244, 214), ColorShift_Bottom = c(98, 72, 54),

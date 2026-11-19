@@ -5468,6 +5468,181 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			kit:SetAttribute("LampNiches", niches)
 		end
 
+		-- Lampkeeper camp helpers shared by Floors 8 and 9.
+		local canvas = rgb(176, 160, 132)
+		local rope = rgb(150, 128, 96)
+		local supplies = { FOLIAGE = { Color = canvas, Material = Enum.Material.Fabric }, WOOD = { Color = rgb(104, 80, 62), Material = Enum.Material.WoodPlanks }, TRIM = { Color = slate, Material = Enum.Material.Slate } }
+		local shelterO = { CAP = { Color = violet }, STEM = { Color = rgb(196, 150, 236) }, FOLIAGE = { Color = canvas, Material = Enum.Material.Fabric }, WOOD = { Color = rgb(104, 80, 62), Material = Enum.Material.Wood }, GLOW = { Color = rgb(90, 160, 170), Material = Enum.Material.SmoothPlastic } }
+		local function piece(kind: string, name: string, at: Vector3, yaw: number, s: number, o: any, fallback: () -> (), tilt: CFrame?, after: (() -> ())?)
+			group(kind, function()
+				onTerrain()
+				if not kitAt(name, CFrame.new(at) * CFrame.Angles(0, yaw, 0) * (tilt or CFrame.identity), s, o) then
+					fallback()
+				end
+				if after then
+					after()
+				end
+			end)
+			table.insert(reservedSpots, { at.X, at.Z, 7 * s })
+		end
+		local function shelter(at: Vector3, yaw: number, crushed: boolean?)
+			piece("CapShelter", "CapShelter", at, yaw, 1, shelterO, function()
+				local cf = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+				local roof = block("ShelterCapRoof", V(13, 0.6, 9), V(0, 0, 0), violet, Enum.Material.SmoothPlastic)
+				roof.CFrame = CFrame.new(origin) * cf * CFrame.new(0, 3.4, 0) * CFrame.Angles(-0.6, 0, 0)
+				for _, sx in { -1, 1 } do
+					beam("ShelterPole", cf:PointToWorldSpace(V(sx * 5, 0, 3.6)), cf:PointToWorldSpace(V(sx * 5, 6.6, 3.6)), 0.5, rgb(104, 80, 62), Enum.Material.Wood)
+				end
+			end, if crushed then CFrame.Angles(0.35, 0, 0.18) else nil)
+		end
+		local function cache(at: Vector3, yaw: number)
+			piece("CampSupplies", "CampSupplies", at, yaw, 1, supplies, function()
+				block("SupplyCrate", V(2.2, 1.6, 1.8), at + V(0, 0.8, 0), rgb(104, 80, 62), Enum.Material.WoodPlanks)
+				orb("SupplySack", at + V(1.8, 0.8, 0.4), V(1.6, 1.8, 1.4), canvas, Enum.Material.Fabric)
+			end)
+		end
+
+		if fungalFloor == 8 then
+			local west, east = layout.Platforms.WestGallery, layout.Platforms.EastGallery
+			local cross = layout.Platforms.Crossing
+			local coldFire = { CANDLE = { Color = rgb(52, 44, 50), Material = Enum.Material.Slate }, CRYSTAL = { Color = rgb(90, 120, 130), Material = Enum.Material.Glass, Transparency = 0.4 }, TRIM = { Color = slate, Material = Enum.Material.Slate } }
+			local warmFire = { CANDLE = { Color = flameWarm, Material = Enum.Material.Neon }, CRYSTAL = { Color = teal, Material = Enum.Material.Glass, Transparency = 0.25 }, TRIM = { Color = slate, Material = Enum.Material.Slate } }
+			local function brazier(at: Vector3, lit: boolean)
+				piece("CrystalBrazier", "CrystalBrazier", at, 0, 1.1, if lit then warmFire else coldFire, function()
+					cyl("BrazierRing", at + V(0, 0.6, 0), 2.2, 1.2, slate, Enum.Material.Slate)
+					if lit then orb("BrazierFlame", at + V(0, 1.6, 0), V(1, 2, 1), flameWarm, Enum.Material.Neon) end
+				end)
+			end
+
+			-- 1. The Violet Cap: the round cap top (TowerRoomBuilder) gets its curled lip, glowing gills and ribs
+			-- beneath, spots out toward its rim (past the camp's reach), and a stout stem down into its pool.
+			local capR = math.sqrt(west.Width ^ 2 + west.Depth ^ 2) / 2 + 1
+			local capTop = V(west.X, west.Y, west.Z)
+			local stemBed = if field then field.Bottom - 3 else bottom
+			-- The curled lip is a ring of separate segments, so clearance drops only those under a walkway (the
+			-- walkways then seem to arrive through gaps in the lip) and never takes the whole cap's dressing.
+			local lipSegments = 20
+			for k = 0, lipSegments - 1 do
+				local a0, a1 = k * 2 * math.pi / lipSegments, (k + 1) * 2 * math.pi / lipSegments
+				local r = capR + 1.2
+				group("VioletCapLip", function()
+					local seg = beam("VioletCapLip", capTop + V(math.cos(a0) * r, -3.6, math.sin(a0) * r), capTop + V(math.cos(a1) * r, -3.6, math.sin(a1) * r), 2.4, rgb(78, 44, 150), Enum.Material.SmoothPlastic)
+					seg.CastShadow = true
+				end)
+			end
+			group("VioletCapGills", function()
+				-- Flat ellipsoids, not upright cylinders: camp clearance measures a part's unrotated size, and an
+				-- upright cylinder's diameter would count as its height.
+				orb("VioletCapGills", capTop - V(0, 4.9, 0), V((capR - 2) * 2, 0.6, (capR - 2) * 2), cyan, Enum.Material.Neon, 0.3)
+				for k = 0, 23 do
+					local a = k * math.pi / 12
+					local r0, r1 = 14, capR - 3
+					beam("VioletCapGillRib", capTop + V(math.cos(a) * r0, -4.6, math.sin(a) * r0), capTop + V(math.cos(a) * r1, -4.2, math.sin(a) * r1), 0.4, cyan, Enum.Material.Neon)
+				end
+			end)
+			group("VioletCap", function()
+				local stemH = (west.Y - 5) - stemBed
+				-- A swollen stem (an ellipsoid running from the pool bed up into the cap) on a broad foot.
+				-- Its top stays under the cap's camp band (camp clearance); the gill disc hides the join.
+				local stem = orb("VioletCapStemIsland", V(west.X, stemBed + stemH / 2, west.Z), V(26, stemH + 2, 26), rgb(176, 170, 206), Enum.Material.SmoothPlastic)
+				stem.CastShadow = true
+				orb("VioletCapStemFoot", V(west.X, stemBed + 2, west.Z), V(36, 5, 36), rgb(150, 142, 182), Enum.Material.SmoothPlastic)
+				for k = 0, 5 do
+					local a = k * math.pi / 3 + 0.3
+					beam("VioletCapRoot", V(west.X + math.cos(a) * 12, stemBed + 3, west.Z + math.sin(a) * 12), V(west.X + math.cos(a) * 24, stemBed + 0.5, west.Z + math.sin(a) * 24), 2.2, rgb(150, 142, 182), Enum.Material.SmoothPlastic)
+				end
+			end)
+			for k = 0, 9 do
+				local a = k * math.pi / 5 + 0.2
+				local r = 36 + (k % 3) * 2.5
+				group("VioletCapSpot", function()
+					cyl("VioletCapSpotDisc", capTop + V(math.cos(a) * r, 0.06, math.sin(a) * r), 1.6 + (k % 2) * 0.8, 0.12, rgb(196, 150, 236), Enum.Material.SmoothPlastic)
+				end)
+			end
+			table.insert(reservedSpots, { west.X, west.Z, capR + 4 })
+
+			-- 2. The Old Aqueduct: the broken spans' last piers stand in the chasm under the Lampkeepers' walkways
+			-- (their tops well under the planks), and the watch-post: a barricade across the deck's north-west
+			-- corner with a dead lamp beside it (the Elite camp holds the deck's middle).
+			local bed = if field then field.Bottom - 3 else bottom
+			for _, ex in { cross.X - cross.Width / 2 - 22, cross.X + cross.Width / 2 + 22 } do
+				group("AqueductBrokenPier", function()
+					local topY = math.min(-3, cross.Y - 16)
+					block("AqueductRuinPierIsland", V(7, topY - bed, cross.Depth - 6), V(ex, (topY + bed) / 2, cross.Z), slateDark, Enum.Material.Slate)
+					block("AqueductRuinPierCap", V(9, 1.2, cross.Depth - 4), V(ex, topY + 0.6, cross.Z), cobble, Enum.Material.Cobblestone)
+				end)
+			end
+			local postAt = V(cross.X - cross.Width / 2 + 8, cross.Y, cross.Z - cross.Depth / 2 + 3)
+			piece("Barricade", "Barricade", postAt, 0, 1, { WOOD = { Color = rgb(104, 80, 62), Material = Enum.Material.WoodPlanks }, TRIM = { Color = slate, Material = Enum.Material.Slate }, STEM = { Color = rope, Material = Enum.Material.Fabric } }, function()
+				block("BarricadePlanks", V(14, 4, 0.6), postAt + V(0, 2, 0), rgb(104, 80, 62), Enum.Material.WoodPlanks)
+			end)
+			-- Behind the barricade at the deck's north edge: clear of the aqueduct camp (34+ studs from its centre)
+			-- and of the west walkway's landing on the deck.
+			lampPost(postAt + V(-4, 0, -2), 0, 1, true)
+
+			-- 3. Lampkeepers' Rest (the Sanctuary): their last lit camp, now the Masters' safe ground. Two cap
+			-- shelters open toward the floor at the back corners, a lit brazier and a supply cache, all clear of
+			-- the portals, the arrival and the exit lane.
+			for _, sx in { -1, 1 } do
+				shelter(V(sx * (safe.Width / 2 - 10), safe.Y, safe.Z + safe.Depth / 2 - 9), math.pi)
+			end
+			local restFire = V(-safe.Width / 2 + 22, safe.Y, safe.Z - 2)
+			brazier(restFire, true)
+			local restGlow = orb("RestBrazierGlow", restFire + V(0, 3, 0), V(1, 1, 1), flameWarm, Enum.Material.SmoothPlastic, 1)
+			pointLight(restGlow, rgb(255, 170, 100), 1.4, 40)
+			cache(V(safe.Width / 2 - 22, safe.Y, safe.Z - 2), -math.pi / 2)
+
+			-- 4. The forward camp at the Rim of Blooms' west end: one shelter facing the chasm, a cache, a cold
+			-- fire-ring and a dead lamp. They left it.
+			local fx, fz = basin.X - basin.Width / 2 + 24, basin.Z + 14
+			shelter(V(fx, basin.Y, fz), math.pi)
+			cache(V(fx + 14, basin.Y, fz + 8), 0.6)
+			brazier(V(fx + 8, basin.Y, fz - 12), false)
+			lampPost(V(fx - 12, basin.Y, fz - 10), math.pi / 4, 1, true)
+
+			-- 5. The fallen camp on the chasm floor below the Crystal Islet, near the east return ramp: a shelter
+			-- crushed under a toppled cap, supplies spilled, its lamp still faintly lit. Only fallers find it.
+			local cx, cz = east.X - 22, east.Z + east.Depth / 2 + 32
+			local cy = groundY(cx, cz)
+			shelter(V(cx, cy, cz), 0.4, true)
+			group("ToppledCap", function()
+				onTerrain()
+				local at = V(cx + 10, cy - 1, cz - 4)
+				if not kitAt("GiantMushroom", CFrame.new(at) * CFrame.Angles(0, 1.1, 0) * CFrame.Angles(0, 0, math.rad(78)), 0.42, capOverride) then
+					mushroom(at, 0.42, false)
+				end
+			end)
+			cache(V(cx - 8, groundY(cx - 8, cz + 6), cz + 6), 2.2)
+			local fallenLamp = V(cx + 4, groundY(cx + 4, cz + 9), cz + 9)
+			lampPost(fallenLamp, 0.8, 0.8, false, true)
+			local fallenGlow = orb("FallenLampGlow", fallenLamp + V(0, 8, 0), V(1, 1, 1), flameWarm, Enum.Material.SmoothPlastic, 1)
+			pointLight(fallenGlow, rgb(255, 160, 90), 0.6, 24)
+
+			-- 6. Chalk signs at the Rim's two walkway heads (beside each walkway, outside its lane) and by the
+			-- aqueduct stairs' top on the ledge, all pointing the way up.
+			for _, link in layout.Links do
+				if link.From == "Basin" and (link.To == "WestGallery" or link.To == "EastGallery") then
+					local ux, uz = link.UX, link.UZ
+					local side = if link.To == "WestGallery" then 1 else -1
+					-- Beside the walkway's landing, clear of it (the landing is 36 wide plus a 3-stud shoulder).
+					local at = V(link.AX + uz * side * 30 - ux * 6, basin.Y, link.AZ - ux * side * 30 - uz * 6)
+					chalkSign(at, math.atan2(-ux, -uz))
+				elseif link.From == "Crossing" and link.To == "Apex" then
+					-- On the ledge itself, beside the stairs' landing.
+					chalkSign(V(link.BX - 26, apex.Y, apex.Z + apex.Depth / 2 - 5), math.pi)
+				end
+			end
+
+			-- 7. Teal crystal spires at the Crystal Islet's far corners (past its camp's reach), and pad-caps on the
+			-- chasm pools.
+			for _, c in { { east.X + east.Width / 2 - 6, east.Z - east.Depth / 2 + 6, 0.42, 0.5 }, { east.X + east.Width / 2 - 8, east.Z + east.Depth / 2 - 6, 0.34, 2.4 }, { east.X + east.Width / 2 - 18, east.Z - east.Depth / 2 + 4, 0.26, 4.1 } } do
+				crystal(V(c[1], east.Y, c[2]), c[3], c[4])
+			end
+			for _, pool in (layout.Terrain and layout.Terrain.Pools) or {} do
+				padCaps(pool.X, pool.Z, 4, math.min(pool.RX, pool.RZ) - 3, 6, math.floor(pool.X * 3 + pool.Z * 5))
+			end
+		end
+
 	end
 
 	-- =========================================================================
