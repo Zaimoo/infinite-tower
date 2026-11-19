@@ -1020,6 +1020,10 @@ function CloisterBuilder.Build(container: Instance): Model
 	end
 
 	model.PrimaryPart = buildGround(model, root, cfg, rng)
+	local envSpawner = getEnvSpawner()
+	if envSpawner.HasTemplate("HubCommons_Ground") then
+		envSpawner.SpawnHubCommonsGround(model, root)
+	end
 	buildEdges(model, root, cfg)
 	buildLandings(model, root, cfg)
 	buildGrandTerrace(model, root)
@@ -1030,7 +1034,6 @@ function CloisterBuilder.Build(container: Instance): Model
 		buildDais(m, anchor, cfg)
 	end)
 	local poolAnchor = root * CFrame.new(FEATURES.Pool[1], 0, FEATURES.Pool[2])
-	local envSpawner = getEnvSpawner()
 	if envSpawner.HasTemplate("HeroBridgePond") then
 		local poolFolder = folder("ReflectingPool", model)
 		envSpawner.SpawnPond("HeroBridgePond", poolFolder, poolAnchor, 1.0, 0, "HeroBridgePond")

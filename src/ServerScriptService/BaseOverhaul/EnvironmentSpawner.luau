@@ -21,9 +21,19 @@ export type TextureIdSet = {
 -- or automatically extracted live from imported GroundMaterialsKit SurfaceAppearance instances).
 EnvironmentSpawner.DefaultGroundTextures = {
 	MeadowGrass = {
-		ColorMap = "rbxassetid://85539524323359",
-		NormalMap = "rbxassetid://107154517231350",
-		RoughnessMap = "rbxassetid://125381403052470",
+		ColorMap = "rbxassetid://71541770840248",
+		NormalMap = "rbxassetid://75623301769837",
+		RoughnessMap = "rbxassetid://99669029183795",
+	} :: TextureIdSet,
+	HubPathWeathering = {
+		ColorMap = "rbxassetid://73400033097811",
+		NormalMap = "rbxassetid://93649149097324",
+		RoughnessMap = "rbxassetid://114372186100758",
+	} :: TextureIdSet,
+	HubGrassClump = {
+		ColorMap = "rbxassetid://115667914360010",
+		NormalMap = "rbxassetid://105314617289066",
+		RoughnessMap = "rbxassetid://98943186118006",
 	} :: TextureIdSet,
 	MedievalCobble = {
 		ColorMap = "rbxassetid://104460573136154",
@@ -53,6 +63,7 @@ EnvironmentSpawner.DefaultGroundTextures = {
 }
 
 local CASTLE_GROUND_VERSION = 4
+local HUB_GROUND_VERSION = 3
 
 local EXPECTED_HEIGHTS = {
 	HeroOakTree = 17.0,
@@ -210,7 +221,7 @@ function EnvironmentSpawner.ApplyGroundMaterials(targetRoots: { Instance }): boo
 	local hasGrass = upsertMaterialVariant(
 		"HubMeadowGrass",
 		Enum.Material.Grass,
-		10,
+		18,
 		Enum.MaterialPattern.Organic,
 		grassTex
 	)
@@ -744,6 +755,38 @@ function EnvironmentSpawner.SpawnCastleCourtyardGround(parent: Instance, courtya
 	model:PivotTo(courtyardCenterCF)
 	model:SetAttribute("BlenderEnvAsset", "CastleCourtyard_Ground")
 	model:SetAttribute("GroundVersion", CASTLE_GROUND_VERSION)
+	model.Parent = parent
+	return model
+end
+
+function EnvironmentSpawner.SpawnHubCommonsGround(parent: Instance, hubCentreCF: CFrame): Model?
+	local template = findTemplate("HubCommons_Ground")
+	if not template then
+		return nil
+	end
+	local model = wrapAsModel(template:Clone(), "HubCommons_Ground")
+	model.WorldPivot = CFrame.identity
+	for _, desc in model:GetDescendants() do
+		if desc:IsA("BasePart") then
+			desc.PivotOffset = CFrame.identity
+			local isFloor = desc.Name == "HubCommons_MeadowFloor"
+			configurePathPart(desc, if isFloor then Enum.AlphaMode.Opaque else Enum.AlphaMode.Transparency)
+			local sa = desc:FindFirstChildWhichIsA("SurfaceAppearance", true)
+			if sa and sa:IsA("SurfaceAppearance") then
+				local texSet = if isFloor
+					then EnvironmentSpawner.DefaultGroundTextures.MeadowGrass
+					else EnvironmentSpawner.DefaultGroundTextures.HubPathWeathering
+				pcall(function()
+					sa.ColorMap = texSet.ColorMap
+					sa.NormalMap = texSet.NormalMap
+					sa.RoughnessMap = texSet.RoughnessMap
+				end)
+			end
+		end
+	end
+	model:PivotTo(hubCentreCF)
+	model:SetAttribute("BlenderEnvAsset", "HubCommons_Ground")
+	model:SetAttribute("GroundVersion", HUB_GROUND_VERSION)
 	model.Parent = parent
 	return model
 end
@@ -1325,43 +1368,45 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 
 	EnvironmentSpawner.ApplyGroundMaterials(roots)
 
-	if EnvironmentSpawner.HasTemplate("GroundProp_MeadowTurfClump") then
+	if EnvironmentSpawner.HasTemplate("HubCommons_Ground") then
 		for _, root in ipairs(roots) do
 			local commons = if root.Name == "MastersCommons"
 				then root
 				else root:FindFirstChild("MastersCommons", true)
-			if commons and commons:FindFirstChild("CloisterTurfScatter") == nil then
-				local surf = commons:FindFirstChild("CommonsSurface", true)
-				if surf and surf:IsA("BasePart") then
-					local surfTopY = surf.Position.Y + surf.Size.Y * 0.5
-					local scatterFolder = Instance.new("Folder")
-					scatterFolder.Name = "CloisterTurfScatter"
-					scatterFolder.Parent = commons
-					local tRng = Random.new(909)
-					for _, desc in commons:GetDescendants() do
-						if desc:IsA("BasePart") and desc.Name == "GardenPath" then
-							local pathLen = math.max(desc.Size.X, desc.Size.Z)
-							local pathWid = math.min(desc.Size.X, desc.Size.Z)
-							if pathLen > 14 and pathWid <= 24 then
-								local alongX = desc.Size.X >= desc.Size.Z
-								for k = 1, 3 do
-									local sideSign = if (k % 2 == 0) then 1 else -1
-									local along = tRng:NextNumber(-pathLen * 0.40, pathLen * 0.40)
-									local lateral = sideSign * (pathWid * 0.5 + tRng:NextNumber(1.6, 5.2))
-									local localOff = if alongX
-										then Vector3.new(along, 0, lateral)
-										else Vector3.new(lateral, 0, along)
-									local wp = (desc.CFrame * CFrame.new(localOff)).Position
-									local poolDist = Vector2.new(wp.X - surf.Position.X, wp.Z - (surf.Position.Z - 160)).Magnitude
-									if poolDist >= 42 then
-										local turfCF = CFrame.new(wp.X, surfTopY, wp.Z)
-										EnvironmentSpawner.SpawnTurfClump(scatterFolder, turfCF, tRng:NextNumber(0.85, 1.20), tRng)
-									end
-								end
-							end
+			if commons then
+				local mainSurf: BasePart? = nil
+				for _, d in commons:GetDescendants() do
+					if d:IsA("BasePart") and d.Name == "CommonsSurface" then
+						if not mainSurf or d.Size.X > mainSurf.Size.X then
+							mainSurf = d
 						end
 					end
 				end
+				if mainSurf then
+					local surfTopY = mainSurf.Position.Y + mainSurf.Size.Y * 0.5
+					local existingGround = commons:FindFirstChild("HubCommons_Ground")
+					if not (existingGround and existingGround:GetAttribute("GroundVersion") == HUB_GROUND_VERSION) then
+						if existingGround then
+							existingGround:Destroy()
+						end
+						EnvironmentSpawner.SpawnHubCommonsGround(commons, CFrame.new(mainSurf.Position.X, surfTopY, mainSurf.Position.Z))
+						upgraded += 1
+					end
+				end
+			end
+		end
+	end
+
+	-- Remove legacy static CloisterTurfScatter (replaced by zero-lag client HubProximityGrass)
+	for _, root in ipairs(roots) do
+		local commons = if root.Name == "MastersCommons"
+			then root
+			else root:FindFirstChild("MastersCommons", true)
+		if commons then
+			local legacyScatter = commons:FindFirstChild("CloisterTurfScatter")
+			if legacyScatter then
+				legacyScatter:Destroy()
+				upgraded += 1
 			end
 		end
 	end

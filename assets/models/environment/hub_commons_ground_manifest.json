@@ -1,0 +1,80 @@
+{
+  "hub_width": 480.0,
+  "hub_length": 640.0,
+  "outer_corner_radius": 60.0,
+  "floor_y": 0.025,
+  "overlay_y": 0.042,
+  "tile_studs": 18.0,
+  "ground_tris": 12360,
+  "grass_clump_tris": 70,
+  "meshes": {
+    "HubCommons_MeadowFloor": {
+      "pos": [
+        0.0,
+        -0.1625,
+        0.0
+      ],
+      "size": [
+        479.4,
+        0.375,
+        639.4
+      ],
+      "pivot_offset": [
+        -0.0,
+        0.1625,
+        -0.0
+      ]
+    },
+    "HubCommons_PathWeathering": {
+      "pos": [
+        0.0,
+        0.042,
+        0.0
+      ],
+      "size": [
+        478.6,
+        0.0,
+        638.6
+      ],
+      "pivot_offset": [
+        -0.0,
+        -0.042,
+        -0.0
+      ]
+    },
+    "HubGrassClump": {
+      "pos": [
+        -0.2268,
+        0.6329,
+        0.1036
+      ],
+      "size": [
+        2.579,
+        1.3457,
+        2.5048
+      ],
+      "pivot_offset": [
+        0.2268,
+        -0.6329,
+        -0.1036
+      ]
+    }
+  },
+  "textures": {
+    "hub_meadow_ground": {
+      "color": "assets/models/environment/textures/hub_ground/Tex_HubMeadowGround_Color.png",
+      "normal": "assets/models/environment/textures/hub_ground/Tex_HubMeadowGround_Normal.png",
+      "roughness": "assets/models/environment/textures/hub_ground/Tex_HubMeadowGround_Roughness.png"
+    },
+    "hub_path_weathering": {
+      "color": "assets/models/environment/textures/hub_ground/Tex_HubPathWeathering_Color.png",
+      "normal": "assets/models/environment/textures/hub_ground/Tex_HubPathWeathering_Normal.png",
+      "roughness": "assets/models/environment/textures/hub_ground/Tex_HubPathWeathering_Roughness.png"
+    },
+    "hub_grass_clump": {
+      "color": "assets/models/environment/textures/hub_ground/Tex_HubGrassClump_Color.png",
+      "normal": "assets/models/environment/textures/hub_ground/Tex_HubGrassClump_Normal.png",
+      "roughness": "assets/models/environment/textures/hub_ground/Tex_HubGrassClump_Roughness.png"
+    }
+  }
+}
