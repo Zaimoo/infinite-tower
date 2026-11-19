@@ -17,8 +17,12 @@ local LocalPlayer = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local HeroCatalog = require(Config:WaitForChild("HeroCatalog"))
+local ArchetypeCombatSkills = require(Config:WaitForChild("ArchetypeCombatSkills"))
 local FirstBiomeCombat = require(Config:WaitForChild("FirstBiomeCombat"))
+local HeroActionTiming = require(Shared:WaitForChild("Util"):WaitForChild("HeroActionTiming"))
 local OutskirtsRules = require(Shared:WaitForChild("Util"):WaitForChild("OutskirtsRules"))
+local OutskirtsSquadBridge = require(script.Parent:WaitForChild("OutskirtsSquadBridge"))
+local AudioManager = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("AudioManager"))
 
 local Assets = ReplicatedStorage:WaitForChild("Assets")
 local ArtPackVisuals = require(Assets:WaitForChild("ArtPackVisuals"))
@@ -483,6 +487,7 @@ local function syncPlotWorkers(director: PlotDirector, origin: CFrame)
 	local ownerUserId = tonumber(plot:GetAttribute("OwnerUserId")) or 0
 	if ownerUserId <= 0 then
 		clearDirectorMobs(director)
+		OutskirtsSquadBridge.ClearPlot(plot)
 		for uuid, hero in pairs(director.Heroes) do
 			destroyHeroVisual(hero)
 			director.Heroes[uuid] = nil
@@ -762,19 +767,443 @@ local function pickHeroTargetMob(director: PlotDirector, hero: HeroVisual): MobV
 	return bestMob
 end
 
-local function pickNearestAwakeHero(awakeHeroes: { HeroVisual }, fromLocal: Vector3): (HeroVisual?, number)
-	local best: HeroVisual? = nil
+type SquadUnit = {
+	NetId: number,
+	Override: OutskirtsSquadBridge.SquadOverride,
+	LocalPos: Vector3,
+}
+
+local function flatDist(a: Vector3, b: Vector3): number
+	local dx = a.X - b.X
+	local dz = a.Z - b.Z
+	return math.sqrt(dx * dx + dz * dz)
+end
+
+local function yawWorldTowards(fromWorld: Vector3, toWorld: Vector3, fallback: number): number
+	local dx = toWorld.X - fromWorld.X
+	local dz = toWorld.Z - fromWorld.Z
+	if dx * dx + dz * dz < 1e-4 then
+		return fallback
+	end
+	return math.atan2(-dx, -dz)
+end
+
+local function stepWorldTowards(current: Vector3, goal: Vector3, maxStep: number): (Vector3, number)
+	local dx = goal.X - current.X
+	local dz = goal.Z - current.Z
+	local dist = math.sqrt(dx * dx + dz * dz)
+	if dist <= 1e-3 then
+		return Vector3.new(goal.X, goal.Y, goal.Z), 0
+	end
+	if dist <= maxStep then
+		return Vector3.new(goal.X, goal.Y, goal.Z), dist
+	end
+	local ratio = maxStep / dist
+	return Vector3.new(
+		current.X + dx * ratio,
+		current.Y + (goal.Y - current.Y) * ratio,
+		current.Z + dz * ratio
+	), maxStep
+end
+
+local function pickNearestDefender(
+	awakeHeroes: { HeroVisual },
+	squadUnits: { SquadUnit },
+	fromLocal: Vector3
+): (string?, any?, number)
+	local bestKind: string? = nil
+	local bestRef: any? = nil
 	local bestDist = math.huge
 	for _, hero in ipairs(awakeHeroes) do
 		if hero.RunInIndex == nil then
 			local d = (hero.LocalPos - fromLocal).Magnitude
 			if d < bestDist then
 				bestDist = d
-				best = hero
+				bestKind = "WORKER"
+				bestRef = hero
 			end
 		end
 	end
-	return best, bestDist
+	for _, unit in ipairs(squadUnits) do
+		if unit.Override.Mode == "ENGAGING" then
+			local d = flatDist(unit.LocalPos, fromLocal)
+			if d < bestDist then
+				bestDist = d
+				bestKind = "SQUAD"
+				bestRef = unit
+			end
+		end
+	end
+	return bestKind, bestRef, bestDist
+end
+
+local function isSquadHeroEligible(node: any, meta: any): boolean
+	if not node or not meta or not node.IsHero then
+		return false
+	end
+	if node.StateEnum ~= 1 or (node.HpPermille or 0) <= 0 or node.WasKnockedOut then
+		return false
+	end
+	if not node.HeroAnimator or meta.DuelSide ~= nil then
+		return false
+	end
+	return true
+end
+
+local function buildSquadAttackCue(
+	director: PlotDirector,
+	origin: CFrame,
+	netId: number,
+	override: OutskirtsSquadBridge.SquadOverride,
+	targetMob: MobVisual,
+	tier: number,
+	timing: HeroActionTiming.Timing
+): any
+	local serverNow = Workspace:GetServerTimeNow()
+	local aimWorld = origin:PointToWorldSpace(targetMob.LocalPos)
+	local targetMobId = targetMob.Id
+	return {
+		IsOutskirtsCosmetic = true,
+		NetId = netId,
+		Tier = tier,
+		StartServerTime = serverNow,
+		CastSeconds = timing.CastSeconds,
+		ReleaseSeconds = timing.ReleaseSeconds,
+		TravelSeconds = timing.TravelSeconds,
+		Aim = aimWorld,
+		OutskirtsTargetFn = function(): Vector3
+			if targetMob.RootPart and targetMob.RootPart.Parent then
+				return targetMob.RootPart.Position
+			end
+			if targetMob.DeathAt == nil then
+				return origin:PointToWorldSpace(targetMob.LocalPos) + Vector3.new(0, 2.0, 0)
+			end
+			return aimWorld + Vector3.new(0, 2.0, 0)
+		end,
+		OutskirtsSelfFn = function(): Vector3
+			return override.VisualPos
+		end,
+		OutskirtsAlliesFn = function(): { Vector3 }
+			local pts: { Vector3 } = {}
+			for _, h in pairs(director.Heroes) do
+				if h.RootPart.Parent then
+					table.insert(pts, Vector3.new(h.RootPart.Position.X, aimWorld.Y, h.RootPart.Position.Z))
+				end
+			end
+			for _, otherOv in pairs(OutskirtsSquadBridge.GetAll()) do
+				if otherOv.Plot == director.Plot and otherOv.Mode == "ENGAGING" then
+					table.insert(pts, Vector3.new(otherOv.VisualPos.X, aimWorld.Y, otherOv.VisualPos.Z))
+				end
+			end
+			return pts
+		end,
+		OutskirtsEnemiesFn = function(center: Vector3, radius: number): { Vector3 }
+			local pts: { Vector3 } = {}
+			for _, m in pairs(director.Mobs) do
+				if m.Spawned and m.DeathAt == nil and m.RootPart and m.RootPart.Parent then
+					local p = m.RootPart.Position
+					local dx = p.X - center.X
+					local dz = p.Z - center.Z
+					if dx * dx + dz * dz <= radius * radius then
+						table.insert(pts, p)
+					end
+				end
+			end
+			return pts
+		end,
+		OutskirtsOnRelease = function(releaseServerNow: number)
+			VfxPrimitives.At(OutskirtsVfxPool, releaseServerNow + timing.TravelSeconds, function()
+				local m = director.Mobs[targetMobId]
+				if not m or m.DeathAt ~= nil then
+					return
+				end
+				local hitClock = os.clock()
+				m.HitsTaken += if tier >= 3 then 2 else 1
+				m.HitAt = hitClock
+				local hitPos = if m.RootPart and m.RootPart.Parent
+					then m.RootPart.Position
+					else aimWorld + Vector3.new(0, 2.0, 0)
+				if tier >= 3 then
+					AudioManager.Play3D("HitSkill", hitPos, nil, 0.55)
+				elseif tier == 2 then
+					AudioManager.Play3D("HitCrit", hitPos, nil, 0.55)
+				else
+					AudioManager.Play3D("HitLight", hitPos, nil, 0.5)
+				end
+				if m.HitsTaken >= m.HitsToDefeat then
+					m.DeathAt = hitClock
+					director.TotalMobsDefeated += 1
+					local vfxNow = Workspace:GetServerTimeNow()
+					VfxPrimitives.Burst(OutskirtsVfxPool, hitPos, GOLD_COLOR, 2.4, vfxNow, 0.28)
+					VfxPrimitives.Motes(OutskirtsVfxPool, hitPos, GOLD_COLOR, vfxNow, 5, 0.75)
+					AudioManager.Play3D("MobDeath", hitPos, nil, 0.65)
+				end
+			end)
+		end,
+	}
+end
+
+local function preparePlotSquadUnits(
+	director: PlotDirector,
+	origin: CFrame,
+	awakeWorkerCount: number,
+	now: number
+): { SquadUnit }
+	local combatState = _G.ClientCombatState
+	local visualNodes = combatState and combatState.VisualNodes
+	local metadata = combatState and combatState.Metadata
+	local units: { SquadUnit } = {}
+	if not visualNodes or not metadata then
+		return units
+	end
+
+	local inWaveState = awakeWorkerCount > 0 and (director.State == "WAVE_APPROACH" or director.State == "CLASH")
+	local seenOnPlot: { [number]: boolean } = {}
+
+	for netId, node in pairs(visualNodes) do
+		local meta = metadata[netId]
+		if not isSquadHeroEligible(node, meta) then
+			continue
+		end
+		local anchorLocal = origin:PointToObjectSpace(node.CurrentPos)
+		if not OutskirtsRules.IsLocalPointInOutskirts(anchorLocal) then
+			continue
+		end
+
+		local existing = OutskirtsSquadBridge.GetOverride(netId)
+		if existing and existing.Plot ~= nil and existing.Plot ~= director.Plot then
+			continue
+		end
+
+		local ownerPlayer = if meta.OwnerUserId then Players:GetPlayerByUserId(meta.OwnerUserId) else nil
+		local isSprinting = ownerPlayer ~= nil and ownerPlayer:GetAttribute("IsSprinting") == true
+
+		if existing then
+			seenOnPlot[netId] = true
+			existing.Plot = director.Plot
+			if not inWaveState then
+				existing.Mode = "RETURNING"
+				existing.TargetMobId = nil
+				existing.PendingAttack = nil
+			elseif isSprinting and flatDist(node.CurrentPos, existing.VisualPos) > OutskirtsRules.SquadSkirmish.SprintDisengageDistance then
+				existing.Mode = "RETURNING"
+				existing.TargetMobId = nil
+				existing.PendingAttack = nil
+			elseif existing.Mode == "RETURNING" and not isSprinting then
+				local curLocal = origin:PointToObjectSpace(existing.VisualPos)
+				if OutskirtsRules.PickSquadTargetMob(curLocal, anchorLocal, existing.TargetMobId, director.Mobs) ~= nil then
+					existing.Mode = "ENGAGING"
+				end
+			end
+			if existing.Mode == "ENGAGING" then
+				table.insert(units, {
+					NetId = netId,
+					Override = existing,
+					LocalPos = origin:PointToObjectSpace(existing.VisualPos),
+				})
+			end
+		elseif inWaveState and not isSprinting then
+			if OutskirtsRules.PickSquadTargetMob(anchorLocal, anchorLocal, nil, director.Mobs) ~= nil then
+				local created = OutskirtsSquadBridge.GetOrCreate(netId, node.CurrentPos, node.CurrentYaw)
+				created.Plot = director.Plot
+				created.Mode = "ENGAGING"
+				created.NextAttackAt = now + ((meta.SlotIndex or 1) - 1) * 0.12
+				seenOnPlot[netId] = true
+				table.insert(units, {
+					NetId = netId,
+					Override = created,
+					LocalPos = origin:PointToObjectSpace(created.VisualPos),
+				})
+			end
+		end
+	end
+
+	-- Any override bound to this plot whose hero walked north of the Outskirts wall (or died) returns cleanly
+	for netId, override in pairs(OutskirtsSquadBridge.GetAll()) do
+		if override.Plot == director.Plot and not seenOnPlot[netId] and override.Mode == "ENGAGING" then
+			override.Mode = "RETURNING"
+			override.TargetMobId = nil
+			override.PendingAttack = nil
+		end
+	end
+
+	return units
+end
+
+local function stepSquadUnitsEngage(
+	director: PlotDirector,
+	origin: CFrame,
+	squadUnits: { SquadUnit },
+	dt: number,
+	now: number
+): number
+	local combatState = _G.ClientCombatState
+	local visualNodes = combatState and combatState.VisualNodes
+	local metadata = combatState and combatState.Metadata
+	if not visualNodes or not metadata then
+		return 0
+	end
+
+	local engagedCount = 0
+	local cycle = OutskirtsRules.SquadSkirmish.AttackCycle
+	local snapDist = OutskirtsRules.SquadSkirmish.ReturnSnapDistance
+
+	for _, unit in ipairs(squadUnits) do
+		local netId = unit.NetId
+		local override = unit.Override
+		local node = visualNodes[netId]
+		local meta = metadata[netId]
+		if not isSquadHeroEligible(node, meta) then
+			OutskirtsSquadBridge.ClearHero(netId)
+			continue
+		end
+
+		local anchorWorld = node.CurrentPos
+		if flatDist(anchorWorld, override.VisualPos) > snapDist then
+			OutskirtsSquadBridge.ClearHero(netId)
+			continue
+		end
+
+		engagedCount += 1
+		local anchorLocal = origin:PointToObjectSpace(anchorWorld)
+		local curLocal = origin:PointToObjectSpace(override.VisualPos)
+		local targetMob = OutskirtsRules.PickSquadTargetMob(curLocal, anchorLocal, override.TargetMobId, director.Mobs)
+
+		if not targetMob then
+			override.TargetMobId = nil
+			if now >= override.CastLockUntil then
+				override.Mode = "RETURNING"
+			else
+				override.Walking = false
+				override.MoveSpeedScale = 1.0
+			end
+			continue
+		end
+
+		override.TargetMobId = targetMob.Id
+		local mobLocal: Vector3 = targetMob.LocalPos
+		local targetWorld = origin:PointToWorldSpace(mobLocal)
+		local distToMob = flatDist(curLocal, mobLocal)
+
+		local seed = HeroCatalog.Seeds[meta.TemplateId]
+		local archetype = (seed and seed.Archetype) or "Vanguard"
+		local animator = (node :: any).HeroAnimator
+		local weaponType = if animator then animator.WeaponType else OutskirtsRules.DefaultWeaponForArchetype(archetype)
+		local desiredRange, isRanged = OutskirtsRules.ResolveSquadAttackRange(seed and seed.AttackRange, weaponType)
+		local moveSpeed = math.max((seed and seed.MovementSpeed) or 20, 18)
+
+		override.VisualYaw = lerpAngle(override.VisualYaw, yawWorldTowards(override.VisualPos, targetWorld, override.VisualYaw), math.min(1, dt * 14))
+
+		if now < override.CastLockUntil then
+			override.Walking = false
+			override.MoveSpeedScale = 1.0
+			continue
+		end
+
+		local steppedDist = 0
+		if distToMob > desiredRange then
+			local goalLocal = if isRanged
+				then OutskirtsRules.ClampToOutskirts(mobLocal)
+				else OutskirtsRules.ResolveMeleeStandoff(mobLocal, curLocal, meta.SlotIndex or 1, desiredRange)
+			local goalWorldFlat = origin:PointToWorldSpace(goalLocal)
+			local goalWorld = Vector3.new(goalWorldFlat.X, anchorWorld.Y, goalWorldFlat.Z)
+			local nextWorld, stepped = stepWorldTowards(override.VisualPos, goalWorld, moveSpeed * dt)
+			local clampedLocal = OutskirtsRules.ClampToOutskirts(origin:PointToObjectSpace(nextWorld))
+			local clampedWorld = origin:PointToWorldSpace(clampedLocal)
+			override.VisualPos = Vector3.new(clampedWorld.X, anchorWorld.Y, clampedWorld.Z)
+			steppedDist = stepped
+			distToMob = flatDist(clampedLocal, mobLocal)
+		end
+
+		override.Walking = steppedDist > 0.01
+		override.MoveSpeedScale = if override.Walking then math.clamp(moveSpeed / 20, 1.0, 2.2) else 1.0
+
+		if distToMob <= desiredRange + 0.85 and now >= override.NextAttackAt then
+			local tier = cycle[override.AttackCycleIdx] or 1
+			override.AttackCycleIdx = (override.AttackCycleIdx % #cycle) + 1
+			local tierKey: HeroActionTiming.Tier = if tier == 3 then "SKILL" elseif tier == 2 then "SPECIAL" else "BASIC"
+			local skillProfile = ArchetypeCombatSkills.GetSkillProfile(meta.TemplateId, archetype)
+			local tierDef: any = if tierKey == "SKILL"
+				then skillProfile.Skill
+				elseif tierKey == "SPECIAL" then skillProfile.Special
+				else skillProfile.Basic
+			local baseInterval = math.clamp((seed and seed.AttackInterval) or 1.05, 0.75, 1.5)
+			local timing = HeroActionTiming.For(meta.TemplateId, weaponType, tierKey, tierDef, baseInterval, distToMob)
+			if tierKey == "SKILL" then
+				timing = HeroActionTiming.WithSkillWindup(timing)
+			end
+
+			override.NextAttackAt = now + math.max(baseInterval, timing.CastSeconds) + (if tier == 3 then 0.35 else 0)
+			override.CastLockUntil = now + (if tier == 3 then timing.CastSeconds else timing.ReleaseSeconds)
+			override.PendingAttack = {
+				ActionState = TIER_ACTION_NAMES[tier] or "AttackBasic",
+				CastSeconds = timing.CastSeconds,
+				Tier = tier,
+				Cue = buildSquadAttackCue(director, origin, netId, override, targetMob, tier, timing),
+			}
+		end
+	end
+
+	return engagedCount
+end
+
+local function stepReturningSquadOverrides(dt: number, now: number)
+	local combatState = _G.ClientCombatState
+	local visualNodes = combatState and combatState.VisualNodes
+	local metadata = combatState and combatState.Metadata
+	local snapDist = OutskirtsRules.SquadSkirmish.ReturnSnapDistance
+	local arriveDist = OutskirtsRules.SquadSkirmish.ReturnArriveDistance
+
+	for netId, override in pairs(OutskirtsSquadBridge.GetAll()) do
+		local node = visualNodes and visualNodes[netId]
+		local meta = metadata and metadata[netId]
+		if not isSquadHeroEligible(node, meta) then
+			OutskirtsSquadBridge.ClearHero(netId)
+			continue
+		end
+		if override.Plot and (not Directors[override.Plot] or Directors[override.Plot].Parked) then
+			OutskirtsSquadBridge.ClearHero(netId)
+			continue
+		end
+		if override.Mode ~= "RETURNING" then
+			continue
+		end
+		if now < override.CastLockUntil then
+			override.Walking = false
+			override.MoveSpeedScale = 1.0
+			continue
+		end
+
+		local anchorWorld = node.CurrentPos
+		local distToAnchor = flatDist(override.VisualPos, anchorWorld)
+		if distToAnchor >= snapDist or distToAnchor <= arriveDist then
+			OutskirtsSquadBridge.ClearHero(netId)
+			continue
+		end
+
+		local goalWorld = anchorWorld
+		if override.Plot then
+			local plotOrigin = HubPresence.CachedOrigin(override.Plot, now)
+			if plotOrigin then
+				local curLocal = plotOrigin:PointToObjectSpace(override.VisualPos)
+				local anchorLocal = plotOrigin:PointToObjectSpace(anchorWorld)
+				local returnLocal = OutskirtsRules.ResolveReturnGoal(curLocal, anchorLocal)
+				if returnLocal ~= anchorLocal then
+					local wpWorld = plotOrigin:PointToWorldSpace(returnLocal)
+					goalWorld = Vector3.new(wpWorld.X, anchorWorld.Y, wpWorld.Z)
+				end
+			end
+		end
+
+		local seed = HeroCatalog.Seeds[meta.TemplateId]
+		local baseSpeed = math.max((seed and seed.MovementSpeed) or 20, 22)
+		local returnSpeed = if distToAnchor > 16 then math.max(baseSpeed, 30) else baseSpeed
+		local nextWorld, stepped = stepWorldTowards(override.VisualPos, goalWorld, returnSpeed * dt)
+		override.VisualPos = nextWorld
+		override.VisualYaw = lerpAngle(override.VisualYaw, yawWorldTowards(override.VisualPos, goalWorld, override.VisualYaw), math.min(1, dt * 12))
+		override.Walking = stepped > 0.01
+		override.MoveSpeedScale = if override.Walking then math.clamp(returnSpeed / 20, 1.0, 2.0) else 1.0
+	end
 end
 
 local function stepDirector(director: PlotDirector, origin: CFrame, dt: number, now: number)
@@ -854,6 +1283,8 @@ local function stepDirector(director: PlotDirector, origin: CFrame, dt: number, 
 		end
 	end
 
+	local squadUnits = preparePlotSquadUnits(director, origin, #awakeHeroes, now)
+
 	-- Step Mobs
 	for _, mob in pairs(director.Mobs) do
 		if not mob.Spawned then
@@ -871,15 +1302,15 @@ local function stepDirector(director: PlotDirector, origin: CFrame, dt: number, 
 					mob.PassedMid = true
 				end
 			else
-				local nearestHero, heroDist = pickNearestAwakeHero(awakeHeroes, mob.LocalPos)
+				local targetKind, targetRef, heroDist = pickNearestDefender(awakeHeroes, squadUnits, mob.LocalPos)
 				local chaseHero = false
-				if nearestHero then
+				if targetRef then
 					if not mob.TargetsBuildingFirst or heroDist <= 9.5 then
 						chaseHero = true
 					end
 				end
 
-				local goalPos = if chaseHero and nearestHero then nearestHero.LocalPos else lane.BuildingTarget
+				local goalPos = if chaseHero and targetRef then targetRef.LocalPos else lane.BuildingTarget
 				local distToGoal = (goalPos - mob.LocalPos).Magnitude
 				mob.AttackingBuilding = not chaseHero and distToGoal <= (mob.AttackRange + 1.0)
 
@@ -892,14 +1323,20 @@ local function stepDirector(director: PlotDirector, origin: CFrame, dt: number, 
 					mob.NextAttackAt = now + OutskirtsRules.Timing.MobAttackInterval
 					mob.ActionStartedAt = now
 					mob.ActionImpactDone = false
-					if chaseHero and nearestHero then
-						nearestHero.HitFlashUntil = now + 0.14
+					if chaseHero and targetRef then
+						if targetKind == "WORKER" then
+							(targetRef :: HeroVisual).HitFlashUntil = now + 0.14
+						elseif targetKind == "SQUAD" then
+							(targetRef :: SquadUnit).Override.HitFlashUntil = now + 0.14
+						end
 					end
 				end
 			end
 		end
 		stepMobAnimation(director, origin, mob, movedDist, now)
 	end
+
+	local engagedSquadCount = stepSquadUnitsEngage(director, origin, squadUnits, dt, now)
 
 	-- Step Heroes
 	local campfireLook = Vector3.new(-1.9, 0, 89.5)
@@ -1061,6 +1498,7 @@ local function stepDirector(director: PlotDirector, origin: CFrame, dt: number, 
 		GuardPostLevel = director.GuardPostLevel,
 		WaveIndex = director.WaveIndex,
 		HeroCount = heroCount,
+		EngagedSquadCount = engagedSquadCount,
 		LiveMobCount = liveMobs,
 		TotalWavesSpawned = director.TotalWavesSpawned,
 		TotalMobsDefeated = director.TotalMobsDefeated,
@@ -1072,6 +1510,9 @@ local function setDirectorParked(director: PlotDirector, parked: boolean)
 		return
 	end
 	director.Parked = parked
+	if parked then
+		OutskirtsSquadBridge.ClearPlot(director.Plot)
+	end
 	local parent: Instance? = if parked then nil else EntitiesFolder
 	for _, hero in pairs(director.Heroes) do
 		hero.Model.Parent = parent
@@ -1174,6 +1615,7 @@ local function unregisterPlot(plot: Model)
 	end
 	table.clear(director.Connections)
 	clearDirectorMobs(director)
+	OutskirtsSquadBridge.ClearPlot(plot)
 	for uuid, hero in pairs(director.Heroes) do
 		destroyHeroVisual(hero)
 		director.Heroes[uuid] = nil
@@ -1208,6 +1650,7 @@ local function stepAdventurerPatrol(dt: number)
 	OutskirtsVfxPool:Step(Workspace:GetServerTimeNow())
 
 	if HubPresence.InTower() then
+		OutskirtsSquadBridge.ClearAll()
 		for _, director in pairs(Directors) do
 			setDirectorParked(director, true)
 		end
@@ -1269,6 +1712,8 @@ local function stepAdventurerPatrol(dt: number)
 			stepDirector(director, origin, frameDt, now)
 		end
 	end
+
+	stepReturningSquadOverrides(frameDt, now)
 end
 RunService.RenderStepped:Connect(function(dt: number)
 	debug.profilebegin("AdventurerPatrol")
