@@ -284,6 +284,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(228, 232, 255), Saturation = 0.24, ExposureCompensation = -0.08, BloomIntensity = 0.55,
 		SunRaysIntensity = 0.06, SunRaysSpread = 0.35,
 	},
+	-- Floor 7, Mycelium Galleries: deeper in. Lower, more violet ambient, a thicker drip-mist haze, and the
+	-- lamp niches' warmth standing out against the cold.
+	[7] = {
+		Ambient = c(36, 32, 74), OutdoorAmbient = c(50, 46, 98), ColorShift_Top = c(124, 212, 242), ColorShift_Bottom = c(112, 48, 162),
+		AtmosphereDensity = 0.42, AtmosphereColor = c(76, 64, 138), AtmosphereDecay = c(44, 28, 96), AtmosphereHaze = 1.6,
+		TintColor = c(226, 226, 255), Saturation = 0.26, ExposureCompensation = -0.12, BloomIntensity = 0.6,
+	},
 	-- Floor 11, Cinder Gate: searing white-hot desert noon, crisp pale mirage haze over dark volcanic ash & ochre sandstone.
 	[11] = {
 		Ambient = c(96, 84, 72), OutdoorAmbient = c(154, 138, 118), ColorShift_Top = c(255, 244, 214), ColorShift_Bottom = c(98, 72, 54),

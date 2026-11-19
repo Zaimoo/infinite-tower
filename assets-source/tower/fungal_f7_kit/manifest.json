@@ -1,0 +1,46 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "LampNiche": {
+      "Min": [
+        -6.4,
+        0.0,
+        -3.729
+      ],
+      "Roles": {
+        "ACCENT": 344,
+        "BULB": 300,
+        "GLOW": 84,
+        "MOSS": 320,
+        "STEM": 86,
+        "TRIM": 576
+      },
+      "Size": [
+        12.8,
+        15.039,
+        5.469
+      ],
+      "Triangles": 1710
+    },
+    "MyceliumNet": {
+      "Min": [
+        -13.649,
+        -0.49,
+        -1.839
+      ],
+      "Roles": {
+        "BULB": 420,
+        "GLOW": 438,
+        "MOSS": 160,
+        "STEM": 252
+      },
+      "Size": [
+        27.348,
+        14.849,
+        3.613
+      ],
+      "Triangles": 1270
+    }
+  },
+  "Unit": "studs"
+}
