@@ -477,6 +477,74 @@ test("Floor 9's terrain is the walking surface: flush on terrain terraces, open 
 	end
 end)
 
+test("Floor 10 is the hand-authored Matriarch's Hollow: a ring round a central dais, reached only from the back", function()
+	local room = Layout.ForFloor(10)
+	assert(room.Authored == "fungal:10" and room.Name == "Matriarch's Hollow")
+	assert(same(room, Layout.Get(5, 10)), "the authored floor is not fixed")
+	assert(not same(room, Layout.Get(5)), "floor 10 should not be the canonical layout")
+	assert(room.Platforms.Sanctuary.Name == "The Last Lamp")
+	assert(room.Platforms.Crossing.Name == "Brood Pillar" and room.Platforms.Apex.Name == "Matriarch's Dais")
+	local paths, intoApex = {}, 0
+	for _, link in room.Links do
+		paths[link.Id] = link.Kind
+		if link.To == "Apex" or link.From == "Apex" then intoApex += 1 end
+	end
+	assert(#room.Links == 8, "floor 10 should have 8 paths round the ring, got " .. #room.Links)
+	assert(paths.WestGallery_WestBastion == "STAIRS" and paths.EastGallery_EastBastion == "STAIRS")
+	assert(paths.WestBastion_Crossing and paths.EastBastion_Crossing and paths.Crossing_Apex)
+	assert(intoApex == 1, "the dais should have one way in (the Silk Stair from the Brood Pillar)")
+	-- The dais sits in the middle of the floor, the Brood Pillar behind it at the back of the nest.
+	local apex, cross, basin = room.Platforms.Apex, room.Platforms.Crossing, room.Platforms.Basin
+	assert(apex.X == 0 and apex.Z > cross.Z + cross.Depth / 2 + apex.Depth / 2 and apex.Z < basin.Z - basin.Depth / 2 - apex.Depth / 2)
+	for _, side in { "West", "East" } do
+		local g, b = room.Platforms[side .. "Gallery"], room.Platforms[side .. "Bastion"]
+		assert(math.abs(g.X) - g.Width / 2 > apex.Width / 2 + 40, side .. "Gallery crowds the dais")
+		assert(math.abs(b.X) - b.Width / 2 > apex.Width / 2, side .. "Bastion crowds the dais")
+	end
+	-- Boss portals on the dais's south rim, facing the way the Masters walked round.
+	assert(room.Portals and room.Portals.Side == "SOUTH")
+	local routes = Layout.PatrolRoutes(5, 10)
+	assert(routes.BASIN_LOOP and routes.GALLERY_WEST and routes.GALLERY_EAST and routes.BASTION_RING, "floor 10 lost patrol routes")
+end)
+
+test("Floor 10's terrain is the walking surface: a round mesa in a moat, open under the silk spans and Brood Pillar", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(10)
+	local td = room.Terrain
+	assert(td and td.Direct and td.Decks.Crossing and td.Decks.Sanctuary and room.Skylight)
+	assert(td.NoApexShelf and td.Shapes.Apex and td.Shapes.Apex.Round)
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	local field = Terrain.Field(room, "fungal_hollow", 10)
+	for id, t in room.Platforms do
+		local y = field.Sample(t.X + 3, t.Z - 3)
+		if td.Decks[id] then
+			assert(y <= t.Y - 4.5 + 1e-6, id .. ": the terrain rises into a deck")
+		else
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, id .. ": ground is not flush with the walking plane")
+		end
+	end
+	local apex, cross = room.Platforms.Apex, room.Platforms.Crossing
+	local _, underCross = field.Sample(cross.X, cross.Z + 12)
+	assert(underCross == "POOL", "no brood pool under Brood Pillar (" .. underCross .. ")")
+	-- The moat rings the dais on both flanks and in front of it, past the mesa's rock apron.
+	for _, at in { { apex.X - apex.Width / 2 - 40, apex.Z }, { apex.X + apex.Width / 2 + 40, apex.Z }, { apex.X, apex.Z + apex.Depth / 2 + 40 } } do
+		local y, kind = field.Sample(at[1], at[2])
+		assert(kind == "POOL" and y < apex.Y - 20, "no moat round the dais at " .. at[1] .. ", " .. at[2])
+	end
+	-- No apex shelf: the ground behind the dais drops to the moat instead of a wall-high massif.
+	local behind = field.Sample(apex.X, apex.Z - apex.Depth / 2 - 30)
+	assert(behind < apex.Y - 10, "a shelf rises behind the dais")
+	for _, link in room.Links do
+		if td.Bridges[link.Id] then
+			local x, z = (link.AX + link.BX) / 2, (link.AZ + link.BZ) / 2
+			local y = field.Sample(x, z)
+			assert(y < math.min(link.AY, link.BY) - 4.4, link.Id .. ": ground rises under the silk span")
+		end
+	end
+end)
+
 test("Fungal-owned terrain materials are used by no biome palette", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local owned = {}

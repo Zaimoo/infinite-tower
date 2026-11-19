@@ -305,6 +305,16 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.44, AtmosphereColor = c(96, 118, 72), AtmosphereDecay = c(78, 42, 118), AtmosphereHaze = 1.8,
 		TintColor = c(232, 248, 204), Contrast = 0.14, Saturation = 0.22, ExposureCompensation = -0.06, BloomIntensity = 0.58,
 	},
+	-- Floor 10, Matriarch's Hollow: the heart of the Veinweb, and the opposite of Floor 9's murk. Clear, pale
+	-- air lit silk-white from the great oculus over the dais, a cyan top light and a magenta floor bounce off
+	-- the moat, and bloom on the silk, cocoons and converging veins (the Last Lamp at the arrival is the
+	-- floor's sole warm flame).
+	[10] = {
+		Ambient = c(70, 62, 104), OutdoorAmbient = c(104, 98, 150), ColorShift_Top = c(200, 250, 255), ColorShift_Bottom = c(170, 60, 200),
+		AtmosphereDensity = 0.3, AtmosphereColor = c(150, 140, 190), AtmosphereDecay = c(80, 50, 130), AtmosphereHaze = 1.0,
+		TintColor = c(246, 242, 255), Contrast = 0.08, Saturation = 0.18, ExposureCompensation = 0.06, BloomIntensity = 0.7,
+		SunRaysIntensity = 0.1, SunRaysSpread = 0.45,
+	},
 	-- Floor 11, Cinder Gate: searing white-hot desert noon, crisp pale mirage haze over dark volcanic ash & ochre sandstone.
 	[11] = {
 		Ambient = c(96, 84, 72), OutdoorAmbient = c(154, 138, 118), ColorShift_Top = c(255, 244, 214), ColorShift_Bottom = c(98, 72, 54),

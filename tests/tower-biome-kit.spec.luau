@@ -13,7 +13,7 @@ end
 local ROLES = {
 	STONE = true, TRIM = true, ACCENT = true, MOSS = true, GLOW = true, WOOD = true, FOLIAGE = true,
 	METAL = true, GOLD = true, CRYSTAL = true, CAP = true, STEM = true, ALT = true, CORAL = true,
-	BULB = true, CANDLE = true,
+	BULB = true, CANDLE = true, SILK = true,
 }
 
 test("Every kit template has a size, stands on the ground and uses known colour roles", function()
@@ -90,6 +90,20 @@ test("Every extra floor-specific template has a size, stands on the ground and u
 	for _, name in { "BrokenBarricade", "RotVat", "OssuaryBones", "RotcapTower", "VelmariBanner", "RotcapCluster", "RotMyceliumWeb" } do
 		assert(Kit.ExtraTemplates[name], "fungal_f9_kit is missing " .. name)
 	end
+	-- Floor 10 (Matriarch's Hollow, fungal_f10_kit).
+	for _, name in { "WebbedArchway", "SilkSpire", "BroodEggClutch", "StolenLampCocoon", "SilkWindlass", "LastLampShrine", "SilkWebCurtain" } do
+		assert(Kit.ExtraTemplates[name], "fungal_f10_kit is missing " .. name)
+	end
+	-- Floor 10's dais and brood pieces (fungal_f10_nest_kit), named apart from fungal_f10_kit's.
+	for _, name in { "ShroudSpire", "EggRack", "SilkSpool", "SilkDrape", "CocoonLamp" } do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "fungal_f10_nest_kit is missing " .. name)
+		assert(t.Min.Y > -2.5 and t.Min.Y < 0.5, name .. " does not stand on its origin")
+		for _, role in t.Roles do
+			assert(ROLES[role], name .. " uses unknown role " .. role)
+		end
+	end
+	assert(Kit.Biomes.fungal_hollow.Palette.SILK, "fungal palette lacks SILK")
 	assert(Kit.Biomes.fungal_hollow.Palette.BULB and Kit.Biomes.fungal_hollow.Palette.CANDLE, "fungal palette lacks BULB or CANDLE")
 	assert(count >= 45, "expected Floor 2-5 and Floor 11-15 extra templates")
 end)
@@ -171,6 +185,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[7] ~= nil, "floor 7 (Mycelium Galleries) has its deep-gallery grade")
 	assert(Light.FloorGrades[8] ~= nil, "floor 8 (Blooming Chasm) has its full-bloom grade")
 	assert(Light.FloorGrades[9] ~= nil, "floor 9 (Rotcap Keep) has its sickly-rot grade")
+	assert(Light.FloorGrades[10] ~= nil, "floor 10 (Matriarch's Hollow) has its heart-of-web grade")
 	assert(Light.FloorGrades[11] ~= nil, "floor 11 (Cinder Gate) has its searing desert noon grade")
 	assert(Light.FloorGrades[12] ~= nil, "floor 12 (Buried Caravan) has its afternoon sandstorm grade")
 	assert(Light.FloorGrades[13] ~= nil, "floor 13 (Glasswind Ravine) has its ravine dusk grade")

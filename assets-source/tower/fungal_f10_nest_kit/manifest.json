@@ -1,0 +1,99 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CocoonLamp": {
+      "Min": [
+        -1.1,
+        0.0,
+        -1.1
+      ],
+      "Roles": {
+        "CANDLE": 80,
+        "SILK": 348,
+        "TRIM": 96,
+        "WOOD": 6
+      },
+      "Size": [
+        2.743,
+        10.725,
+        4.575
+      ],
+      "Triangles": 530
+    },
+    "EggRack": {
+      "Min": [
+        -6.8,
+        0.0,
+        -1.401
+      ],
+      "Roles": {
+        "BULB": 280,
+        "CRYSTAL": 1600,
+        "SILK": 224,
+        "TRIM": 707,
+        "WOOD": 30
+      },
+      "Size": [
+        13.6,
+        20.132,
+        2.801
+      ],
+      "Triangles": 2841
+    },
+    "ShroudSpire": {
+      "Min": [
+        -17.945,
+        -0.343,
+        -17.609
+      ],
+      "Roles": {
+        "GLOW": 144,
+        "SILK": 990,
+        "TRIM": 736
+      },
+      "Size": [
+        35.775,
+        62.343,
+        33.028
+      ],
+      "Triangles": 1870
+    },
+    "SilkDrape": {
+      "Min": [
+        -12.049,
+        -0.364,
+        -1.829
+      ],
+      "Roles": {
+        "MOSS": 160,
+        "SILK": 794,
+        "STEM": 68
+      },
+      "Size": [
+        24.098,
+        9.601,
+        4.02
+      ],
+      "Triangles": 1022
+    },
+    "SilkSpool": {
+      "Min": [
+        -5.4,
+        -0.118,
+        -3.0
+      ],
+      "Roles": {
+        "SILK": 304,
+        "TRIM": 138,
+        "WOOD": 330
+      },
+      "Size": [
+        11.8,
+        7.652,
+        9.546
+      ],
+      "Triangles": 772
+    }
+  },
+  "Unit": "studs"
+}
