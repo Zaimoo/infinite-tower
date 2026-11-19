@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HubLayout = require(Shared:WaitForChild("Config"):WaitForChild("HubLayout"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local OutskirtsRules = require(Shared:WaitForChild("Util"):WaitForChild("OutskirtsRules"))
+local PlotQueue = require(Shared:WaitForChild("Util"):WaitForChild("PlotQueue"))
 
 local PlotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -25,8 +26,57 @@ local LastTeleportAt: { [Player]: number } = {}
 
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local PlotManager = {}
-local AssignedPlots: { [number]: Player? } = {} -- [1..6] = Player
-local PlayerToPlotIndex: { [Player]: number } = {}
+
+-- Players waiting for a plot when every plot is taken (FIFO). They stay behind the join loading
+-- screen, which reads the replicated attributes below and shows "Server full" with their place.
+--   PlotAssignState:   "PENDING" | "QUEUED" | "ASSIGNED"
+--   PlotQueuePosition: 1-based place in the queue (0 once assigned)
+--   PlotQueueTotal:    queue length
+--   PlotTeleported:    true once the character stands on its plot (the loading screen reveals then)
+local plotQueue = PlotQueue.new(
+	HubLayout.AssignmentOrder,
+	function(idx: number): boolean
+		return PlotsFolder:FindFirstChild("Plot_" .. tostring(idx)) ~= nil
+	end,
+	function(player: Player): boolean
+		return player.Parent == Players
+	end
+)
+
+-- Every PlotSpawn is non-neutral, so without a neutral spawn Roblox drops a fresh character at the
+-- world origin, which is inside the central tower (it lands in the crown, ~1,640 studs up). This
+-- hidden neutral spawn on the Commons' south runner gives the engine a safe default instead.
+local FALLBACK_SPAWN_NAME = "HubFallbackSpawn"
+local function ensureFallbackSpawn(): SpawnLocation
+	local existing = Workspace:FindFirstChild(FALLBACK_SPAWN_NAME)
+	if existing and existing:IsA("SpawnLocation") then
+		return existing
+	end
+	if existing then
+		existing:Destroy()
+	end
+	local spawnLoc = Instance.new("SpawnLocation")
+	spawnLoc.Name = FALLBACK_SPAWN_NAME
+	spawnLoc.Size = Vector3.new(8, 1, 8)
+	local arrival = HubLayout.HubArrival
+	spawnLoc.CFrame = CFrame.new(arrival.X, HubLayout.IslandSurfaceY + 0.5, arrival.Z)
+	spawnLoc.Anchored = true
+	spawnLoc.CanCollide = false
+	spawnLoc.CanTouch = false
+	spawnLoc.CanQuery = false
+	spawnLoc.CastShadow = false
+	spawnLoc.Transparency = 1
+	spawnLoc.Neutral = true
+	spawnLoc.Enabled = true
+	spawnLoc.Duration = 0
+	local decal = spawnLoc:FindFirstChildWhichIsA("Decal")
+	if decal then
+		decal:Destroy()
+	end
+	spawnLoc.Parent = Workspace
+	return spawnLoc
+end
+ensureFallbackSpawn()
 
 local function getDataManager(): any
 	while not _G.DataManager do
@@ -36,7 +86,7 @@ local function getDataManager(): any
 end
 
 function PlotManager.GetPlayerPlotModel(player: Player): Model?
-	local idx = PlayerToPlotIndex[player]
+	local idx = plotQueue.PlayerToPlot[player]
 	if not idx then
 		return nil
 	end
@@ -44,11 +94,11 @@ function PlotManager.GetPlayerPlotModel(player: Player): Model?
 end
 
 function PlotManager.GetPlayerPlotIndex(player: Player): number?
-	return PlayerToPlotIndex[player]
+	return plotQueue.PlayerToPlot[player]
 end
 
 function PlotManager.GetPlotOwner(plotIndex: number): Player?
-	return AssignedPlots[plotIndex]
+	return plotQueue.AssignedPlots[plotIndex]
 end
 
 -- Validates that the caller owns an active plot, and optionally that targetPlot matches their owned plot.
@@ -74,7 +124,7 @@ function PlotManager.IsPlayerPlotOwner(player: Player, targetPlot: any?): boolea
 				return false
 			end
 		elseif type(targetPlot) == "number" then
-			if PlayerToPlotIndex[player] ~= targetPlot then
+			if plotQueue.PlayerToPlot[player] ~= targetPlot then
 				return false
 			end
 		elseif type(targetPlot) == "string" then
@@ -214,34 +264,110 @@ function PlotManager.PulseBlessing(player: Player)
 	end
 end
 
+-- Studs a character may sit from its plot spawn before the placement counts as failed.
+local PLACE_TOLERANCE = 40
+-- Re-checks after a teleport: the engine's own spawn step can overwrite a PivotTo made the same
+-- frame the character was added, which left fresh characters at the world origin (in the tower).
+-- PlotTeleported is marked once the early checks settle, with one late safety re-check after.
+local PLACE_EARLY_DELAYS = { 0.15, 0.4 }
+local PLACE_LATE_DELAY = 1.0
+local placeGeneration: { [Player]: number } = {}
+
+local function plotTargetCFrame(player: Player, plotModel: Model): CFrame?
+	local spawnLoc = plotModel:FindFirstChild("PlotSpawn") :: SpawnLocation?
+	local targetCFrame = if spawnLoc
+		then spawnLoc.CFrame * CFrame.new(0, 4, 0)
+		else plotModel:GetPivot() * CFrame.new(0, 4, 0)
+	-- A new Master (no summon yet) spawns facing their Summoning Altar, the guide's first step
+	-- (plan A6).
+	local dm = _G.DataManager
+	local profile = dm and dm.GetProfile and dm.GetProfile(player)
+	local guide = profile and profile.Onboarding and profile.Onboarding.Guide
+	local altar = plotModel:FindFirstChild("Building_Summoning", true)
+	if guide and guide.Enabled and not guide.Facts.Summon and altar and altar:IsA("Model") then
+		local from = targetCFrame.Position
+		local at = altar:GetPivot().Position
+		local flat = Vector3.new(at.X, from.Y, at.Z)
+		if (flat - from).Magnitude > 1 then targetCFrame = CFrame.lookAt(from, flat) end
+	end
+	return targetCFrame
+end
+
+-- Moves the character onto its plot now. Returns false when the character or its root part is not
+-- there yet.
+local function placeOnPlot(player: Player, plotModel: Model): (boolean, CFrame?)
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local targetCFrame = plotTargetCFrame(player, plotModel)
+	if not (char and hrp and targetCFrame) then
+		return false, nil
+	end
+	if hrp:GetAttribute("PlotQueueParked") then
+		hrp:SetAttribute("PlotQueueParked", nil)
+		hrp.Anchored = false
+	end
+	char:PivotTo(targetCFrame)
+	hrp.AssemblyLinearVelocity = Vector3.zero
+	hrp.AssemblyAngularVelocity = Vector3.zero
+	return true, targetCFrame
+end
+
 function PlotManager.TeleportPlayerToPlot(player: Player)
 	local plotModel = PlotManager.GetPlayerPlotModel(player)
 	if not plotModel then
 		return
 	end
-	local spawnLoc = plotModel:FindFirstChild("PlotSpawn") :: SpawnLocation?
+	placeGeneration[player] = (placeGeneration[player] or 0) + 1
+	local generation = placeGeneration[player]
 	local char = player.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if spawnLoc and hrp then
-		local targetCFrame = spawnLoc.CFrame * CFrame.new(0, 4, 0)
-		-- A new Master (no summon yet) spawns facing their Summoning Altar, the guide's first step
-		-- (plan A6).
-		local dm = _G.DataManager
-		local profile = dm and dm.GetProfile and dm.GetProfile(player)
-		local guide = profile and profile.Onboarding and profile.Onboarding.Guide
-		local altar = plotModel:FindFirstChild("Building_Summoning", true)
-		if guide and guide.Enabled and not guide.Facts.Summon and altar and altar:IsA("Model") then
-			local from = targetCFrame.Position
-			local at = altar:GetPivot().Position
-			local flat = Vector3.new(at.X, from.Y, at.Z)
-			if (flat - from).Magnitude > 1 then targetCFrame = CFrame.lookAt(from, flat) end
-		end
-		char:PivotTo(targetCFrame)
-		hrp.AssemblyLinearVelocity = Vector3.zero
-		hrp.AssemblyAngularVelocity = Vector3.zero
+
+	local placed, targetCFrame = placeOnPlot(player, plotModel)
+	if placed and targetCFrame then
 		local TowerFloorService = require(script.Parent.TowerFloorService)
 		TowerFloorService.ExitToOverworld(player, targetCFrame.Position, true)
 	end
+
+	-- Retry until the root part exists, then verify the character stayed put.
+	task.spawn(function()
+		if not placed then
+			local waitedChar = char or player.CharacterAdded:Wait()
+			if waitedChar:WaitForChild("HumanoidRootPart", 10) == nil then
+				return
+			end
+			if placeGeneration[player] ~= generation or player.Character ~= waitedChar then
+				return
+			end
+			placed, targetCFrame = placeOnPlot(player, plotModel)
+			if not (placed and targetCFrame) then
+				return
+			end
+			local TowerFloorService = require(script.Parent.TowerFloorService)
+			TowerFloorService.ExitToOverworld(player, targetCFrame.Position, true)
+		end
+		local target = (targetCFrame :: CFrame).Position
+		local watchedChar = player.Character
+		for _, seconds in PLACE_EARLY_DELAYS do
+			task.wait(seconds)
+			if placeGeneration[player] ~= generation or player.Character ~= watchedChar or player.Parent ~= Players then
+				return
+			end
+			local hrp = watchedChar and watchedChar:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if hrp and (hrp.Position - target).Magnitude > PLACE_TOLERANCE then
+				placeOnPlot(player, plotModel)
+			end
+		end
+		if placeGeneration[player] == generation and player.Parent == Players then
+			player:SetAttribute("PlotTeleported", true)
+		end
+		task.wait(PLACE_LATE_DELAY)
+		if placeGeneration[player] ~= generation or player.Character ~= watchedChar or player.Parent ~= Players then
+			return
+		end
+		local hrp = watchedChar and watchedChar:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if hrp and (hrp.Position - target).Magnitude > PLACE_TOLERANCE then
+			placeOnPlot(player, plotModel)
+		end
+	end)
 end
 
 function PlotManager.TeleportPlayerToHub(player: Player)
@@ -326,6 +452,10 @@ if TeleportRequest then
 		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 		local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 		if not char or not hrp or not humanoid or humanoid.Health <= 0 then
+			return
+		end
+		-- Queued (server full) players wait behind the loading screen until they have a plot.
+		if not plotQueue.PlayerToPlot[player] then
 			return
 		end
 
@@ -547,27 +677,39 @@ PlotsFolder.ChildAdded:Connect(function(child)
 	end
 end)
 
-local function assignPlotToPlayer(player: Player)
-	local dm = getDataManager()
-	local chosenIdx: number? = nil
-	-- Nearest-to-the-gate first, so small servers cluster by the tower (HubLayout.AssignmentOrder)
-	for _, i in HubLayout.AssignmentOrder do
-		if AssignedPlots[i] == nil then
-			chosenIdx = i
-			break
-		end
+
+local function setQueueAttributes(player: Player, state: string, position: number, total: number)
+	player:SetAttribute("PlotAssignState", state)
+	player:SetAttribute("PlotQueuePosition", position)
+	player:SetAttribute("PlotQueueTotal", total)
+end
+
+-- Refreshes every queued player's place in line (1-based) and the queue length.
+local function broadcastQueuePositions()
+	for _, entry in plotQueue:QueueSnapshot() do
+		setQueueAttributes(entry.Player, "QUEUED", entry.Position, entry.Total)
 	end
-	if not chosenIdx then
-		warn(string.format("[PlotManager] All plots occupied! Cannot assign plot for %s (%d)", player.Name, player.UserId))
+end
+
+-- A queued player's character waits, anchored, on the hub's south runner behind the loading screen.
+local function parkQueuedCharacter(player: Player)
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not (char and hrp) then
 		return
 	end
-	AssignedPlots[chosenIdx] = player
-	PlayerToPlotIndex[player] = chosenIdx
+	local arrival = HubLayout.HubArrival
+	local scatter = ((player.UserId % 5) - 2) * 2
+	char:PivotTo(CFrame.new(arrival.X + scatter, arrival.Y, arrival.Z))
+	hrp.AssemblyLinearVelocity = Vector3.zero
+	hrp.Anchored = true
+	hrp:SetAttribute("PlotQueueParked", true)
+end
 
-	local profile = dm.GetProfile(player)
-	if profile then
-		profile.PlotIndex = chosenIdx
-	end
+-- Wires `player` onto plot `chosenIdx` and moves them onto it. Does not wait on DataManager:
+-- the plot, respawn location and teleport happen at once; the profile bits follow when ready.
+local function applyPlotClaim(player: Player, chosenIdx: number)
+	setQueueAttributes(player, "ASSIGNED", 0, plotQueue:QueueLength())
 
 	local plotModel = PlotsFolder:FindFirstChild("Plot_" .. tostring(chosenIdx)) :: Model?
 	if plotModel then
@@ -588,18 +730,94 @@ local function assignPlotToPlayer(player: Player)
 		FacilityPresence.Reapply(plotModel)
 	end
 
-	player.CharacterAdded:Connect(function()
-		task.wait(0.25)
+	if player.Character then
 		PlotManager.TeleportPlayerToPlot(player)
+	end
+
+	task.spawn(function()
+		local dm = getDataManager()
+		-- The profile may still be loading: wait for it (or for the player to leave / lose the plot).
+		local profile = dm.GetProfile(player)
+		local started = os.clock()
+		while not profile and player.Parent == Players and plotQueue.PlayerToPlot[player] == chosenIdx and os.clock() - started < 60 do
+			task.wait(0.2)
+			profile = dm.GetProfile(player)
+		end
+		if plotQueue.PlayerToPlot[player] ~= chosenIdx then
+			return
+		end
+		if profile then
+			profile.PlotIndex = chosenIdx
+			local guide = profile.Onboarding and profile.Onboarding.Guide
+			local needsAltarFacing = guide ~= nil and guide.Enabled == true and not guide.Facts.Summon
+			-- Re-face a brand-new Master toward their Summoning Altar now the guide state is known,
+			-- or trigger placement if it hasn't run yet.
+			if needsAltarFacing or (not placeGeneration[player] and player:GetAttribute("PlotTeleported") ~= true) then
+				PlotManager.TeleportPlayerToPlot(player)
+			end
+		end
 		PlotManager.RefreshPlotVisuals(player)
 	end)
+end
 
-	if player.Character then
-		task.defer(function()
-			PlotManager.TeleportPlayerToPlot(player)
-			PlotManager.RefreshPlotVisuals(player)
-		end)
+local function onCharacterAdded(player: Player, _char: Model)
+	task.wait(0.25)
+	if player.Parent ~= Players then
+		return
 	end
+	if plotQueue.PlayerToPlot[player] then
+		PlotManager.TeleportPlayerToPlot(player)
+		task.spawn(PlotManager.RefreshPlotVisuals, player)
+	elseif plotQueue:QueuePosition(player) then
+		local char = player.Character
+		if char then
+			char:WaitForChild("HumanoidRootPart", 10)
+		end
+		if plotQueue:QueuePosition(player) then
+			parkQueuedCharacter(player)
+		end
+	end
+end
+
+local function assignPlotToPlayer(player: Player)
+	if plotQueue.PlayerToPlot[player] or plotQueue:QueuePosition(player) then
+		return
+	end
+	player:SetAttribute("PlotTeleported", false)
+	setQueueAttributes(player, "PENDING", 0, plotQueue:QueueLength())
+	player.CharacterAdded:Connect(function(char)
+		onCharacterAdded(player, char)
+	end)
+
+	local result = plotQueue:Join(player)
+	if result.State == "ASSIGNED" and result.PlotIndex then
+		applyPlotClaim(player, result.PlotIndex)
+		return
+	end
+
+	-- Server full: wait in line behind the join loading screen.
+	player.RespawnLocation = ensureFallbackSpawn()
+	broadcastQueuePositions()
+	warn(string.format("[PlotManager] All plots occupied: %s (%d) queued at #%d", player.Name, player.UserId, result.Position))
+	if player.Character then
+		task.spawn(onCharacterAdded, player, player.Character)
+	end
+end
+
+-- Hands freed plots to the front of the queue.
+local function promoteQueue()
+	for _, promotion in plotQueue:Promote() do
+		applyPlotClaim(promotion.Player, promotion.PlotIndex)
+	end
+	broadcastQueuePositions()
+end
+
+function PlotManager.GetQueuePosition(player: Player): number?
+	return plotQueue:QueuePosition(player)
+end
+
+function PlotManager.GetQueueLength(): number
+	return plotQueue:QueueLength()
 end
 
 for _, p in ipairs(Players:GetPlayers()) do
@@ -609,10 +827,12 @@ Players.PlayerAdded:Connect(assignPlotToPlayer)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	LastTeleportAt[player] = nil
-	local idx = PlayerToPlotIndex[player]
+	placeGeneration[player] = nil
+	local idx, wasQueued = plotQueue:Release(player)
+	if wasQueued then
+		broadcastQueuePositions()
+	end
 	if idx then
-		AssignedPlots[idx] = nil
-		PlayerToPlotIndex[player] = nil
 		local plotModel = PlotsFolder:FindFirstChild("Plot_" .. tostring(idx)) :: Model?
 		if plotModel then
 			setPlotReplicationFocus(plotModel, player, false)
@@ -633,6 +853,42 @@ Players.PlayerRemoving:Connect(function(player: Player)
 				workers:ClearAllChildren()
 			end
 			FacilityPresence.Reset(plotModel)
+		end
+		-- The plot is free: the first player in line takes it (after the reset above).
+		task.defer(promoteQueue)
+	end
+end)
+
+-- Safety net: an overworld character inside the central tower's drum (above its gate porch) can
+-- only have got there through a bad spawn. Send them home. Tower floors and the raid arena are
+-- built far off-map, so they never match.
+task.spawn(function()
+	while true do
+		task.wait(1)
+		for _, player in Players:GetPlayers() do
+			local char = player.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if hrp and not hrp.Anchored then
+				local pos = hrp.Position
+				if PlotQueue.IsInTowerCrownTrap(pos) then
+					local ok, onOverworld = pcall(function()
+						local tfs = require(script.Parent.TowerFloorService)
+						local state = tfs.GetState(player)
+						return state.FloorId == 0 and not tfs.IsTransitioning(player)
+					end)
+					local inDuel = _G.CombatSimulation and _G.CombatSimulation.IsInDuel and _G.CombatSimulation.IsInDuel(player)
+					if ok and onOverworld and not inDuel then
+						warn(string.format("[PlotManager] %s was inside the central tower at %s; returning them", player.Name, tostring(pos)))
+						if plotQueue.PlayerToPlot[player] then
+							PlotManager.TeleportPlayerToPlot(player)
+						elseif plotQueue:QueuePosition(player) then
+							parkQueuedCharacter(player)
+						else
+							PlotManager.TeleportPlayerToHub(player)
+						end
+					end
+				end
+			end
 		end
 	end
 end)
