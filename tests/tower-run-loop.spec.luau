@@ -79,10 +79,11 @@ local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"]
 local Balance = require(nodes["ReplicatedStorage.Shared.Config.StatBalance"])
 local Hardcore = require(nodes["ReplicatedStorage.Shared.Config.TowerHardcoreConfig"])
 
-test("Floor 1 fits starter Han and a starter Rare feels stronger immediately", function()
+test("Floor 1 fits starter Han and the first-pull Superior carries the first biome; a lone Rare does not", function()
 	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1.05 }
 	local dagger = { Star = 1, Rarity = 1, TemplateId = "art_rusty_daggers" }
 	local catio = { TemplateId = "hero_catio", Stars = 1, Level = 1, QualityScalar = 0.9 }
+	local aeli = { TemplateId = "hero_aeli", Stars = 1, Level = 1, QualityScalar = 0.9 }
 	local hanStats = StatFormulas.GetCombatSnapshot(han, dagger)
 	local hanPower = StatFormulas.GetHeroPower(han, dagger)
 	local floorOne = Balance.GetTowerFloorStats(1, "ALPHA")
@@ -90,12 +91,19 @@ test("Floor 1 fits starter Han and a starter Rare feels stronger immediately", f
 	assert(floorOne.MaxHP / hanStats.DPS < 24, "Han can take on the first Alpha with his starter gear")
 	assert(floorOne.ATK * 8 < hanStats.Health, "Han can survive several hits")
 	assert(hanPower >= Floors.RecommendedPower(1), "the starter should meet the first recommendation")
-	assert(StatFormulas.GetHeroPower(catio) >= Floors.RecommendedPower(5),
-		"even an unequipped low-quality Rare gives the early squad enough power for the first biome")
+	-- Floors 1-9 were raised once the first ten-pull guaranteed a Superior (StatBalance.towerCombatScale).
+	assert(StatFormulas.GetHeroPower(aeli) >= Floors.RecommendedPower(5),
+		"an unequipped low-quality Superior gives the early squad enough power for the first biome")
+	assert(StatFormulas.GetHeroPower(catio) < Floors.RecommendedPower(5),
+		"an unequipped Rare alone no longer meets the Floor 5 recommendation")
 	assert(Hardcore.StarterGems == 900)
 end)
 
-test("Tower combat uses the reference curve from Floor 10 and keeps Floors 1-9 relief", function()
+test("Tower combat scales the reference curve by TowerDifficulty and keeps Floors 1-9 relief", function()
+	local difficulty = Balance.TowerDifficulty
+	assert(difficulty.HP > 1 and difficulty.ATK > 1, "tower floors run harder than the anchor squads")
+	local hp50, atk50 = Balance.TowerDifficultyAt(50)
+	assert(hp50 == difficulty.HP and atk50 == 1, "Floor 50 keeps the HP bump; its ATK stays at the 7-star survival gate")
 	for _, role in { "REGULAR", "ELITE", "ALPHA", "BOSS" } do
 		for floor = 1, 50 do
 			local stats = Balance.GetTowerFloorStats(floor, role)
@@ -103,7 +111,10 @@ test("Tower combat uses the reference curve from Floor 10 and keeps Floors 1-9 r
 			if floor < Balance.CurveStartFloor then
 				assert(stats.MaxHP < reference.MaxHP and stats.ATK <= reference.ATK, "Floors 1-9 keep their early relief")
 			else
-				assert(stats.MaxHP == reference.MaxHP and stats.ATK == reference.ATK, "tower fights follow the reference from Floor 10")
+				local hpScale, atkScale = Balance.TowerDifficultyAt(floor)
+				assert(stats.MaxHP == math.round(reference.MaxHP * hpScale)
+					and stats.ATK == math.max(1, math.round(reference.ATK * atkScale)),
+					"tower fights follow the scaled reference from Floor 10")
 			end
 		end
 	end

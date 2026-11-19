@@ -16,7 +16,7 @@ local function input(over)
 	return i
 end
 local function arc(over)
-	local t={Shape="ARC",Origin=v(0,0),Aim=v(0,5),Yaw=math.pi,Range=12,Radius=0,HalfArcCos=math.cos(math.rad(50)),TimeToImpact=.7,Age=.3}
+	local t={Shape="ARC",Origin=v(0,0),Aim=v(0,5),Yaw=math.pi,Range=12,Radius=0,HalfArcCos=math.cos(math.rad(50)),TimeToImpact=.7,Age=.5}
 	for k,value in over or {} do t[k]=value end
 	return t
 end
@@ -38,7 +38,7 @@ test("A Striker in a swing walks round to its edge and ends up outside it",funct
 	assert(plan and plan.Kind=="EVADE","expected an evade")
 	assert(not M.InDanger(a,plan.Goal),"escape point is still inside the swing")
 	assert(flat(plan.Goal,v(0,5))<9,"flanking is shorter than backing out of a 12-stud reach")
-	assert(plan.Deadline==.7 and plan.Speed==20)
+	assert(plan.Deadline==.7 and plan.Speed==20*M.EVADE_SPEED)
 end)
 test("Every escape point is clear of its telegraph, including dead-centre stacks",function()
 	local shapes={
@@ -73,7 +73,7 @@ test("A telegraph that cannot be left in time is not dodged",function()
 	assert(plan and plan.Kind=="EVADE")
 end)
 test("Telegraphs are noticed after the reaction delay, and never once they have landed",function()
-	assert(M.Plan(input({Threats={arc({Age=.1})},EvadeOnly=true}))==nil,"dodged before the reaction delay")
+	assert(M.Plan(input({Threats={arc({Age=M.EVADE_REACTION-.1})},EvadeOnly=true}))==nil,"dodged before the reaction delay")
 	assert(M.Plan(input({Threats={arc({TimeToImpact=0})},EvadeOnly=true}))==nil,"dodged a landed hit")
 end)
 test("Vanguards and Berserkers hold their ground in a telegraph",function()
@@ -96,8 +96,8 @@ test("A hero whose dodge is on cooldown takes the hit but keeps positioning",fun
 	local plan=M.Plan(input({Position=v(0,4.8),TargetYaw=0,Threats={arc()},EvadeOnCooldown=true}))
 	assert(plan==nil or plan.Kind~="EVADE","dodged on cooldown while positioning")
 end)
-test("Dodge cooldowns start at the Striker's 8.5 s floor and grow for the other archetypes",function()
-	assert(M.EVADE_COOLDOWN_MIN==8.5 and M.Profile("Striker").EvadeCooldown==M.EVADE_COOLDOWN_MIN)
+test("Dodge cooldowns start at the Striker's 14 s floor and grow for the other archetypes",function()
+	assert(M.EVADE_COOLDOWN_MIN==14 and M.Profile("Striker").EvadeCooldown==M.EVADE_COOLDOWN_MIN)
 	for _,archetype in {"Marksman","Scholar","Healer"} do
 		assert(M.Profile(archetype).EvadeCooldown>M.EVADE_COOLDOWN_MIN,archetype.." should wait longer than a Striker")
 	end
@@ -169,6 +169,8 @@ test("A ranged hero kites a mob that closed in, without leaving its own range or
 	-- A mob on another terrace is not a threat.
 	assert(M.Plan(ranged({Hostiles={{NetId=41,Position=Vector3.new(0,12,16)}}}))==nil)
 	assert(M.Plan(ranged({Hostiles={chaser},EvadeOnly=true}))==nil,"no positioning while busy")
+	assert(M.Plan(ranged({Hostiles={chaser},KiteOnCooldown=true}))==nil,"kited recently: stands and fights")
+	assert(M.KITE_SPEED*20<12,"a kiting hero is slower than a Regular, so the mob catches up")
 end)
 test("Stacked ranged heroes spread sideways; only the higher NetId moves",function()
 	local function ranged(netId,x,ally)

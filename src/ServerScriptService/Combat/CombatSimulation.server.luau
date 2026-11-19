@@ -2557,6 +2557,7 @@ local function stepCombatManeuver(simHero: SimHero, targetMob: SimMob, inRange: 
 				LeashRadius = if leashCenter then HeroTargeting.HERO_TETHER - 5 else nil,
 				EvadeOnly = not positioning,
 				EvadeOnCooldown = now < (h.NextEvadeAt or 0),
+				KiteOnCooldown = now < (h.NextKiteAt or 0),
 			})
 			if plan then
 				-- The plan is pure geometry; the world decides whether the spot can be stood on
@@ -2580,6 +2581,9 @@ local function stepCombatManeuver(simHero: SimHero, targetMob: SimMob, inRange: 
 					if plan.Kind == "EVADE" then
 						-- The cooldown runs from the start of the dodge; a hero still on it takes the next hit.
 						h.NextEvadeAt = now + HeroCombatMovement.Profile(simHero.Archetype).EvadeCooldown
+					elseif plan.Kind == "KITE" then
+						-- Like a dodge, the kite cooldown runs from the start of the step back.
+						h.NextKiteAt = now + HeroCombatMovement.KITE_COOLDOWN
 					end
 				elseif plan.Kind == "EVADE" then
 					h.NextEvadeAt = now + 0.3
