@@ -16,7 +16,7 @@ local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 57 -- 57: Tuck SynthesisChamber deeper into NW corner (56: Match merchant bazaar pebble stone to castle courtyard grey granite)
+local VERSION = 58 -- 58: Add solid awning roof, post, and prop colliders to Building_Market (57: Tuck SynthesisChamber deeper into NW corner)
 
 local function attachPrompt(
 	parent: Instance,

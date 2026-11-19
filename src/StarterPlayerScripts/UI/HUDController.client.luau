@@ -691,11 +691,18 @@ local squadWipeText = makeLabel({
 })
 
 local partiallyDefeatedBanner: Frame? = nil
+local hasPartialDefeat = false
+local refreshPartialBannerVisibility: () -> ()
 
 SquadWipeStateRemote.OnClientEvent:Connect(function(isWiped: boolean)
 	squadWipeBanner.Visible = isWiped
-	if isWiped and partiallyDefeatedBanner then
-		partiallyDefeatedBanner.Visible = false
+	if isWiped then
+		hasPartialDefeat = false
+		if refreshPartialBannerVisibility then
+			refreshPartialBannerVisibility()
+		elseif partiallyDefeatedBanner then
+			partiallyDefeatedBanner.Visible = false
+		end
 	end
 end)
 
@@ -788,6 +795,17 @@ partiallyDefeatedBanner.InputBegan:Connect(function(input: InputObject)
 	end
 end)
 
+refreshPartialBannerVisibility = function()
+	if not partiallyDefeatedBanner then return end
+	local isStationed = Store.SquadAssignment ~= nil and Store.SquadAssignment > 0
+	local inFortressTree = WindowManager.IsOpen("Fortress")
+	local show = hasPartialDefeat and not isStationed and not inFortressTree
+	partiallyDefeatedBanner.Visible = show
+	if not show then
+		partialTooltipPopover.Visible = false
+	end
+end
+
 SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 	if type(status) ~= "table" then return end
 	local fallen = status.FallenCount or 0
@@ -799,8 +817,8 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 	local isStationed = status.IsStationed == true or (Store.SquadAssignment ~= nil and Store.SquadAssignment > 0)
 
 	if isWiped then
-		partiallyDefeatedBanner.Visible = false
-		partialTooltipPopover.Visible = false
+		hasPartialDefeat = false
+		refreshPartialBannerVisibility()
 		squadWipeBanner.Visible = not isStationed
 		return
 	end
@@ -808,7 +826,7 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 	squadWipeBanner.Visible = false
 
 	if not isStationed and fallen > 0 and alive > 0 and clientFloorProgress.FloorId > 0 then
-		partiallyDefeatedBanner.Visible = true
+		hasPartialDefeat = true
 		partialHeader.Text = string.format("%d/%d %s DOWN", fallen, total, if total == 1 then "HERO" else "HEROES")
 		local namesText = if #fallenList > 0 then table.concat(fallenList, ", ") else "Hero"
 		partialSubtext.Text = string.format("%s · revives when you change floor", namesText)
@@ -823,18 +841,13 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 		end
 		tooltipList.Text = table.concat(lines, "\n")
 	else
-		partiallyDefeatedBanner.Visible = false
-		partialTooltipPopover.Visible = false
+		hasPartialDefeat = false
 	end
+	refreshPartialBannerVisibility()
 end)
 
-Store.Changed:Connect(function()
-	local isStationed = Store.SquadAssignment ~= nil and Store.SquadAssignment > 0
-	if isStationed and partiallyDefeatedBanner and partiallyDefeatedBanner.Visible then
-		partiallyDefeatedBanner.Visible = false
-		partialTooltipPopover.Visible = false
-	end
-end)
+Store.Changed:Connect(refreshPartialBannerVisibility)
+WindowManager.Changed:Connect(refreshPartialBannerVisibility)
 
 -- Both squad alerts sit bottom-centre. They used to be 560 px wide at a fixed height, which put them
 -- on top of the Squad drawer whenever it was expanded (and danger auto-expands it). Now they are

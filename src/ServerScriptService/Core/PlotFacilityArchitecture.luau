@@ -1025,22 +1025,20 @@ function Arch.BuildMarket(folder: Instance, centerCF: CFrame): Part
 		end
 	end
 
-	-- Invisible solid box colliders ONLY for the 3 counters & 2 outer crate/barrel clusters
-	-- so flagstones, open courtyard plaza, and rear trader lane stay 100% passable.
+	-- Solid box colliders for the 3 counters, crate/barrel/sack clusters, 12 timber corner posts,
+	-- and 3 sloped awning roofs so players can climb and stand on top of the market without phasing through,
+	-- while flagstones, open courtyard plaza, and rear trader lane stay 100% passable.
 	local colColor = Color3.fromRGB(92, 86, 78)
-	local marketColliders = {
-		{ Name = "CounterCollider_Left", Pos = V(-10.50, 1.65, -2.69), Size = V(9.8, 3.30, 2.25), YawDeg = 15 },
-		{ Name = "CounterCollider_Center", Pos = V(0.87, 1.65, -6.60), Size = V(11.2, 3.30, 2.25), YawDeg = -2 },
-		{ Name = "CounterCollider_Right", Pos = V(10.94, 1.65, -0.66), Size = V(9.2, 3.30, 2.25), YawDeg = -26 },
-		{ Name = "ClutterCollider_Left", Pos = V(-15.80, 1.35, -1.20), Size = V(3.6, 2.70, 5.60), YawDeg = 15 },
-		{ Name = "ClutterCollider_Right", Pos = V(13.50, 1.35, 3.00), Size = V(4.6, 2.70, 4.40), YawDeg = -26 },
-	}
-	for _, col in ipairs(marketColliders) do
+	local function addMarketCollider(name: string, size: Vector3, localCF: CFrame)
+		local existingCol = model:FindFirstChild(name)
+		if existingCol then
+			existingCol:Destroy()
+		end
 		local cp = part(
 			model,
-			col.Name,
-			col.Size,
-			centerCF * CFrame.new(col.Pos) * CFrame.Angles(0, math.rad(col.YawDeg), 0),
+			name,
+			size,
+			centerCF * localCF,
 			colColor,
 			Enum.Material.Wood,
 			true
@@ -1050,6 +1048,94 @@ function Arch.BuildMarket(folder: Instance, centerCF: CFrame): Part
 		cp.CanTouch = false
 		cp.CanQuery = false
 	end
+
+	local marketColliders = {
+		{ Name = "CounterCollider_Left", Pos = V(-10.50, 1.65, -2.69), Size = V(9.8, 3.30, 2.25), YawDeg = 15 },
+		{ Name = "CounterCollider_Center", Pos = V(0.87, 1.65, -6.60), Size = V(11.2, 3.30, 2.25), YawDeg = -2 },
+		{ Name = "CounterCollider_Right", Pos = V(10.94, 1.65, -0.66), Size = V(9.2, 3.30, 2.25), YawDeg = -26 },
+		{ Name = "ClutterCollider_Left", Pos = V(-15.80, 1.35, -1.20), Size = V(3.6, 2.70, 5.60), YawDeg = 15 },
+		{ Name = "ClutterCollider_Right", Pos = V(13.50, 1.35, 3.00), Size = V(4.6, 2.70, 4.40), YawDeg = -26 },
+		{ Name = "ClutterCollider_CenterCrate", Pos = V(5.20, 0.88, -4.30), Size = V(2.25, 1.76, 1.65), YawDeg = -12 },
+		{ Name = "ClutterCollider_CenterSack", Pos = V(-3.10, 0.82, -4.20), Size = V(1.55, 1.64, 1.55), YawDeg = 18 },
+		{ Name = "ClutterCollider_RearBarrel", Pos = V(6.00, 1.22, -9.80), Size = V(1.90, 2.45, 1.90), YawDeg = 0 },
+	}
+	for _, col in ipairs(marketColliders) do
+		addMarketCollider(
+			col.Name,
+			col.Size,
+			CFrame.new(col.Pos) * CFrame.Angles(0, math.rad(col.YawDeg), 0)
+		)
+	end
+
+	-- Stall-local colliders: sloped awning roofs, timber corner posts, and front display crates
+	local stallDefs = {
+		{
+			Tag = "Left",
+			BaseCF = CFrame.new(-10.8, 0, -3.8) * CFrame.Angles(0, math.rad(15), 0),
+			AwningPos = V(0, 9.52, -0.35),
+			AwningSize = V(11.4, 0.48, 6.80),
+			AwningPitchDeg = 23.3,
+			PostX = 5.00,
+			FrontZ = 2.15,
+			FrontH = 8.20,
+			RearZ = -2.95,
+			RearH = 10.55,
+			PostThick = 0.56,
+		},
+		{
+			Tag = "Center",
+			BaseCF = CFrame.new(0.9, 0, -7.6) * CFrame.Angles(0, math.rad(-2), 0),
+			AwningPos = V(0, 10.18, -0.55),
+			AwningSize = V(13.0, 0.52, 7.10),
+			AwningPitchDeg = 22.0,
+			PostX = 5.80,
+			FrontZ = 2.10,
+			FrontH = 8.70,
+			RearZ = -3.35,
+			RearH = 11.15,
+			PostThick = 0.58,
+		},
+		{
+			Tag = "Right",
+			BaseCF = CFrame.new(11.4, 0, -1.6) * CFrame.Angles(0, math.rad(-26), 0),
+			AwningPos = V(0, 9.52, -0.35),
+			AwningSize = V(10.8, 0.48, 6.80),
+			AwningPitchDeg = 23.3,
+			PostX = 4.75,
+			FrontZ = 2.05,
+			FrontH = 8.15,
+			RearZ = -2.80,
+			RearH = 10.45,
+			PostThick = 0.56,
+		},
+	}
+	for _, st in ipairs(stallDefs) do
+		addMarketCollider(
+			"AwningCollider_" .. st.Tag,
+			st.AwningSize,
+			st.BaseCF * CFrame.new(st.AwningPos) * CFrame.Angles(math.rad(st.AwningPitchDeg), 0, 0)
+		)
+		for _, side in ipairs({ { Suffix = "L", Sign = -1 }, { Suffix = "R", Sign = 1 } }) do
+			local sx = side.Sign * st.PostX
+			addMarketCollider(
+				string.format("PostCollider_%s_Front_%s", st.Tag, side.Suffix),
+				V(st.PostThick, st.FrontH, st.PostThick),
+				st.BaseCF * CFrame.new(sx, st.FrontH * 0.5, st.FrontZ)
+			)
+			addMarketCollider(
+				string.format("PostCollider_%s_Rear_%s", st.Tag, side.Suffix),
+				V(st.PostThick, st.RearH, st.PostThick),
+				st.BaseCF * CFrame.new(sx, st.RearH * 0.5, st.RearZ)
+			)
+		end
+	end
+	-- Front fruit display crates in front of the Right stall
+	local rightBaseCF = CFrame.new(11.4, 0, -1.6) * CFrame.Angles(0, math.rad(-26), 0)
+	addMarketCollider(
+		"ClutterCollider_RightFruitCrates",
+		V(4.20, 1.44, 1.75),
+		rightBaseCF * CFrame.new(-1.35, 0.72, 2.85)
+	)
 
 	-- Keep PrimaryRoot hullSize.Y <= 1.5 so PrimaryRoot stays non-colliding while PromptAnchor & TraderSpots sit cleanly
 	local interactionPart = finalizeFacilityModel(model, centerCF, V(4, 1.0, 4), V(0, 3.1, 6.2))
@@ -1856,7 +1942,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 28 then
+	if existing and existing:GetAttribute("PrefabVersion") == 29 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1865,7 +1951,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 28)
+	prefabs:SetAttribute("PrefabVersion", 29)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")
