@@ -408,7 +408,7 @@ LocalPlayer.CharacterRemoving:Connect(function()
 	setModalFocusMode(false)
 end)
 
--- Top Bar Container
+-- Top Bar Container (hidden immediately so a stalled WaitForChild never flashes legacy prototype UI)
 local topBar = makeFrame({
 	Name = "TopBarContainer",
 	Size = UDim2.new(1, -24, 0, 48),
@@ -418,6 +418,7 @@ local topBar = makeFrame({
 	Corner = 10,
 	Stroke = 1.5,
 	StrokeColor = Color3.fromRGB(70, 75, 110),
+	Visible = false,
 	Parent = hudGui,
 })
 
@@ -428,6 +429,7 @@ local currencyLabel = makeLabel({
 	Text = " GOLD: 500    GEMS: 300",
 	TextColor3 = Color3.fromRGB(255, 225, 95),
 	TextXAlignment = Enum.TextXAlignment.Left,
+	Visible = false,
 	Parent = topBar,
 })
 

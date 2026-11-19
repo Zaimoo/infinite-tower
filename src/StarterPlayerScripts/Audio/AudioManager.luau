@@ -62,6 +62,14 @@ local function isClientReady(): boolean
 		return true
 	end
 	local player = Players.LocalPlayer
+	if player and player:GetAttribute("PlotAssignState") == "QUEUED" then
+		bootClock = os.clock()
+		return false
+	end
+	if player and player:GetAttribute("PlotAssignState") == "QUEUED" then
+		bootClock = os.clock()
+		return false
+	end
 	if (player and player:GetAttribute("ClientLoaded") == true) or os.clock() - bootClock > READY_FALLBACK_SECONDS then
 		clientReady = true
 	end

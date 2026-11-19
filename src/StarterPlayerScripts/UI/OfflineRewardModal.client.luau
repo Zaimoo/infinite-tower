@@ -167,8 +167,11 @@ end
 -- only after that so the count-up isn't played behind it. Capped so the popup can't be lost.
 local function waitForClientLoaded()
 	local waited = 0
-	while LocalPlayer:GetAttribute("ClientLoaded") ~= true and waited < 30 do
-		waited += task.wait(0.1)
+	while LocalPlayer:GetAttribute("ClientLoaded") ~= true and (LocalPlayer:GetAttribute("PlotAssignState") == "QUEUED" or waited < 30) do
+		local dt = task.wait(0.1)
+		if LocalPlayer:GetAttribute("PlotAssignState") ~= "QUEUED" then
+			waited += dt
+		end
 	end
 end
 

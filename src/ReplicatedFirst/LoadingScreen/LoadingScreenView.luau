@@ -18,6 +18,7 @@ local SKIP_BG = Color3.fromRGB(16, 18, 26)
 local SKIP_BORDER = Color3.fromRGB(90, 160, 230)
 local SKIP_TEXT = Color3.fromRGB(225, 245, 255)
 local INK = Color3.fromRGB(6, 6, 8)
+local QUEUE_TITLE = Color3.fromRGB(240, 192, 96)
 
 local DIAGONAL_ANGLE_DEG = -39 -- matches reference video "\" seam (top-right -> bottom-left sweep)
 local CURTAIN_OVERSCAN = 1.08 -- brief full-black beat at midpoint before uncovering the world
@@ -31,6 +32,8 @@ export type View = {
 	PreloadTargets: { Instance },
 	RevealLogo: (self: View) -> (),
 	ShowSkip: (self: View, onSkip: () -> ()) -> (),
+	SetSkipAllowed: (self: View, allowed: boolean) -> (),
+	SetQueueStatus: (self: View, visible: boolean, position: number?, total: number?) -> (),
 	FadeOut: (self: View, duration: number?) -> (),
 	Destroy: (self: View) -> (),
 }
@@ -167,9 +170,64 @@ function View.new(playerGui: Instance): View
 
 	gui.Parent = playerGui
 
+	-- "Server full" status under the logo, shown while the player waits in the plot queue.
+	local queueStatus = Instance.new("Frame")
+	queueStatus.Name = "QueueStatus"
+	queueStatus.AnchorPoint = Vector2.new(0.5, 0)
+	queueStatus.Position = UDim2.new(0.5, 0, 0.5, 0)
+	queueStatus.Size = UDim2.new(0.92, 0, 0, 76)
+	queueStatus.BackgroundTransparency = 1
+	queueStatus.Visible = false
+	queueStatus.ZIndex = 5
+	queueStatus.Parent = stage
+	local queueWidth = Instance.new("UISizeConstraint")
+	queueWidth.MaxSize = Vector2.new(560, 76)
+	queueWidth.Parent = queueStatus
+
+	local queueTitle = Instance.new("TextLabel")
+	queueTitle.Name = "Title"
+	queueTitle.BackgroundTransparency = 1
+	queueTitle.Size = UDim2.new(1, 0, 0, 34)
+	queueTitle.Font = Enum.Font.GothamBlack
+	queueTitle.TextSize = 28
+	queueTitle.TextColor3 = QUEUE_TITLE
+	queueTitle.Text = "SERVER FULL"
+	queueTitle.ZIndex = 5
+	queueTitle.Parent = queueStatus
+	local titleStroke = Instance.new("UIStroke")
+	titleStroke.Color = INK
+	titleStroke.Thickness = 2
+	titleStroke.Parent = queueTitle
+
+	local queueDetail = Instance.new("TextLabel")
+	queueDetail.Name = "Detail"
+	queueDetail.BackgroundTransparency = 1
+	queueDetail.Position = UDim2.fromOffset(0, 40)
+	queueDetail.Size = UDim2.new(1, 0, 0, 26)
+	queueDetail.Font = Enum.Font.GothamBold
+	queueDetail.TextSize = 18
+	queueDetail.TextColor3 = SKIP_TEXT
+	queueDetail.Text = ""
+	queueDetail.TextWrapped = true
+	queueDetail.ZIndex = 5
+	queueDetail.Parent = queueStatus
+	local detailStroke = Instance.new("UIStroke")
+	detailStroke.Color = INK
+	detailStroke.Thickness = 1.5
+	detailStroke.Parent = queueDetail
+
+	-- Keeps the status just below the logo whatever the logo's on-screen size.
+	local function placeQueueStatus()
+		local logoBottom = logoContainer.AbsolutePosition.Y + logoContainer.AbsoluteSize.Y - stage.AbsolutePosition.Y
+		queueStatus.Position = UDim2.new(0.5, 0, 0, math.floor(logoBottom + 18))
+	end
+	local queuePlaceConn = logoContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeQueueStatus)
+	local stageResizeConn = stage:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeQueueStatus)
+
 	local destroyed = false
 	local logoRevealed = false
 	local skipConn: RBXScriptConnection? = nil
+	local skipAllowed = true
 
 	local self = {} :: View
 	self.PreloadTargets = { logoImage }
@@ -185,15 +243,45 @@ function View.new(playerGui: Instance): View
 	end
 
 	function self.ShowSkip(_: View, onSkip: () -> ())
-		if skip.Visible or destroyed then
+		if skip.Visible or destroyed or not skipAllowed then
 			return
 		end
 		skip.Visible = true
 		skip.TextTransparency = 1
 		skip.BackgroundTransparency = 1
 		TweenService:Create(skip, TweenInfo.new(0.35), { TextTransparency = 0, BackgroundTransparency = 0 }):Play()
+		if skipConn then
+			skipConn:Disconnect()
+		end
 		skipConn = skip.Activated:Connect(onSkip)
 		GuiService.SelectedObject = skip
+	end
+
+	-- A queued player must not dismiss the screen before they have a plot.
+	function self.SetSkipAllowed(_: View, allowed: boolean)
+		skipAllowed = allowed
+		if destroyed or allowed then
+			return
+		end
+		if GuiService.SelectedObject == skip then
+			GuiService.SelectedObject = nil
+		end
+		skip.Visible = false
+	end
+
+	function self.SetQueueStatus(_: View, visible: boolean, position: number?, total: number?)
+		if destroyed then
+			return
+		end
+		if not visible then
+			queueStatus.Visible = false
+			return
+		end
+		placeQueueStatus()
+		local place = math.max(1, position or 1)
+		local waiting = math.max(place, total or place)
+		queueDetail.Text = string.format("Waiting for a free island  ·  Queue position #%d of %d", place, waiting)
+		queueStatus.Visible = true
 	end
 
 	function self.FadeOut(_: View, duration: number?)
@@ -247,6 +335,7 @@ function View.new(playerGui: Instance): View
 				stageHidden = true
 				backdrop.Visible = false
 				logoContainer.Visible = false
+				queueStatus.Visible = false
 			end
 
 			if alpha >= 1 then
@@ -270,6 +359,8 @@ function View.new(playerGui: Instance): View
 		if skipConn then
 			skipConn:Disconnect()
 		end
+		queuePlaceConn:Disconnect()
+		stageResizeConn:Disconnect()
 		gui:Destroy()
 	end
 

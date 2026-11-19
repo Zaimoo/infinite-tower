@@ -68,7 +68,18 @@ if not loaded then
 			loadedConn:Disconnect()
 		end
 	end)
-	task.delay(30, setLoaded)
+	task.spawn(function()
+		local waited = 0
+		while not loaded and (player:GetAttribute("PlotAssignState") == "QUEUED" or waited < 30) do
+			local dt = task.wait(0.25)
+			if player:GetAttribute("PlotAssignState") ~= "QUEUED" then
+				waited += dt
+			end
+		end
+		if not loaded then
+			setLoaded()
+		end
+	end)
 end
 dimGui.Parent = playerGui
 gui.Parent = playerGui

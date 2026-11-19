@@ -24,6 +24,7 @@ local SKIP_AFTER = 8 -- seconds before the Skip button appears
 local HARD_CAP = 90 -- safety net: seconds before the screen closes no matter what
 local LOADED_GUARD = 15 -- longest wait for game.Loaded
 local CHARACTER_GUARD = 3 -- brief wait for character / Waiting Room camera to settle
+local POST_ASSIGN_TELEPORT_GUARD = 6 -- longest wait for PlotTeleported after leaving the queue
 local MIN_VISIBLE = 1.35 -- keep the centered logo up long enough to read cleanly, even on warm cache
 local CHUNK = 20 -- assets per PreloadAsync call
 local WIPE_TIME = 0.60
@@ -49,6 +50,30 @@ local closing = false -- true once the diagonal wipe reveal begins; prevents war
 local function finish()
 	finished = true
 end
+
+local function isQueued(): boolean
+	return player:GetAttribute("PlotAssignState") == "QUEUED"
+end
+
+local function syncQueueUI()
+	if isQueued() then
+		finished = false
+		local pos = tonumber(player:GetAttribute("PlotQueuePosition")) or 1
+		local total = tonumber(player:GetAttribute("PlotQueueTotal")) or pos
+		view:SetSkipAllowed(false)
+		view:SetQueueStatus(true, pos, total)
+	else
+		view:SetQueueStatus(false)
+		view:SetSkipAllowed(true)
+	end
+end
+
+local queueConns: { RBXScriptConnection } = {
+	player:GetAttributeChangedSignal("PlotAssignState"):Connect(syncQueueUI),
+	player:GetAttributeChangedSignal("PlotQueuePosition"):Connect(syncQueueUI),
+	player:GetAttributeChangedSignal("PlotQueueTotal"):Connect(syncQueueUI),
+}
+syncQueueUI()
 
 -- Preload the loading screen's own stickman cutout logo so it reveals razor-sharp without pop-in.
 pcall(function()
@@ -191,17 +216,44 @@ task.spawn(function()
 		task.wait(0.05)
 	end
 
+	-- Hold the loading screen while the server is full and wait until the character is placed on its plot.
+	while isQueued() do
+		task.wait(0.1)
+	end
+
+	local assignState = player:GetAttribute("PlotAssignState")
+	local teleportDeadline = os.clock() + if assignState == "ASSIGNED" or assignState == "PENDING" then POST_ASSIGN_TELEPORT_GUARD else 4
+	while not finished and player:GetAttribute("PlotTeleported") ~= true and os.clock() < teleportDeadline do
+		if isQueued() then
+			while isQueued() do
+				task.wait(0.1)
+			end
+			teleportDeadline = os.clock() + POST_ASSIGN_TELEPORT_GUARD
+		else
+			task.wait(0.05)
+		end
+	end
+
 	finish()
 end)
 
--- Skip after SKIP_AFTER seconds; close by HARD_CAP regardless.
-task.delay(SKIP_AFTER, function()
-	if not finished then
-		view:ShowSkip(finish)
-	end
-end)
-while not finished and os.clock() - startedAt < HARD_CAP do
+-- Skip after SKIP_AFTER non-queued seconds; close by HARD_CAP non-queued seconds regardless.
+local activeLoadElapsed = 0
+local lastStep = os.clock()
+while (not finished or isQueued()) and activeLoadElapsed < HARD_CAP do
 	task.wait(0.05)
+	local now = os.clock()
+	if not isQueued() then
+		activeLoadElapsed += now - lastStep
+		if activeLoadElapsed >= SKIP_AFTER and not finished then
+			view:ShowSkip(finish)
+		end
+	end
+	lastStep = now
+end
+
+for _, conn in queueConns do
+	conn:Disconnect()
 end
 
 local remaining = MIN_VISIBLE - (os.clock() - startedAt)
