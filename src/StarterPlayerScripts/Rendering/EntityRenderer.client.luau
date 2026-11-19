@@ -810,10 +810,12 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	if not isHero and not enemySpec and meta and (meta.MobType == "WORLD_BOSS" or meta.MobType == "RIFT_BOSS") then theme = BillboardThemes.Mob.BIOME_BOSS end
 
 	local hl = Instance.new("Highlight")
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
 	hl.FillColor = bodyColor
 	hl.OutlineColor = theme.Accent:Lerp(Color3.new(1, 1, 1), if isHero then 0.45 else 0.2)
 	hl.FillTransparency = 1
-	hl.OutlineTransparency = 0.25
+	hl.OutlineTransparency = 1
+	hl.Enabled = false
 	hl.Adornee = art or model
 	hl.Parent = model
 
@@ -1094,10 +1096,6 @@ local function consume(buf: buffer)
     node.StamBarFill.BackgroundColor3 = Color3.fromRGB(255, 210, 55)
    end
   end
-  if node.Highlight then
-   node.Highlight.OutlineColor=_G.ClientCombatState.FocusedNetId==id and Color3.fromRGB(0,255,235) or bit32.band(e.Flags,2)~=0 and Color3.fromRGB(255,195,40) or Color3.new(1,1,1)
-   node.Highlight.OutlineTransparency=meta.TowerEnemy and (_G.ClientCombatState.FocusedNetId==id and .15 or .8) or .25
-  end
   -- Snapshots are unreliable and actions reliable, so a snapshot often lands just before the START it
   -- already counts. Only a gap that outlives that race means a lost action and is worth a full resync.
   local actionKey=ActionState.Key(e)
@@ -1229,9 +1227,8 @@ local function stepRender(dt: number)
 		end
 		local camDist = if camPos then (node.CurrentPos - camPos).Magnitude else 0
 		local highlight = node.Highlight
-		if highlight then
-			local wantHighlight = camDist <= HIGHLIGHT_DISTANCE or _G.ClientCombatState.FocusedNetId == node.NetId
-			if highlight.Enabled ~= wantHighlight then highlight.Enabled = wantHighlight end
+		if highlight and highlight.Enabled and camDist > HIGHLIGHT_DISTANCE then
+			highlight.Enabled = false
 		end
 		local stepDt = dt
 		n.AnimFar = camDist > LOD_FULL_RATE_DISTANCE -- EnemyAnimator rests springs out here

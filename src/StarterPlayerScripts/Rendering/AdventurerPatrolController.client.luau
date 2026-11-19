@@ -37,9 +37,6 @@ local VfxPool = require(CombatVfxFolder:WaitForChild("VfxPool"))
 local VfxPrimitives = require(CombatVfxFolder:WaitForChild("VfxPrimitives"))
 local SkillVfx = require(CombatVfxFolder:WaitForChild("SkillVfx"))
 
-local ThemeFolder = script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud")
-local Theme = require(ThemeFolder:WaitForChild("Theme"))
-
 local VisualContainer = Workspace:FindFirstChild("AdventurerVisualEntities") :: Folder?
 if not VisualContainer then
 	local created = Instance.new("Folder")
@@ -328,10 +325,11 @@ local function createHeroVisual(
 
 	local hl = Instance.new("Highlight")
 	hl.Name = "OutskirtsHeroHighlight"
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
 	hl.FillColor = Color3.fromRGB(255, 245, 210)
-	hl.OutlineColor = Theme.RarityColor(rarity):Lerp(Color3.new(1, 1, 1), 0.35)
 	hl.FillTransparency = 1
-	hl.OutlineTransparency = 0.45
+	hl.OutlineTransparency = 1
+	hl.Enabled = false
 	hl.Adornee = art or model
 	hl.Parent = model
 
@@ -579,13 +577,11 @@ local function realizeMobModel(director: PlotDirector, origin: CFrame, mob: MobV
 
 	local hl = Instance.new("Highlight")
 	hl.Name = "OutskirtsMobHighlight"
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
 	hl.FillColor = Color3.fromRGB(245, 255, 200)
-	hl.OutlineColor = if mob.Role == "ALPHA"
-		then Color3.fromRGB(255, 196, 72)
-		elseif mob.Role == "ELITE" then Color3.fromRGB(255, 125, 85)
-		else Color3.fromRGB(48, 56, 52)
 	hl.FillTransparency = 1
-	hl.OutlineTransparency = if mob.Role == "ALPHA" or mob.Role == "ELITE" then 0.25 else 0.55
+	hl.OutlineTransparency = 1
+	hl.Enabled = false
 	hl.Adornee = rig.Model or model
 	hl.Parent = model
 
@@ -732,8 +728,10 @@ local function stepMobAnimation(
 	if mob.Highlight then
 		if mob.HitAt and now - mob.HitAt < 0.15 and not mob.DeathAt then
 			mob.Highlight.FillTransparency = 0.35
+			mob.Highlight.Enabled = true
 		else
 			mob.Highlight.FillTransparency = 1
+			mob.Highlight.Enabled = false
 		end
 	end
 
@@ -1041,7 +1039,9 @@ local function stepDirector(director: PlotDirector, origin: CFrame, dt: number, 
 			hero.Animator:SetLocomotion(desiredLoco)
 			hero.Animator:Step(dt, speedScale)
 		end
-		hero.Highlight.FillTransparency = if now < hero.HitFlashUntil then 0.55 else 1
+		local flashing = now < hero.HitFlashUntil
+		hero.Highlight.FillTransparency = if flashing then 0.55 else 1
+		hero.Highlight.Enabled = flashing
 	end
 
 	local heroCount = 0
@@ -1242,16 +1242,17 @@ local function stepAdventurerPatrol(dt: number)
 
 		setDirectorParked(director, false)
 
-		local wantOutline = camDist <= HIGHLIGHT_DIST
-		for _, hero in pairs(director.Heroes) do
-			if hero.Highlight.Enabled ~= wantOutline then
-				hero.Highlight.Enabled = wantOutline
+		if camDist > HIGHLIGHT_DIST then
+			for _, hero in pairs(director.Heroes) do
+				if hero.Highlight.Enabled then
+					hero.Highlight.Enabled = false
+				end
 			end
-		end
-		for _, mob in pairs(director.Mobs) do
-			local hl = mob.Highlight
-			if hl and hl.Enabled ~= wantOutline then
-				hl.Enabled = wantOutline
+			for _, mob in pairs(director.Mobs) do
+				local hl = mob.Highlight
+				if hl and hl.Enabled then
+					hl.Enabled = false
+				end
 			end
 		end
 
