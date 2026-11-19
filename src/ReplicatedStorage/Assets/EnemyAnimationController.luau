@@ -404,9 +404,11 @@ function Controller.Step(node: any, dt: number, now: number)
 		if node.Highlight then
 			node.Highlight.FillColor = Color3.fromRGB(235, 255, 190)
 			node.Highlight.FillTransparency = .45
+			node.Highlight.Enabled = true
 		end
 	elseif node.Highlight then
 		node.Highlight.FillTransparency = 1
+		node.Highlight.Enabled = false
 	end
 	if node.DeathAt then
 		local alpha = math.clamp((now - node.DeathAt - 1.1) / .5, 0, 1)

@@ -32,9 +32,6 @@ local VfxPool = require(CombatVfxFolder:WaitForChild("VfxPool"))
 local VfxPrimitives = require(CombatVfxFolder:WaitForChild("VfxPrimitives"))
 local SkillVfx = require(CombatVfxFolder:WaitForChild("SkillVfx"))
 
-local ThemeFolder = script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud")
-local Theme = require(ThemeFolder:WaitForChild("Theme"))
-
 local VisualContainer = Workspace:FindFirstChild("AdventurerVisualEntities") :: Folder?
 if not VisualContainer then
 	local created = Instance.new("Folder")
@@ -48,8 +45,6 @@ local WorkerVfxPool = VfxPool.new(EntitiesFolder)
 local FULL_RATE_DIST = 220
 local THROTTLE_DIST = 480
 local THROTTLE_STEP = 1 / 15
--- Highlights are costly and capped per client: only plots inside the full-rate radius keep outlines.
-local HIGHLIGHT_DIST = FULL_RATE_DIST
 
 local GOLD_COLOR = Color3.fromRGB(255, 214, 92)
 local MARKET_COLOR = Color3.fromRGB(240, 184, 78)
@@ -100,7 +95,6 @@ type WorkerVisual = {
 	RootPart: Part,
 	Rig: Model?,
 	Animator: HeroAnimator.HeroAnimator?,
-	Highlight: Highlight,
 	PropModel: Model?,
 	PropKind: FacilityWorkerRules.PropKind,
 	PropVisible: boolean,
@@ -839,16 +833,6 @@ local function createWorkerVisual(
 	end
 	local rig = if art and art:GetAttribute("HeroRigVersion") ~= nil then art else nil
 
-	local hl = Instance.new("Highlight")
-	hl.Name = "FacilityWorkerHighlight"
-	hl.DepthMode = Enum.HighlightDepthMode.Occluded
-	hl.FillColor = Color3.fromRGB(255, 245, 210)
-	hl.OutlineColor = Theme.RarityColor(rarity):Lerp(Color3.new(1, 1, 1), 0.35)
-	hl.FillTransparency = 1
-	hl.OutlineTransparency = 0.45
-	hl.Adornee = art or model
-	hl.Parent = model
-
 	model.Parent = if director.Parked then nil else EntitiesFolder
 
 	local animator: HeroAnimator.HeroAnimator? = nil
@@ -875,7 +859,6 @@ local function createWorkerVisual(
 		RootPart = root,
 		Rig = rig,
 		Animator = animator,
-		Highlight = hl,
 		PropModel = nil,
 		PropKind = "NONE",
 		PropVisible = true,
@@ -1703,13 +1686,6 @@ local function stepFacilityWorkers(dt: number)
 
 		if director.Parked then
 			parkDirector(director, false, origin)
-		end
-
-		local wantOutline = nearestDist <= HIGHLIGHT_DIST
-		for _, worker in pairs(director.Workers) do
-			if worker.Highlight.Enabled ~= wantOutline then
-				worker.Highlight.Enabled = wantOutline
-			end
 		end
 
 		if nearestDist > FULL_RATE_DIST then
