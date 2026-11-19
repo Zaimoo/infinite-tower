@@ -284,6 +284,37 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(228, 232, 255), Saturation = 0.24, ExposureCompensation = -0.08, BloomIntensity = 0.55,
 		SunRaysIntensity = 0.06, SunRaysSpread = 0.35,
 	},
+	-- Floor 7, Mycelium Galleries: deeper in. Lower, more violet ambient, a thicker drip-mist haze, and the
+	-- lamp niches' warmth standing out against the cold.
+	[7] = {
+		Ambient = c(36, 32, 74), OutdoorAmbient = c(50, 46, 98), ColorShift_Top = c(124, 212, 242), ColorShift_Bottom = c(112, 48, 162),
+		AtmosphereDensity = 0.42, AtmosphereColor = c(76, 64, 138), AtmosphereDecay = c(44, 28, 96), AtmosphereHaze = 1.6,
+		TintColor = c(226, 226, 255), Saturation = 0.26, ExposureCompensation = -0.12, BloomIntensity = 0.6,
+	},
+	-- Floor 8, Blooming Chasm: full bloom, the brightest Fungal floor. Strong cyan from the wide oculus, mist
+	-- rising from the chasm, gills and crystals at their most saturated (the Lampkeepers' Rest is the one warm pool).
+	[8] = {
+		Ambient = c(54, 52, 102), OutdoorAmbient = c(76, 74, 132), ColorShift_Top = c(150, 240, 255), ColorShift_Bottom = c(112, 62, 172),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(84, 100, 164), AtmosphereDecay = c(56, 40, 112), AtmosphereHaze = 1.2,
+		TintColor = c(232, 240, 255), Saturation = 0.3, ExposureCompensation = -0.02, BloomIntensity = 0.6,
+	},
+	-- Floor 9, Rotcap Keep: sickly rot. Yellow-green tint mixed into the violet, thick murky air, stronger
+	-- contrast and bloom on the yellow-green rot glows; no warm light anywhere on the floor.
+	[9] = {
+		Ambient = c(56, 42, 82), OutdoorAmbient = c(84, 98, 62), ColorShift_Top = c(196, 248, 88), ColorShift_Bottom = c(118, 52, 176),
+		AtmosphereDensity = 0.44, AtmosphereColor = c(96, 118, 72), AtmosphereDecay = c(78, 42, 118), AtmosphereHaze = 1.8,
+		TintColor = c(232, 248, 204), Contrast = 0.14, Saturation = 0.22, ExposureCompensation = -0.06, BloomIntensity = 0.58,
+	},
+	-- Floor 10, Matriarch's Hollow: the heart of the Veinweb, and the opposite of Floor 9's murk. Clear, pale
+	-- air lit silk-white from the great oculus over the dais, a cyan top light and a magenta floor bounce off
+	-- the moat, and bloom on the silk, cocoons and converging veins (the Last Lamp at the arrival is the
+	-- floor's sole warm flame).
+	[10] = {
+		Ambient = c(70, 62, 104), OutdoorAmbient = c(104, 98, 150), ColorShift_Top = c(200, 250, 255), ColorShift_Bottom = c(170, 60, 200),
+		AtmosphereDensity = 0.3, AtmosphereColor = c(150, 140, 190), AtmosphereDecay = c(80, 50, 130), AtmosphereHaze = 1.0,
+		TintColor = c(246, 242, 255), Contrast = 0.08, Saturation = 0.18, ExposureCompensation = 0.06, BloomIntensity = 0.7,
+		SunRaysIntensity = 0.1, SunRaysSpread = 0.45,
+	},
 	-- Floor 11, Cinder Gate: searing white-hot desert noon, crisp pale mirage haze over dark volcanic ash & ochre sandstone.
 	[11] = {
 		Ambient = c(96, 84, 72), OutdoorAmbient = c(154, 138, 118), ColorShift_Top = c(255, 244, 214), ColorShift_Bottom = c(98, 72, 54),

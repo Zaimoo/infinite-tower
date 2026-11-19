@@ -369,6 +369,226 @@ local AUTHORED: {[number]: any} = {
 		-- A round oculus in a closed cavern vault, over the Apex (TowerRoomBuilder).
 		Skylight = {X = 0, Z = -132, Radius = 46},
 	},
+	-- Floor 7, Mycelium Galleries (Fungal Hollow): the Velmari's lamp-galleries, cut in tiers into the cavern
+	-- wall and now strung with the Veinweb's nets. The main route is a switchback up the wall: east to the
+	-- Lower Lamp Gallery, back west over the Netted Isle (a rounded rock island rising out of the span pool,
+	-- under a small oculus), up the gallery steps to the Upper Lamp Gallery, and east again to the Lantern
+	-- Vault. A shortcut ramp climbs from the Drip Hall straight onto the isle; the long east climb skips the
+	-- upper gallery.
+	[7] = {
+		Key = "fungal:7",
+		Name = "Mycelium Galleries",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 118, Width = 340, Depth = 88},
+		EastGallery = {X = 126, Y = 4, Z = 20, Width = 88, Depth = 72},
+		Crossing = {X = -20, Y = 8, Z = -40, Width = 60, Depth = 60},
+		WestGallery = {X = -134, Y = 12, Z = -110, Width = 88, Depth = 72},
+		Apex = {X = 40, Y = 16, Z = -180, Width = 104, Depth = 76},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "EastGallery"}, {"Basin", "Crossing"},
+			{"EastGallery", "Apex"}, {"Crossing", "WestGallery"}, {"WestGallery", "Apex"},
+		},
+		-- The gallery steps: broad slate steps from the isle up to the upper gallery.
+		Stairs = {Crossing_WestGallery = true},
+		Names = {
+			Sanctuary = "Lampwright's Stair", Basin = "Drip Hall", EastGallery = "Lower Lamp Gallery",
+			Crossing = "Netted Isle", WestGallery = "Upper Lamp Gallery", Apex = "Lantern Vault",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			Decks = {Sanctuary = true},
+			-- The Netted Isle is terrain, not a slab: a squircle 3 studs past its edges, its corners falling away
+			-- into the pool, so it reads as a rock island.
+			Shapes = {Crossing = {Round = 3.2, Grow = 3}},
+			LiquidRise = 2.6,
+			FloorDip = 2.2,
+			WallBand = {Base = 38, Noise = 14},
+			Pools = {
+				{X = -20, Z = -40, RX = 60, RZ = 56},  -- the span pool round the Netted Isle
+				{X = -120, Z = 40, RX = 26, RZ = 20},  -- drip puddle below the hall's west end
+				{X = 10, Z = -110, RX = 26, RZ = 20},  -- drip puddle below the vault
+			},
+			GroveScale = 0.5,
+			GroundCover = {"GlowcapTuftA", "GlowcapTuftB", "SporeMoss", "GlowcapTuftA"},
+			GroundCoverCount = 170,
+			-- The veins thicken on this floor.
+			CliffVeins = 40,
+		},
+		-- A small oculus over the isle: daylight filtered through the nets.
+		Skylight = {X = -20, Z = -40, Radius = 28},
+	},
+	-- Floor 8, Blooming Chasm (Fungal Hollow): the cavern floor fell away and the Veinweb bloomed in the chasm.
+	-- The Lampkeepers (the last Velmari who refused the Veinweb) made their refuge here: their last lit camp is
+	-- the Sanctuary, and from the Rim of Blooms their rope walkways, lashed to the Veinweb's cables, hang out
+	-- over the chasm to the Violet Cap (the walkable top of a colossal mushroom) and the Crystal Islet. Both
+	-- reach the Old Aqueduct, a surviving Velmari span running east-west between them, whose stairs climb to
+	-- the Bloomcrown Ledge; the islet also climbs the Spine, a rock ridge, straight to the ledge.
+	[8] = {
+		Key = "fungal:8",
+		Name = "Blooming Chasm",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 136, Width = 400, Depth = 96},
+		-- Square, so the round cap top (a disc through its corners) stays close to it.
+		WestGallery = {X = -140, Y = 8, Z = -20, Width = 62, Depth = 62},
+		EastGallery = {X = 150, Y = 4, Z = -30, Width = 84, Depth = 76},
+		-- 48 deep, so the deck's camp stays clear of the stairs' first treads (they start 4 studs inside it).
+		Crossing = {X = 10, Y = 12, Z = -60, Width = 96, Depth = 48},
+		Apex = {X = 0, Y = 20, Z = -196, Width = 104, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"WestGallery", "Crossing"}, {"EastGallery", "Crossing"},
+			{"Crossing", "Apex"}, {"EastGallery", "Apex"},
+		},
+		Names = {
+			Sanctuary = "Lampkeepers' Rest", Basin = "Rim of Blooms", WestGallery = "Violet Cap",
+			EastGallery = "Crystal Islet", Crossing = "Old Aqueduct", Apex = "Bloomcrown Ledge",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			-- Built or grown decks: the Sanctuary's landing, the aqueduct (a span: no ground raised under it)
+			-- and the Violet Cap's top (a round cap on its stem: no ground under it either).
+			Decks = {Sanctuary = true, Crossing = true, WestGallery = true},
+			DeckThickness = {Crossing = 4, WestGallery = 3},
+			RoundDecks = {WestGallery = true},
+			-- The Lampkeepers' rope walkways: plank decks hung over the chasm (solid, visible parts; the chasm
+			-- stays open beneath them). The Spine (EastGallery_Apex) is a rock ridge: terrain.
+			Bridges = {Basin_WestGallery = true, Basin_EastGallery = true, WestGallery_Crossing = true, EastGallery_Crossing = true},
+			LiquidRise = 2.6,
+			FloorDip = 2.2,
+			WallBand = {Base = 40, Noise = 14},
+			Pools = {
+				{X = 10, Z = -62, RX = 58, RZ = 34},   -- under the aqueduct
+				{X = -136, Z = -22, RX = 40, RZ = 36}, -- round the Violet Cap's stem
+				{X = 64, Z = 30, RX = 40, RZ = 28},    -- the bloom pool in the middle of the chasm
+			},
+			-- A sea of mid-size caps on the chasm floor, below eye level.
+			GroveScale = 1.3,
+			GroundCover = {"GlowcapTuftA", "GlowcapTuftB", "SporeMoss", "GlowcapTuftA"},
+			GroundCoverCount = 200,
+			CliffVeins = 30,
+		},
+		-- The widest oculus yet, over the middle of the chasm: the brightest Fungal floor.
+		Skylight = {X = 0, Z = -50, Radius = 56},
+	},
+	-- Floor 9, Rotcap Keep (Fungal Hollow): the Velmari citadel devoured from the inside by rotcaps, and the
+	-- scene of the Lampkeepers' last stand. An "H" layout with a high keystone: both wings climb north along
+	-- the cavern walls (Brewing Cellars -> West Rot-Spire; Ossuary of Caps -> East Rot-Spire), then high
+	-- spans cross from both spires to The Keystone suspended over the central rot pit, whose stairs climb
+	-- to the roofless Keep of the Rotcap under a colossal rotcap.
+	[9] = {
+		Key = "fungal:9",
+		Name = "Rotcap Keep",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 160, Width = 440, Depth = 110},
+		WestGallery = {X = -156, Y = 8, Z = -12, Width = 92, Depth = 80},
+		EastGallery = {X = 160, Y = 12, Z = -20, Width = 92, Depth = 80},
+		WestBastion = {X = -150, Y = 16, Z = -144, Width = 88, Depth = 78},
+		EastBastion = {X = 150, Y = 20, Z = -136, Width = 88, Depth = 78},
+		Crossing = {X = 0, Y = 20, Z = -124, Width = 76, Depth = 62},
+		Apex = {X = 0, Y = 24, Z = -228, Width = 108, Depth = 80},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"WestGallery", "WestBastion"}, {"EastGallery", "EastBastion"},
+			{"WestBastion", "Crossing"}, {"EastBastion", "Crossing"},
+			{"Crossing", "Apex"},
+		},
+		Names = {
+			Sanctuary = "The Broken Gate", Basin = "Fallen Quarry", WestGallery = "Brewing Cellars",
+			EastGallery = "Ossuary of Caps", WestBastion = "West Rot-Spire", EastBastion = "East Rot-Spire",
+			Crossing = "The Keystone", Apex = "Keep of the Rotcap",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			Decks = {Sanctuary = true, Crossing = true},
+			DeckThickness = {Crossing = 4},
+			-- High stone-and-plank spans crossing from both rot-spires to The Keystone above the rot pit.
+			Bridges = {WestBastion_Crossing = true, EastBastion_Crossing = true},
+			LiquidRise = 2.6,
+			FloorDip = 2.2,
+			WallBand = {Base = 40, Noise = 14},
+			Pools = {
+				{X = 0, Z = -76, RX = 68, RZ = 74},    -- the central rot pit under The Keystone
+				{X = -96, Z = -78, RX = 36, RZ = 32},  -- west rot pool under the high span
+				{X = 96, Z = -78, RX = 36, RZ = 32},   -- east rot pool under the high span
+			},
+			GroveScale = 0.65,
+			GroundCover = {"GlowcapTuftA", "GlowcapTuftB", "SporeMoss", "GlowcapTuftA"},
+			GroundCoverCount = 190,
+			CliffVeins = 44,
+		},
+		Skylight = {X = 0, Z = -124, Radius = 36},
+	},
+	-- Floor 10, Matriarch's Hollow (Fungal Hollow, BOSS_ARENA): the Spore Matriarch's nest, and the floor
+	-- that plays least like Floor 9. Floor 9 climbs wings to spires against the north wall; here the boss dais
+	-- is a rock mesa in the MIDDLE of the nest, under the great oculus, and the terraces ring it: from the
+	-- Silk Shore the route laps the dais (west by the Egg Gallery and the West Cocoon Arcade, or east by the
+	-- Spinneret and the East Cocoon Arcade) to the Brood Pillar at the very back, the gate of the nest, and
+	-- the only way in is the Silk Stair from the pillar, inward and up across the brood pool to the dais. The
+	-- Matriarch is in view from every side of the lap.
+	[10] = {
+		Key = "fungal:10",
+		Name = "Matriarch's Hollow",
+		PathStyle = "VELMARI",
+		Basin = {X = 0, Y = 0, Z = 196, Width = 480, Depth = 100},
+		WestGallery = {X = -205, Y = 8, Z = -30, Width = 86, Depth = 80},
+		EastGallery = {X = 205, Y = 12, Z = -30, Width = 86, Depth = 80},
+		WestBastion = {X = -160, Y = 16, Z = -215, Width = 86, Depth = 80},
+		EastBastion = {X = 160, Y = 20, Z = -215, Width = 86, Depth = 80},
+		-- The Brood Pillar: a deck on a silk-and-mushroom column at the back of the nest, the ring's low point.
+		Crossing = {X = 0, Y = 12, Z = -262, Width = 76, Depth = 68},
+		-- The dais: a rounded rock mesa in the middle of the nest (terrain), the boss arena.
+		Apex = {X = 0, Y = 28, Z = -60, Width = 140, Depth = 110},
+		Paths = {
+			{"Sanctuary", "Basin"},
+			{"Basin", "WestGallery"}, {"Basin", "EastGallery"},
+			{"WestGallery", "WestBastion"}, {"EastGallery", "EastBastion"},
+			{"WestBastion", "Crossing"}, {"EastBastion", "Crossing"},
+			{"Crossing", "Apex"},
+		},
+		-- The wall stairs up to the cocoon arcades (the Silk Stair is stairs anyway: every Crossing -> Apex is).
+		Stairs = {WestGallery_WestBastion = true, EastGallery_EastBastion = true},
+		Names = {
+			Sanctuary = "The Last Lamp", Basin = "Silk Shore", WestGallery = "West Egg Gallery",
+			EastGallery = "Spinneret Ledge", WestBastion = "West Cocoon Arcade", EastBastion = "East Cocoon Arcade",
+			Crossing = "Brood Pillar", Apex = "Matriarch's Dais",
+		},
+		-- The Silk Stair lands on the dais' north side, so the boss portals stand at its south side, facing the
+		-- way the Masters came in, spread wide of the Veinweb heart between them.
+		Portals = {Side = "SOUTH", Spread = 44},
+		Terrain = {
+			Direct = true,
+			Surface = "FUNGAL",
+			Decks = {Sanctuary = true, Crossing = true},
+			DeckThickness = {Crossing = 4},
+			Shapes = {Apex = {Round = 3.0, Grow = 4}},
+			-- The dais is in the middle: no shelf behind it (the ring's north terraces stand there).
+			NoApexShelf = true,
+			-- Silk spans hung over the brood pool: the back ring to the pillar, and the Silk Stair to the dais.
+			Bridges = {WestBastion_Crossing = true, EastBastion_Crossing = true, Crossing_Apex = true},
+			LiquidRise = 2.6,
+			FloorDip = 6,
+			WallBand = {Base = 34, Noise = 12},
+			Pools = {
+				{X = 0, Z = -46, RX = 124, RZ = 128},   -- the brood pool round the dais mesa
+				{X = 0, Z = -262, RX = 54, RZ = 42},    -- under the Brood Pillar
+				{X = -84, Z = -246, RX = 40, RZ = 28},  -- under the west span
+				{X = 84, Z = -246, RX = 40, RZ = 28},   -- under the east span
+			},
+			-- A made nest: few caps outside the heart, silk and stone instead.
+			GroveScale = 0.35,
+			GroundCover = {"SporeMoss", "GlowcapTuftB", "SporeMoss"},
+			GroundCoverCount = 140,
+			CliffVeins = 54,
+		},
+		-- The great oculus, over the dais in the middle of the nest.
+		Skylight = {X = 0, Z = -60, Radius = 70},
+	},
 	-- Floor 11, Cinder Gate (Ashen Dunes Introduction): wind-rippled black-ash plains swept by the central
 	-- Sleeping Dune (dead-end Dune Crest lookout) with a half-buried Varrash caravan wreck, banded Toll House
 	-- ruins, a cylindrical Watch Kiln tower, waystone-lined tracks, and the towering Cinder Gate in the basalt wall.

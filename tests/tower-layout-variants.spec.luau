@@ -313,6 +313,238 @@ test("Floor 6's terrain is the walking surface: flush under natural ground, rece
 	end
 end)
 
+test("Floor 7 is the hand-authored Mycelium Galleries: a switchback up the lamp-gallery wall", function()
+	local room = Layout.ForFloor(7)
+	assert(room.Authored == "fungal:7" and room.Name == "Mycelium Galleries")
+	assert(same(room, Layout.Get(2, 7)), "the authored floor is not fixed")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- East, back west over the span and up the gallery steps, east again to the vault; a shortcut onto the span.
+	assert(paths.Basin_EastGallery == "RAMP" and paths.Basin_Crossing == "RAMP" and paths.EastGallery_Apex == "RAMP")
+	assert(paths.Crossing_WestGallery == "STAIRS" and paths.WestGallery_Apex == "RAMP")
+	assert(paths.Basin_WestGallery == nil and paths.Crossing_Apex == nil and paths.Basin_Apex == nil)
+	assert(room.EliteCount == 2)
+	local mobs = 0
+	for _, camp in room.Camps do if camp.Id ~= "APEX_SANCTUM" then mobs += camp.Size end end
+	assert(mobs == 22, "floor 7 has " .. mobs .. " live mobs")
+	local p = room.Platforms
+	assert(p.EastGallery.Y < p.Crossing.Y and p.Crossing.Y < p.WestGallery.Y and p.WestGallery.Y < p.Apex.Y, "the switchback does not climb")
+	assert(p.EastGallery.X > 0 and p.WestGallery.X < 0 and p.Apex.X > 0, "the switchback does not zig-zag")
+	local td = room.Terrain
+	-- The Netted Isle is a rounded terrain island, not a deck.
+	assert(td and td.Direct and not td.Decks.Crossing and td.Shapes.Crossing and room.Skylight)
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	for _, pool in td.Pools do
+		for _, link in room.Links do
+			for step = 0, 20 do
+				local x = link.AX + (link.BX - link.AX) * step / 20
+				local z = link.AZ + (link.BZ - link.AZ) * step / 20
+				-- Only the span pool may run under a path (the shortcut and the steps cross it to reach the bridge).
+				local e = ((x - pool.X) / pool.RX) ^ 2 + ((z - pool.Z) / pool.RZ) ^ 2
+				assert(e > 1 or (pool.X == p.Crossing.X and pool.Z == p.Crossing.Z), link.Id .. " runs through a pool")
+			end
+		end
+	end
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local field = Terrain.Field(room, "fungal_hollow", 7)
+	for id, t in room.Platforms do
+		local y = field.Sample(t.X + 3, t.Z - 3)
+		if td.Decks[id] then
+			assert(y <= t.Y - 4.5 + 1e-6, id .. ": the terrain rises into a deck")
+		else
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, id .. ": ground is not flush with the walking plane")
+		end
+	end
+	-- The isle rises out of the span pool, and its rounded corners fall away (no square slab).
+	local cross = p.Crossing
+	local _, shore = field.Sample(cross.X + cross.Width / 2 + 14, cross.Z)
+	assert(shore == "POOL", "no pool round the Netted Isle (" .. shore .. ")")
+	local cornerY = field.Sample(cross.X + cross.Width / 2 - 1, cross.Z + cross.Depth / 2 - 1)
+	assert(cornerY < cross.Y - 3, "the Netted Isle's corner is still square")
+	local edgeY = field.Sample(cross.X + cross.Width / 2 - 1, cross.Z)
+	assert(math.abs(edgeY - (cross.Y - 2)) < 1e-6, "the Netted Isle's edge is not flat where paths land")
+end)
+
+test("Floor 8 is the hand-authored Blooming Chasm: rope walkways over the chasm to a cap, an islet and the aqueduct", function()
+	local room = Layout.ForFloor(8)
+	assert(room.Authored == "fungal:8" and room.Name == "Blooming Chasm")
+	assert(same(room, Layout.Get(3, 8)), "the authored floor is not fixed")
+	assert(room.Platforms.Sanctuary.Name == "Lampkeepers' Rest", "the Sanctuary is the Lampkeepers' camp")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_WestGallery and paths.Basin_EastGallery and paths.WestGallery_Crossing and paths.EastGallery_Crossing)
+	assert(paths.Crossing_Apex == "STAIRS" and paths.EastGallery_Apex == "RAMP")
+	assert(paths.WestGallery_Apex == nil and paths.Basin_Crossing == nil, "the aqueduct is reached only from the islands")
+	assert(room.EliteCount == 3)
+	local mobs = 0
+	for _, camp in room.Camps do if camp.Id ~= "APEX_SANCTUM" then mobs += camp.Size end end
+	assert(mobs == 25, "floor 8 has " .. mobs .. " live mobs")
+	local td = room.Terrain
+	assert(td.Decks.WestGallery and td.RoundDecks.WestGallery and td.Decks.Crossing, "the cap top and the aqueduct are decks")
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	-- The Violet Cap's patrol walks its rope walkway to the aqueduct (it has no path up).
+	local routes = Layout.PatrolRoutes(3, 8)
+	assert(routes.GALLERY_WEST and routes.GALLERY_EAST, "floor 8 lost a gallery patrol")
+	local last = routes.GALLERY_WEST[#routes.GALLERY_WEST]
+	assert(math.abs(last.Y - room.Platforms.Crossing.Y) < 1e-6, "the Violet Cap patrol does not reach the aqueduct")
+	-- The walkways hang over open chasm: no ground rises under their middles; the terrain terraces are flush.
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local field = Terrain.Field(room, "fungal_hollow", 8)
+	for _, link in room.Links do
+		if td.Bridges[link.Id] then
+			local x, z = (link.AX + link.BX) / 2, (link.AZ + link.BZ) / 2
+			local y = field.Sample(x, z)
+			assert(y < math.min(link.AY, link.BY) - 4.4, link.Id .. ": ground rises under the rope walkway")
+		end
+	end
+	for id, t in room.Platforms do
+		if not td.Decks[id] then
+			local y = field.Sample(t.X + 3, t.Z - 3)
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, id .. ": ground is not flush with the walking plane")
+		end
+	end
+end)
+
+test("Floor 9 is the hand-authored Rotcap Keep: an H with a high keystone over the rot pit", function()
+	local room = Layout.ForFloor(9)
+	assert(room.Authored == "fungal:9" and room.Name == "Rotcap Keep")
+	assert(same(room, Layout.Get(4, 9)), "the authored floor is not fixed")
+	assert(not same(room, Layout.Get(4)), "floor 9 should not be the canonical layout")
+	assert(room.Platforms.Sanctuary.Name == "The Broken Gate")
+	assert(room.Platforms.Crossing.Name == "The Keystone" and room.Platforms.Apex.Name == "Keep of the Rotcap")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- The H shape: wings climb to rot-spires, high spans meet at The Keystone, stairs climb to the Keep.
+	assert(paths.Basin_WestGallery == "RAMP" and paths.Basin_EastGallery == "RAMP")
+	assert(paths.WestGallery_WestBastion == "RAMP" and paths.EastGallery_EastBastion == "RAMP")
+	assert(paths.WestBastion_Crossing == "RAMP" and paths.EastBastion_Crossing == "RAMP")
+	assert(paths.Crossing_Apex == "STAIRS")
+	assert(paths.Basin_Crossing == nil and paths.Basin_Apex == nil and paths.WestBastion_Apex == nil and paths.EastBastion_Apex == nil,
+		"floor 9 breaks the H shape")
+	assert(room.EliteCount == 4)
+	local mobs = 0
+	for _, camp in room.Camps do if camp.Id ~= "APEX_SANCTUM" then mobs += camp.Size end end
+	assert(mobs == 35, "floor 9 has " .. mobs .. " live mobs")
+	-- Both wings clear the chasm return ramps.
+	for _, side in { "West", "East" } do
+		local g = room.Platforms[side .. "Gallery"]
+		assert(g.Z + g.Depth / 2 < 41, side .. "Gallery overlaps the chasm return ramp landing")
+	end
+	-- The bastion ring crosses The Keystone.
+	local routes = Layout.PatrolRoutes(4, 9)
+	assert(routes.BASTION_RING and routes.GALLERY_WEST and routes.GALLERY_EAST, "floor 9 lost patrol routes")
+	local hitsKeystone = false
+	for _, pt in routes.BASTION_RING do
+		if math.abs(pt.X - room.Platforms.Crossing.X) <= room.Platforms.Crossing.Width / 2
+			and math.abs(pt.Z - room.Platforms.Crossing.Z) <= room.Platforms.Crossing.Depth / 2 then
+			hitsKeystone = true
+		end
+	end
+	assert(hitsKeystone, "floor 9 bastion ring does not cross The Keystone")
+end)
+
+test("Floor 9's terrain is the walking surface: flush on terrain terraces, open under the high spans and Keystone", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(9)
+	local td = room.Terrain
+	assert(td and td.Direct and td.Decks.Crossing and td.Decks.Sanctuary and room.Skylight)
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	local field = Terrain.Field(room, "fungal_hollow", 9)
+	for id, t in room.Platforms do
+		local y = field.Sample(t.X + 3, t.Z - 3)
+		if td.Decks[id] then
+			assert(y <= t.Y - 4.5 + 1e-6, id .. ": the terrain rises into a deck")
+		else
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, id .. ": ground is not flush with the walking plane")
+		end
+	end
+	-- The rot pit runs under The Keystone; the high spans cross open ground/pools.
+	local cross = room.Platforms.Crossing
+	local _, underCross = field.Sample(cross.X, cross.Z + 12)
+	assert(underCross == "POOL", "no rot pit under The Keystone (" .. underCross .. ")")
+	for _, link in room.Links do
+		if td.Bridges[link.Id] then
+			local x, z = (link.AX + link.BX) / 2, (link.AZ + link.BZ) / 2
+			local y = field.Sample(x, z)
+			assert(y < math.min(link.AY, link.BY) - 4.4, link.Id .. ": ground rises under the high span")
+		end
+	end
+end)
+
+test("Floor 10 is the hand-authored Matriarch's Hollow: a ring round a central dais, reached only from the back", function()
+	local room = Layout.ForFloor(10)
+	assert(room.Authored == "fungal:10" and room.Name == "Matriarch's Hollow")
+	assert(same(room, Layout.Get(5, 10)), "the authored floor is not fixed")
+	assert(not same(room, Layout.Get(5)), "floor 10 should not be the canonical layout")
+	assert(room.Platforms.Sanctuary.Name == "The Last Lamp")
+	assert(room.Platforms.Crossing.Name == "Brood Pillar" and room.Platforms.Apex.Name == "Matriarch's Dais")
+	local paths, intoApex = {}, 0
+	for _, link in room.Links do
+		paths[link.Id] = link.Kind
+		if link.To == "Apex" or link.From == "Apex" then intoApex += 1 end
+	end
+	assert(#room.Links == 8, "floor 10 should have 8 paths round the ring, got " .. #room.Links)
+	assert(paths.WestGallery_WestBastion == "STAIRS" and paths.EastGallery_EastBastion == "STAIRS")
+	assert(paths.WestBastion_Crossing and paths.EastBastion_Crossing and paths.Crossing_Apex)
+	assert(intoApex == 1, "the dais should have one way in (the Silk Stair from the Brood Pillar)")
+	-- The dais sits in the middle of the floor, the Brood Pillar behind it at the back of the nest.
+	local apex, cross, basin = room.Platforms.Apex, room.Platforms.Crossing, room.Platforms.Basin
+	assert(apex.X == 0 and apex.Z > cross.Z + cross.Depth / 2 + apex.Depth / 2 and apex.Z < basin.Z - basin.Depth / 2 - apex.Depth / 2)
+	for _, side in { "West", "East" } do
+		local g, b = room.Platforms[side .. "Gallery"], room.Platforms[side .. "Bastion"]
+		assert(math.abs(g.X) - g.Width / 2 > apex.Width / 2 + 40, side .. "Gallery crowds the dais")
+		assert(math.abs(b.X) - b.Width / 2 > apex.Width / 2, side .. "Bastion crowds the dais")
+	end
+	-- Boss portals on the dais's south rim, facing the way the Masters walked round.
+	assert(room.Portals and room.Portals.Side == "SOUTH")
+	local routes = Layout.PatrolRoutes(5, 10)
+	assert(routes.BASIN_LOOP and routes.GALLERY_WEST and routes.GALLERY_EAST and routes.BASTION_RING, "floor 10 lost patrol routes")
+end)
+
+test("Floor 10's terrain is the walking surface: a round mesa in a moat, open under the silk spans and Brood Pillar", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(10)
+	local td = room.Terrain
+	assert(td and td.Direct and td.Decks.Crossing and td.Decks.Sanctuary and room.Skylight)
+	assert(td.NoApexShelf and td.Shapes.Apex and td.Shapes.Apex.Round)
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+	end
+	local field = Terrain.Field(room, "fungal_hollow", 10)
+	for id, t in room.Platforms do
+		local y = field.Sample(t.X + 3, t.Z - 3)
+		if td.Decks[id] then
+			assert(y <= t.Y - 4.5 + 1e-6, id .. ": the terrain rises into a deck")
+		else
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, id .. ": ground is not flush with the walking plane")
+		end
+	end
+	local apex, cross = room.Platforms.Apex, room.Platforms.Crossing
+	local _, underCross = field.Sample(cross.X, cross.Z + 12)
+	assert(underCross == "POOL", "no brood pool under Brood Pillar (" .. underCross .. ")")
+	-- The moat rings the dais on both flanks and in front of it, past the mesa's rock apron.
+	for _, at in { { apex.X - apex.Width / 2 - 40, apex.Z }, { apex.X + apex.Width / 2 + 40, apex.Z }, { apex.X, apex.Z + apex.Depth / 2 + 40 } } do
+		local y, kind = field.Sample(at[1], at[2])
+		assert(kind == "POOL" and y < apex.Y - 20, "no moat round the dais at " .. at[1] .. ", " .. at[2])
+	end
+	-- No apex shelf: the ground behind the dais drops to the moat instead of a wall-high massif.
+	local behind = field.Sample(apex.X, apex.Z - apex.Depth / 2 - 30)
+	assert(behind < apex.Y - 10, "a shelf rises behind the dais")
+	for _, link in room.Links do
+		if td.Bridges[link.Id] then
+			local x, z = (link.AX + link.BX) / 2, (link.AZ + link.BZ) / 2
+			local y = field.Sample(x, z)
+			assert(y < math.min(link.AY, link.BY) - 4.4, link.Id .. ": ground rises under the silk span")
+		end
+	end
+end)
+
 test("Fungal-owned terrain materials are used by no biome palette", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local owned = {}
