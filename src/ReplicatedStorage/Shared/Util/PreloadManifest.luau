@@ -5,10 +5,10 @@
 --     the faces and hair meshes), weapon templates (with their meshes), UI images and sounds, and
 --     the HUD that is already built.
 --   Background: preloaded after the screen fades. Raid boss and portal meshes, weapon VFX.
--- PreloadAsync treats a bare content ID string as an image, so a mesh or sound ID passed as a
--- string fails with "Asset type does not match requested type". ScanAssets therefore works out
--- each ID's kind from the config keys above it, and Collect wraps mesh and sound IDs in a
--- SpecialMesh or Sound to preload them as instances.
+-- Passing a bare content ID string to PreloadAsync fails for modern Image assets as well as
+-- meshes and sounds ("Asset type does not match requested type"). ScanAssets therefore works out
+-- each ID's kind from the config keys above it, and Collect wraps every ID in a matching instance
+-- (ImageLabel, SpecialMesh or Sound) to preload it reliably.
 -- ScanIds and ScanAssets are pure (tested in tests/preload-manifest.spec.luau); Collect touches the
 -- DataModel and is only called on the client after game:IsLoaded().
 
@@ -102,7 +102,9 @@ function PreloadManifest.ScanAssets(value: any, out: { Asset }?, seen: { [any]: 
 	return result
 end
 
--- What to hand PreloadAsync for an asset: the ID itself for an image, an instance holding it otherwise.
+-- What to hand PreloadAsync for an asset: an instance matching its asset kind.
+-- Passing bare rbxassetid:// strings to PreloadAsync fails for modern Image assets, so images are
+-- wrapped in an ImageLabel just as meshes use SpecialMesh and sounds use Sound.
 function PreloadManifest.ToTarget(asset: Asset): Target
 	if asset.Kind == "Mesh" then
 		local mesh = Instance.new("SpecialMesh")
@@ -114,7 +116,9 @@ function PreloadManifest.ToTarget(asset: Asset): Target
 		sound.SoundId = asset.Id
 		return sound
 	end
-	return asset.Id
+	local image = Instance.new("ImageLabel")
+	image.Image = asset.Id
+	return image
 end
 
 -- Descendants of `root` (and root itself) that carry content, appended to `out`.
