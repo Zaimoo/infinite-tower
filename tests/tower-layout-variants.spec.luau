@@ -558,7 +558,8 @@ test("Fungal-owned terrain materials are used by no biome palette", function()
 		end
 	end
 	for key, m in Terrain.Surfaces.FUNGAL :: any do
-		assert(owned[m] or Terrain.MaterialColors[m] == nil, "Fungal surface " .. key .. " uses another look's recoloured material")
+		-- Basalt is the shared dark rock (one colour for every biome), so the Fungal peaks may use it.
+		assert(owned[m] or m == Enum.Material.Basalt or Terrain.MaterialColors[m] == nil, "Fungal surface " .. key .. " uses another look's recoloured material")
 	end
 end)
 
@@ -707,6 +708,515 @@ test("Floor 20 is the hand-authored Frostbound Throne: symmetric cathedral nave,
 		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
 	end
 	assert(totalMobs == 35, "Floor 20 keeps 35 live camp mobs (got " .. totalMobs .. ")")
+end)
+
+-- Terraces (including the Sanctuary), links and distinct walk heights (other than the Sanctuary's).
+local function ladderCounts(room: any): (number, number, number)
+	local terraces, levels, seen = 0, 0, {}
+	for id, p in room.Platforms do
+		terraces += 1
+		if id ~= "Sanctuary" and not seen[p.Y] then
+			seen[p.Y] = true
+			levels += 1
+		end
+	end
+	return terraces, #room.Links, levels
+end
+
+local function routeLength(room: any): number
+	local g = Graph.new(room)
+	local s, a = room.Sanctuary, room.Platforms.Apex
+	local from = { X = s.X, Y = s.Y, Z = s.Z }
+	local route = Graph.Route(g, from, { X = a.X, Y = a.Y, Z = a.Z })
+	assert(#route > 0, "no route to the Apex")
+	local length = 0
+	for _, point in route do
+		length += Graph.Distance(from, point)
+		from = point
+	end
+	return length
+end
+
+test("Floor 21 is the hand-authored Slagworks Entry: a bigger room round a hub every route passes", function()
+	local room = Layout.ForFloor(21)
+	assert(room.Authored == "infernal:1" and room.Name == "Slagworks Entry" and room.PathStyle == "SOOTWRIGHT")
+	assert(room.DirectTerrain == true and room.Surface == "SOOTWRIGHT" and room.Masonry == "FOUNDRY_IRON")
+	assert(room.Width == 480 and room.Depth == 525 and room.Height == 160, "Floor 21 overrides its room size")
+	assert(room.Bottom == 0 and #room.ReturnLinks == 0, "Floor 21 has no chasm")
+	assert(same(room, Layout.Get(1, 21)), "the authored floor 21 is not fixed")
+	assert(not same(room, Layout.Get(1)), "floor 21 should not be the canonical layout")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(paths.Basin_Weighbridge == "RAMP" and paths.Weighbridge_Crossing == "RAMP")
+	assert(paths.Crossing_WestGallery and paths.Crossing_EastGallery and paths.Crossing_OreCrusher and paths.Crossing_CoalBunker)
+	assert(paths.Crossing_Apex == "STAIRS", "the Furnace Steps climb from the Great Turntable")
+	assert(paths.WestGallery_OreCrusher == "RAMP", "the rim track links the Sorting Shed to the Ore Crusher")
+	assert(room.Suspended.Platforms.OreCrusher and room.Suspended.Links.Crossing_OreCrusher and room.Suspended.Links.WestGallery_OreCrusher)
+	-- The hub: without the Great Turntable, the Ore Yard reaches nothing past the Weighbridge.
+	local adjacent: { [string]: { string } } = {}
+	for _, link in room.Links do
+		if link.From ~= "Crossing" and link.To ~= "Crossing" then
+			adjacent[link.From] = adjacent[link.From] or {}
+			adjacent[link.To] = adjacent[link.To] or {}
+			table.insert(adjacent[link.From], link.To)
+			table.insert(adjacent[link.To], link.From)
+		end
+	end
+	local reached, queue = { Basin = true }, { "Basin" }
+	while #queue > 0 do
+		local id = table.remove(queue) :: string
+		for _, other in adjacent[id] or {} do
+			if not reached[other] then
+				reached[other] = true
+				table.insert(queue, other)
+			end
+		end
+	end
+	for id in reached do
+		assert(id == "Basin" or id == "Sanctuary" or id == "Weighbridge", "the Ore Yard reaches " .. id .. " without the turntable")
+	end
+	local p = room.Platforms
+	assert(p.Crossing.Name == "Great Turntable" and p.Weighbridge.Name == "Weighbridge" and p.WestGallery.Name == "Sorting Shed")
+	assert(p.EastGallery.Name == "Slag Tip" and p.OreCrusher.Name == "Ore Crusher" and p.CoalBunker.Name == "Coal Bunker" and p.Apex.Name == "Furnace Gate")
+	-- Terrain terraces sit on 4-stud planes (smooth terrain only renders flush there); the rest are built decks.
+	for id, t in p do
+		if not room.Decks[id] then
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		assert(camp.Platform ~= "Weighbridge" and camp.Platform ~= "OreCrusher" and camp.Platform ~= "CoalBunker", "ExtraPlatforms hold no camps")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 16 and room.EliteCount == 1, "Floor 21 keeps 16 live camp mobs and 1 Elite")
+	assert(Layout.PatrolRoutes(1, 21).BASIN_LOOP ~= nil)
+end)
+
+test("Floor 21 climbs the escalation ladder: bigger and more elaborate than every earlier first floor", function()
+	local room = Layout.ForFloor(21)
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 9 and links == 9 and levels == 8, string.format("Floor 21 has %d/%d/%d", terraces, links, levels))
+	for _, earlier in { 1, 6, 11, 16 } do
+		local t, l, v = ladderCounts(Layout.ForFloor(earlier))
+		assert(terraces > t and links > l and levels > v, "Floor 21 does not beat floor " .. earlier)
+	end
+	local canonical = Layout.Get(1)
+	assert(room.Width * room.Depth >= 1.25 * canonical.Width * canonical.Depth, "Floor 21's room is not grander")
+	-- Bigger rooms, but the walk to the summit stays within half again the canonical floor's.
+	local walk, base = routeLength(room), routeLength(canonical)
+	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+	-- Every floor without its own Size keeps its per-index room size.
+	for id = 1, 50 do
+		if id < 21 or id > 25 then
+			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
+			assert(r.Width == c.Width and r.Depth == c.Depth and r.Height == c.Height and r.Bottom == c.Bottom, "floor " .. id .. " changed size")
+		end
+	end
+end)
+
+test("Floor 21's terrain: Sootwright ground, a slag tip heaped by the east spur, walkways untouched", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(21)
+	local field = Terrain.Field(room, "infernal_foundry", 21)
+	assert(field.Surface == Terrain.Surfaces.SOOTWRIGHT, "floor 21 uses the Sootwright surface")
+	assert(field.Accent ~= nil, "the slag tips colour their own ground")
+	-- The heap rises well over the yard somewhere along the fan, and shows clinker and glowing seams.
+	local top, seams = -math.huge, 0
+	for along = 4, 60, 4 do
+		for across = -16, 16, 4 do
+			local yaw = math.rad(-24)
+			local x = 212 + math.sin(yaw) * along + math.cos(yaw) * across
+			local z = -8 + math.cos(yaw) * along - math.sin(yaw) * across
+			top = math.max(top, field.Height(x, z))
+			local m = field.Accent(x, z)
+			if m == Enum.Material.CrackedLava then seams += 1 end
+		end
+	end
+	assert(top > field.Bottom + 14, "the slag tip does not heap up")
+	assert(seams > 0, "the slag tip has no glowing seams")
+	-- Terraces stay flush: the ground at every terrace centre is at or under its top.
+	for id, t in room.Platforms do
+		assert(field.Height(t.X, t.Z) <= t.Y + 0.01, id .. " is buried")
+	end
+end)
+
+test("No terrain is made of a blocky material: every slope stays walkable", function()
+	-- Brick and WoodPlanks terrain collides as 4-stud blocks however smoothly it is written, so a ramp or trail
+	-- in them is a staircase heroes cannot climb (Floors 21-23's Sanctuary ramps, 2026-11-20).
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local blocky = {}
+	for _, m in Terrain.BlockyMaterials do
+		blocky[m] = true
+	end
+	assert(blocky[Enum.Material.Brick] and blocky[Enum.Material.WoodPlanks])
+	for biome, palette in Terrain.Palettes do
+		for key, m in palette :: any do
+			assert(not blocky[m], biome .. " palette " .. key .. " is a blocky terrain material")
+		end
+	end
+	for name, surface in Terrain.Surfaces do
+		for key, m in surface :: any do
+			assert(not blocky[m], name .. " surface " .. key .. " is a blocky terrain material")
+		end
+	end
+	-- The Sootwright ground keeps to shared or uncoloured materials (it recolours nothing).
+	for key, m in Terrain.Surfaces.SOOTWRIGHT :: any do
+		for _, fungal in Terrain.FungalMaterials do
+			assert(m ~= fungal, "Sootwright surface " .. key .. " uses a Fungal-owned material")
+		end
+	end
+	local field = Terrain.Field(Layout.ForFloor(21), "infernal_foundry", 21)
+	for _, link in Layout.ForFloor(21).Links do
+		for t = 0, 1, 0.1 do
+			local x, z = link.AX + (link.BX - link.AX) * t, link.AZ + (link.BZ - link.AZ) * t
+			local m = field.Accent and field.Accent(x, z)
+			assert(not (m and blocky[m]), link.Id .. " crosses blocky slag")
+		end
+	end
+end)
+
+test("Floors 21-25's landmarks stand clear of every walkway and camp", function()
+	local Infernal = require(nodes["ServerScriptService.Core.TowerSetPieces.InfernalFoundry"])
+	local Infernal24 = require(nodes["ServerScriptService.Core.TowerSetPieces.InfernalFloor24"])
+	local Infernal25 = require(nodes["ServerScriptService.Core.TowerSetPieces.InfernalFloor25"])
+	assert(#Infernal.Floor21Landmarks >= 10, "Floor 21 needs at least 10 landmarks")
+	assert(#Infernal.Floor22Landmarks >= 12, "Floor 22 needs at least 12 landmarks")
+	assert(#Infernal.Floor23Landmarks >= 14, "Floor 23 needs at least 14 landmarks")
+	assert(#Infernal24.Landmarks >= 16, "Floor 24 needs at least 16 landmarks")
+	assert(#Infernal25.Landmarks >= 19, "Floor 25 needs at least 18 landmarks plus the Great Crucible")
+	for floorId, list in { [21] = Infernal.Floor21Landmarks, [22] = Infernal.Floor22Landmarks, [23] = Infernal.Floor23Landmarks, [24] = Infernal24.Landmarks, [25] = Infernal25.Landmarks } do
+	local room = Layout.ForFloor(floorId)
+	local lanes = Layout.Lanes((floorId - 1) % 5 + 1, floorId)
+	-- Separating-axis test between an axis-aligned rectangle and a lane's oriented strip (top-down).
+	local function overlaps(lm: any, lane: any): boolean
+		local dx, dz = lane.BX - lane.AX, lane.BZ - lane.AZ
+		local len = math.max(math.sqrt(dx * dx + dz * dz), 1e-6)
+		local ux, uz = dx / len, dz / len
+		local cx, cz = (lane.AX + lane.BX) / 2, (lane.AZ + lane.BZ) / 2
+		local laneCorners = {}
+		for _, s in { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } } do
+			table.insert(laneCorners, { cx + ux * len / 2 * s[1] - uz * lane.HalfWidth * s[2], cz + uz * len / 2 * s[1] + ux * lane.HalfWidth * s[2] })
+		end
+		local rectCorners = {}
+		for _, s in { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } } do
+			table.insert(rectCorners, { lm.X + lm.HalfX * s[1], lm.Z + lm.HalfZ * s[2] })
+		end
+		for _, axis in { { 1, 0 }, { 0, 1 }, { ux, uz }, { -uz, ux } } do
+			local aMin, aMax, bMin, bMax = math.huge, -math.huge, math.huge, -math.huge
+			for _, c in rectCorners do
+				local v = c[1] * axis[1] + c[2] * axis[2]
+				aMin, aMax = math.min(aMin, v), math.max(aMax, v)
+			end
+			for _, c in laneCorners do
+				local v = c[1] * axis[1] + c[2] * axis[2]
+				bMin, bMax = math.min(bMin, v), math.max(bMax, v)
+			end
+			if aMax < bMin or bMax < aMin then
+				return false
+			end
+		end
+		return true
+	end
+	for _, lm in list do
+		local y0 = lm.Y or (room.Bottom - 4)
+		local y1 = y0 + lm.Top
+		for _, lane in lanes do
+			local ly0 = math.min(lane.AY, lane.BY) - lane.Below
+			local ly1 = math.max(lane.AY, lane.BY) + lane.Above
+			if y1 > ly0 and y0 < ly1 then
+				assert(not overlaps(lm, lane), lm.Id .. " stands on walkway " .. lane.Id)
+			end
+		end
+		for _, camp in room.Camps do
+			if y1 > camp.Y - 2 and y0 < camp.Y + 22 then
+				local nx = math.clamp(camp.X, lm.X - lm.HalfX, lm.X + lm.HalfX)
+				local nz = math.clamp(camp.Z, lm.Z - lm.HalfZ, lm.Z + lm.HalfZ)
+				assert((nx - camp.X) ^ 2 + (nz - camp.Z) ^ 2 >= 34 * 34, lm.Id .. " reaches into camp " .. camp.Id)
+			end
+		end
+		assert(math.abs(lm.X) + lm.HalfX <= room.Width / 2 and math.abs(lm.Z) + lm.HalfZ <= room.Depth / 2, lm.Id .. " leaves the room")
+	end
+	end
+end)
+
+test("Floor 22 is the hand-authored Molten Assembly: a walkable crane girder between two piers, with a stem to the hall", function()
+	local room = Layout.ForFloor(22)
+	assert(room.Authored == "infernal:2" and room.Name == "Molten Assembly" and room.PathStyle == "SOOTWRIGHT")
+	assert(room.DirectTerrain == true and room.Surface == "SOOTWRIGHT" and room.Masonry == "FOUNDRY_IRON")
+	assert(room.Width == 550 and room.Depth == 615 and room.Height == 180 and room.Bottom == 0, "Floor 22 overrides its room size")
+	assert(room.Skylight ~= nil, "the assembly hall is vaulted, lit by one oculus")
+	assert(same(room, Layout.Get(2, 22)) and not same(room, Layout.Get(2)))
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- The girder: pier -> West Hoist -> Crane Trolley -> East Hoist -> pier, rising Y 8 to 12 (the failed jack).
+	local girder = { "WestGallery_WestHoist", "WestHoist_Crossing", "Crossing_EastHoist", "EastHoist_EastGallery" }
+	for _, id in girder do
+		assert(paths[id] == "RAMP" and room.Suspended.Links[id] and room.GirderSpans[id], id .. " is not a free girder span")
+	end
+	local p = room.Platforms
+	assert(p.WestGallery.Y < p.WestHoist.Y and p.WestHoist.Y < p.Crossing.Y and p.Crossing.Y < p.EastHoist.Y and p.EastHoist.Y < p.EastGallery.Y,
+		"the girder tilts up from west to east")
+	-- The piers join only through the girder nodes (no pier-to-pier or pier-to-trolley link).
+	assert(paths.WestGallery_EastGallery == nil and paths.WestGallery_Crossing == nil and paths.Crossing_EastGallery == nil)
+	-- Only the trolley's stem reaches the hall: trolley -> Inspection Gallery -> stair -> Assembly Hall; a loading
+	-- ramp climbs from the yard to the trolley.
+	assert(paths.Crossing_Inspection == "RAMP" and paths.Inspection_Apex == "STAIRS" and paths.Basin_Crossing == "RAMP")
+	local toApex = 0
+	for _, link in room.Links do
+		if link.To == "Apex" or link.From == "Apex" then toApex += 1 end
+	end
+	assert(toApex == 1, "the Assembly Hall has one way in")
+	assert(paths.WestGallery_PatternLoft and paths.EastGallery_ControlCab, "each pier carries its loft")
+	for _, id in { "PatternLoft", "ControlCab" } do
+		local degree = 0
+		for _, link in room.Links do
+			if link.From == id or link.To == id then degree += 1 end
+		end
+		assert(degree == 1, id .. " is a dead-end loft")
+	end
+	assert(p.Crossing.Name == "Crane Trolley" and p.Inspection.Name == "Inspection Gallery" and p.Apex.Name == "Assembly Hall")
+	for id, t in p do
+		if not room.Decks[id] then
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		local extra = { WestHoist = true, EastHoist = true, Inspection = true, PatternLoft = true, ControlCab = true }
+		assert(not extra[camp.Platform], "ExtraPlatforms hold no camps")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 22 and room.EliteCount == 2, "Floor 22 keeps 22 live camp mobs and 2 Elites")
+	-- The ladder: grander than Floor 21 and than every earlier second floor.
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 11 and links == 12 and levels == 10, string.format("Floor 22 has %d/%d/%d", terraces, links, levels))
+	local t21, l21, v21 = ladderCounts(Layout.ForFloor(21))
+	assert(terraces > t21 and links > l21 and levels > v21, "Floor 22 does not beat Floor 21")
+	local r21 = Layout.ForFloor(21)
+	assert(room.Width * room.Depth > r21.Width * r21.Depth, "Floor 22's hall is not bigger than Floor 21's yard")
+	for _, earlier in { 2, 7, 12, 17 } do
+		local t, l, v = ladderCounts(Layout.ForFloor(earlier))
+		assert(terraces > t and links > l and levels > v, "Floor 22 does not beat floor " .. earlier)
+	end
+	local walk, base = routeLength(room), routeLength(Layout.Get(2))
+	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+end)
+
+test("Floor 23 is the hand-authored Furnace Causeway: a three-span causeway over lava with six bays off it like ribs", function()
+	local room = Layout.ForFloor(23)
+	assert(room.Authored == "infernal:3" and room.Name == "Furnace Causeway" and room.PathStyle == "SOOTWRIGHT")
+	assert(room.Width == 625 and room.Depth == 700 and room.Height == 205 and room.Bottom == -4, "Floor 23 is a bigger hall over a lava chasm")
+	assert(#room.ReturnLinks == 2, "return ramps climb from the lava shore")
+	assert(same(room, Layout.Get(3, 23)) and not same(room, Layout.Get(3)))
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- The spine: South -> Mid -> North Causeway on stone piers, then the stair to the Furnace Mouth.
+	for _, id in { "Basin_Crossing", "Crossing_MidCauseway", "MidCauseway_NorthCauseway" } do
+		assert(paths[id] == "RAMP" and room.Suspended.Links[id] and room.StonePiers[id], id .. " is not a stone causeway span")
+	end
+	assert(paths.NorthCauseway_Apex == "STAIRS")
+	local p = room.Platforms
+	assert(p.Crossing.Y < p.MidCauseway.Y and p.MidCauseway.Y < p.NorthCauseway.Y and p.NorthCauseway.Y < p.Apex.Y, "the spine climbs north")
+	-- Six ribs, two per span on alternate sides, each bay joined only to its span (and the catwalk).
+	local spine = { Crossing = true, MidCauseway = true, NorthCauseway = true }
+	local ribs = { WestGallery = "Crossing", SlagBay = "Crossing", EastGallery = "MidCauseway", CoolingBay = "MidCauseway",
+		CastingBay = "NorthCauseway", BladeGallery = "NorthCauseway" }
+	for bay, span in ribs do
+		assert(paths[span .. "_" .. bay] == "RAMP", bay .. " is not a rib off " .. span)
+		assert(math.abs(p[bay].Z - p[span].Z) < 1 and math.abs(p[bay].X) > 100, bay .. " does not open off its span")
+		for _, link in room.Links do
+			local other = if link.From == bay then link.To elseif link.To == bay then link.From else nil
+			if other then
+				assert(other == span or (bay == "EastGallery" and other == "BladeGallery") or (bay == "BladeGallery" and other == "EastGallery"),
+					bay .. " joins " .. other)
+			end
+		end
+	end
+	assert(paths.EastGallery_BladeGallery == "RAMP", "the east catwalk joins the Quench Bay up to the Blade Gallery")
+	for bay, span in ribs do
+		assert(not spine[bay] and spine[span])
+	end
+	assert((p.WestGallery.X < 0) ~= (p.SlagBay.X < 0) and (p.EastGallery.X < 0) ~= (p.CoolingBay.X < 0) and (p.CastingBay.X < 0) ~= (p.BladeGallery.X < 0),
+		"each span's two ribs go to opposite sides")
+	for id, t in p do
+		if not room.Decks[id] then
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	-- 25 mobs, 3 Elites, one Elite camp above the entry level; extra platforms hold none.
+	local totalMobs, raisedElite = 0, false
+	for _, camp in room.Camps do
+		assert(ribs[camp.Platform] == nil or camp.Platform == "WestGallery" or camp.Platform == "EastGallery", "ExtraPlatforms hold no camps")
+		assert(camp.Platform ~= "MidCauseway" and camp.Platform ~= "NorthCauseway")
+		if camp.Platform ~= "Apex" then
+			totalMobs += camp.Size
+			if camp.Elite and camp.Y > p.Basin.Y then raisedElite = true end
+		end
+	end
+	assert(totalMobs == 25 and room.EliteCount == 3 and raisedElite, "Floor 23 keeps 25 mobs, 3 Elites, one above the entry level")
+	local routes = Layout.PatrolRoutes(3, 23)
+	assert(routes.BASIN_LOOP and routes.SPINE and routes.CATWALK, "Floor 23 patrols the Basin, the spine and the catwalk")
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil, "the authored patrols replace the generic ones")
+	-- The ladder: grander than Floor 22 and every earlier third floor.
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 12 and links == 12 and levels == 11, string.format("Floor 23 has %d/%d/%d", terraces, links, levels))
+	local t22, l22, v22 = ladderCounts(Layout.ForFloor(22))
+	assert(terraces > t22 and links >= l22 and levels > v22, "Floor 23 does not beat Floor 22")
+	local r22 = Layout.ForFloor(22)
+	assert(room.Width * room.Depth > r22.Width * r22.Depth)
+	for _, earlier in { 3, 8, 13, 18 } do
+		local t, l, v = ladderCounts(Layout.ForFloor(earlier))
+		assert(terraces > t and links > l and levels > v, "Floor 23 does not beat floor " .. earlier)
+	end
+	local walk, base = routeLength(room), routeLength(Layout.Get(3))
+	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+end)
+
+test("Floor 24 is the hand-authored Ironflame Bulwark: three strips split by lava channels, Sluice Towers, and The Pour", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(24)
+	assert(room.Authored == "infernal:4" and room.Name == "Ironflame Bulwark" and room.PathStyle == "SOOTWRIGHT")
+	assert(room.DirectTerrain == true and room.Surface == "SOOTWRIGHT" and room.Masonry == "FOUNDRY_IRON")
+	assert(room.Width == 715 and room.Depth == 810 and room.Height == 230 and room.Bottom == -4, "Floor 24 is a 715x810x230 fortress over a lava chasm")
+	assert(#room.ReturnLinks == 2, "return ramps climb from the lava shore")
+	assert(same(room, Layout.Get(4, 24)) and not same(room, Layout.Get(4)))
+	-- Signature shape: Basin links ONLY to Sanctuary and the West Gun Deck (The Pour blocks the centre).
+	local basinOut = {}
+	local paths = {}
+	for _, link in room.Links do
+		paths[link.Id] = link.Kind
+		if link.From == "Basin" then table.insert(basinOut, link.To)
+		elseif link.To == "Basin" and link.From ~= "Sanctuary" then table.insert(basinOut, link.From) end
+	end
+	assert(#basinOut == 1 and basinOut[1] == "WestGallery", "Floor 24's Basin must link only to the West Gun Deck")
+	-- Strip-to-strip weave and elevated deck-to-deck spans are solid suspended iron bridges.
+	for _, id in { "Basin_WestGallery", "PowderStore_WestBastion", "WestBastion_SignalBastion", "WestBastion_Apex",
+		"WestGallery_WestSluice", "WestSluice_Crossing", "Crossing_IronflameForge", "Crossing_EastSluice",
+		"EastSluice_EastGallery", "HammerHall_EastBastion", "EastBastion_Apex" } do
+		assert(paths[id] == "RAMP" and room.Suspended.Links[id], id .. " is not a suspended iron bridge")
+	end
+	assert(room.Suspended.Platforms.WestSluice and room.Suspended.Platforms.EastSluice)
+	assert(room.StonePiers.WestSluice and room.StonePiers.EastSluice)
+	assert(paths.WestGallery_PowderStore == "STAIRS" and paths.EastGallery_HammerHall == "STAIRS")
+	-- Terrain terraces sit on 4-stud planes; the rest are built iron decks.
+	local p = room.Platforms
+	for id, t in p do
+		if not room.Decks[id] then
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	-- Terrain features: The Pour carves a molten pool south of Crossing, and Lava Falls paint glowing cliff ribbons.
+	local field = Terrain.Field(room, "infernal_foundry", 24)
+	assert(field.Kind(0, 86) == "POOL", "The Pour must carve a molten lava pit south of Ironflame Gate")
+	assert(field.Kind(-115, 0) == "POOL" and field.Kind(115, -60) == "POOL", "both north-south lava channels must be molten pools")
+	assert(field.Accent ~= nil and field.Accent(-340, -120) == Enum.Material.CrackedLava, "Lava Falls paint glowing lava ribbons on the cavern walls")
+	for id, t in p do
+		assert(field.Height(t.X, t.Z) <= t.Y + 0.01, id .. " is buried")
+	end
+	-- 35 live camp mobs, 4 Elites (all above entry level); ExtraPlatforms hold no camps.
+	local extras = { PowderStore = true, SignalBastion = true, WestSluice = true, IronflameForge = true, EastSluice = true, HammerHall = true }
+	local totalMobs, raisedElites = 0, 0
+	for _, camp in room.Camps do
+		assert(not extras[camp.Platform], "ExtraPlatform " .. camp.Platform .. " must hold no camp")
+		if camp.Platform ~= "Apex" then
+			totalMobs += camp.Size
+			if camp.Elite and camp.Y > p.Basin.Y then raisedElites += 1 end
+		end
+	end
+	assert(totalMobs == 35 and room.EliteCount == 4 and raisedElites == 4, "Floor 24 keeps 35 mobs and 4 raised Elites")
+	local routes = Layout.PatrolRoutes(4, 24)
+	assert(routes.BASIN_LOOP and routes.BASTION_RING and routes.WEST_STRIP and routes.WEAVE)
+	-- The escalation ladder: strictly grander than Floor 23 and every earlier 4th floor (4, 9, 14, 19).
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 14 and links == 14 and levels == 12, string.format("Floor 24 has %d/%d/%d", terraces, links, levels))
+	local t23, l23, v23 = ladderCounts(Layout.ForFloor(23))
+	assert(terraces > t23 and links > l23 and levels > v23, "Floor 24 does not beat Floor 23")
+	local r23 = Layout.ForFloor(23)
+	assert(room.Width * room.Depth > r23.Width * r23.Depth)
+	for _, earlier in { 4, 9, 14, 19 } do
+		local t, l, v = ladderCounts(Layout.ForFloor(earlier))
+		assert(terraces > t and links > l and levels > v, "Floor 24 does not beat floor " .. earlier)
+	end
+	-- Note on walking distance: in a 715x810 room with Sanctuary at Z+371, Apex at Z-320 (straight-line 691.6 >
+	-- 1.5x canonical F4 = 683.0) and Basin linking only to West Gun Deck (X-230), the shortest walk stays under 2.0x.
+	local walk, base = routeLength(room), routeLength(Layout.Get(4))
+	assert(walk <= 2.0 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+end)
+
+test("Floor 25 is the hand-authored Titan's Crucible: an hourglass pinch with side chambers and the 170x124 Boss Dais", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(25)
+	assert(room.Authored == "infernal:5" and room.Name == "Titan's Crucible" and room.PathStyle == "SOOTWRIGHT")
+	assert(room.DirectTerrain == true and room.Surface == "SOOTWRIGHT" and room.Masonry == "FOUNDRY_IRON")
+	assert(room.Width == 740 and room.Depth == 795 and room.Height == 250 and room.Bottom == -6, "Floor 25 is a 740x795x250 boss hall over a deep lava lake")
+	assert(#room.ReturnLinks == 2, "return ramps climb from the lava shore")
+	assert(same(room, Layout.Get(5, 25)) and not same(room, Layout.Get(5)))
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- Hourglass pinch: no Basin->Crossing and no Crossing->Apex, and every Basin->Apex route passes Pour Gate (Crossing).
+	assert(paths.Basin_Crossing == nil and paths.Crossing_Apex == nil, "Floor 25 has no Basin->Crossing or Crossing->Apex")
+	assert(paths.Basin_WestGallery == "STAIRS" and paths.Basin_EastGallery == "STAIRS")
+	local adjacent: { [string]: { string } } = {}
+	for _, link in room.Links do
+		if link.From ~= "Crossing" and link.To ~= "Crossing" then
+			adjacent[link.From] = adjacent[link.From] or {}
+			adjacent[link.To] = adjacent[link.To] or {}
+			table.insert(adjacent[link.From], link.To)
+			table.insert(adjacent[link.To], link.From)
+		end
+	end
+	local reached, queue = { Basin = true }, { "Basin" }
+	while #queue > 0 do
+		local id = table.remove(queue) :: string
+		for _, other in adjacent[id] or {} do
+			if not reached[other] then
+				reached[other] = true
+				table.insert(queue, other)
+			end
+		end
+	end
+	assert(not reached.Apex, "every Basin->Apex route on Floor 25 must pass through Pour Gate (Crossing)")
+	local p = room.Platforms
+	assert(p.Apex.Width == 170 and p.Apex.Depth == 124 and p.Apex.Y == 44, "Boss dais is 170x124 at Y44")
+	for id, t in p do
+		if not room.Decks[id] then
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	-- Terrain features: boiling lava lake beneath Pour Gate and six glowing wall lava falls.
+	local field = Terrain.Field(room, "infernal_foundry", 25)
+	assert(field.Kind(0, -46) == "POOL", "Floor 25 has a boiling lava lake beneath Pour Gate")
+	assert(field.Accent ~= nil and field.Accent(-356, -100) == Enum.Material.CrackedLava, "Lava Falls paint glowing ribbons on the cavern walls")
+	for id, t in p do
+		assert(field.Height(t.X, t.Z) <= t.Y + 0.01, id .. " is buried")
+	end
+	-- 35 live camp mobs + Boss, 4 Elites; ExtraPlatforms hold no camps.
+	local extras = { PatternShop = true, IngotStore = true, PourSpout = true, WestDuct = true, EastDuct = true, WestChainGallery = true, EastChainGallery = true }
+	local totalMobs, hasBoss = 0, false
+	for _, camp in room.Camps do
+		assert(not extras[camp.Platform], "ExtraPlatform " .. camp.Platform .. " must hold no camp")
+		if camp.Platform == "Apex" then
+			hasBoss = camp.Boss == true
+		else
+			totalMobs += camp.Size
+		end
+	end
+	assert(totalMobs == 35 and room.EliteCount == 4 and hasBoss, "Floor 25 keeps 35 live camp mobs, 4 Elites, and the Ember Titan boss")
+	local routes = Layout.PatrolRoutes(5, 25)
+	assert(routes.BASIN_LOOP and routes.LOWER_PINCH and routes.UPPER_PINCH and routes.CRUCIBLE_RING)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil and routes.BASTION_RING == nil)
+	-- The escalation ladder: strictly grander than Floor 24 and every earlier 5th floor (5, 10, 15, 20).
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 15 and links == 16 and levels == 13, string.format("Floor 25 has %d/%d/%d", terraces, links, levels))
+	local t24, l24, v24 = ladderCounts(Layout.ForFloor(24))
+	assert(terraces > t24 and links > l24 and levels > v24, "Floor 25 does not beat Floor 24")
+	local r24 = Layout.ForFloor(24)
+	assert(room.Width * room.Depth > r24.Width * r24.Depth)
+	for _, earlier in { 5, 10, 15, 20 } do
+		local t, l, v = ladderCounts(Layout.ForFloor(earlier))
+		assert(terraces > t and links > l and levels > v, "Floor 25 does not beat floor " .. earlier)
+	end
 end)
 
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()

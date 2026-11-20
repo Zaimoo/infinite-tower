@@ -9,6 +9,9 @@ local PropClearance = require(script.Parent.TowerPropClearance)
 local KitProps = require(script.Parent.TowerKitProps)
 local TowerLayout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local Kit = require(game.ReplicatedStorage.Shared.Config.TowerBiomeKit)
+local InfernalSetPieces = require(script.Parent.TowerSetPieces.InfernalFoundry)
+local InfernalFloor24 = require(script.Parent.TowerSetPieces.InfernalFloor24)
+local InfernalFloor25 = require(script.Parent.TowerSetPieces.InfernalFloor25)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
@@ -6446,6 +6449,26 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 	end
 
+	-- Infernal Foundry authored floors build their set pieces in TowerSetPieces/InfernalFoundry (Floors 21-23)
+	-- and per-floor modules (InfernalFloor24, InfernalFloor25), through these builders.
+	local infernalBuild = if layout.Authored == "infernal:1" then InfernalSetPieces.Floor21
+		elseif layout.Authored == "infernal:2" then InfernalSetPieces.Floor22
+		elseif layout.Authored == "infernal:3" then InfernalSetPieces.Floor23
+		elseif layout.Authored == "infernal:4" then InfernalFloor24.Build
+		elseif layout.Authored == "infernal:5" then InfernalFloor25.Build
+		else nil
+	if infernalBuild then
+		infernalBuild({
+			origin = origin, layout = layout, field = field, w = w, d = d, h = h, bottom = bottom,
+			group = group, block = block, beam = beam, cyl = cyl, orb = orb, ring = ring,
+			pointLight = pointLight, kitAt = kitAt, has = KitProps.Has, footprintClear = footprintClear,
+			current = function(): Instance return currentParent end,
+			tag = function(name: string, value: any) currentParent:SetAttribute(name, value) end,
+			reserve = function(x: number, z: number, r: number) table.insert(reservedSpots, { x, z, r }) end,
+			setAttribute = function(name: string, value: any) kit:SetAttribute(name, value) end,
+		})
+	end
+
 	-- =========================================================================
 	-- 5. MONUMENTAL NORTH APEX CITADEL / TEMPLE / PORTAL & OVERHEAD SKY SPECTACLE
 	-- =========================================================================
@@ -6483,8 +6506,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
-	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then
-		-- Floors 16-20 own their north horizon backdrops directly.
+	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" then
+		-- Floors 16-25 own their north horizon backdrops directly (Floors 21-25: TowerSetPieces).
 	else
 		-- Authored Fungal floors have their own backdrop: the cavern wall itself (Floor 6's Crown Cluster grows on it).
 		for _, s in if fungalFloor then {} else { -1, 1 } do
@@ -7226,6 +7249,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 
+	elseif biome == "infernal_foundry" and (layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5") then
+		-- Floors 21-25 build their own fortress, furnace, crucible and works backdrops in TowerSetPieces.
 	elseif biome == "infernal_foundry" then
 		for _, s in { -1, 1 } do
 			spire(backdrop + V(s * 54 * scale, 0, 4), 72 * scale, 19 * scale, rgb(38, 28, 30), rgb(255, 108, 28), false)
@@ -7642,7 +7667,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- An authored floor can thin its groves (Floor 6: one giant, the Elder Cap, not a forest of them).
 		local td = layout.Terrain or {}
 		local groveScale = td.GroveScale or 1
-		local groveCount = if layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then 0 else math.round(eco.Groves * 1.5 * density * groveScale)
+		local groveCount = if layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" then 0 else math.round(eco.Groves * 1.5 * density * groveScale)
 		for _ = 1, groveCount do
 			local name = pick(eco.Trees)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2])
@@ -7667,9 +7692,13 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				if ux then put("Understory", under, ux, uy, uz, us, ur) end
 			end
 		end
-		-- Meadow: small understory scattered loosely over open ground and terrace lawns.
+		-- Meadow: small understory scattered loosely over open ground and terrace lawns (Floor 21: the yard's
+		-- coal, scrap and clinker once its kit is imported).
+		local understory = if (layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5") and KitProps.Has("CoalHeap") and KitProps.Has("ScrapHeap")
+			then { "CoalHeap", "ScrapHeap", "ForgeScrap", "BoulderCluster" }
+			else eco.Understory
 		for _ = 1, math.floor(w * d / 1800) do
-			local name = pick(eco.Understory)
+			local name = pick(understory)
 			local ms = rand:NextNumber(0.6, 1.1)
 			local mr = radiusOf(name, ms)
 			local mx, my, mz = search(mr, function(kind, slope)

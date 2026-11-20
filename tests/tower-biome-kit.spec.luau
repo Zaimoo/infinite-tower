@@ -108,6 +108,67 @@ test("Every extra floor-specific template has a size, stands on the ground and u
 	assert(count >= 45, "expected Floor 2-5 and Floor 11-15 extra templates")
 end)
 
+test("Floor 21 has its own Sootwright kit: at least six new templates for the escalation ladder", function()
+	local f21 = { "OreCrusherJaw", "CoalHopper", "OreCart", "TankLocomotive", "SignalCabin", "FurnaceGateDoors",
+		"WaterTower", "RailBuffer", "FlueStack", "ScrapHeap", "CoalHeap", "SignalLamp" }
+	for _, name in f21 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 21 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates), not gate every floor")
+	end
+	assert(#f21 >= 6)
+	-- The tallest Floor 21 landmark (a flue stack) reaches the ladder's 80 studs at its smallest placed scale.
+	assert(Kit.ExtraTemplates.FlueStack.Size.Y * 0.85 >= 80)
+end)
+
+test("Floor 22 has its own assembly-hall kit: more new templates than Floor 21", function()
+	local f22 = { "ConstructShell", "AssemblyScaffold", "ChainHoist", "CraneTrolley", "QuenchTank", "PatternRack",
+		"ControlCabin", "FurnaceBox", "WallGear", "ConveyorRollers", "PartsRack", "HydraulicJack" }
+	for _, name in f22 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 22 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f22 >= 7)
+	-- The master jig's scaffold, at its placed height scale (3.1), clears the ladder's 95 studs.
+	assert(Kit.ExtraTemplates.AssemblyScaffold.Size.Y * 3.1 >= 95)
+end)
+
+test("Floor 23 has its own furnace-line kit: at least eight new templates", function()
+	local f23 = { "FurnaceTower", "TiltingCrucible", "MouldBed", "CoolingRack", "BladeDisplay", "FurnaceDoorGiant",
+		"SlagLadleCart", "JibCrane", "BellowsDuctRun", "CrustIsland", "SteamVent" }
+	for _, name in f23 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 23 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f23 >= 8)
+	-- The tallest Floor 23 landmarks, the flue stacks flanking the Mouth (scale 1.15), clear the ladder's 110.
+	assert(Kit.ExtraTemplates.FlueStack.Size.Y * 1.15 >= 110)
+end)
+
+test("Floor 24 has its own Ironflame Bulwark kit: at least nine new templates and a 130+ stud Citadel", function()
+	local f24 = { "BulwarkWall", "SluiceTower", "SluiceGateChain", "SlagCannon", "SignalBrazier", "DropHammer",
+		"PowderKegStack", "FlameJetPortcullis", "ChainWinch", "SiegeBallista", "ArmourRack", "CitadelDoors" }
+	for _, name in f24 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 24 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f24 >= 9)
+	-- The tallest Floor 24 landmark, Ironflame Citadel keep (scale 1.55), clears the ladder's 130 studs.
+	assert(Kit.ExtraTemplates.CitadelDoors.Size.Y * 1.55 >= 130)
+end)
+
+test("Floor 25 has its own Titan's Crucible kit: at least ten new templates and a 170+ stud Great Crucible", function()
+	local f25 = { "GreatCrucible", "TitanHeartGrate", "GreatBellows", "TitanMouldFist", "TitanMouldHelm",
+		"HangingChainRun", "PourSpoutChute", "DuctManifold", "IngotPallet", "PatternLathe", "VaultRibArch",
+		"ChainGalleryRail" }
+	for _, name in f25 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 25 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f25 >= 10)
+	-- The colossal Great Crucible centrepiece (scale 1.85) clears the ladder's 170 studs.
+	assert(Kit.ExtraTemplates.GreatCrucible.Size.Y * 1.85 >= 170)
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -196,7 +257,12 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[18] ~= nil, "floor 18 (Shattered Iceway) has its blizzard grade")
 	assert(Light.FloorGrades[19] ~= nil, "floor 19 (Whiteguard Keep) has its twilight aurora grade")
 	assert(Light.FloorGrades[20] ~= nil, "floor 20 (Frostbound Throne) has its frozen night grade")
-	assert(Light.TowerPreset(5, 21) == Light.TowerPreset(5), "a floor without its own grade shares its biome's")
+	assert(Light.FloorGrades[21] ~= nil, "floor 21 (Slagworks Entry) has its smoky red dawn grade")
+	assert(Light.FloorGrades[22] ~= nil, "floor 22 (Molten Assembly) has its sodium work-light grade")
+	assert(Light.FloorGrades[23] ~= nil, "floor 23 (Furnace Causeway) has its furnace-glare grade")
+	assert(Light.FloorGrades[24] ~= nil, "floor 24 (Ironflame Bulwark) has its siege-red night grade")
+	assert(Light.FloorGrades[25] ~= nil, "floor 25 (Titan's Crucible) has its molten-heart grade")
+	assert(Light.TowerPreset(6, 26) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400

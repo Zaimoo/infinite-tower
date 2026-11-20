@@ -1,0 +1,232 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AssemblyScaffold": {
+      "Min": [
+        -9.6,
+        0.0,
+        -7.6
+      ],
+      "Roles": {
+        "METAL": 72,
+        "TRIM": 984,
+        "WOOD": 72
+      },
+      "Size": [
+        19.3,
+        30.963,
+        15.2
+      ],
+      "Triangles": 1128
+    },
+    "ChainHoist": {
+      "Min": [
+        -1.6,
+        0.042,
+        -1.3
+      ],
+      "Roles": {
+        "GOLD": 122,
+        "METAL": 138,
+        "TRIM": 856
+      },
+      "Size": [
+        3.2,
+        22.258,
+        3.15
+      ],
+      "Triangles": 1116
+    },
+    "ConstructShell": {
+      "Min": [
+        -6.361,
+        0.0,
+        -3.9
+      ],
+      "Roles": {
+        "ACCENT": 56,
+        "GLOW": 24,
+        "GOLD": 300,
+        "METAL": 1279,
+        "TRIM": 556
+      },
+      "Size": [
+        14.061,
+        25.25,
+        7.8
+      ],
+      "Triangles": 2215
+    },
+    "ControlCabin": {
+      "Min": [
+        -7.722,
+        0.0,
+        -7.722
+      ],
+      "Roles": {
+        "CRYSTAL": 48,
+        "GLOW": 12,
+        "GOLD": 240,
+        "METAL": 36,
+        "TRIM": 324,
+        "WOOD": 24
+      },
+      "Size": [
+        15.443,
+        12.8,
+        15.443
+      ],
+      "Triangles": 684
+    },
+    "ConveyorRollers": {
+      "Min": [
+        -2.85,
+        0.0,
+        -11.9
+      ],
+      "Roles": {
+        "ACCENT": 92,
+        "METAL": 616,
+        "TRIM": 132
+      },
+      "Size": [
+        7.95,
+        5.92,
+        22.9
+      ],
+      "Triangles": 840
+    },
+    "CraneTrolley": {
+      "Min": [
+        -8.13,
+        0.0,
+        -5.7
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "GLOW": 12,
+        "GOLD": 500,
+        "METAL": 336,
+        "TRIM": 132
+      },
+      "Size": [
+        16.26,
+        11.84,
+        12.1
+      ],
+      "Triangles": 992
+    },
+    "FurnaceBox": {
+      "Min": [
+        -11.7,
+        0.0,
+        -12.14
+      ],
+      "Roles": {
+        "GLOW": 80,
+        "METAL": 188,
+        "STONE": 24,
+        "TRIM": 864
+      },
+      "Size": [
+        23.4,
+        34.238,
+        21.04
+      ],
+      "Triangles": 1156
+    },
+    "HydraulicJack": {
+      "Min": [
+        -4.964,
+        0.0,
+        -4.0
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "GOLD": 440,
+        "METAL": 92,
+        "TRIM": 156
+      },
+      "Size": [
+        8.964,
+        15.254,
+        8.0
+      ],
+      "Triangles": 700
+    },
+    "PartsRack": {
+      "Min": [
+        -6.2,
+        0.0,
+        -1.9
+      ],
+      "Roles": {
+        "GOLD": 216,
+        "METAL": 450,
+        "TRIM": 108
+      },
+      "Size": [
+        12.4,
+        9.0,
+        3.8
+      ],
+      "Triangles": 774
+    },
+    "PatternRack": {
+      "Min": [
+        -6.45,
+        -0.098,
+        -1.95
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "TRIM": 60,
+        "WOOD": 784
+      },
+      "Size": [
+        12.75,
+        11.098,
+        7.25
+      ],
+      "Triangles": 856
+    },
+    "QuenchTank": {
+      "Min": [
+        -13.5,
+        -0.2,
+        -9.5
+      ],
+      "Roles": {
+        "CRYSTAL": 12,
+        "METAL": 140,
+        "STONE": 12,
+        "TRIM": 276
+      },
+      "Size": [
+        28.166,
+        7.4,
+        19.0
+      ],
+      "Triangles": 440
+    },
+    "WallGear": {
+      "Min": [
+        -14.404,
+        -0.904,
+        -2.5
+      ],
+      "Roles": {
+        "ACCENT": 588,
+        "METAL": 1248,
+        "TRIM": 192
+      },
+      "Size": [
+        34.904,
+        28.807,
+        5.0
+      ],
+      "Triangles": 2028
+    }
+  },
+  "Unit": "studs"
+}

@@ -105,7 +105,8 @@ local EXPECTED = {
 
 test("data-driven refactor preserves exact room, lane and patrol snapshots for floors 1-5 and unauthored 6-50", function()
 	for floorId, exp in EXPECTED do
-		if (floorId >= 11 and floorId <= 20) then
+		-- Hand-authored floors past the Verdant five (Fungal, Ashen, Frozen, Infernal...) have their own layouts.
+		if floorId > 5 and Layout.ForFloor(floorId).Authored ~= nil then
 			continue
 		end
 		local idx = (floorId - 1) % 5 + 1
