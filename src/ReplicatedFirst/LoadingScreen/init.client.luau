@@ -92,7 +92,8 @@ local function preload(list: { any })
 		local chunk = table.move(list, i, math.min(i + CHUNK - 1, total), 1, {})
 		pcall(function()
 			ContentProvider:PreloadAsync(chunk, function(contentId: string, fetchStatus: Enum.AssetFetchStatus)
-				if fetchStatus == Enum.AssetFetchStatus.Failure or fetchStatus == Enum.AssetFetchStatus.TimedOut then
+				-- Ignore empty contentId callbacks emitted by Roblox for TextLabels using custom FontFamily assets.
+				if contentId ~= "" and (fetchStatus == Enum.AssetFetchStatus.Failure or fetchStatus == Enum.AssetFetchStatus.TimedOut) then
 					table.insert(failedIds, contentId)
 				end
 			end)
