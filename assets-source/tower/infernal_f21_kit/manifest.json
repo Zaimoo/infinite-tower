@@ -1,0 +1,242 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "CoalHeap": {
+      "Min": [
+        -6.204,
+        -0.1,
+        -4.536
+      ],
+      "Roles": {
+        "ALT": 360,
+        "STONE": 60
+      },
+      "Size": [
+        12.909,
+        3.153,
+        8.959
+      ],
+      "Triangles": 420
+    },
+    "CoalHopper": {
+      "Min": [
+        -18.3,
+        0.0,
+        -8.0
+      ],
+      "Roles": {
+        "ACCENT": 36,
+        "ALT": 240,
+        "METAL": 204,
+        "TRIM": 456,
+        "WOOD": 12
+      },
+      "Size": [
+        36.6,
+        24.145,
+        14.583
+      ],
+      "Triangles": 948
+    },
+    "FlueStack": {
+      "Min": [
+        -7.3,
+        0.0,
+        -7.3
+      ],
+      "Roles": {
+        "GLOW": 52,
+        "METAL": 1200,
+        "STONE": 148,
+        "TRIM": 492
+      },
+      "Size": [
+        14.6,
+        100.4,
+        19.3
+      ],
+      "Triangles": 1892
+    },
+    "FurnaceGateDoors": {
+      "Min": [
+        -24.0,
+        0.0,
+        -6.6
+      ],
+      "Roles": {
+        "ACCENT": 24,
+        "GLOW": 24,
+        "GOLD": 1500,
+        "METAL": 24,
+        "STONE": 96,
+        "TRIM": 336
+      },
+      "Size": [
+        48.0,
+        46.4,
+        12.0
+      ],
+      "Triangles": 2004
+    },
+    "OreCart": {
+      "Min": [
+        -3.92,
+        0.0,
+        -5.0
+      ],
+      "Roles": {
+        "ACCENT": 48,
+        "ALT": 80,
+        "METAL": 12,
+        "TRIM": 252
+      },
+      "Size": [
+        7.84,
+        6.662,
+        10.0
+      ],
+      "Triangles": 392
+    },
+    "OreCrusherJaw": {
+      "Min": [
+        -13.0,
+        -0.4,
+        -10.96
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "ALT": 172,
+        "GLOW": 12,
+        "GOLD": 584,
+        "METAL": 280,
+        "STONE": 24,
+        "TRIM": 1224
+      },
+      "Size": [
+        26.0,
+        25.59,
+        25.817
+      ],
+      "Triangles": 2308
+    },
+    "RailBuffer": {
+      "Min": [
+        -3.5,
+        0.05,
+        -2.705
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "METAL": 160,
+        "TRIM": 84,
+        "WOOD": 12
+      },
+      "Size": [
+        7.0,
+        5.35,
+        5.93
+      ],
+      "Triangles": 268
+    },
+    "ScrapHeap": {
+      "Min": [
+        -8.741,
+        -0.6,
+        -6.022
+      ],
+      "Roles": {
+        "ACCENT": 380,
+        "METAL": 108,
+        "STONE": 80,
+        "TRIM": 84
+      },
+      "Size": [
+        17.396,
+        6.0,
+        12.261
+      ],
+      "Triangles": 652
+    },
+    "SignalCabin": {
+      "Min": [
+        -6.504,
+        -0.3,
+        -4.365
+      ],
+      "Roles": {
+        "ACCENT": 120,
+        "GLOW": 12,
+        "METAL": 180,
+        "STONE": 12,
+        "TRIM": 88,
+        "WOOD": 12
+      },
+      "Size": [
+        11.604,
+        12.5,
+        9.915
+      ],
+      "Triangles": 424
+    },
+    "SignalLamp": {
+      "Min": [
+        -0.9,
+        0.0,
+        -0.9
+      ],
+      "Roles": {
+        "GLOW": 12,
+        "GOLD": 12,
+        "METAL": 24,
+        "TRIM": 100
+      },
+      "Size": [
+        4.305,
+        9.8,
+        2.05
+      ],
+      "Triangles": 148
+    },
+    "TankLocomotive": {
+      "Min": [
+        -3.5,
+        -0.208,
+        -9.9
+      ],
+      "Roles": {
+        "ACCENT": 24,
+        "GLOW": 24,
+        "GOLD": 204,
+        "METAL": 2160,
+        "TRIM": 1440,
+        "WOOD": 20
+      },
+      "Size": [
+        7.0,
+        12.208,
+        20.628
+      ],
+      "Triangles": 3872
+    },
+    "WaterTower": {
+      "Min": [
+        -7.05,
+        -0.032,
+        -7.05
+      ],
+      "Roles": {
+        "ACCENT": 500,
+        "METAL": 228,
+        "TRIM": 432,
+        "WOOD": 12
+      },
+      "Size": [
+        14.1,
+        34.032,
+        19.55
+      ],
+      "Triangles": 1172
+    }
+  },
+  "Unit": "studs"
+}

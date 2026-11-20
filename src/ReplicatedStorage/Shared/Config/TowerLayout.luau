@@ -1144,11 +1144,540 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Frostbound Throne",
 		},
 	},
+	-- Floor 21, Slagworks Entry (Infernal Foundry): the Sootwrights' outer works, where ore came in and
+	-- slag went out. A hub with spokes: the Ore Yard crosses the Weighbridge onto the Great Turntable, and
+	-- every route passes it. Four spurs leave the turntable (Sorting Shed, Slag Tip, Ore Crusher on its
+	-- gantry, Coal Bunker), the Furnace Steps climb from it to the Furnace Gate, and one rim track links
+	-- the Sorting Shed to the Ore Crusher. A bigger room than Floor 1 (Size, docs/prompts/
+	-- infernal-foundry-floor-layouts-prompt.md Part 2): 9 terraces, 9 links, 8 walk heights.
+	[21] = {
+		Key = "infernal:1",
+		Name = "Slagworks Entry",
+		Size = { Width = 480, Depth = 525, Height = 160 },
+		PathStyle = "SOOTWRIGHT",
+		DirectTerrain = true,
+		Surface = "SOOTWRIGHT",
+		Masonry = "FOUNDRY_IRON",
+		Decks = {
+			Weighbridge = true,
+			Crossing = true,
+			OreCrusher = true,
+			CoalBunker = true,
+		},
+		Suspended = {
+			-- The Ore Crusher stands on an iron gantry; girder bridges carry the rail spurs up to it.
+			Platforms = { OreCrusher = true },
+			Links = {
+				Crossing_OreCrusher = true,
+				WestGallery_OreCrusher = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 96, Feather = 30 },
+			-- The Slag Tip: cooled slag tipped off the east spur, a fan of clinker spilling south-west toward the yard.
+			{ Kind = "SLAG_TIP", X = 212, Z = -8, Top = 30, Length = 78, Yaw = -24, HalfWidth = 20, Spread = 26 },
+			-- Ore and coal heaps banked against the back corners behind the Crusher and the Bunker.
+			{ Kind = "SLAG_TIP", X = -210, Z = -214, Top = 34, Length = 56, Yaw = 45, HalfWidth = 18, Spread = 22 },
+			{ Kind = "SLAG_TIP", X = 210, Z = -218, Top = 32, Length = 52, Yaw = -45, HalfWidth = 18, Spread = 20 },
+			-- Molten runoff pooled at the foot of the slag fan, and a sump under the crusher's girder spur.
+			{
+				Kind = "POOL_ELLIPSES_SQ",
+				Strength = 0.28,
+				Gain = 0.3,
+				Ellipses = {
+					{ X = 172, Z = 48, RX = 24, RZ = 10 },
+					{ X = -84, Z = -88, RX = 18, RZ = 13 },
+				},
+			},
+		},
+		Basin = { X = 0, Y = 0, Z = 120, Width = 400, Depth = 90 },
+		Crossing = { X = 0, Y = 4, Z = -10, Width = 96, Depth = 84 },
+		WestGallery = { X = -150, Y = 8, Z = 0, Width = 84, Depth = 76 },
+		EastGallery = { X = 150, Y = 12, Z = -20, Width = 84, Depth = 76 },
+		ExtraPlatforms = {
+			Weighbridge = { X = 0, Y = 2, Z = 54, Width = 60, Depth = 20 },
+			OreCrusher = { X = -140, Y = 16, Z = -130, Width = 70, Depth = 60 },
+			CoalBunker = { X = 140, Y = 6, Z = -140, Width = 70, Depth = 60 },
+		},
+		Apex = { X = 0, Y = 20, Z = -190, Width = 120, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "Weighbridge" },
+			{ "Weighbridge", "Crossing" },
+			{ "Crossing", "WestGallery" },
+			{ "Crossing", "EastGallery" },
+			{ "Crossing", "OreCrusher" },
+			{ "Crossing", "CoalBunker" },
+			{ "Crossing", "Apex" },
+			{ "WestGallery", "OreCrusher" },
+		},
+		Stairs = { Crossing_Apex = true },
+		Names = {
+			Sanctuary = "Slagworks Gate",
+			Basin = "Ore Yard",
+			Weighbridge = "Weighbridge",
+			Crossing = "Great Turntable",
+			WestGallery = "Sorting Shed",
+			EastGallery = "Slag Tip",
+			OreCrusher = "Ore Crusher",
+			CoalBunker = "Coal Bunker",
+			Apex = "Furnace Gate",
+		},
+	},
+	-- Floor 22, Molten Assembly (Infernal Foundry): the assembly hall, under a closed brick vault. A gantry
+	-- crane spans the hall on two lattice piers, and its girder is the route: pier -> West Hoist -> Crane
+	-- Trolley -> East Hoist -> pier, tilted by a failed jack (Y 8 up to 12). From the trolley a stem climbs over
+	-- the Inspection Gallery and up an iron stair to the Assembly Hall; each pier also carries a dead-end loft
+	-- (the Pattern Loft, the Control Cab). A loading ramp climbs from the yard straight to the trolley, so the
+	-- walk to the hall stays within 1.5x the canonical floor's. 11 terraces, 12 links, 10 walk heights.
+	[22] = {
+		Key = "infernal:2",
+		Name = "Molten Assembly",
+		Size = { Width = 550, Depth = 615, Height = 180 },
+		PathStyle = "SOOTWRIGHT",
+		DirectTerrain = true,
+		Surface = "SOOTWRIGHT",
+		Masonry = "FOUNDRY_IRON",
+		Decks = {
+			WestGallery = true,
+			WestHoist = true,
+			Crossing = true,
+			EastHoist = true,
+			EastGallery = true,
+			Inspection = true,
+			PatternLoft = true,
+			ControlCab = true,
+		},
+		Suspended = {
+			-- Every deck stands on iron (gantry columns), and every link but the arrival and the hall stair is a
+			-- girder bridge over the yard floor.
+			Platforms = {
+				WestGallery = true, WestHoist = true, Crossing = true, EastHoist = true, EastGallery = true,
+				Inspection = true, PatternLoft = true, ControlCab = true,
+			},
+			Links = {
+				Basin_WestGallery = true, Basin_EastGallery = true, Basin_Crossing = true,
+				WestGallery_WestHoist = true, WestHoist_Crossing = true, Crossing_EastHoist = true, EastHoist_EastGallery = true,
+				Crossing_Inspection = true, WestGallery_PatternLoft = true, EastGallery_ControlCab = true,
+			},
+		},
+		-- The crane girder's spans hang free between their nodes (no trestles), as a deep lattice box girder.
+		GirderSpans = {
+			WestGallery_WestHoist = true, WestHoist_Crossing = true, Crossing_EastHoist = true, EastHoist_EastGallery = true,
+		},
+		-- A closed brick vault over the hall; the only daylight is a smoky oculus over the Inspection Gallery.
+		Skylight = { X = 0, Z = -110, Radius = 44 },
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 100, Feather = 30 },
+			-- Molten runnels down both side aisles of the hall, under the piers and lofts.
+			{ Kind = "LAVA_CHANNEL", X = -212, ZStart = -270, ZEnd = 86, HalfWidth = 11, NoiseAmp = 3, Gain = 0.36 },
+			{ Kind = "LAVA_CHANNEL", X = 212, ZStart = -270, ZEnd = 86, HalfWidth = 11, NoiseAmp = 3, Gain = 0.36 },
+			-- Slag and scrap banked in the back corners.
+			{ Kind = "SLAG_TIP", X = -240, Z = -272, Top = 30, Length = 50, Yaw = 50, HalfWidth = 18, Spread = 18 },
+			{ Kind = "SLAG_TIP", X = 240, Z = -272, Top = 30, Length = 50, Yaw = -50, HalfWidth = 18, Spread = 18 },
+		},
+		Basin = { X = 0, Y = 0, Z = 150, Width = 470, Depth = 100 },
+		WestGallery = { X = -175, Y = 8, Z = -20, Width = 80, Depth = 68 },
+		Crossing = { X = 0, Y = 10, Z = -20, Width = 72, Depth = 56 },
+		EastGallery = { X = 175, Y = 12, Z = -20, Width = 80, Depth = 68 },
+		ExtraPlatforms = {
+			WestHoist = { X = -88, Y = 9, Z = -20, Width = 40, Depth = 40 },
+			EastHoist = { X = 88, Y = 11, Z = -20, Width = 40, Depth = 40 },
+			Inspection = { X = 0, Y = 18, Z = -120, Width = 64, Depth = 48 },
+			PatternLoft = { X = -180, Y = 16, Z = -150, Width = 70, Depth = 60 },
+			ControlCab = { X = 180, Y = 20, Z = -160, Width = 66, Depth = 56 },
+		},
+		Apex = { X = 0, Y = 24, Z = -230, Width = 120, Depth = 88 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "EastGallery" },
+			{ "Basin", "Crossing" },
+			{ "WestGallery", "WestHoist" },
+			{ "WestHoist", "Crossing" },
+			{ "Crossing", "EastHoist" },
+			{ "EastHoist", "EastGallery" },
+			{ "Crossing", "Inspection" },
+			{ "Inspection", "Apex" },
+			{ "WestGallery", "PatternLoft" },
+			{ "EastGallery", "ControlCab" },
+		},
+		Stairs = { Inspection_Apex = true },
+		Names = {
+			Sanctuary = "Hall Doors",
+			Basin = "Assembly Yard",
+			WestGallery = "West Gantry Pier",
+			WestHoist = "West Hoist",
+			Crossing = "Crane Trolley",
+			EastHoist = "East Hoist",
+			EastGallery = "East Gantry Pier",
+			Inspection = "Inspection Gallery",
+			PatternLoft = "Pattern Loft",
+			ControlCab = "Control Cab",
+			Apex = "Assembly Hall",
+		},
+	},
+	-- Floor 23, Furnace Causeway (Infernal Foundry): the furnace line over a lava lake. A causeway in three spans
+	-- on stone piers (South -> Mid -> North) runs north to a stair up to the Furnace Mouth, and six bays open off
+	-- it like ribs, two per span on alternate sides; an iron catwalk joins the East Quench Bay up to the Blade
+	-- Gallery. 12 terraces, 12 links, 11 walk heights in a 625 x 700 hall.
+	[23] = {
+		Key = "infernal:3",
+		Name = "Furnace Causeway",
+		Size = { Width = 625, Depth = 700, Height = 205 },
+		PathStyle = "SOOTWRIGHT",
+		DirectTerrain = true,
+		Surface = "SOOTWRIGHT",
+		Masonry = "FOUNDRY_IRON",
+		Decks = {
+			Crossing = true,
+			MidCauseway = true,
+			NorthCauseway = true,
+			CoolingBay = true,
+			BladeGallery = true,
+		},
+		Suspended = {
+			Platforms = { Crossing = true, MidCauseway = true, NorthCauseway = true, CoolingBay = true, BladeGallery = true },
+			Links = {
+				Basin_Crossing = true, Crossing_MidCauseway = true, MidCauseway_NorthCauseway = true,
+				Crossing_WestGallery = true, Crossing_SlagBay = true, MidCauseway_EastGallery = true,
+				MidCauseway_CoolingBay = true, NorthCauseway_CastingBay = true, NorthCauseway_BladeGallery = true,
+				EastGallery_BladeGallery = true,
+			},
+		},
+		-- The causeway's decks and spans stand on soot-brick piers rising out of the lava (not iron trestles).
+		StonePiers = {
+			Crossing = true, MidCauseway = true, NorthCauseway = true,
+			Basin_Crossing = true, Crossing_MidCauseway = true, MidCauseway_NorthCauseway = true,
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 104, Feather = 30 },
+			-- The lava lake under the causeway, filling the hall between the Charging Floor and the Furnace Mouth.
+			{ Kind = "CENOTE_LAGOON", Z = -95, RX = 250, RZ = 215, NoiseScale = 60, NoiseAmp = 0.08, NoiseSeed = 23, Base = 0.3, Gain = 0.36 },
+			-- Crust floes and cooled ridges drifting on the lake.
+			{
+				Kind = "PRESSURE_RIDGE",
+				Ridges = {
+					{ AX = -70, AZ = -10, BX = -40, BZ = -60, HalfWidth = 6, Height = 2.4, WarpAmp = 5 },
+					{ AX = 50, AZ = -140, BX = 80, BZ = -175, HalfWidth = 6, Height = 2.6, WarpAmp = 6 },
+					{ AX = -90, AZ = -150, BX = -60, BZ = -120, HalfWidth = 5, Height = 2.2, WarpAmp = 4 },
+					{ AX = 60, AZ = 80, BX = 90, BZ = 30, HalfWidth = 5, Height = 2.0, WarpAmp = 4 },
+				},
+			},
+		},
+		Basin = { X = 0, Y = 0, Z = 180, Width = 540, Depth = 110 },
+		Crossing = { X = 0, Y = 6, Z = 40, Width = 64, Depth = 100 },
+		WestGallery = { X = -140, Y = 8, Z = 40, Width = 84, Depth = 76 },
+		EastGallery = { X = 140, Y = 16, Z = -90, Width = 84, Depth = 76 },
+		ExtraPlatforms = {
+			SlagBay = { X = 140, Y = 4, Z = 40, Width = 80, Depth = 72 },
+			MidCauseway = { X = 0, Y = 12, Z = -90, Width = 60, Depth = 80 },
+			CoolingBay = { X = -140, Y = 14, Z = -90, Width = 80, Depth = 72 },
+			NorthCauseway = { X = 0, Y = 20, Z = -195, Width = 60, Depth = 70 },
+			CastingBay = { X = -140, Y = 24, Z = -195, Width = 76, Depth = 68 },
+			BladeGallery = { X = 140, Y = 22, Z = -195, Width = 76, Depth = 68 },
+		},
+		Apex = { X = 0, Y = 28, Z = -285, Width = 124, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "Crossing" },
+			{ "Crossing", "WestGallery" },
+			{ "Crossing", "SlagBay" },
+			{ "Crossing", "MidCauseway" },
+			{ "MidCauseway", "EastGallery" },
+			{ "MidCauseway", "CoolingBay" },
+			{ "MidCauseway", "NorthCauseway" },
+			{ "NorthCauseway", "CastingBay" },
+			{ "NorthCauseway", "BladeGallery" },
+			{ "NorthCauseway", "Apex" },
+			{ "EastGallery", "BladeGallery" },
+		},
+		Stairs = { NorthCauseway_Apex = true },
+		Patrols = {
+			SPINE = { "Crossing", "MidCauseway", "NorthCauseway", "Apex" },
+			CATWALK = { "EastGallery", "BladeGallery", "NorthCauseway" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Charging Gate",
+			Basin = "Charging Floor",
+			Crossing = "South Causeway",
+			WestGallery = "West Smelting Bay",
+			SlagBay = "Slag Bay",
+			MidCauseway = "Mid Causeway",
+			EastGallery = "East Quench Bay",
+			CoolingBay = "Cooling Bay",
+			NorthCauseway = "North Causeway",
+			CastingBay = "Casting Bay",
+			BladeGallery = "Blade Gallery",
+			Apex = "Furnace Mouth",
+		},
+	},
+	-- Floor 24, Ironflame Bulwark (Infernal Foundry): the Foundry's defences. Two north-south lava channels cut the
+	-- floor into three fortified strips, with The Pour (a molten cauldron pit) blocking the south centre. The yard
+	-- leads only to the West Gun Deck; from there, squads either climb the west strip (Gun Deck -> Powder Store ->
+	-- West Bulwark Tower -> Citadel, with the dead-end Signal Bastion beyond) or weave east across both Sluice
+	-- Towers and the Ironflame Gate onto the East Foundry Deck, Hammer Hall and East Bulwark Tower. 14 terraces,
+	-- 14 links, 12 walk heights in a 715 x 810 cavern fortress.
+	[24] = {
+		Key = "infernal:4",
+		Name = "Ironflame Bulwark",
+		Size = { Width = 715, Depth = 810, Height = 230, Bottom = -4 },
+		PathStyle = "SOOTWRIGHT",
+		DirectTerrain = true,
+		Surface = "SOOTWRIGHT",
+		Masonry = "FOUNDRY_IRON",
+		Decks = {
+			WestGallery = true,
+			PowderStore = true,
+			WestBastion = true,
+			SignalBastion = true,
+			WestSluice = true,
+			Crossing = true,
+			IronflameForge = true,
+			EastSluice = true,
+			EastGallery = true,
+			HammerHall = true,
+			EastBastion = true,
+		},
+		Suspended = {
+			Platforms = { WestSluice = true, EastSluice = true },
+			Links = {
+				Basin_WestGallery = true,
+				PowderStore_WestBastion = true,
+				WestBastion_SignalBastion = true,
+				WestBastion_Apex = true,
+				WestGallery_WestSluice = true,
+				WestSluice_Crossing = true,
+				Crossing_IronflameForge = true,
+				Crossing_EastSluice = true,
+				EastSluice_EastGallery = true,
+				HammerHall_EastBastion = true,
+				EastBastion_Apex = true,
+			},
+		},
+		-- The two sluice decks stand directly in the lava channels on battered soot-brick piers.
+		StonePiers = { WestSluice = true, EastSluice = true },
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.6 },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 110, Feather = 32 },
+			-- Two north-south lava channels cutting the fortress into three fortified strips.
+			{ Kind = "LAVA_CHANNEL", X = -115, ZStart = -360, ZEnd = 165, HalfWidth = 38, NoiseAmp = 6, Gain = 0.4 },
+			{ Kind = "LAVA_CHANNEL", X = 115, ZStart = -360, ZEnd = 165, HalfWidth = 38, NoiseAmp = 6, Gain = 0.4 },
+			-- The Pour: boiling molten pit blocking the south centre in front of the Ironflame Gate.
+			{ Kind = "POUR_PIT", X = 0, Z = 86, RX = 84, RZ = 66, RimWidth = 14, RimHeight = 3.6, NoiseAmp = 0.14, NoiseSeed = 24, Gain = 0.44 },
+			-- Volcanic lava falls cascading down the outer cavern walls.
+			{ Kind = "LAVA_FALL", X = -340, Z = -120, Width = 32, Depth = 54, Height = 128, Axis = "Z", RibbonWidth = 10 },
+			{ Kind = "LAVA_FALL", X = -340, Z = -280, Width = 32, Depth = 54, Height = 140, Axis = "Z", RibbonWidth = 10 },
+			{ Kind = "LAVA_FALL", X = 340, Z = -60, Width = 32, Depth = 54, Height = 128, Axis = "Z", RibbonWidth = 10 },
+			{ Kind = "LAVA_FALL", X = 340, Z = -260, Width = 32, Depth = 54, Height = 140, Axis = "Z", RibbonWidth = 10 },
+			{ Kind = "LAVA_FALL", X = -135, Z = -388, Width = 54, Depth = 34, Height = 148, Axis = "X", RibbonWidth = 12 },
+			{ Kind = "LAVA_FALL", X = 135, Z = -388, Width = 54, Depth = 34, Height = 148, Axis = "X", RibbonWidth = 12 },
+		},
+		Basin = { X = 0, Y = 0, Z = 230, Width = 620, Depth = 120 },
+		WestGallery = { X = -230, Y = 8, Z = 60, Width = 92, Depth = 80 },
+		WestBastion = { X = -230, Y = 24, Z = -190, Width = 90, Depth = 80 },
+		Crossing = { X = 0, Y = 14, Z = -40, Width = 84, Depth = 64 },
+		EastGallery = { X = 230, Y = 10, Z = -80, Width = 92, Depth = 80 },
+		EastBastion = { X = 230, Y = 30, Z = -300, Width = 90, Depth = 80 },
+		ExtraPlatforms = {
+			PowderStore = { X = -230, Y = 16, Z = -65, Width = 70, Depth = 56 },
+			SignalBastion = { X = -230, Y = 32, Z = -310, Width = 80, Depth = 56 },
+			WestSluice = { X = -115, Y = 12, Z = -10, Width = 48, Depth = 44 },
+			IronflameForge = { X = 0, Y = 20, Z = -160, Width = 76, Depth = 60 },
+			EastSluice = { X = 115, Y = 12, Z = -70, Width = 48, Depth = 44 },
+			HammerHall = { X = 230, Y = 18, Z = -190, Width = 80, Depth = 64 },
+		},
+		Apex = { X = 0, Y = 36, Z = -320, Width = 124, Depth = 96 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "WestGallery", "PowderStore" },
+			{ "PowderStore", "WestBastion" },
+			{ "WestBastion", "Apex" },
+			{ "WestBastion", "SignalBastion" },
+			{ "WestGallery", "WestSluice" },
+			{ "WestSluice", "Crossing" },
+			{ "Crossing", "IronflameForge" },
+			{ "Crossing", "EastSluice" },
+			{ "EastSluice", "EastGallery" },
+			{ "EastGallery", "HammerHall" },
+			{ "HammerHall", "EastBastion" },
+			{ "EastBastion", "Apex" },
+		},
+		Stairs = {
+			WestGallery_PowderStore = true,
+			EastGallery_HammerHall = true,
+		},
+		Patrols = {
+			WEST_STRIP = { "WestGallery", "PowderStore", "WestBastion" },
+			WEAVE = { "WestGallery", "WestSluice", "Crossing", "EastSluice", "EastGallery" },
+		},
+		Names = {
+			Sanctuary = "Siege Gate",
+			Basin = "Mustering Yard",
+			WestGallery = "West Gun Deck",
+			PowderStore = "Powder Store",
+			WestBastion = "West Bulwark Tower",
+			SignalBastion = "Signal Bastion",
+			WestSluice = "West Sluice Tower",
+			Crossing = "Ironflame Gate",
+			IronflameForge = "Ironflame Forge",
+			EastSluice = "East Sluice Tower",
+			EastGallery = "East Foundry Deck",
+			HammerHall = "Hammer Hall",
+			EastBastion = "East Bulwark Tower",
+			Apex = "Ironflame Citadel",
+		},
+	},
+	-- Floor 25, Titan's Crucible (Infernal Foundry Boss Arena): the heart of the Foundry. An hourglass with side
+	-- chambers at every level over a deep lava lake (Bottom = -6). Both Mould Stations climb from the Casting Floor
+	-- by twin iron stairs (each with a dead-end side chamber: Pattern Shop and Ingot Store) and converge on the Pour
+	-- Gate pinch — every Basin->Apex route passes through it. Beyond the Pour Gate stand the dead-end Pour Spout
+	-- overlook and the twin Duct bridgeheads climbing to the Great Bellows Towers, each with a high Chain Gallery
+	-- beside the 170 x 124 dark-iron Titan's Crucible Dais. 15 terraces, 16 links, 13 walk heights in 800 x 920 x 270.
+	[25] = {
+		Key = "infernal:5",
+		Name = "Titan's Crucible",
+		Size = { Width = 740, Depth = 795, Height = 250, Bottom = -6 },
+		PathStyle = "SOOTWRIGHT",
+		DirectTerrain = true,
+		Surface = "SOOTWRIGHT",
+		Masonry = "FOUNDRY_IRON",
+		Decks = {
+			IngotStore = true,
+			Crossing = true,
+			PourSpout = true,
+			WestDuct = true,
+			EastDuct = true,
+			WestBastion = true,
+			EastBastion = true,
+			WestChainGallery = true,
+			EastChainGallery = true,
+			Apex = true,
+		},
+		Suspended = {
+			Platforms = {
+				Crossing = true,
+				PourSpout = true,
+				WestDuct = true,
+				EastDuct = true,
+				WestChainGallery = true,
+				EastChainGallery = true,
+			},
+			Links = {
+				WestGallery_PatternShop = true,
+				EastGallery_IngotStore = true,
+				WestGallery_Crossing = true,
+				EastGallery_Crossing = true,
+				Crossing_PourSpout = true,
+				Crossing_WestDuct = true,
+				Crossing_EastDuct = true,
+				WestDuct_WestBastion = true,
+				EastDuct_EastBastion = true,
+				WestBastion_WestChainGallery = true,
+				EastBastion_EastChainGallery = true,
+				WestBastion_Apex = true,
+				EastBastion_Apex = true,
+			},
+		},
+		-- The Pour Gate stands over the boiling lava lake on battered soot-brick bridge piers.
+		StonePiers = { Crossing = true },
+		Liquid = { LevelOffset = 3.2, FloorDip = 1.8 },
+		TerrainFeatures = {
+			{ Kind = "APEX_ALCOVE", Width = 132, Feather = 32 },
+			-- Colossal molten lake filling the Foundry core beneath the Pour Gate, ducts and dais.
+			{ Kind = "CENOTE_LAGOON", Z = -100, RX = 290, RZ = 248, NoiseScale = 60, NoiseAmp = 0.08, NoiseSeed = 25, Base = 0.3, Gain = 0.42 },
+			{
+				Kind = "PRESSURE_RIDGE",
+				Ridges = {
+					{ AX = -95, AZ = 30, BX = -45, BZ = -10, HalfWidth = 6.5, Height = 2.5, WarpAmp = 5 },
+					{ AX = 55, AZ = 15, BX = 105, BZ = -30, HalfWidth = 6.5, Height = 2.4, WarpAmp = 5 },
+					{ AX = -80, AZ = -95, BX = -35, BZ = -130, HalfWidth = 6, Height = 2.3, WarpAmp = 5 },
+					{ AX = 40, AZ = -110, BX = 85, BZ = -155, HalfWidth = 6, Height = 2.3, WarpAmp = 5 },
+				},
+			},
+			-- Six towering molten lava falls pouring down the cavern walls.
+			{ Kind = "LAVA_FALL", X = -356, Z = -100, Width = 32, Depth = 54, Height = 155, Axis = "Z", RibbonWidth = 10 },
+			{ Kind = "LAVA_FALL", X = -356, Z = -265, Width = 32, Depth = 54, Height = 168, Axis = "Z", RibbonWidth = 10 },
+			{ Kind = "LAVA_FALL", X = 356, Z = -100, Width = 32, Depth = 54, Height = 155, Axis = "Z", RibbonWidth = 10 },
+			{ Kind = "LAVA_FALL", X = 356, Z = -265, Width = 32, Depth = 54, Height = 168, Axis = "Z", RibbonWidth = 10 },
+			{ Kind = "LAVA_FALL", X = -156, Z = -384, Width = 54, Depth = 30, Height = 180, Axis = "X", RibbonWidth = 12 },
+			{ Kind = "LAVA_FALL", X = 156, Z = -384, Width = 54, Depth = 30, Height = 180, Axis = "X", RibbonWidth = 12 },
+		},
+		Basin = { X = 0, Y = 0, Z = 228, Width = 640, Depth = 112 },
+		WestGallery = { X = -210, Y = 8, Z = 68, Width = 92, Depth = 80 },
+		EastGallery = { X = 210, Y = 8, Z = 68, Width = 92, Depth = 80 },
+		Crossing = { X = 0, Y = 20, Z = -46, Width = 88, Depth = 68 },
+		WestBastion = { X = -222, Y = 30, Z = -215, Width = 92, Depth = 82 },
+		EastBastion = { X = 222, Y = 32, Z = -215, Width = 92, Depth = 82 },
+		ExtraPlatforms = {
+			PatternShop = { X = -255, Y = 12, Z = -48, Width = 68, Depth = 60 },
+			IngotStore = { X = 255, Y = 14, Z = -48, Width = 68, Depth = 60 },
+			PourSpout = { X = 0, Y = 28, Z = -146, Width = 60, Depth = 44 },
+			WestDuct = { X = -114, Y = 24, Z = -146, Width = 56, Depth = 52 },
+			EastDuct = { X = 114, Y = 26, Z = -146, Width = 56, Depth = 52 },
+			WestChainGallery = { X = -200, Y = 36, Z = -325, Width = 74, Depth = 56 },
+			EastChainGallery = { X = 200, Y = 40, Z = -325, Width = 74, Depth = 56 },
+		},
+		Apex = { X = 0, Y = 44, Z = -302, Width = 170, Depth = 124 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "EastGallery" },
+			{ "WestGallery", "PatternShop" },
+			{ "EastGallery", "IngotStore" },
+			{ "WestGallery", "Crossing" },
+			{ "EastGallery", "Crossing" },
+			{ "Crossing", "PourSpout" },
+			{ "Crossing", "WestDuct" },
+			{ "Crossing", "EastDuct" },
+			{ "WestDuct", "WestBastion" },
+			{ "EastDuct", "EastBastion" },
+			{ "WestBastion", "WestChainGallery" },
+			{ "EastBastion", "EastChainGallery" },
+			{ "WestBastion", "Apex" },
+			{ "EastBastion", "Apex" },
+		},
+		Stairs = {
+			Basin_WestGallery = true,
+			Basin_EastGallery = true,
+		},
+		Patrols = {
+			LOWER_PINCH = { "WestGallery", "Crossing", "EastGallery" },
+			UPPER_PINCH = { "WestBastion", "WestDuct", "Crossing", "EastDuct", "EastBastion" },
+			CRUCIBLE_RING = { "WestBastion", "Apex", "EastBastion" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Foundry Core Gate",
+			Basin = "Casting Floor",
+			WestGallery = "West Mould Station",
+			EastGallery = "East Mould Station",
+			PatternShop = "Pattern Shop",
+			IngotStore = "Ingot Store",
+			Crossing = "Pour Gate",
+			PourSpout = "Pour Spout",
+			WestDuct = "West Duct",
+			EastDuct = "East Duct",
+			WestBastion = "West Bellows",
+			EastBastion = "East Bellows",
+			WestChainGallery = "West Chain Gallery",
+			EastChainGallery = "East Chain Gallery",
+			Apex = "Titan's Crucible",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any
 	assert(index >= 1 and index <= 5 and index % 1 == 0)
-	local w, d = widths[index], depths[index]
+	-- An authored floor may override its room size (Size = {Width, Depth, Height, Bottom?}); every consumer
+	-- reads the built layout's Width/Depth/Height/Bottom, never the per-index tables.
+	local roomSize = v and v.Size
+	local w, d = (roomSize and roomSize.Width) or widths[index], (roomSize and roomSize.Depth) or depths[index]
 	local platforms, links = {}, {}
 	local function platform(id, x, y, z, width, depth)
 		local o = v and v[id]
@@ -1272,7 +1801,7 @@ local function build(index: number, v: any?): any
 	for _, c in camps do
 		if c.Elite and c.Id ~= "APEX_SANCTUM" then eliteCount += 1 end
 	end
-	local bottom = if index==5 then -6 elseif index>=3 then -4 else 0
+	local bottom = if roomSize and roomSize.Bottom then roomSize.Bottom elseif index==5 then -6 elseif index>=3 then -4 else 0
 	local returns = {}
 	if bottom < 0 then
 		local basin = platforms.Basin
@@ -1284,7 +1813,7 @@ local function build(index: number, v: any?): any
 			table.insert(returns,connector)
 		end
 	end
-	return {Width=w, Depth=d, Height=heights[index], Bottom=bottom, ReturnLinks=returns,
+	return {Width=w, Depth=d, Height=(roomSize and roomSize.Height) or heights[index], Bottom=bottom, ReturnLinks=returns,
 		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe, EliteCount=eliteCount, Index=index,
 		Varied=v ~= nil, Authored=v and v.Key or nil, Name=v and v.Name or nil, PathStyle=v and v.PathStyle or nil,
 		DirectTerrain=v ~= nil and v.DirectTerrain == true,
@@ -1295,8 +1824,9 @@ local function build(index: number, v: any?): any
 		Liquid=v and v.Liquid or nil,
 		TerrainFeatures=v and v.TerrainFeatures or nil,
 		Patrols=v and v.Patrols or nil,
-		ReplacePatrols=v ~= nil and v.ReplacePatrols == true,
-		Terrain=v and v.Terrain or nil, Skylight=v and v.Skylight or nil, Portals=v and v.Portals or nil}
+		ReplacePatrols=v ~= nil and v.ReplacePatrols == true, Surface=v and v.Surface or nil,
+		Terrain=v and v.Terrain or nil, Skylight=v and v.Skylight or nil, Portals=v and v.Portals or nil,
+		GirderSpans=v and v.GirderSpans or nil, StonePiers=v and v.StonePiers or nil}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,

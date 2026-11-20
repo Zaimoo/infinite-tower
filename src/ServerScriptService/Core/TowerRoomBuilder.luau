@@ -469,7 +469,9 @@ function Builder.Build(id: number, generation: number): any
 		-- The oculus: a narrower, paler shaft straight down onto the floor beneath it.
 		naturalSpot.Angle = 48
 		naturalSpot.Brightness = 2.2
-		naturalSpot.Color = if layout.Authored == "fungal:9" then Color3.fromRGB(186, 245, 92) else Color3.fromRGB(176, 238, 255)
+		naturalSpot.Color = if layout.Authored == "fungal:9" then Color3.fromRGB(186, 245, 92)
+			elseif layout.Authored == "infernal:2" then Color3.fromRGB(255, 214, 160) -- smoky daylight through the hall's oculus
+			else Color3.fromRGB(176, 238, 255)
 	end
 	naturalSpot.Parent = sunShaft
 
@@ -506,6 +508,15 @@ function Builder.Build(id: number, generation: number): any
 	local whiteguardGranite = Color3.fromRGB(116, 128, 142)
 	local whiteguardGraniteDark = Color3.fromRGB(86, 98, 112)
 	local whiteguardIron = Color3.fromRGB(54, 62, 74)
+	-- Sootwright (Infernal Foundry) iron, soot brick, brass and rail timber.
+	local sootIron = Color3.fromRGB(70, 64, 64)
+	local sootIronDark = Color3.fromRGB(44, 40, 42)
+	local sootBrick = Color3.fromRGB(92, 56, 46)
+	local sootBrickDark = Color3.fromRGB(62, 40, 36)
+	local sootBrass = Color3.fromRGB(150, 112, 58)
+	local sootRust = Color3.fromRGB(112, 62, 40)
+	local railTimber = Color3.fromRGB(58, 44, 36)
+	local railSteel = Color3.fromRGB(128, 122, 118)
 
 	local MASONRY_STYLES: { [string]: { [string]: any } } = {
 		ORGANIC = {
@@ -614,6 +625,22 @@ function Builder.Build(id: number, generation: number): any
 			StairMatA = Enum.Material.Slate,
 			StairMatB = Enum.Material.Ice,
 		},
+		-- Floor 21 (Sootwright): riveted diamond-plate decks on soot-brick plinths, an iron gantry under a
+		-- suspended deck, girder bridges with rails, and iron stair treads with brass nosing.
+		FOUNDRY_IRON = {
+			DeckKind = "FOUNDRY_IRON",
+			-- Landings stay flush, invisible colliders: the deck (and the turntable laid on it) shows through.
+			LandingProxy = true,
+			BridgeKind = "FOUNDRY_GIRDER",
+			CurbColor = sootIronDark,
+			CurbMaterial = Enum.Material.Metal,
+			CurbMode = "FOUNDRY_RAIL",
+			StairColorA = sootIron,
+			StairColorB = sootIronDark,
+			StairMatA = Enum.Material.DiamondPlate,
+			StairMatB = Enum.Material.Metal,
+			StairNosing = sootBrass,
+		},
 	}
 
 	local PATH_STYLES: { [string]: { [string]: any } } = {
@@ -701,6 +728,35 @@ function Builder.Build(id: number, generation: number): any
 			SolidLipMatA = Enum.Material.Granite,
 			SolidLipMatB = Enum.Material.Snow,
 			SolidLipStep = 3.4,
+			AllowRootStair = false,
+			ShowVaultLanterns = false,
+		},
+		-- Floor 21 (Sootwright): every earthen ramp is a rail spur, timber sleepers laid across it under a
+		-- pair of steel rails (RailInlay); kerbs are riveted iron.
+		SOOTWRIGHT = {
+			VisibleCurb = true,
+			CurbColor = sootIronDark,
+			CurbMaterial = Enum.Material.Metal,
+			CurbCapColor = sootBrass,
+			CurbCapMaterial = Enum.Material.Metal,
+			LandingColor = sootIron,
+			LandingMaterial = Enum.Material.DiamondPlate,
+			StairColorA = sootIron,
+			StairColorB = sootIronDark,
+			StairMatA = Enum.Material.DiamondPlate,
+			StairMatB = Enum.Material.Metal,
+			GrassStepLipColorA = railTimber,
+			GrassStepLipColorB = Color3.fromRGB(46, 36, 32),
+			GrassStepLipMatA = Enum.Material.Wood,
+			GrassStepLipMatB = Enum.Material.Wood,
+			GrassStepLipWBase = 0.42,
+			GrassStepLipWStep = 0.03,
+			GrassStepLipWMod = 1,
+			GrassStepLipH = 0.4,
+			GrassStepLipY = 0.04,
+			GrassStepLipStep = 3.6,
+			GrassStepLipStagger = 0,
+			RailInlay = true,
 			AllowRootStair = false,
 			ShowVaultLanterns = false,
 		},
@@ -1133,6 +1189,197 @@ function Builder.Build(id: number, generation: number): any
 						local paver = decor(model, "WhiteguardFlagstone", Vector3.new(8.5 + (k % 3) * 2.0, 0.10, 6.5 + ((k + 1) % 3) * 1.5), pPos, if k % 2 == 0 then whiteguardGranite else whiteguardGraniteDark, Enum.Material.Slate)
 						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 19) % 24 - 12), 0)
 					end
+				elseif deckKind == "FOUNDRY_IRON" then
+					-- Floor 21 Sootwright decks: a diamond-plate iron top with a riveted cornice. A grounded deck stands
+					-- on a soot-brick plinth into the yard; a suspended one (the Ore Crusher) on an iron gantry.
+					local suspendedDeck = layout.Suspended and layout.Suspended.Platforms and layout.Suspended.Platforms[name]
+					local deepBottom = origin.Y + layout.Bottom - 7
+					local fullH = math.max(4, (origin.Y + terrace.Y) - deepBottom)
+					local slabH = if suspendedDeck then 3.2 else fullH
+					slab.Size = Vector3.new(terrace.Width, slabH, terrace.Depth)
+					slab.Position = Vector3.new(topCenter.X, topCenter.Y - slabH / 2, topCenter.Z)
+					slab.Color = sootIron
+					slab.Material = Enum.Material.DiamondPlate
+					-- Riveted iron cornice round the top edge, brass rivet heads every few studs.
+					for _, sz in { -1, 1 } do
+						decor(model, "FoundryCorniceZ", Vector3.new(terrace.Width + 1.6, 1.6, 1.4), topCenter + Vector3.new(0, -0.95, sz * (terrace.Depth / 2 + 0.2)), sootIronDark, Enum.Material.Metal)
+					end
+					for _, sx in { -1, 1 } do
+						decor(model, "FoundryCorniceX", Vector3.new(1.4, 1.6, math.max(1, terrace.Depth - 1.2)), topCenter + Vector3.new(sx * (terrace.Width / 2 + 0.2), -0.95, 0), sootIronDark, Enum.Material.Metal)
+					end
+					local function rivets(ax: number, az: number, bx: number, bz: number, ox: number, oz: number)
+						local len = math.sqrt((bx - ax) ^ 2 + (bz - az) ^ 2)
+						local count = math.max(2, math.floor(len / 7))
+						for r = 0, count do
+							local t = r / count
+							local at = topCenter + Vector3.new(ax + (bx - ax) * t + ox, -0.95, az + (bz - az) * t + oz)
+							decor(model, "FoundryRivet", Vector3.new(0.7, 0.7, 0.7), at, sootBrass, Enum.Material.Metal).Shape = Enum.PartType.Ball
+						end
+					end
+					rivets(-terrace.Width / 2, terrace.Depth / 2, terrace.Width / 2, terrace.Depth / 2, 0, 0.95)
+					rivets(-terrace.Width / 2, -terrace.Depth / 2, terrace.Width / 2, -terrace.Depth / 2, 0, -0.95)
+					rivets(-terrace.Width / 2, -terrace.Depth / 2, -terrace.Width / 2, terrace.Depth / 2, -0.95, 0)
+					rivets(terrace.Width / 2, -terrace.Depth / 2, terrace.Width / 2, terrace.Depth / 2, 0.95, 0)
+					local stoneDeck = suspendedDeck and layout.StonePiers ~= nil and layout.StonePiers[name] == true
+					if stoneDeck then
+						-- Floor 23's causeway: soot-brick piers with basalt cutwaters rising from the lava under a deep
+						-- brick spandrel, iron bands at the top.
+						local pierTop = topCenter.Y - slabH
+						decor(model, "CausewaySpandrelZ", Vector3.new(terrace.Width - 2, 5, terrace.Depth - 2), Vector3.new(topCenter.X, pierTop - 2.5, topCenter.Z), sootBrickDark, Enum.Material.Brick)
+						local rows = math.max(2, math.floor(terrace.Depth / 34) + 1)
+						for iz = 0, rows - 1 do
+							local cz = topCenter.Z - terrace.Depth / 2 + 8 + (terrace.Depth - 16) * iz / (rows - 1)
+							for _, sx in { -1, 1 } do
+								local cx = topCenter.X + sx * (terrace.Width / 2 - 8)
+								local h = (pierTop - 5) - deepBottom
+								local pier = part(model, "CausewayPier", Vector3.new(11, h, 11), Vector3.new(cx, deepBottom + h / 2, cz), sootBrick, Enum.Material.Brick, true)
+								pier.CanQuery = true
+								pier.CanTouch = false
+								decor(model, "CausewayCutwater", Vector3.new(13, 6, 13), Vector3.new(cx, deepBottom + 6, cz), Color3.fromRGB(40, 36, 38), Enum.Material.Basalt)
+								decor(model, "CausewayPierBand", Vector3.new(11.6, 1.2, 11.6), Vector3.new(cx, pierTop - 6, cz), sootIronDark, Enum.Material.Metal)
+							end
+						end
+					elseif suspendedDeck then
+						-- The gantry: solid iron columns down to the yard with cross-bracing and deep edge girders.
+						local colH = (topCenter.Y - slabH) - deepBottom
+						local cols: { Vector3 } = {}
+						local nx = math.max(2, math.floor(terrace.Width / 22) + 1)
+						local nz = math.max(2, math.floor(terrace.Depth / 22) + 1)
+						for ix = 0, nx - 1 do
+							for iz = 0, nz - 1 do
+								if ix == 0 or iz == 0 or ix == nx - 1 or iz == nz - 1 then
+									local cx = topCenter.X - terrace.Width / 2 + 3 + (terrace.Width - 6) * ix / (nx - 1)
+									local cz = topCenter.Z - terrace.Depth / 2 + 3 + (terrace.Depth - 6) * iz / (nz - 1)
+									local colPos = Vector3.new(cx, deepBottom + colH / 2, cz)
+									local col = part(model, "FoundryGantryColumn", Vector3.new(3, colH, 3), colPos, sootIronDark, Enum.Material.Metal, true)
+									col.CanQuery = true
+									col.CanTouch = false
+									decor(model, "FoundryGantryFoot", Vector3.new(5, 1.6, 5), Vector3.new(cx, deepBottom + 4.2, cz), sootBrickDark, Enum.Material.Brick)
+									table.insert(cols, colPos)
+								end
+							end
+						end
+						for _, sz in { -1, 1 } do
+							decor(model, "FoundryGantryGirderZ", Vector3.new(terrace.Width, 3.4, 1.6), topCenter + Vector3.new(0, -slabH - 1.7, sz * (terrace.Depth / 2 - 3)), sootIronDark, Enum.Material.Metal)
+						end
+						for _, sx in { -1, 1 } do
+							decor(model, "FoundryGantryGirderX", Vector3.new(1.6, 3.4, terrace.Depth), topCenter + Vector3.new(sx * (terrace.Width / 2 - 3), -slabH - 1.7, 0), sootIronDark, Enum.Material.Metal)
+						end
+						-- X-bracing between neighbouring edge columns (two tiers).
+						for i, c in cols do
+							for j = i + 1, #cols do
+								local o = cols[j]
+								local gap = Vector3.new(o.X - c.X, 0, o.Z - c.Z).Magnitude
+								if gap > 1 and gap < 26 and (math.abs(o.X - c.X) < 0.5 or math.abs(o.Z - c.Z) < 0.5) then
+									for tier = 0, 1 do
+										local y0 = deepBottom + 6 + tier * (colH - 8) * 0.5
+										local y1 = y0 + (colH - 8) * 0.5
+										for _, flip in { 0, 1 } do
+											local p0 = Vector3.new(c.X, if flip == 0 then y0 else y1, c.Z)
+											local p1 = Vector3.new(o.X, if flip == 0 then y1 else y0, o.Z)
+											local brace = decor(model, "FoundryGantryBrace", Vector3.new(0.7, 0.7, (p1 - p0).Magnitude), (p0 + p1) / 2, sootIronDark, Enum.Material.Metal)
+											brace.CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+										end
+									end
+								end
+							end
+						end
+					else
+						-- Soot-brick plinth skirts below the cornice, with iron corner posts.
+						for _, sz in { -1, 1 } do
+							decor(model, "FoundryBrickSkirtZ", Vector3.new(terrace.Width + 0.6, fullH - 1.8, 0.8), Vector3.new(topCenter.X, deepBottom + (fullH - 1.8) / 2, topCenter.Z + sz * (terrace.Depth / 2 + 0.2)), sootBrick, Enum.Material.Brick)
+						end
+						for _, sx in { -1, 1 } do
+							decor(model, "FoundryBrickSkirtX", Vector3.new(0.8, fullH - 1.8, terrace.Depth - 0.2), Vector3.new(topCenter.X + sx * (terrace.Width / 2 + 0.2), deepBottom + (fullH - 1.8) / 2, topCenter.Z), sootBrick, Enum.Material.Brick)
+							for _, sz in { -1, 1 } do
+								local cp = Vector3.new(topCenter.X + sx * (terrace.Width / 2 - 1.6), deepBottom + (fullH - 0.2) / 2, topCenter.Z + sz * (terrace.Depth / 2 - 1.6))
+								local corner = part(model, "FoundryCornerPost", Vector3.new(4.2, fullH - 0.2, 4.2), cp, sootIronDark, Enum.Material.Metal, true)
+								corner.CanQuery = true
+								corner.CanTouch = false
+							end
+						end
+					end
+					local function flatRail(name: string, p0: Vector3, p1: Vector3, width: number, height: number, col: Color3, mat: Enum.Material)
+						local railPart = decor(model, name, Vector3.new(width, height, math.max(0.2, (p1 - p0).Magnitude)), (p0 + p1) / 2, col, mat)
+						railPart.CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+						return railPart
+					end
+					if name == "Crossing" and layout.Authored == "infernal:2" then
+						-- Floor 22's Crane Trolley: crane rails across the deck along the girder, hatch plates, and under
+						-- the deck the twin winch drums and the hook block hanging toward the yard (all decor, never solid).
+						for _, side in { -1, 1 } do
+							flatRail("TrolleyCraneRail", topCenter + Vector3.new(-terrace.Width / 2 + 1, 0.2, side * 2.6), topCenter + Vector3.new(terrace.Width / 2 - 1, 0.2, side * 2.6), 0.45, 0.32, railSteel, Enum.Material.Metal)
+							decor(model, "TrolleyHatchPlate", Vector3.new(14, 0.1, 9), topCenter + Vector3.new(side * 22, 0.07, -terrace.Depth / 2 + 8), sootIronDark, Enum.Material.DiamondPlate)
+						end
+						local under = topCenter.Y - slabH
+						for _, side in { -1, 1 } do
+							local drum = decor(model, "TrolleyWinchDrum", Vector3.new(24, 7, 7), Vector3.new(topCenter.X + side * 15, under - 4.2, topCenter.Z), sootIron, Enum.Material.Metal)
+							drum.Shape = Enum.PartType.Cylinder
+							for _, ex in { -12.4, 12.4 } do
+								local flange = decor(model, "TrolleyDrumFlange", Vector3.new(0.8, 9, 9), Vector3.new(topCenter.X + side * 15 + ex, under - 4.2, topCenter.Z), sootIronDark, Enum.Material.Metal)
+								flange.Shape = Enum.PartType.Cylinder
+							end
+						end
+						-- The hook block: ropes down from the drums to a sheave block and a brass hook over the yard.
+						local hookTop = under - 8
+						local hookY = math.max(origin.Y + layout.Bottom + 1, hookTop - 10)
+						for _, side in { -1, 1 } do
+							flatRail("TrolleyHookRope", Vector3.new(topCenter.X + side * 1.2, hookTop + 2, topCenter.Z), Vector3.new(topCenter.X + side * 1.2, hookY + 3, topCenter.Z), 0.35, 0.35, railSteel, Enum.Material.Metal)
+						end
+						decor(model, "TrolleyHookBlock", Vector3.new(4, 3.4, 3), Vector3.new(topCenter.X, hookY + 2, topCenter.Z), sootIronDark, Enum.Material.Metal)
+						decor(model, "TrolleyHook", Vector3.new(1.2, 2.6, 1.2), Vector3.new(topCenter.X, hookY - 0.4, topCenter.Z), sootBrass, Enum.Material.Metal)
+					elseif layout.StonePiers ~= nil and layout.StonePiers[name] == true then
+						-- A causeway deck: the rail line runs straight up it, north-south, sleepers and all.
+						for _, side in { -1, 1 } do
+							flatRail("CausewayRail", topCenter + Vector3.new(side * 2.6, 0.2, terrace.Depth / 2 - 1), topCenter + Vector3.new(side * 2.6, 0.2, -terrace.Depth / 2 + 1), 0.45, 0.32, railSteel, Enum.Material.Metal)
+						end
+						for k = 1, math.floor(terrace.Depth / 3.2) - 1 do
+							decor(model, "CausewaySleeper", Vector3.new(9, 0.16, 1.4), topCenter + Vector3.new(0, 0.18, -terrace.Depth / 2 + k * 3.2), railTimber, Enum.Material.Wood)
+						end
+					elseif name == "Crossing" and layout.Authored == "infernal:1" then
+						-- The Great Turntable: a sunken brick pit ring, the iron ring rail, and the turntable bridge
+						-- laid north-south with its rails and sleepers (flush deck markings, walked over).
+						local r = math.min(terrace.Width, terrace.Depth) * 0.46
+						flatDisc("TurntablePitRing", topCenter + Vector3.new(0, 0.05, 0), r * 2 + 4, 0.1, sootBrickDark, Enum.Material.Brick)
+						flatDisc("TurntablePitFloor", topCenter + Vector3.new(0, 0.08, 0), r * 2 - 2, 0.1, Color3.fromRGB(40, 34, 34), Enum.Material.Basalt)
+						local segs = 36
+						for k = 0, segs - 1 do
+							local a0, a1 = k / segs * math.pi * 2, (k + 1) / segs * math.pi * 2
+							local p0 = topCenter + Vector3.new(math.cos(a0) * (r - 3), 0.2, math.sin(a0) * (r - 3))
+							local p1 = topCenter + Vector3.new(math.cos(a1) * (r - 3), 0.2, math.sin(a1) * (r - 3))
+							flatRail("TurntableRingRail", p0, p1, 0.6, 0.3, railSteel, Enum.Material.Metal)
+						end
+						flatRail("TurntableBridgeDeck", topCenter + Vector3.new(0, 0.12, r), topCenter + Vector3.new(0, 0.12, -r), 12, 0.1, sootIronDark, Enum.Material.DiamondPlate)
+						for _, side in { -1, 1 } do
+							flatRail("TurntableBridgeGirder", topCenter + Vector3.new(side * 6.4, 0.3, r), topCenter + Vector3.new(side * 6.4, 0.3, -r), 0.9, 0.5, sootRust, Enum.Material.Metal)
+							flatRail("TurntableBridgeRail", topCenter + Vector3.new(side * 2.6, 0.3, r - 1), topCenter + Vector3.new(side * 2.6, 0.3, -r + 1), 0.45, 0.32, railSteel, Enum.Material.Metal)
+						end
+						for k = 1, math.floor(r * 2 / 3.2) - 1 do
+							local z = -r + k * 3.2
+							decor(model, "TurntableSleeper", Vector3.new(9, 0.16, 1.4), topCenter + Vector3.new(0, 0.2, z), railTimber, Enum.Material.Wood)
+						end
+						-- The pivot boss and its hammer-ring inlay.
+						flatDisc("TurntablePivot", topCenter + Vector3.new(0, 0.26, 0), 5, 0.12, sootBrass, Enum.Material.Metal)
+					elseif name == "Weighbridge" then
+						-- The scale plate, framed in brass, its rails running straight across it.
+						decor(model, "WeighbridgeScalePlate", Vector3.new(terrace.Width - 14, 0.1, terrace.Depth - 6), topCenter + Vector3.new(0, 0.07, 0), Color3.fromRGB(86, 78, 74), Enum.Material.DiamondPlate)
+						for _, sx in { -1, 1 } do
+							decor(model, "WeighbridgeBrassFrame", Vector3.new(0.6, 0.12, terrace.Depth - 5), topCenter + Vector3.new(sx * (terrace.Width / 2 - 7), 0.1, 0), sootBrass, Enum.Material.Metal)
+						end
+						for _, sz in { -1, 1 } do
+							decor(model, "WeighbridgeBrassFrame", Vector3.new(terrace.Width - 13, 0.12, 0.6), topCenter + Vector3.new(0, 0.1, sz * (terrace.Depth / 2 - 3)), sootBrass, Enum.Material.Metal)
+						end
+					elseif name == "CoalBunker" or name == "OreCrusher" then
+						-- Hazard-striped loading edge and a siding of rail across the deck.
+						for k = 0, 9 do
+							decor(model, "FoundryHazardStripe", Vector3.new(2.2, 0.08, 1.2), topCenter + Vector3.new(-terrace.Width / 2 + 5 + k * 3.2, 0.06, -terrace.Depth / 2 + 2.6), if k % 2 == 0 then Color3.fromRGB(178, 132, 42) else sootIronDark, Enum.Material.Metal)
+						end
+						-- The Coal Bunker's siding runs under its hopper chutes (TowerSetPieces), the crusher's past its chute.
+						local sidingZ = if name == "CoalBunker" then -18 else terrace.Depth * 0.2
+						for _, side in { -1, 1 } do
+							flatRail("DeckSidingRail", topCenter + Vector3.new(-terrace.Width / 2 + 4, 0.2, side * 2.6 + sidingZ), topCenter + Vector3.new(terrace.Width / 2 - 4, 0.2, side * 2.6 + sidingZ), 0.45, 0.32, railSteel, Enum.Material.Metal)
+						end
+					end
 				elseif deckKind == "GLACIER_SLAB" then
 					-- Jagged lake ice floe slabs (Floor 16 & Frozen Iceway): snow-packed walking cap over translucent glacier keel
 					local deepBottom = origin.Y + layout.Bottom - 5
@@ -1223,12 +1470,35 @@ function Builder.Build(id: number, generation: number): any
 	-- limestone, and the landings take the terrace's own ground so they don't read as tiles laid on the grass.
 	local grassyPaths = natural and isDirectTerrainLayout(layout)
 	local landingLayerByTerrace: { [string]: number } = {}
+	local function landingOutsideTerrace(pad: any, terraceName: string?): boolean
+		local t = if terraceName then layout.Platforms[terraceName] else nil
+		if not t then
+			return true
+		end
+		local dx, dz = pad.BX - pad.AX, pad.BZ - pad.AZ
+		local len = math.max(math.sqrt(dx * dx + dz * dz), 1e-4)
+		local rx, rz = -dz / len, dx / len
+		local hw = pad.Width / 2 - 0.5
+		for _, pt in { { pad.AX, pad.AZ }, { pad.BX, pad.BZ } } do
+			for _, side in { -1, 1 } do
+				local cx = pt[1] + rx * side * hw
+				local cz = pt[2] + rz * side * hw
+				if math.abs(cx - t.X) > t.Width / 2 + 0.25 or math.abs(cz - t.Z) > t.Depth / 2 + 0.25 then
+					return true
+				end
+			end
+		end
+		return false
+	end
 	local function landing(pad: any, id: string, terraceName: string?)
 		local a=origin+Vector3.new(pad.AX,pad.AY,pad.AZ)
 		local b=origin+Vector3.new(pad.BX,pad.BY,pad.BZ)
 		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
 		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
 		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
+		local isFoundryBridgehead = layout.Masonry == "FOUNDRY_IRON"
+			and (isSuspendedLink(layout, id) or isArchitecturalDeck(layout, terraceName))
+			and (not isArchitecturalDeck(layout, terraceName) or landingOutsideTerrace(pad, terraceName))
 		if direct then
 			-- On a deck the landing is part of the masonry (solid, the deck's colour); elsewhere it is terrain.
 			-- A hung walkway's landings are its own planks, run out onto the terrace it reaches.
@@ -1244,6 +1514,17 @@ function Builder.Build(id: number, generation: number): any
 			else
 				proxy(p)
 			end
+		elseif isFoundryBridgehead then
+			-- Exposed FOUNDRY_IRON bridgehead apron: a diagonal bridge or chasm span's landing extends past the
+			-- terrace edge (or lands onto a terrain terrace where voxel ground stops short of the suspended link).
+			-- Keep it solid, visible diamond-plate with a dark-iron underside flange so every bridge joins flush.
+			p.Color = sootIron
+			p.Material = Enum.Material.DiamondPlate
+			p.CanCollide = true
+			p.CanQuery = true
+			p.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -0.98, 0)
+			local keel = decor(model, "FoundryLandingKeel", Vector3.new(pad.Width + 0.8, 1.8, (b - a).Magnitude + 0.4), (a + b) / 2, sootIronDark, Enum.Material.Metal)
+			keel.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -2.05, 0)
 		elseif isArchitecturalDeck(layout, terraceName) then
 			if masonryStyle and masonryStyle.LandingProxy then
 				-- Keep landing collider solid & flush atop organic/fortress decks without showing protruding rectangles.
@@ -1320,6 +1601,11 @@ function Builder.Build(id: number, generation: number): any
 				)
 				tread.CFrame = CFrame.lookAt(tread.Position, tread.Position + flat) * (if rootStair then CFrame.Angles(0, math.rad(math.sin(step * 1.7) * 2.5), 0) else CFrame.identity)
 				structure(tread,link.Id)
+				if masonryStyle and masonryStyle.StairNosing then
+					-- Brass nosing along each tread's front edge (Sootwright iron stairs).
+					local nosing = decor(model, "StairBrassNosing", Vector3.new(treadW - 1.2, 0.22, 0.55), Vector3.new(center.X, top + 0.02, center.Z), masonryStyle.StairNosing, Enum.Material.Metal)
+					nosing.CFrame = CFrame.lookAt(nosing.Position, nosing.Position + flat) * CFrame.new(0, 0, (flat.Magnitude / steps) * 0.5 - 0.3)
+				end
 				if stairInlayCol and step % 2 == 1 then
 					local inlay = decor(model, "GlassStairAmberInlay", Vector3.new(treadW * 0.72, 0.08, 0.42), Vector3.new(center.X, top + 0.05, center.Z), stairInlayCol, Enum.Material.Neon)
 					inlay.CFrame = CFrame.lookAt(inlay.Position, inlay.Position + flat) * CFrame.new(0, 0, -0.35)
@@ -1615,6 +1901,97 @@ function Builder.Build(id: number, generation: number): any
 					local plank = decor(model, "BridgePlankSleeper", Vector3.new(link.Width + 0.6, 0.14, 2.6), at, if i % 2 == 0 then bridgeWoodA else bridgeWoodB, Enum.Material.Wood)
 					plank.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.06 + (i % 2) * 0.015, 0)
 				end
+			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "FOUNDRY_GIRDER" then
+				-- Floor 21 Sootwright girder spur: a diamond-plate deck on two lattice side girders, rails and
+				-- sleepers down its spine, and iron trestles (solid) braced down to the yard.
+				local deepBottom = origin.Y + layout.Bottom - 5
+				local length = delta.Magnitude
+				ramp.Color = sootIron
+				ramp.Material = Enum.Material.DiamondPlate
+				local function strut(name: string, p0: Vector3, p1: Vector3, thick: number, col: Color3, mat: Enum.Material)
+					local sp = decor(model, name, Vector3.new(thick, thick, math.max(0.2, (p1 - p0).Magnitude)), (p0 + p1) / 2, col, mat)
+					sp.CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+					return sp
+				end
+				local down = Vector3.new(0, -1, 0)
+				-- A crane girder span (layout.GirderSpans, Floor 22) hangs free between its nodes: a deeper box
+				-- girder with cross-bracing underneath and no trestles.
+				local freeSpan = layout.GirderSpans ~= nil and layout.GirderSpans[link.Id] == true
+				local chordDepth = if freeSpan then 8.5 else 5.6
+				for _, side in { -1, 1 } do
+					local edge = right * (side * (link.Width * 0.47))
+					-- Top and bottom chords, then the lattice web zig-zagging between them.
+					strut("BridgeSideGirder", a + edge + down * 1.4, b + edge + down * 1.4, 1.5, sootIronDark, Enum.Material.Metal)
+					strut("FoundryGirderChord", a + edge + down * chordDepth, b + edge + down * chordDepth, if freeSpan then 1.5 else 1.1, sootIronDark, Enum.Material.Metal)
+					local bays = math.max(3, math.floor(length / 6))
+					for k = 0, bays - 1 do
+						local t0, t1 = k / bays, (k + 1) / bays
+						local hi0, lo1 = a:Lerp(b, t0) + edge + down * 1.6, a:Lerp(b, t1) + edge + down * (chordDepth - 0.2)
+						if k % 2 == 1 then
+							hi0, lo1 = a:Lerp(b, t0) + edge + down * (chordDepth - 0.2), a:Lerp(b, t1) + edge + down * 1.6
+						end
+						strut("FoundryGirderWeb", hi0, lo1, 0.6, sootRust, Enum.Material.Metal)
+					end
+				end
+				if freeSpan then
+					local bays = math.max(2, math.floor(length / 8))
+					for k = 0, bays do
+						local at = a:Lerp(b, k / bays) + down * chordDepth
+						strut("FoundryGirderTie", at - right * (link.Width * 0.47), at + right * (link.Width * 0.47), 0.8, sootIronDark, Enum.Material.Metal)
+					end
+				end
+				-- Rails and sleepers along the spur.
+				local sleepers = math.max(3, math.floor((length - 2) / 3.2))
+				for i = 1, sleepers do
+					local at = a:Lerp(b, (i - 0.5) / sleepers)
+					local sl = decor(model, "BridgePlankSleeper", Vector3.new(9, 0.16, 1.4), at, railTimber, Enum.Material.Wood)
+					sl.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.1, 0)
+				end
+				for _, side in { -1, 1 } do
+					local r0, r1 = a + right * (side * 2.6), b + right * (side * 2.6)
+					local railPart = decor(model, "RampRailInlay", Vector3.new(0.45, 0.32, math.max(1, length - 1)), (r0 + r1) / 2, railSteel, Enum.Material.Metal)
+					railPart.CFrame = CFrame.lookAt((r0 + r1) / 2, r1) * CFrame.new(0, 0.28, 0)
+				end
+				local stoneSpan = layout.StonePiers ~= nil and layout.StonePiers[link.Id] == true
+				if stoneSpan then
+					-- A soot-brick causeway span: broad piers out of the lava and twin pipe runs along both parapets.
+					local spanFracs = if length > 40 then { 0.3, 0.7 } else { 0.5 }
+					for _, frac in spanFracs do
+						local pt = a:Lerp(b, frac)
+						local h = math.max(2.5, (pt.Y - 6) - deepBottom)
+						local pier = decor(model, "ViaductPier", Vector3.new(link.Width - 4, h, 8), Vector3.new(pt.X, deepBottom + h / 2, pt.Z), sootBrick, Enum.Material.Brick)
+						pier.CFrame = CFrame.lookAt(pier.Position, pier.Position + flat) * CFrame.Angles(0, 0, 0)
+						local cut = decor(model, "CausewayCutwater", Vector3.new(link.Width, 6, 10), Vector3.new(pt.X, deepBottom + 6, pt.Z), Color3.fromRGB(40, 36, 38), Enum.Material.Basalt)
+						cut.CFrame = CFrame.lookAt(cut.Position, cut.Position + flat)
+					end
+					for _, side in { -1, 1 } do
+						for _, off in { 0, 1.7 } do
+							local pa = a + right * (side * (link.Width / 2 + 1.2 + off)) + Vector3.new(0, -0.6, 0)
+							local pb = b + right * (side * (link.Width / 2 + 1.2 + off)) + Vector3.new(0, -0.6, 0)
+							local pipe = decor(model, "CausewayPipeRun", Vector3.new(1.4, 1.4, (pb - pa).Magnitude), (pa + pb) / 2, if off == 0 then sootIron else sootRust, Enum.Material.Metal)
+							pipe.CFrame = CFrame.lookAt((pa + pb) / 2, pb)
+						end
+					end
+				end
+				-- Trestles: paired columns with an X-brace between them (none under a free crane span or a stone span).
+				local fracs = if freeSpan or stoneSpan then {} elseif length > 58 then { 0.22, 0.5, 0.78 } else { 0.3, 0.7 }
+				for _, frac in fracs do
+					local pt = a:Lerp(b, frac)
+					local legTop = pt.Y - 5.6
+					local legH = math.max(2.5, legTop - deepBottom)
+					local feet = {}
+					for _, side in { -1, 1 } do
+						local legPos = pt + right * (side * (link.Width * 0.42))
+						decor(model, "ViaductPier", Vector3.new(2.6, legH, 2.6), Vector3.new(legPos.X, deepBottom + legH / 2, legPos.Z), sootIronDark, Enum.Material.Metal)
+						decor(model, "FoundryGantryFoot", Vector3.new(4.4, 1.6, 4.4), Vector3.new(legPos.X, deepBottom + 3.2, legPos.Z), sootBrickDark, Enum.Material.Brick)
+						table.insert(feet, legPos)
+					end
+					if legH > 6 then
+						local l, r = feet[1], feet[2]
+						strut("FoundryTrestleBrace", Vector3.new(l.X, deepBottom + 4, l.Z), Vector3.new(r.X, legTop - 0.5, r.Z), 0.7, sootRust, Enum.Material.Metal)
+						strut("FoundryTrestleBrace", Vector3.new(r.X, deepBottom + 4, r.Z), Vector3.new(l.X, legTop - 0.5, l.Z), 0.7, sootRust, Enum.Material.Metal)
+					end
+				end
 			elseif isSuspendedLink(layout, link.Id) then
 				-- Floor 3 Gorge-spanning Heartroot bridge: invisible flat collider slab wrapped in densely braided curved
 				-- Heartroot cables spanning INTO LandingA and LandingB so bridge roots connect seamlessly into
@@ -1692,20 +2069,32 @@ function Builder.Build(id: number, generation: number): any
 				if groundPalette then ramp.Material = groundPalette.Ground end
 				disableTerrainProxyPart(ramp)
 				local length = delta.Magnitude
-				local stones = math.max(1, math.floor((length - 4) / 5.2))
+				local stones = math.max(1, math.floor((length - 4) / ((pathStyle and pathStyle.GrassStepLipStep) or 5.2)))
+				local staggerBy = (pathStyle and pathStyle.GrassStepLipStagger) or 1.4
 				local wBase = (pathStyle and pathStyle.GrassStepLipWBase) or 0.26
 				local wStep = (pathStyle and pathStyle.GrassStepLipWStep) or 0.04
 				local wMod = (pathStyle and pathStyle.GrassStepLipWMod) or 7
 				local lipH = (pathStyle and pathStyle.GrassStepLipH) or 0.45
 				local lipY = (pathStyle and pathStyle.GrassStepLipY) or 0.06
+				local railed = pathStyle ~= nil and pathStyle.RailInlay == true
 				for i = 1, stones do
-					local stagger = if i % 2 == 0 then 1.4 else -1.4
+					local stagger = if i % 2 == 0 then staggerBy else -staggerBy
 					local at = a:Lerp(b, (i - 0.5) / stones) + right * stagger
 					local stoneW = link.Width * (wBase + ((i * wMod) % 3) * wStep)
 					local lipCol = if pathStyle then (if i % 2 == 0 then pathStyle.GrassStepLipColorA else pathStyle.GrassStepLipColorB) else flagstoneDark
 					local lipMat = if pathStyle then (if i % 2 == 0 then pathStyle.GrassStepLipMatA else pathStyle.GrassStepLipMatB) else Enum.Material.Limestone
-					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, lipH, 2.9), at, lipCol, lipMat)
-					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, lipY, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, lipH, if railed then 1.6 else 2.9), at, lipCol, lipMat)
+					-- Sleepers lie square across the spur; stepping stones are laid a little askew.
+					local skew = if railed then ((i * 7) % 5 - 2) * 0.6 else ((i * 19) % 14) - 7
+					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, lipY, 0) * CFrame.Angles(0, math.rad(skew), 0)
+				end
+				if railed then
+					-- A pair of steel rails down the spur's spine, on the sleepers (flush trim, never collides).
+					for _, side in { -1, 1 } do
+						local railAt = mid + right * (side * 2.6)
+						local rail = decor(model, "RampRailInlay", Vector3.new(0.45, 0.32, math.max(1, length - 2)), railAt, railSteel, Enum.Material.Metal)
+						rail.CFrame = CFrame.lookAt(railAt, railAt + delta) * CFrame.new(0, lipY + lipH * 0.5 + 0.12, 0)
+					end
 				end
 				if pathStyle and pathStyle.GrassTrailKerbs then
 					local kerbs = math.max(2, math.floor(length / 16))
@@ -1846,6 +2235,23 @@ function Builder.Build(id: number, generation: number): any
 							local pt = a:Lerp(b, pIdx / (posts + 1)) + curbOffset
 							local post = decor(curbGroup, "BridgeRailPost", Vector3.new(1.1, 3.6, 1.1), pt, bridgeWood, Enum.Material.Wood)
 							post.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.65, 0)
+						end
+					elseif curbMode == "FOUNDRY_RAIL" then
+						-- Sootwright iron handrail: a low riveted kerb, a top rail and a mid rail on posts.
+						curb.Size = Vector3.new(1.4, 1.2, curbLen)
+						curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 0.2, 0)
+						local railLen = math.max(1, delta.Magnitude - 2)
+						local top = decor(curbGroup, "BridgeHandrail", Vector3.new(0.6, 0.6, railLen), mid + curbOffset, sootIronDark, Enum.Material.Metal)
+						top.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 3.4, 0)
+						local midRail = decor(curbGroup, "BridgeMidRail", Vector3.new(0.4, 0.4, railLen), mid + curbOffset, sootRust, Enum.Material.Metal)
+						midRail.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 2.0, 0)
+						local posts = math.max(2, math.floor(railLen / 8) + 1)
+						for pIdx = 0, posts - 1 do
+							local pt = a:Lerp(b, 0.02 + 0.96 * pIdx / (posts - 1)) + curbOffset
+							local post = decor(curbGroup, "BridgeRailPost", Vector3.new(0.7, 3.4, 0.7), pt, sootIronDark, Enum.Material.Metal)
+							post.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.9, 0)
+							local knob = decor(curbGroup, "BridgeNewelCap", Vector3.new(0.9, 0.5, 0.9), pt, sootBrass, Enum.Material.Metal)
+							knob.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 3.85, 0)
 						end
 					else
 						local capCol = (masonryStyle and masonryStyle.CurbCapColor) or pathStyle.CurbCapColor

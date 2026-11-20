@@ -1,0 +1,215 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BellowsDuctRun": {
+      "Min": [
+        -4.0,
+        0.0,
+        -8.0
+      ],
+      "Roles": {
+        "ACCENT": 76,
+        "METAL": 214,
+        "TRIM": 1400
+      },
+      "Size": [
+        8.0,
+        27.767,
+        27.56
+      ],
+      "Triangles": 1690
+    },
+    "BladeDisplay": {
+      "Min": [
+        -4.1,
+        0.0,
+        -1.3
+      ],
+      "Roles": {
+        "GOLD": 44,
+        "METAL": 60,
+        "TRIM": 12,
+        "WOOD": 72
+      },
+      "Size": [
+        8.5,
+        8.9,
+        2.6
+      ],
+      "Triangles": 188
+    },
+    "CoolingRack": {
+      "Min": [
+        -6.25,
+        -0.2,
+        -1.85
+      ],
+      "Roles": {
+        "GLOW": 96,
+        "METAL": 480,
+        "STONE": 12,
+        "TRIM": 384
+      },
+      "Size": [
+        12.5,
+        9.2,
+        3.7
+      ],
+      "Triangles": 972
+    },
+    "CrustIsland": {
+      "Min": [
+        -9.16,
+        -0.2,
+        -6.736
+      ],
+      "Roles": {
+        "ALT": 80,
+        "GLOW": 72,
+        "STONE": 60
+      },
+      "Size": [
+        16.872,
+        2.178,
+        12.714
+      ],
+      "Triangles": 212
+    },
+    "FurnaceDoorGiant": {
+      "Min": [
+        -28.0,
+        0.0,
+        -7.5
+      ],
+      "Roles": {
+        "GLOW": 88,
+        "GOLD": 552,
+        "METAL": 96,
+        "STONE": 480,
+        "TRIM": 240
+      },
+      "Size": [
+        56.0,
+        54.0,
+        16.1
+      ],
+      "Triangles": 1456
+    },
+    "FurnaceTower": {
+      "Min": [
+        -10.0,
+        0.0,
+        -9.0
+      ],
+      "Roles": {
+        "ACCENT": 200,
+        "GLOW": 136,
+        "METAL": 72,
+        "STONE": 36,
+        "TRIM": 372
+      },
+      "Size": [
+        20.0,
+        59.3,
+        18.0
+      ],
+      "Triangles": 816
+    },
+    "JibCrane": {
+      "Min": [
+        -3.0,
+        0.0,
+        -3.4
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "GOLD": 122,
+        "METAL": 72,
+        "TRIM": 564
+      },
+      "Size": [
+        6.0,
+        32.412,
+        22.3
+      ],
+      "Triangles": 770
+    },
+    "MouldBed": {
+      "Min": [
+        -8.45,
+        0.0,
+        -5.45
+      ],
+      "Roles": {
+        "GLOW": 156,
+        "METAL": 48,
+        "STONE": 12,
+        "TRIM": 48
+      },
+      "Size": [
+        16.9,
+        1.8,
+        10.9
+      ],
+      "Triangles": 264
+    },
+    "SlagLadleCart": {
+      "Min": [
+        -4.85,
+        -2.251,
+        -7.4
+      ],
+      "Roles": {
+        "ACCENT": 36,
+        "GLOW": 190,
+        "METAL": 568,
+        "TRIM": 190
+      },
+      "Size": [
+        10.29,
+        15.373,
+        17.013
+      ],
+      "Triangles": 984
+    },
+    "SteamVent": {
+      "Min": [
+        -2.34,
+        0.0,
+        -2.4
+      ],
+      "Roles": {
+        "ACCENT": 112,
+        "METAL": 124,
+        "TRIM": 540
+      },
+      "Size": [
+        4.68,
+        10.8,
+        4.8
+      ],
+      "Triangles": 776
+    },
+    "TiltingCrucible": {
+      "Min": [
+        -7.7,
+        -0.309,
+        -8.972
+      ],
+      "Roles": {
+        "ACCENT": 264,
+        "GLOW": 242,
+        "GOLD": 44,
+        "METAL": 428,
+        "TRIM": 214
+      },
+      "Size": [
+        16.0,
+        16.747,
+        20.872
+      ],
+      "Triangles": 1192
+    }
+  },
+  "Unit": "studs"
+}

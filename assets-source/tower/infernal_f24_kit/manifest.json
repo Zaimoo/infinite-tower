@@ -1,0 +1,238 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "ArmourRack": {
+      "Min": [
+        -3.95,
+        0.0,
+        -1.6
+      ],
+      "Roles": {
+        "GOLD": 116,
+        "METAL": 162,
+        "TRIM": 172,
+        "WOOD": 96
+      },
+      "Size": [
+        7.9,
+        8.8,
+        3.2
+      ],
+      "Triangles": 546
+    },
+    "BulwarkWall": {
+      "Min": [
+        -12.2,
+        0.0,
+        -3.15
+      ],
+      "Roles": {
+        "GOLD": 500,
+        "METAL": 84,
+        "STONE": 108,
+        "TRIM": 108
+      },
+      "Size": [
+        24.4,
+        12.875,
+        6.3
+      ],
+      "Triangles": 800
+    },
+    "ChainWinch": {
+      "Min": [
+        -4.525,
+        0.0,
+        -4.6
+      ],
+      "Roles": {
+        "GOLD": 400,
+        "METAL": 600,
+        "TRIM": 1334,
+        "WOOD": 24
+      },
+      "Size": [
+        9.295,
+        16.491,
+        9.2
+      ],
+      "Triangles": 2358
+    },
+    "CitadelDoors": {
+      "Min": [
+        -32.4,
+        0.0,
+        -10.0
+      ],
+      "Roles": {
+        "GLOW": 524,
+        "GOLD": 600,
+        "METAL": 192,
+        "STONE": 240,
+        "TRIM": 848
+      },
+      "Size": [
+        64.8,
+        91.5,
+        24.8
+      ],
+      "Triangles": 2404
+    },
+    "DropHammer": {
+      "Min": [
+        -8.125,
+        0.0,
+        -6.0
+      ],
+      "Roles": {
+        "ACCENT": 384,
+        "GLOW": 12,
+        "METAL": 416,
+        "STONE": 12,
+        "TRIM": 654
+      },
+      "Size": [
+        16.25,
+        44.18,
+        12.0
+      ],
+      "Triangles": 1478
+    },
+    "FlameJetPortcullis": {
+      "Min": [
+        -19.9,
+        0.0,
+        -6.0
+      ],
+      "Roles": {
+        "GLOW": 588,
+        "GOLD": 12,
+        "METAL": 120,
+        "STONE": 144,
+        "TRIM": 216
+      },
+      "Size": [
+        39.8,
+        31.85,
+        12.0
+      ],
+      "Triangles": 1080
+    },
+    "PowderKegStack": {
+      "Min": [
+        -4.3,
+        0.0,
+        -3.2
+      ],
+      "Roles": {
+        "ACCENT": 236,
+        "TRIM": 1304,
+        "WOOD": 244
+      },
+      "Size": [
+        8.6,
+        7.1,
+        6.4
+      ],
+      "Triangles": 1784
+    },
+    "SiegeBallista": {
+      "Min": [
+        -9.65,
+        0.0,
+        -7.822
+      ],
+      "Roles": {
+        "GOLD": 396,
+        "METAL": 60,
+        "TRIM": 276,
+        "WOOD": 60
+      },
+      "Size": [
+        19.3,
+        8.214,
+        18.999
+      ],
+      "Triangles": 792
+    },
+    "SignalBrazier": {
+      "Min": [
+        -8.35,
+        0.0,
+        -8.35
+      ],
+      "Roles": {
+        "GLOW": 384,
+        "GOLD": 48,
+        "METAL": 60,
+        "STONE": 56,
+        "TRIM": 576
+      },
+      "Size": [
+        16.693,
+        29.7,
+        16.7
+      ],
+      "Triangles": 1124
+    },
+    "SlagCannon": {
+      "Min": [
+        -4.45,
+        0.0,
+        -6.168
+      ],
+      "Roles": {
+        "GLOW": 52,
+        "GOLD": 392,
+        "METAL": 1364,
+        "TRIM": 1600,
+        "WOOD": 60
+      },
+      "Size": [
+        7.89,
+        9.304,
+        15.651
+      ],
+      "Triangles": 3468
+    },
+    "SluiceGateChain": {
+      "Min": [
+        -16.6,
+        0.0,
+        -1.7
+      ],
+      "Roles": {
+        "ACCENT": 72,
+        "METAL": 312,
+        "TRIM": 168
+      },
+      "Size": [
+        33.2,
+        23.036,
+        3.4
+      ],
+      "Triangles": 552
+    },
+    "SluiceTower": {
+      "Min": [
+        -9.4,
+        0.0,
+        -9.4
+      ],
+      "Roles": {
+        "ACCENT": 88,
+        "GLOW": 72,
+        "METAL": 840,
+        "STONE": 180,
+        "TRIM": 144
+      },
+      "Size": [
+        18.8,
+        50.8,
+        18.8
+      ],
+      "Triangles": 1324
+    }
+  },
+  "Unit": "studs"
+}

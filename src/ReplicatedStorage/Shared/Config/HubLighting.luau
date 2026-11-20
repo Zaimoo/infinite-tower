@@ -385,6 +385,46 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(226, 240, 255), Saturation = 0.04, Contrast = 0.16, ExposureCompensation = 0.16, BloomIntensity = 0.48,
 		SunRaysIntensity = 0.05, SunRaysSpread = 0.42,
 	},
+	-- Floor 21 (Slagworks Entry): smoky red dawn, the only Infernal floor with open sky — a low red-orange key
+	-- with a sulphur-yellow tint, soot haze thick enough to layer the flue stacks, and rays through the smoke.
+	[21] = {
+		Ambient = c(92, 58, 50), OutdoorAmbient = c(132, 82, 66), ColorShift_Top = c(255, 168, 112), ColorShift_Bottom = c(96, 42, 34),
+		AtmosphereDensity = 0.3, AtmosphereColor = c(168, 98, 76), AtmosphereDecay = c(118, 58, 46), AtmosphereHaze = 1.6,
+		TintColor = c(255, 236, 206), Saturation = 0.06, Contrast = 0.12, ExposureCompensation = 0.12, BloomIntensity = 0.4,
+		SunRaysIntensity = 0.1, SunRaysSpread = 0.5,
+	},
+	-- Floor 22 (Molten Assembly): interior work-light under a closed vault — warm sodium amber, strong contrast,
+	-- a thin steam haze, and bloom on the lamp strings and furnace mouths.
+	[22] = {
+		Ambient = c(98, 70, 50), OutdoorAmbient = c(118, 84, 60), ColorShift_Top = c(255, 186, 112), ColorShift_Bottom = c(84, 44, 30),
+		AtmosphereDensity = 0.36, AtmosphereColor = c(150, 112, 88), AtmosphereDecay = c(96, 60, 44), AtmosphereHaze = 1.3,
+		TintColor = c(255, 230, 196), Saturation = 0.08, Contrast = 0.2, ExposureCompensation = 0.2, BloomIntensity = 0.55,
+		SunRaysIntensity = 0.14, SunRaysSpread = 0.3,
+	},
+	-- Floor 23 (Furnace Causeway): furnace glare, the hottest light so far — a white-orange key off the lava lake
+	-- and six furnace mouths, heat haze, and heavy bloom kept just short of washing out the telegraphs.
+	[23] = {
+		Ambient = c(112, 62, 40), OutdoorAmbient = c(136, 76, 48), ColorShift_Top = c(255, 214, 150), ColorShift_Bottom = c(140, 52, 22),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(176, 104, 62), AtmosphereDecay = c(132, 54, 28), AtmosphereHaze = 1.8,
+		TintColor = c(255, 236, 214), Saturation = 0.12, Contrast = 0.16, ExposureCompensation = 0.1, BloomIntensity = 0.7,
+		SunRaysIntensity = 0.08, SunRaysSpread = 0.45,
+	},
+	-- Floor 24 (Ironflame Bulwark): siege-red night — deep crimson key off The Pour and lava falls against a cool
+	-- steel-blue shadow fill across the iron-bound towers, smoky haze tuned so the Citadel and lava falls read.
+	[24] = {
+		Ambient = c(68, 66, 86), OutdoorAmbient = c(96, 82, 98), ColorShift_Top = c(255, 138, 92), ColorShift_Bottom = c(148, 42, 22),
+		AtmosphereDensity = 0.31, AtmosphereColor = c(154, 78, 64), AtmosphereDecay = c(102, 46, 48), AtmosphereHaze = 1.65,
+		TintColor = c(246, 224, 214), Saturation = 0.1, Contrast = 0.2, ExposureCompensation = 0.14, BloomIntensity = 0.62,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.4,
+	},
+	-- Floor 25 (Titan's Crucible): molten heart — molten gold under-light rising from the lava lake and Great
+	-- Crucible against a dark soot-black vaulted cavern, tuned so the 179-stud Crucible reads and boss telegraphs pop.
+	[25] = {
+		Ambient = c(86, 56, 42), OutdoorAmbient = c(104, 66, 46), ColorShift_Top = c(255, 198, 118), ColorShift_Bottom = c(196, 88, 26),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(162, 92, 54), AtmosphereDecay = c(88, 42, 30), AtmosphereHaze = 1.55,
+		TintColor = c(255, 234, 204), Saturation = 0.12, Contrast = 0.22, ExposureCompensation = 0.12, BloomIntensity = 0.66,
+		SunRaysIntensity = 0.08, SunRaysSpread = 0.44,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

@@ -1,0 +1,235 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "ChainGalleryRail": {
+      "Min": [
+        -11.2,
+        0.0,
+        -0.6
+      ],
+      "Roles": {
+        "GOLD": 320,
+        "METAL": 372,
+        "TRIM": 72
+      },
+      "Size": [
+        22.4,
+        6.13,
+        1.55
+      ],
+      "Triangles": 764
+    },
+    "DuctManifold": {
+      "Min": [
+        -6.0,
+        -1.64,
+        -16.1
+      ],
+      "Roles": {
+        "ACCENT": 100,
+        "GOLD": 44,
+        "METAL": 214,
+        "TRIM": 1482
+      },
+      "Size": [
+        12.0,
+        24.985,
+        25.1
+      ],
+      "Triangles": 1840
+    },
+    "GreatBellows": {
+      "Min": [
+        -12.5,
+        0.0,
+        -11.5
+      ],
+      "Roles": {
+        "ACCENT": 80,
+        "METAL": 336,
+        "STONE": 12,
+        "TRIM": 348,
+        "WOOD": 36
+      },
+      "Size": [
+        25.0,
+        63.809,
+        28.176
+      ],
+      "Triangles": 812
+    },
+    "GreatCrucible": {
+      "Min": [
+        -37.6,
+        0.0,
+        -17.174
+      ],
+      "Roles": {
+        "GLOW": 96,
+        "GOLD": 1400,
+        "METAL": 208,
+        "STONE": 240,
+        "TRIM": 1304
+      },
+      "Size": [
+        75.2,
+        97.039,
+        37.409
+      ],
+      "Triangles": 3248
+    },
+    "HangingChainRun": {
+      "Min": [
+        -3.7,
+        -0.284,
+        -2.6
+      ],
+      "Roles": {
+        "GOLD": 600,
+        "METAL": 56,
+        "TRIM": 684
+      },
+      "Size": [
+        7.4,
+        35.259,
+        5.2
+      ],
+      "Triangles": 1340
+    },
+    "IngotPallet": {
+      "Min": [
+        -7.0,
+        0.0,
+        -4.4
+      ],
+      "Roles": {
+        "GLOW": 24,
+        "METAL": 180,
+        "TRIM": 120,
+        "WOOD": 12
+      },
+      "Size": [
+        14.0,
+        4.825,
+        8.8
+      ],
+      "Triangles": 336
+    },
+    "PatternLathe": {
+      "Min": [
+        -13.1,
+        0.0,
+        -3.8
+      ],
+      "Roles": {
+        "ACCENT": 516,
+        "GOLD": 800,
+        "METAL": 348,
+        "TRIM": 354,
+        "WOOD": 60
+      },
+      "Size": [
+        24.81,
+        13.95,
+        8.3
+      ],
+      "Triangles": 2078
+    },
+    "PourSpoutChute": {
+      "Min": [
+        -11.65,
+        0.0,
+        -11.531
+      ],
+      "Roles": {
+        "ACCENT": 76,
+        "GLOW": 80,
+        "METAL": 80,
+        "STONE": 40,
+        "TRIM": 966
+      },
+      "Size": [
+        23.292,
+        22.15,
+        26.431
+      ],
+      "Triangles": 1242
+    },
+    "TitanHeartGrate": {
+      "Min": [
+        -15.2,
+        -1.2,
+        -2.5
+      ],
+      "Roles": {
+        "GLOW": 88,
+        "GOLD": 576,
+        "METAL": 108,
+        "TRIM": 384
+      },
+      "Size": [
+        30.4,
+        30.4,
+        4.5
+      ],
+      "Triangles": 1156
+    },
+    "TitanMouldFist": {
+      "Min": [
+        -11.5,
+        0.0,
+        -8.0
+      ],
+      "Roles": {
+        "GLOW": 48,
+        "METAL": 470,
+        "STONE": 12,
+        "TRIM": 72
+      },
+      "Size": [
+        23.0,
+        9.369,
+        16.0
+      ],
+      "Triangles": 602
+    },
+    "TitanMouldHelm": {
+      "Min": [
+        -11.523,
+        0.0,
+        -9.0
+      ],
+      "Roles": {
+        "GLOW": 192,
+        "METAL": 248,
+        "STONE": 12,
+        "TRIM": 200
+      },
+      "Size": [
+        23.046,
+        18.696,
+        18.0
+      ],
+      "Triangles": 652
+    },
+    "VaultRibArch": {
+      "Min": [
+        -7.2,
+        0.0,
+        -7.2
+      ],
+      "Roles": {
+        "METAL": 132,
+        "STONE": 172,
+        "TRIM": 888
+      },
+      "Size": [
+        51.741,
+        119.042,
+        14.4
+      ],
+      "Triangles": 1192
+    }
+  },
+  "Unit": "studs"
+}

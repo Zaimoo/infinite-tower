@@ -22,8 +22,12 @@ if (-not (Test-Path -LiteralPath $luau) -or -not (Test-Path -LiteralPath $compil
 # Compile every production script in its original form. No test loader transforms
 # are applied to this check, so malformed production files cannot hide in shims.
 $sources = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'src') -Filter '*.luau' -Recurse | ForEach-Object { $_.FullName })
-& $compiler --null @sources
-if ($LASTEXITCODE -ne 0) { throw 'Production Luau compilation failed.' }
+# In batches: every full path on one command line overflows Windows' 32,767-character limit.
+for ($first = 0; $first -lt $sources.Count; $first += 100) {
+    $batch = $sources[$first..([Math]::Min($first + 99, $sources.Count - 1))]
+    & $compiler --null @batch
+    if ($LASTEXITCODE -ne 0) { throw 'Production Luau compilation failed.' }
+}
 
 # The CLI has no Roblox DataModel. Bundle unchanged module bodies inside loader
 # closures, supplying only module lookup and the Color3 constructors used by the
@@ -138,6 +142,9 @@ $modulePaths = @(
     'ServerScriptService/Core/TowerTraversal.luau',
     'ServerScriptService/Core/TowerNavigationGraph.luau',
     'ServerScriptService/Core/TowerTerrain.luau',
+    'ServerScriptService/Core/TowerSetPieces/InfernalFoundry.luau',
+    'ServerScriptService/Core/TowerSetPieces/InfernalFloor24.luau',
+    'ServerScriptService/Core/TowerSetPieces/InfernalFloor25.luau',
     'ServerScriptService/Core/NavigationRecovery.luau',
     'ServerScriptService/Core/NavigationQueue.luau',
     'ServerScriptService/Combat/SquadMovement.luau',

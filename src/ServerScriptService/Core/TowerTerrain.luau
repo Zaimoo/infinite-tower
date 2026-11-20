@@ -71,6 +71,10 @@ local Surfaces: { [string]: Surface } = {
 	-- wet teal-black pool beds. Every material here is Fungal-owned (see MaterialColors).
 	FUNGAL = { Trail = M.Cobblestone, Walk = M.Concrete, WalkAccent = M.Pavement, Bank = M.Concrete,
 		Cliff = M.Pavement, Peak = M.Basalt, PoolBed = M.Asphalt, Lush = M.Concrete },
+	-- Infernal Foundry (the Sootwrights): sooty basalt yards, slate-grey trodden tracks, patches of brown ash,
+	-- slate banks and cracked-lava sumps. (Never Brick or WoodPlanks: see BlockyMaterials.)
+	SOOTWRIGHT = { Trail = M.Slate, Walk = M.Basalt, WalkAccent = M.Ground, Bank = M.Slate,
+		Cliff = M.Basalt, Peak = M.Slate, PoolBed = M.CrackedLava, Lush = M.Basalt },
 }
 TowerTerrain.Surfaces = Surfaces
 
@@ -96,6 +100,9 @@ TowerTerrain.MaterialColors = table.freeze({
 	[M.Ice] = Color3.fromRGB(106, 174, 224),
 })
 TowerTerrain.FungalMaterials = table.freeze({ M.Cobblestone, M.Concrete, M.Pavement, M.Asphalt })
+-- Terrain materials Roblox shapes as blocks: a smooth slope written in them collides as 4-stud steps, which no
+-- hero can climb (measured in Studio, 2026-11-20). No palette or surface may use them for terrain.
+TowerTerrain.BlockyMaterials = table.freeze({ M.Brick, M.WoodPlanks })
 local colorsApplied = false
 local function applyColors()
 	if colorsApplied then return end
@@ -119,6 +126,8 @@ export type Field = {
 	LiquidLevel: number,
 	Palette: Palette,
 	Surface: Surface?, -- direct floors only
+	-- An authored feature's own material at a spot (a slag tip's clinker and glowing seams), or nil.
+	Accent: ((x: number, z: number) -> Enum.Material?)?,
 }
 
 -- Direct floors (TowerLayout `Terrain.Direct`): smooth voxel terrain renders its surface about RES / 2 above
@@ -202,7 +211,10 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	-- islands, the water level and pool depth, and the width of the mountain band.
 	local td = layout.Terrain
 	local direct = td ~= nil and td.Direct == true
-	local surface = if direct and td.Surface then Surfaces[td.Surface] else nil
+	-- A floor with top-level DirectTerrain names its surface beside it (layout.Surface, e.g. Floor 21).
+	local surface = if direct and td.Surface then Surfaces[td.Surface]
+		elseif directTerrain and layout.Surface then Surfaces[layout.Surface]
+		else nil
 	if surface then
 		palette = table.clone(palette)
 		palette.Cliff, palette.Peak, palette.Shore = surface.Cliff, surface.Peak, surface.PoolBed
@@ -217,6 +229,62 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	local reach = 0
 	for _, r in rects do
 		reach = math.max(reach, (r.Y - bottom + 12) / APRON)
+	end
+
+	-- Slag tips (TerrainFeatures SLAG_TIP, Infernal): a heap of tipped slag at (X, Z), Top studs over the floor,
+	-- spilling a widening fan Length studs along Yaw (degrees; 0 = +Z, 90 = +X). Returns the heap's height
+	-- over the floor and how far inside it the spot is (0 outside, 1 on the crest), or 0, 0.
+	local slagTips = {}
+	local pourPits = {}
+	local lavaFalls = {}
+	for _, feat in features or {} do
+		if feat.Kind == "SLAG_TIP" then
+			local yaw = math.rad(feat.Yaw or 0)
+			table.insert(slagTips, { X = feat.X, Z = feat.Z, Top = feat.Top, Length = feat.Length, DX = math.sin(yaw), DZ = math.cos(yaw),
+				Half = feat.HalfWidth or 18, Spread = feat.Spread or 24 })
+		elseif feat.Kind == "POUR_PIT" then
+			table.insert(pourPits, {
+				X = feat.X or 0, Z = feat.Z or 0,
+				RX = feat.RX or 75, RZ = feat.RZ or 60,
+				RimWidth = feat.RimWidth or 16, RimHeight = feat.RimHeight or 3.8,
+				NoiseAmp = feat.NoiseAmp or 0.14, NoiseSeed = feat.NoiseSeed or 141,
+				Gain = feat.Gain or 0.42,
+			})
+		elseif feat.Kind == "LAVA_FALL" then
+			table.insert(lavaFalls, {
+				X = feat.X or 0, Z = feat.Z or 0,
+				HalfW = (feat.Width or 26) * 0.5, HalfD = (feat.Depth or 38) * 0.5,
+				Height = feat.Height or 110, Axis = feat.Axis or "X",
+				RibbonHalf = (feat.RibbonWidth or 10) * 0.5,
+			})
+		end
+	end
+	local function pourPitDist(pit: any, x: number, z: number): number
+		return math.sqrt(((x - pit.X) / pit.RX) ^ 2 + ((z - pit.Z) / pit.RZ) ^ 2)
+			+ pit.NoiseAmp * fbm(x / 22, z / 22, seed + pit.NoiseSeed, 2)
+	end
+	local function slagTip(x: number, z: number): (number, number)
+		local bestH, bestW = 0, 0
+		for i, tip in slagTips do
+			local rx, rz = x - tip.X, z - tip.Z
+			local along = rx * tip.DX + rz * tip.DZ
+			local across = math.abs(rx * tip.DZ - rz * tip.DX)
+			local t = along / tip.Length
+			if t > -0.3 and t < 1 then
+				local half = tip.Half + tip.Spread * math.max(t, 0)
+				-- Behind the crest the heap rounds off over a short back slope.
+				local fall = if t < 0 then (1 + t / 0.3) else (1 - t) ^ 1.25
+				local u = across / half + 0.1 * fbm(x / 16, z / 16, seed + 101 + i, 2)
+				if u < 1 and fall > 0 then
+					local lumps = 1 + 0.14 * fbm(x / 9, z / 9, seed + 107 + i, 2)
+					local height = tip.Top * fall * (1 - u * u) ^ 0.6 * lumps
+					if height > bestH then
+						bestH, bestW = height, (1 - u) * fall
+					end
+				end
+			end
+		end
+		return bestH, bestW
 	end
 
 	-- Ground before walkways: chasm, pools, dunes and mountains.
@@ -254,6 +322,38 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		-- there, so lower ground would leave anyone walking on air above it. Only pools go lower (under water).
 		if kind == "CHASM" then
 			base = math.max(base, bottom)
+		end
+		-- Slag tips heap up over open ground and the mountain foot alike (kept off walkways by the caps below).
+		if #slagTips > 0 then
+			local heap = slagTip(x, z)
+			if heap > 0.5 and bottom + heap > base then
+				base, kind = bottom + heap, "MOUNTAIN"
+			end
+		end
+		-- Lava falls: volcanic cascade chutes banked into the outer cavern mountain walls.
+		for i, fall in lavaFalls do
+			local fx, fz = math.abs(x - fall.X), math.abs(z - fall.Z)
+			if fx < fall.HalfW and fz < fall.HalfD then
+				local ux = 1 - (fx / fall.HalfW) ^ 1.6
+				local uz = 1 - (fz / fall.HalfD) ^ 1.6
+				local warp = 1 + 0.14 * fbm(x / 18, z / 18, seed + 151 + i, 2)
+				local cliffH = fall.Height * ux * uz * warp
+				if bottom + cliffH > base then
+					base, kind = bottom + cliffH, "MOUNTAIN"
+				end
+			end
+		end
+		-- Pour pits: a jagged volcanic basalt berm ringing the molten cauldron (kept off walkways by caps).
+		if kind == "CHASM" then
+			for _, pit in pourPits do
+				local pd = pourPitDist(pit, x, z)
+				local rimNorm = pit.RimWidth / math.max(pit.RX, pit.RZ)
+				if pd >= 1.0 and pd < 1.0 + rimNorm then
+					local t = 1 - (pd - 1.0) / rimNorm
+					local rimH = pit.RimHeight * (t * t * (3 - 2 * t)) * (0.78 + 0.22 * fbm(x / 10, z / 10, seed + 149, 2))
+					base = math.max(base, bottom + rimH)
+				end
+			end
 		end
 		-- Authored wind-carved sand dunes in open desert basins (walkway caps still protect terraces/ramps).
 		if kind == "CHASM" and features then
@@ -394,6 +494,12 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 						end
 						if dist < 1.0 then
 							wet = math.max(wet, 0.28 + (1.0 - dist) * (feat.Gain or 0.36))
+						end
+					elseif feat.Kind == "POUR_PIT" then
+						local pd = math.sqrt(((x - (feat.X or 0)) / (feat.RX or 75)) ^ 2 + ((z - (feat.Z or 0)) / (feat.RZ or 60)) ^ 2)
+							+ (feat.NoiseAmp or 0.14) * fbm(x / 22, z / 22, seed + (feat.NoiseSeed or 141), 2)
+						if pd < 1.0 then
+							wet = math.max(wet, 0.30 + (1.0 - pd) * (feat.Gain or 0.42))
 						end
 					end
 				end
@@ -696,6 +802,45 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		LiquidLevel = liquidLevel,
 		Palette = palette,
 		Surface = surface,
+		-- Authored feature materials: slag tips, glowing pour-pit rims, and volcanic lava-fall chutes.
+		Accent = if #slagTips > 0 or #pourPits > 0 or #lavaFalls > 0
+			then function(x: number, z: number): Enum.Material?
+				for i, fall in lavaFalls do
+					local fx, fz = math.abs(x - fall.X), math.abs(z - fall.Z)
+					if fx < fall.HalfW and fz < fall.HalfD then
+						local along = if fall.Axis == "Z" then x else z
+						local across = if fall.Axis == "Z" then (z - fall.Z) else (x - fall.X)
+						local sway = 3.5 * fbm(along / 18, 0, seed + 161 + i, 2)
+						if math.abs(across - sway) < fall.RibbonHalf then
+							return M.CrackedLava
+						end
+						return M.Basalt
+					end
+				end
+				for _, pit in pourPits do
+					local pd = pourPitDist(pit, x, z)
+					local rimNorm = pit.RimWidth / math.max(pit.RX, pit.RZ)
+					if pd >= 0.94 and pd < 1.0 + rimNorm then
+						local seam = math.abs(fbm(x / 10, z / 10, seed + 157, 2))
+						if pd < 1.04 or seam < 0.14 then
+							return M.CrackedLava
+						end
+						return M.Basalt
+					end
+				end
+				if #slagTips > 0 then
+					local heap, inside = slagTip(x, z)
+					if heap >= 1.5 then
+						local seam = math.abs(fbm(x / 11, z / 11, seed + 131, 2))
+						if seam < 0.07 + 0.08 * inside then
+							return M.CrackedLava
+						end
+						return if math.noise(x / 13, z / 13, seed + 137) > 0.1 then M.Slate else M.Basalt
+					end
+				end
+				return nil
+			end
+			else nil,
 	}
 end
 
