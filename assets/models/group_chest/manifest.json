@@ -1,0 +1,465 @@
+{
+  "group_chest": {
+    "TemplateId": "group_chest",
+    "FBX": "group_chest.fbx",
+    "HingePivot": [
+      0.0,
+      2.85,
+      2.15
+    ],
+    "Triangles": 14534,
+    "PartCount": 18,
+    "Parts": [
+      {
+        "Name": "Base_GoldPlinth",
+        "SubCollection": "ChestBase",
+        "Offset": [
+          0.0,
+          0.37,
+          0.0
+        ],
+        "Size": [
+          6.8634,
+          0.74,
+          4.7034
+        ],
+        "Material": "Metal",
+        "Color": [
+          228,
+          175,
+          68
+        ],
+        "Transparency": 0.0,
+        "Collidable": true,
+        "MeshId": "",
+        "Triangles": 1692,
+        "VertCount": 3126
+      },
+      {
+        "Name": "Base_CornerPillars",
+        "SubCollection": "ChestBase",
+        "Offset": [
+          0.0,
+          1.87,
+          0.0
+        ],
+        "Size": [
+          6.84,
+          2.58,
+          4.58
+        ],
+        "Material": "Metal",
+        "Color": [
+          238,
+          186,
+          78
+        ],
+        "Transparency": 0.0,
+        "Collidable": true,
+        "MeshId": "",
+        "Triangles": 3232,
+        "VertCount": 6024
+      },
+      {
+        "Name": "Base_CrystalWalls",
+        "SubCollection": "ChestBase",
+        "Offset": [
+          -0.0046,
+          1.62,
+          0.0009
+        ],
+        "Size": [
+          6.0367,
+          2.08,
+          3.9848
+        ],
+        "Material": "Glass",
+        "Color": [
+          88,
+          205,
+          255
+        ],
+        "Transparency": 0.22,
+        "Collidable": true,
+        "MeshId": "",
+        "Triangles": 544,
+        "VertCount": 773
+      },
+      {
+        "Name": "Base_InnerGlitchCore",
+        "SubCollection": "ChestBase",
+        "Offset": [
+          0.0,
+          1.79,
+          0.0
+        ],
+        "Size": [
+          5.52,
+          2.38,
+          3.42
+        ],
+        "Material": "Neon",
+        "Color": [
+          46,
+          148,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 154,
+        "VertCount": 336
+      },
+      {
+        "Name": "Base_LockEscutcheon",
+        "SubCollection": "ChestBase",
+        "Offset": [
+          0.0,
+          1.5372,
+          -0.011
+        ],
+        "Size": [
+          6.9788,
+          2.7437,
+          4.741
+        ],
+        "Material": "Metal",
+        "Color": [
+          226,
+          234,
+          248
+        ],
+        "Transparency": 0.0,
+        "Collidable": true,
+        "MeshId": "",
+        "Triangles": 2044,
+        "VertCount": 3362
+      },
+      {
+        "Name": "Base_DiamondGems",
+        "SubCollection": "ChestBase",
+        "Offset": [
+          0.0,
+          1.564,
+          -0.04
+        ],
+        "Size": [
+          6.9686,
+          2.6264,
+          4.86
+        ],
+        "Material": "Neon",
+        "Color": [
+          210,
+          240,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 600,
+        "VertCount": 1280
+      },
+      {
+        "Name": "Lid_GoldArches",
+        "SubCollection": "ChestLid",
+        "Offset": [
+          0.0,
+          3.8795,
+          0.0
+        ],
+        "Size": [
+          6.57,
+          2.0591,
+          4.404
+        ],
+        "Material": "Metal",
+        "Color": [
+          238,
+          186,
+          78
+        ],
+        "Transparency": 0.0,
+        "Collidable": true,
+        "MeshId": "",
+        "Triangles": 3796,
+        "VertCount": 5858
+      },
+      {
+        "Name": "Lid_CrystalDome",
+        "SubCollection": "ChestLid",
+        "Offset": [
+          -0.0044,
+          3.7421,
+          0.0
+        ],
+        "Size": [
+          5.9687,
+          1.7042,
+          4.0102
+        ],
+        "Material": "Glass",
+        "Color": [
+          96,
+          214,
+          255
+        ],
+        "Transparency": 0.22,
+        "Collidable": true,
+        "MeshId": "",
+        "Triangles": 564,
+        "VertCount": 990
+      },
+      {
+        "Name": "Lid_InnerCore",
+        "SubCollection": "ChestLid",
+        "Offset": [
+          0.0,
+          3.6105,
+          0.0
+        ],
+        "Size": [
+          5.36,
+          1.3591,
+          3.5114
+        ],
+        "Material": "Neon",
+        "Color": [
+          56,
+          165,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 100,
+        "VertCount": 156
+      },
+      {
+        "Name": "Lid_CrownMount",
+        "SubCollection": "ChestLid",
+        "Offset": [
+          0.0,
+          4.7678,
+          0.0
+        ],
+        "Size": [
+          1.3673,
+          0.5756,
+          1.2195
+        ],
+        "Material": "Metal",
+        "Color": [
+          232,
+          182,
+          76
+        ],
+        "Transparency": 0.0,
+        "Collidable": true,
+        "MeshId": "",
+        "Triangles": 540,
+        "VertCount": 864
+      },
+      {
+        "Name": "Lid_ApexDiamond",
+        "SubCollection": "ChestLid",
+        "Offset": [
+          0.0,
+          4.2412,
+          -0.794
+        ],
+        "Size": [
+          6.3614,
+          2.3177,
+          2.9293
+        ],
+        "Material": "Neon",
+        "Color": [
+          140,
+          225,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 208,
+        "VertCount": 440
+      },
+      {
+        "Name": "Lid_FrontClasp",
+        "SubCollection": "ChestLid",
+        "Offset": [
+          0.0,
+          3.12,
+          -1.09
+        ],
+        "Size": [
+          6.312,
+          0.92,
+          2.56
+        ],
+        "Material": "Metal",
+        "Color": [
+          228,
+          236,
+          250
+        ],
+        "Transparency": 0.0,
+        "Collidable": true,
+        "MeshId": "",
+        "Triangles": 700,
+        "VertCount": 1300
+      },
+      {
+        "Name": "Glitch_Shard_1",
+        "SubCollection": "ChestGlitch",
+        "Offset": [
+          3.2079,
+          4.0647,
+          2.7569
+        ],
+        "Size": [
+          0.5937,
+          0.7924,
+          0.3875
+        ],
+        "Material": "Neon",
+        "Color": [
+          46,
+          128,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 60,
+        "VertCount": 150
+      },
+      {
+        "Name": "Glitch_Shard_2",
+        "SubCollection": "ChestGlitch",
+        "Offset": [
+          4.1264,
+          1.7657,
+          0.6528
+        ],
+        "Size": [
+          0.4094,
+          0.8451,
+          0.3967
+        ],
+        "Material": "Neon",
+        "Color": [
+          150,
+          225,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 60,
+        "VertCount": 150
+      },
+      {
+        "Name": "Glitch_Shard_3",
+        "SubCollection": "ChestGlitch",
+        "Offset": [
+          1.1513,
+          5.1158,
+          3.9487
+        ],
+        "Size": [
+          0.4902,
+          0.8514,
+          0.3844
+        ],
+        "Material": "Neon",
+        "Color": [
+          46,
+          128,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 60,
+        "VertCount": 150
+      },
+      {
+        "Name": "Glitch_Shard_4",
+        "SubCollection": "ChestGlitch",
+        "Offset": [
+          -3.7561,
+          4.8665,
+          2.0381
+        ],
+        "Size": [
+          0.3206,
+          0.8917,
+          0.5098
+        ],
+        "Material": "Neon",
+        "Color": [
+          150,
+          225,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 60,
+        "VertCount": 150
+      },
+      {
+        "Name": "Glitch_Shard_5",
+        "SubCollection": "ChestGlitch",
+        "Offset": [
+          -4.1406,
+          3.2632,
+          -1.8491
+        ],
+        "Size": [
+          0.5062,
+          0.712,
+          0.3308
+        ],
+        "Material": "Neon",
+        "Color": [
+          46,
+          128,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 60,
+        "VertCount": 150
+      },
+      {
+        "Name": "Glitch_Shard_6",
+        "SubCollection": "ChestGlitch",
+        "Offset": [
+          -2.6471,
+          1.6642,
+          -3.2533
+        ],
+        "Size": [
+          0.463,
+          0.7684,
+          0.4381
+        ],
+        "Material": "Neon",
+        "Color": [
+          150,
+          225,
+          255
+        ],
+        "Transparency": 0.0,
+        "Collidable": false,
+        "MeshId": "",
+        "Triangles": 60,
+        "VertCount": 150
+      }
+    ]
+  }
+}

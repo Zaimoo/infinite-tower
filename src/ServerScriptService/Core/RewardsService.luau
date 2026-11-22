@@ -6,17 +6,22 @@
 --
 -- Remotes (ReplicatedStorage.Remotes.RewardsRemotes):
 --   RewardsRequest (RemoteFunction): action "GET" | "CLAIM_DAILY" | "CLAIM_WEEKLY" |
---       "CLAIM_PLAYTIME" (tier index) | "REDEEM_CODE" (text). Returns { Ok, Message, State }.
+--       "CLAIM_PLAYTIME" (tier index) | "REDEEM_CODE" (text) | "CLAIM_GROUP_CHEST". Returns { Ok, Message, State }.
 --   RewardsSync (RemoteEvent): the same State, pushed on join, at the UTC day rollover and when the
 --       friend boost changes.
 -- The client only sends requests; every claim is checked here against the server clock (os.time,
 -- UTC), so changing the device clock does nothing.
 
+local CollectionService = game:GetService("CollectionService")
+local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config.RewardsConfig)
+local HubLayout = require(ReplicatedStorage.Shared.Config.HubLayout)
+local GroupChestMeshHydrator = require(ReplicatedStorage.Assets.GroupChestMeshHydrator)
 local RewardRules = require(ReplicatedStorage.Shared.Util.RewardRules)
 local RewardCodes = require(script.Parent.RewardCodes)
 
@@ -38,6 +43,7 @@ local CODE_COOLDOWN = 2 -- seconds between code attempts, so codes cannot be gue
 local recentRequests: { [Player]: { number } } = {}
 local lastCodeAttempt: { [Player]: number } = {}
 local lastTick: { [Player]: number } = {}
+local claimingGroupChest: { [Player]: boolean } = {}
 
 local function allowRequest(player: Player): boolean
 	local now = os.clock()
@@ -147,7 +153,56 @@ local function onPlayerRemoving(player: Player)
 	recentRequests[player] = nil
 	lastCodeAttempt[player] = nil
 	lastTick[player] = nil
+	claimingGroupChest[player] = nil
 	task.defer(recountFriends) -- after the player has left Players
+end
+
+--============================================================================
+-- Group membership & claim
+--============================================================================
+
+local function isPlayerInGroup(player: Player): boolean
+	if RunService:IsStudio() and workspace:GetAttribute("DebugInGroup") ~= nil then
+		return workspace:GetAttribute("DebugInGroup") == true
+	end
+
+	local idsToCheck: { number } = {}
+	local seen: { [number]: boolean } = {}
+	local function addId(id: number?)
+		if type(id) == "number" and id > 0 and not seen[id] then
+			seen[id] = true
+			table.insert(idsToCheck, id)
+		end
+	end
+	for _, id in Config.GroupIds do
+		addId(id)
+	end
+	if game.CreatorType == Enum.CreatorType.Group then
+		addId(game.CreatorId)
+	end
+
+	for _, id in idsToCheck do
+		local ok, inGroup = pcall(function()
+			return player:IsInGroup(id)
+		end)
+		if ok and inGroup == true then
+			return true
+		end
+	end
+
+	-- Fallback to GroupService:GetGroupsAsync so mid-session group joins take effect immediately.
+	local okGroups, groups = pcall(function()
+		return GroupService:GetGroupsAsync(player.UserId)
+	end)
+	if okGroups and type(groups) == "table" then
+		for _, g in groups do
+			if type(g) == "table" and type(g.Id) == "number" and seen[g.Id] then
+				return true
+			end
+		end
+	end
+
+	return false
 end
 
 --============================================================================
@@ -188,6 +243,22 @@ local function handle(player: Player, action: any, arg: any): any
 		lastCodeAttempt[player] = clock
 		reward, problem = RewardRules.RedeemCode(state, now, arg, RewardCodes)
 		title = "Code redeemed"
+	elseif action == "CLAIM_GROUP_CHEST" then
+		if state.GroupChest.Claimed then
+			return reply(player, profile, false, "You already claimed the Group Chest.")
+		end
+		if claimingGroupChest[player] then
+			return reply(player, profile, false, "Claim already in progress.")
+		end
+		claimingGroupChest[player] = true
+		local okCheck, inGroup = pcall(isPlayerInGroup, player)
+		claimingGroupChest[player] = nil
+		if d.GetProfile(player) ~= profile or player.Parent ~= Players then
+			return { Ok = false, Message = "Your save is no longer active." }
+		end
+		state = RewardRules.EnsureState(profile)
+		reward, problem = RewardRules.ClaimGroupChest(state, okCheck and inGroup == true)
+		title = "Group chest"
 	else
 		return { Ok = false, Message = "Unknown request." }
 	end
@@ -216,6 +287,154 @@ end
 function RewardsService.ResetPlaytime(profile: any)
 	local state = RewardRules.EnsureState(profile)
 	RewardRules.ResetPlaytime(state, os.time())
+end
+
+local function resolvePlotCourtyardOrigin(plotIndex: number): CFrame
+	local plotsFolder = Workspace:FindFirstChild("WaitingRoomPlots")
+	local plot = plotsFolder and plotsFolder:FindFirstChild("Plot_" .. tostring(plotIndex))
+	local island = plot and plot:FindFirstChild("FloatingFortressIsland")
+	local top = island and island:FindFirstChild("IslandTopSurface")
+	if top and top:IsA("BasePart") then
+		local surfaceY = top.Position.Y + top.Size.Y * 0.5
+		if top.Size.Z > 200 then
+			return CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
+		end
+		return CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
+	end
+	local spawn = plot and plot:FindFirstChild("PlotSpawn")
+	if spawn and spawn:IsA("BasePart") then
+		local surfaceY = spawn.Position.Y - spawn.Size.Y * 0.5
+		return CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z)
+			* spawn.CFrame.Rotation
+			* CFrame.Angles(0, math.pi, 0)
+			* CFrame.new(0, 0, 38)
+	end
+	return HubLayout.PlotCourtyardCFrame(plotIndex)
+end
+
+local function buildGroupChestModel(parent: Instance, name: string, origin: CFrame, scale: number): (Model, ProximityPrompt)
+	local model = Instance.new("Model")
+	model.Name = name
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+
+	GroupChestMeshHydrator.BuildChest(model, origin, scale)
+
+	local collider = Instance.new("Part")
+	collider.Name = "ChestCollider"
+	collider.Size = Vector3.new(7.0, 5.4, 4.8) * scale
+	collider.CFrame = origin * CFrame.new(0, 2.7 * scale, 0)
+	collider.Anchored = true
+	collider.CanCollide = true
+	collider.Transparency = 1
+	collider.CastShadow = false
+	collider.TopSurface = Enum.SurfaceType.Smooth
+	collider.BottomSurface = Enum.SurfaceType.Smooth
+	collider.Parent = model
+
+	local coreLightAnchor = Instance.new("Part")
+	coreLightAnchor.Name = "CoreLightAnchor"
+	coreLightAnchor.Size = Vector3.new(1, 1, 1)
+	coreLightAnchor.CFrame = origin * CFrame.new(0, 2.2 * scale, 0)
+	coreLightAnchor.Anchored = true
+	coreLightAnchor.CanCollide = false
+	coreLightAnchor.CanQuery = false
+	coreLightAnchor.CanTouch = false
+	coreLightAnchor.Transparency = 1
+	coreLightAnchor.CastShadow = false
+	coreLightAnchor.Massless = true
+	coreLightAnchor.Parent = model
+
+	local light = Instance.new("PointLight")
+	light.Name = "ChestGlitchLight"
+	light.Color = Color3.fromRGB(56, 189, 248)
+	light.Brightness = 1.9
+	light.Range = 20
+	light.Shadows = false
+	light.Parent = coreLightAnchor
+
+	local trigger = Instance.new("Part")
+	trigger.Name = "GroupChestTrigger"
+	trigger.Size = Vector3.new(8.5, 6.0, 6.5) * scale
+	trigger.CFrame = origin * CFrame.new(0, 3.0 * scale, 0)
+	trigger.Anchored = true
+	trigger.CanCollide = false
+	trigger.CanQuery = false
+	trigger.CanTouch = false
+	trigger.Transparency = 1
+	trigger.CastShadow = false
+	trigger.Massless = true
+	trigger.Parent = model
+	model.PrimaryPart = trigger
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "GroupChestPrompt"
+	prompt.ActionText = "Claim 50K Gold + 2K Gems"
+	prompt.ObjectText = "Group Chest"
+	prompt.KeyboardKeyCode = Enum.KeyCode.F
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = trigger
+
+	local anchor = Instance.new("Attachment")
+	anchor.Name = "SignAnchor"
+	anchor.Position = Vector3.new(0, 4.4 * scale, 0)
+	anchor.Parent = trigger
+
+	local board = Instance.new("BillboardGui")
+	board.Name = "GroupChestSign"
+	board.Size = UDim2.fromOffset(320, 68)
+	board.LightInfluence = 0
+	board.MaxDistance = 260
+	board.Adornee = anchor
+	board.Parent = trigger
+
+	local function addSignLabel(labelName: string, y: number, h: number, textSize: number, text: string, color: Color3)
+		local label = Instance.new("TextLabel")
+		label.Name = labelName
+		label.BackgroundTransparency = 1
+		label.Position = UDim2.fromOffset(0, y)
+		label.Size = UDim2.new(1, 0, 0, h)
+		label.Font = Enum.Font.GothamBlack
+		label.TextSize = textSize
+		label.TextColor3 = color
+		label.TextStrokeTransparency = 0.35
+		label.Text = text
+		label.Parent = board
+	end
+	addSignLabel("Title", 0, 38, 28, "GROUP CHEST", Color3.fromRGB(130, 220, 255))
+	addSignLabel("Subtitle", 40, 26, 16, "+50,000 GOLD · +2,000 GEMS", Color3.fromRGB(255, 225, 130))
+
+	CollectionService:AddTag(model, "GroupChestStation")
+	model.Parent = parent
+	return model, prompt
+end
+
+-- Spawns Group Chest stations in front of the right front-gate Gothic wall bay on each plot.
+-- Plot_1 uses `GroupChestStation` under `parent` for direct lookups; Plots 2..N use `GroupChestStation_Plot_N`.
+function RewardsService.BuildGroupChestStation(parent: Instance): (Model, ProximityPrompt)
+	for _, child in parent:GetChildren() do
+		if child.Name == "GroupChestStation" or string.match(child.Name, "^GroupChestStation_Plot_%d+$") then
+			child:Destroy()
+		end
+	end
+
+	local g = HubLayout.GroupChest
+	local scale = g.Scale
+	local localChestCF = CFrame.lookAt(Vector3.new(g.X, 0, g.Z), Vector3.new(g.X, 0, 0))
+
+	local origin1 = if parent == Workspace
+		then resolvePlotCourtyardOrigin(1) * localChestCF
+		else HubLayout.GroupChestCFrame(1)
+	local primaryModel, primaryPrompt = buildGroupChestModel(parent, "GroupChestStation", origin1, scale)
+
+	if parent == Workspace then
+		for i = 2, HubLayout.PlotCount do
+			local plotOrigin = resolvePlotCourtyardOrigin(i) * localChestCF
+			buildGroupChestModel(parent, "GroupChestStation_Plot_" .. tostring(i), plotOrigin, scale)
+		end
+	end
+
+	return primaryModel, primaryPrompt
 end
 
 function RewardsService.Init(dependencies: Dependencies)
@@ -273,6 +492,8 @@ function RewardsService.Init(dependencies: Dependencies)
 			end
 		end
 	end)
+
+	RewardsService.BuildGroupChestStation(Workspace)
 end
 
 return RewardsService

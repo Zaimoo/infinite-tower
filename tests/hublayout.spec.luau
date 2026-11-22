@@ -231,5 +231,44 @@ test("Leaderboard Plaza sits in the eastern promenade wedge clear of Pilgrim's W
 	end
 end)
 
+test("Group Chest sits in front of the right front-gate Gothic wall bay on each plot courtyard, clear of the gate, PlotSpawn, fountain, and Summoning Portal", function()
+	local g = Hub.GroupChest
+	assert(type(g) == "table" and g.X == 29 and g.Z == -49.5, "HubLayout.GroupChest coordinates must be defined")
+	assert(type(Hub.PlotCourtyardCFrame) == "function", "HubLayout.PlotCourtyardCFrame helper must exist")
+	assert(type(Hub.GroupChestCFrame) == "function", "HubLayout.GroupChestCFrame helper must exist")
+
+	-- Half extents of Group Chest at scale 1 are ~3.5 in X and ~2.4 in Z; front plinth ends at Z = -54
+	local halfW, halfD = 3.5 * g.Scale, 2.4 * g.Scale
+	assert(g.X - halfW > 16 + 4, "GroupChest clears WestBridgeGateArch right pier and open door")
+	assert(g.Z - halfD > -54 + 1.5, "GroupChest clears Wall_West_Bay_29 stone plinth")
+	assert(g.X + halfW < 74, "GroupChest stays inside the courtyard walls")
+
+	-- Clear of PlotSpawn at (0, -38), PlazaFountain (radius 16.5 at (0, 0)), and SummoningPortal (48, -34)
+	assert(math.sqrt(g.X ^ 2 + (g.Z + 38) ^ 2) > 15, "GroupChest clears PlotSpawn")
+	assert(math.sqrt(g.X ^ 2 + g.Z ^ 2) > 16.5 + 10, "GroupChest clears PlazaFountain")
+	assert(math.sqrt((g.X - 48) ^ 2 + (g.Z + 34) ^ 2) > 22, "GroupChest clears SummoningPortal")
+
+	-- Verify expected courtyard world position stays inside Plot_N polygon bounds on all 8 plots
+	for i = 1, N do
+		local slot = Hub.PlotSlots[i]
+		local fx, fz = slot.DX, slot.DZ -- local +Z (outward); RightVector (+X) is (-fz, fx)
+		local px, pz = -fz, fx
+		local c = Hub.PlotCentre(i)
+		local courtyardX = c.X - fx * 100
+		local courtyardZ = c.Z - fz * 100
+		local worldX = courtyardX + px * g.X + fx * g.Z
+		local worldZ = courtyardZ + pz * g.X + fz * g.Z
+		local corners = Hub.PlotCorners(i)
+		local minX, maxX = math.huge, -math.huge
+		local minZ, maxZ = math.huge, -math.huge
+		for _, pt in corners do
+			minX, maxX = math.min(minX, pt[1]), math.max(maxX, pt[1])
+			minZ, maxZ = math.min(minZ, pt[2]), math.max(maxZ, pt[2])
+		end
+		assert(worldX > minX + 10 and worldX < maxX - 10, "GroupChest world X inside Plot_" .. i)
+		assert(worldZ > minZ + 10 and worldZ < maxZ - 10, "GroupChest world Z inside Plot_" .. i)
+	end
+end)
+
 print(string.format("HubLayout: %d passed, %d failed", passed, failed))
 if failed > 0 then error("hub layout tests failed") end

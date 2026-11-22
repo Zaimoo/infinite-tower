@@ -49,6 +49,11 @@ RewardsConfig.FriendBoost = table.freeze({
 	MaxFriends = 3, -- +30% at most
 })
 
+-- Group Chest (one-time reward for Roblox group members at the hub Group Chest station).
+RewardsConfig.GroupChest = table.freeze({ Gold = 50000, Gems = 2000 } :: Reward)
+RewardsConfig.GroupId = 558670409
+RewardsConfig.GroupIds = table.freeze({ 558670409, 980345483, 2664056 })
+
 RewardsConfig.MaxCodeLength = 24
 
 assert(#RewardsConfig.Daily == 7, "RewardsConfig: the daily calendar has 7 days")
