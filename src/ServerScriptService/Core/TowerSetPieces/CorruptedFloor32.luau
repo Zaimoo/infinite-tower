@@ -27,80 +27,80 @@ local function tinted(base: any, changes: { [string]: any }): any
 	return o
 end
 
--- Overripe rose-dusk orchard palette: warm weathered timber, mossy fieldstone, rose-stained linen Pale Bands,
--- warm golden-amber leaves, soft rose-pink blossoms, bruised plum fruit, and vivid magenta rot-glow (hue ~305°,
--- never crimson/red so enemy telegraphs stay unmistakable).
+-- Overripe rose-violet orchard palette: plum-tinted orchard bark, twilight fieldstone, violet-stained Pale
+-- Bands, warm autumn-gold leaves, rich orchid-rose blossoms, deep bruised plum fruit, and vivid purple-magenta
+-- rot-glow (hue ~295°-310°, never crimson/red so enemy telegraphs stay unmistakable).
 local ORCHARD = table.freeze({
-	WOOD = swatch(82, 58, 52, Mat.Wood), -- gnarled orchard bark and weathered oak
-	TRIM = swatch(186, 152, 110, Mat.Wood), -- pale cut timber, crutch poles, ladders, screw threads
-	ALT = swatch(198, 146, 72, Mat.Fabric), -- woven wicker skeps, baskets, terracotta pots, golden straw
-	FOLIAGE = swatch(196, 134, 58, Mat.Grass), -- warm autumn-gold orchard foliage
-	CORAL = swatch(238, 152, 178, Mat.Grass), -- overripe rose-pink orchard blossoms & ripe apples
-	CAP = swatch(134, 42, 108, Mat.SmoothPlastic), -- bruised plum-violet foliage & overripe fruit pulp
-	ACCENT = swatch(242, 232, 236, Mat.Grass), -- pale white blossoms
-	MOSS = swatch(102, 92, 58, Mat.Grass), -- olive orchard moss
-	SILK = swatch(224, 186, 198, Mat.Fabric), -- Pale Bands stained faint pink at the knot
-	STONE = swatch(112, 100, 92, Mat.Slate), -- mossy fieldstone walls & footings
-	METAL = swatch(66, 56, 62, Mat.Metal), -- forged vat & press hoops
-	GLOW = swatch(238, 86, 212, Mat.Neon), -- magenta rot-fruit & oozing cider must (hue ~308°)
-	CANDLE = swatch(255, 196, 120, Mat.Neon), -- warm hearth/lantern/hive flame
-	STEM = swatch(64, 44, 54, Mat.Wood),
+	WOOD = swatch(72, 46, 74, Mat.Wood), -- plum-weathered orchard bark and dark oak
+	TRIM = swatch(176, 134, 156, Mat.Wood), -- pale lavender-weathered timber, crutch poles, ladders, screw threads
+	ALT = swatch(198, 136, 98, Mat.Fabric), -- woven wicker skeps, baskets, warm straw
+	FOLIAGE = swatch(196, 126, 108, Mat.Grass), -- warm dusk-plum/amber orchard foliage
+	CORAL = swatch(226, 114, 218, Mat.Grass), -- overripe orchid-rose orchard blossoms & ripe fruit
+	CAP = swatch(124, 34, 152, Mat.SmoothPlastic), -- deep bruised purple-plum foliage & fruit pulp
+	ACCENT = swatch(238, 218, 248, Mat.Grass), -- pale lilac-white blossoms
+	MOSS = swatch(92, 66, 104, Mat.Grass), -- twilight violet-olive moss
+	SILK = swatch(222, 178, 234, Mat.Fabric), -- Pale Bands stained violet-pink at the knot
+	STONE = swatch(106, 86, 118, Mat.Slate), -- twilight mossy fieldstone walls & footings
+	METAL = swatch(62, 46, 74, Mat.Metal), -- forged vat & press hoops
+	GLOW = swatch(222, 74, 255, Mat.Neon), -- vivid purple-magenta rot-fruit & oozing cider must (hue ~295°)
+	CANDLE = swatch(255, 196, 132, Mat.Neon), -- warm hearth/lantern/hive flame
+	STEM = swatch(58, 36, 72, Mat.Wood),
 })
 
--- The Grafted Crown's five-species palette: pink blossom (CORAL), golden autumn (ALT), olive fruiting (FOLIAGE),
--- deep plum-berry (CAP), pale white blossom (ACCENT), and stained linen Pale Bands (SILK).
+-- The Grafted Crown's five-species palette: orchid-pink blossom (CORAL), golden autumn (ALT), olive fruiting
+-- (FOLIAGE), deep purple-plum (CAP), pale lilac-white blossom (ACCENT), and stained linen Pale Bands (SILK).
 local CROWN_TINT = tinted(ORCHARD, {
-	WOOD = swatch(74, 50, 48, Mat.Wood),
-	CORAL = swatch(244, 156, 188, Mat.Grass),
-	ALT = swatch(224, 154, 52, Mat.Grass),
-	FOLIAGE = swatch(114, 136, 58, Mat.Grass),
-	CAP = swatch(138, 38, 92, Mat.Grass),
-	ACCENT = swatch(240, 234, 238, Mat.Grass),
-	SILK = swatch(228, 210, 206, Mat.Fabric),
-	GLOW = swatch(242, 88, 218, Mat.Neon),
+	WOOD = swatch(66, 40, 68, Mat.Wood),
+	CORAL = swatch(236, 118, 224, Mat.Grass),
+	ALT = swatch(224, 150, 74, Mat.Grass),
+	FOLIAGE = swatch(112, 132, 74, Mat.Grass),
+	CAP = swatch(132, 34, 158, Mat.Grass),
+	ACCENT = swatch(236, 220, 248, Mat.Grass),
+	SILK = swatch(226, 196, 236, Mat.Fabric),
+	GLOW = swatch(226, 76, 255, Mat.Neon),
 })
 
--- Blossoming pink-and-gold orchard variant (for south/mid orchard rows and pleached arches).
+-- Blossoming orchid-purple and rose-gold orchard variant (for south/mid orchard rows and pleached arches).
 local BLOSSOM = tinted(ORCHARD, {
-	FOLIAGE = swatch(172, 138, 66, Mat.Grass),
-	CORAL = swatch(246, 162, 190, Mat.Grass),
+	FOLIAGE = swatch(168, 104, 138, Mat.Grass),
+	CORAL = swatch(234, 122, 228, Mat.Grass),
 })
 
--- Deeper dusk-plum variant for upper rows near the ridge, Thorn Saddle, and the Pressing Hollow.
+-- Deeper dusk-violet variant for upper rows near the ridge, Thorn Saddle, and the Pressing Hollow.
 local ROTTEN = tinted(ORCHARD, {
-	WOOD = swatch(52, 36, 46, Mat.Wood),
-	FOLIAGE = swatch(124, 52, 98, Mat.Grass),
-	CORAL = swatch(198, 92, 156, Mat.Grass),
-	CAP = swatch(118, 34, 102, Mat.SmoothPlastic),
-	MOSS = swatch(76, 46, 68, Mat.Grass),
-	SILK = swatch(210, 152, 182, Mat.Fabric),
-	STONE = swatch(88, 76, 82, Mat.Slate),
+	WOOD = swatch(48, 28, 62, Mat.Wood),
+	FOLIAGE = swatch(112, 38, 146, Mat.Grass),
+	CORAL = swatch(184, 72, 206, Mat.Grass),
+	CAP = swatch(108, 26, 142, Mat.SmoothPlastic),
+	MOSS = swatch(70, 38, 92, Mat.Grass),
+	SILK = swatch(204, 142, 220, Mat.Fabric),
+	STONE = swatch(82, 64, 98, Mat.Slate),
 })
 
 local LAMP_TINT = tinted(ORCHARD, {
-	GLOW = swatch(255, 184, 108, Mat.Neon),
+	GLOW = swatch(255, 184, 116, Mat.Neon),
 })
 
 local SKEP_TINT = tinted(ORCHARD, {
-	ALT = swatch(206, 158, 78, Mat.Fabric),
-	TRIM = swatch(154, 114, 58, Mat.Wood),
-	GLOW = swatch(255, 178, 96, Mat.Neon),
-	CANDLE = swatch(255, 224, 156, Mat.Neon),
+	ALT = swatch(206, 152, 88, Mat.Fabric),
+	TRIM = swatch(148, 102, 84, Mat.Wood),
+	GLOW = swatch(242, 146, 232, Mat.Neon),
+	CANDLE = swatch(255, 214, 162, Mat.Neon),
 })
 
 local BENCH_TINT = tinted(ORCHARD, {
-	ALT = swatch(174, 96, 64, Mat.SmoothPlastic), -- terracotta clay rootstock pots
-	GLOW = swatch(255, 174, 88, Mat.Neon), -- warm bubbling grafting wax
+	ALT = swatch(166, 86, 98, Mat.SmoothPlastic), -- clay rootstock pots
+	GLOW = swatch(242, 136, 236, Mat.Neon), -- glowing violet-amber grafting wax
 })
 
 local BLOOM = tinted(ORCHARD, {
-	STEM = swatch(54, 32, 50, Mat.SmoothPlastic),
-	CAP = swatch(214, 78, 186, Mat.SmoothPlastic),
-	GLOW = swatch(248, 110, 224, Mat.Neon),
+	STEM = swatch(52, 28, 68, Mat.SmoothPlastic),
+	CAP = swatch(194, 62, 224, Mat.SmoothPlastic),
+	GLOW = swatch(232, 92, 255, Mat.Neon),
 })
 
-local ROT_LIGHT = rgb(236, 88, 212)
-local LAMP_LIGHT = rgb(255, 182, 108)
+local ROT_LIGHT = rgb(216, 72, 248)
+local LAMP_LIGHT = rgb(255, 182, 118)
 
 -- Floor 32's landmark footprints (local floor space, scaled), checked offline by the specs against every
 -- walkway lane, camp (34-stud clearance) and portal spot, and reserved so clutter passes keep off them.

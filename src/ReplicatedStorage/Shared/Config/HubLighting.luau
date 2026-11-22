@@ -433,12 +433,12 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.26, AtmosphereColor = c(168, 118, 126), AtmosphereDecay = c(110, 56, 96), AtmosphereHaze = 0.75,
 		TintColor = c(255, 238, 222), Saturation = 0.16, Contrast = 0.12, ExposureCompensation = 0.04, BloomIntensity = 0.42,
 	},
-	-- Floor 32, Twisted Orchard: overripe rose dusk. Warm rose-amber low sun over the terraced orchard slope,
-	-- heavy sweet rose-violet haze, glowing rot-fruit and magenta cider must against warm timber and blossoms.
+	-- Floor 32, Twisted Orchard: overripe rose-violet dusk. Deep purple-violet dusk sky and haze,
+	-- lush royal-violet shadows, glowing violet-magenta rot-fruit and cider must across the orchard slope.
 	[32] = {
-		Ambient = c(96, 58, 72), OutdoorAmbient = c(144, 92, 102), ColorShift_Top = c(255, 174, 152), ColorShift_Bottom = c(112, 46, 82),
-		AtmosphereDensity = 0.34, AtmosphereColor = c(194, 116, 146), AtmosphereDecay = c(132, 56, 106), AtmosphereHaze = 1.2,
-		TintColor = c(255, 226, 230), Saturation = 0.12, Contrast = 0.06, ExposureCompensation = 0.05, BloomIntensity = 0.46,
+		Ambient = c(74, 34, 126), OutdoorAmbient = c(116, 58, 176), ColorShift_Top = c(198, 114, 255), ColorShift_Bottom = c(96, 30, 152),
+		AtmosphereDensity = 0.35, AtmosphereColor = c(146, 58, 198), AtmosphereDecay = c(84, 24, 138), AtmosphereHaze = 1.3,
+		TintColor = c(222, 184, 255), Saturation = 0.24, Contrast = 0.10, ExposureCompensation = 0.08, BloomIntensity = 0.52,
 	},
 }
 HubLighting.FloorGrades = FloorGrades
