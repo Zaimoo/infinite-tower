@@ -78,6 +78,11 @@ return function(keepImported: boolean?): string
 	local missing = {}
 
 	for root, byTemplate in byRoot do
+		-- Reset any arbitrary camera-yaw placement (e.g. Open Cloud insert_asset) before measuring bounds.
+		if root:IsA("PVInstance") then
+			root:PivotTo(CFrame.identity)
+		end
+
 		-- 2. Unit scale: the importer scales every template alike; take the median ratio of authored to imported height.
 		local ratios = {}
 		for name, parts in byTemplate do
@@ -168,8 +173,8 @@ return function(keepImported: boolean?): string
 				p.RenderFidelity = Enum.RenderFidelity.Automatic
 				p.DoubleSided = false
 				for _, child in p:GetChildren() do
-					-- Colour and material come from the role palette at runtime; drop importer materials.
-					if child:IsA("SurfaceAppearance") then
+					-- Colour and material come from the role palette at runtime; drop importer materials and package links.
+					if child:IsA("SurfaceAppearance") or child:IsA("PackageLink") then
 						child:Destroy()
 					end
 				end
