@@ -185,6 +185,108 @@ test("Floor 26 has its own Kairnfolk kit: at least eight new templates and a 95+
 	assert(gate.Size.Y * 1.45 > 30, "the bell-gate does not clear the walk")
 end)
 
+test("Floor 31 has its own Blighted Verge kit: at least eight new templates and a 105+ stud Heartrot Spring", function()
+	local f31 = { "HollinWaterMill", "MillWheel", "FieldstoneWeir", "PaleBandTree", "GraftKnotPost", "WardensLeanTo",
+		"SawnStumpCluster", "HeartrotSpringTrunk", "HollinStileArch", "WattleFence", "FieldstoneCairn", "FelledBandLog",
+		"HangingLantern", "AutumnGrassTuft", "RotBloomCluster" }
+	for _, name in f31 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 31 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f31 >= 8)
+	-- The Heartrot Spring elder (placed at scale 1.25) clears the ladder's 105 studs.
+	assert(Kit.ExtraTemplates.HeartrotSpringTrunk.Size.Y * 1.25 >= 105)
+	-- The Pale Bands are linen (SILK) on every banded template.
+	for _, name in { "PaleBandTree", "GraftKnotPost", "HollinStileArch", "FieldstoneCairn", "FelledBandLog" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "SILK"), name .. " has no Pale Band")
+	end
+end)
+
+test("Floor 32 has its own Twisted Orchard kit: at least nine new templates and a 125+ stud Great Cider Press", function()
+	local f32 = {
+		"GreatCiderPress", "PressHouseRoof", "GraftedCrownTree", "GraftedFruitTreeA", "GraftedFruitTreeB",
+		"GraftedFruitTreeC", "PleachedArch", "EspalierWall", "BeeSkepBench", "CiderVatSplit",
+		"GraftingBench", "FruitBasketPile", "CrutchPoleProp", "ThornBrambleArch", "HollinBench",
+	}
+	for _, name in f32 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 32 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f32 >= 9)
+	-- The Great Cider Press (placed at scale 1.2) clears the ladder's 125 studs.
+	assert(Kit.ExtraTemplates.GreatCiderPress.Size.Y * 1.2 >= 125)
+	-- The Grafted Crown carries five distinct seasonal crown roles plus linen Pale Bands.
+	for _, role in { "CORAL", "ALT", "FOLIAGE", "CAP", "ACCENT", "SILK" } do
+		assert(table.find(Kit.ExtraTemplates.GraftedCrownTree.Roles, role), "GraftedCrownTree missing role " .. role)
+	end
+	-- Pale Bands are linen (SILK) on every banded orchard template.
+	for _, name in { "GraftedCrownTree", "GraftedFruitTreeA", "GraftedFruitTreeB", "GraftedFruitTreeC", "PleachedArch" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "SILK"), name .. " has no Pale Band")
+	end
+end)
+
+test("Floor 33 has its own Briar Labyrinth kit: at least ten new templates, low hedges and a 150+ stud Thornheart", function()
+	local f33 = {
+		"ThornheartKnot", "BriarGatehouse", "HedgeWallStraight", "HedgeWallCorner", "HedgeWallBroken",
+		"WattleCroft", "ScarecrowProp", "HangingPlanterPergola", "FieldstoneWellhead", "GibbetCage",
+		"RotRoseBush", "TopiaryStag", "TopiaryGraftKnot", "ThreeArmSignpost", "ThornKnotCluster",
+		"WardenSkeleton",
+	}
+	for _, name in f33 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 33 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f33 >= 10)
+	-- The Thornheart centrepiece (placed at scale 1.1) clears the ladder's 150 studs.
+	assert(Kit.ExtraTemplates.ThornheartKnot.Size.Y * 1.1 >= 150)
+	-- Every labyrinth hedge piece stays at or under 9 studs so the gameplay camera reads the maze from above.
+	for _, name in { "HedgeWallStraight", "HedgeWallCorner", "HedgeWallBroken" } do
+		assert(Kit.ExtraTemplates[name].Size.Y <= 9, name .. " is taller than the 9-stud hedge limit")
+	end
+	-- Pale Bands are linen (SILK) on the banded labyrinth templates.
+	for _, name in { "BriarGatehouse", "ThreeArmSignpost", "ScarecrowProp", "WardenSkeleton", "GibbetCage" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "SILK"), name .. " has no Pale Band")
+	end
+end)
+
+test("Floor 34 has its own Heartrot Stronghold kit: at least eleven new templates and a 175+ stud Great Rotwood", function()
+	local f34 = {
+		"GreatRotwoodCavity", "ElderTrunkRootFlare", "ElderTrunkBoleA", "ElderTrunkBoleB", "ElderTrunkFork",
+		"TreehouseKeep", "ShelfFungusBracket", "SapTapCistern", "SeedJarStack", "StakePalisadeSegment",
+		"StiltHut", "WeepingGallowsTree", "SunkenWardenBoat", "BranchBridgeHanger",
+	}
+	for _, name in f34 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 34 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f34 >= 11)
+	-- The Great Rotwood centrepiece (placed at Y scale 1.15) clears the ladder's 175 studs.
+	assert(Kit.ExtraTemplates.GreatRotwoodCavity.Size.Y * 1.15 >= 175)
+	-- Pale Bands are linen (SILK) on every banded stronghold template.
+	for _, name in { "GreatRotwoodCavity", "ElderTrunkBoleA", "TreehouseKeep", "StakePalisadeSegment", "WeepingGallowsTree", "BranchBridgeHanger" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "SILK"), name .. " has no Pale Band")
+	end
+end)
+
+test("Floor 35 has its own Sovereign's Grove kit: at least twelve new templates and a 230+ stud Mother Graft", function()
+	local f35 = {
+		"MotherGraftTrunk", "MotherGraftLimbOak", "MotherGraftLimbPine", "MotherGraftLimbFruit",
+		"RootRidgeSegment", "RootKneeJunction", "LastWardenGraft", "RotbloomGiant", "FallenCrownBranch",
+		"SapfallRibbon", "HeartrotGeode", "ThornCagedSeed", "MossMantle", "WardenRootShrine",
+	}
+	for _, name in f35 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 35 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f35 >= 12)
+	-- The Mother Graft colossus (placed at Y scale 1.15) clears the ladder's 230 studs.
+	assert(Kit.ExtraTemplates.MotherGraftTrunk.Size.Y * 1.15 >= 230)
+	-- Pale Bands are linen (SILK) on every banded grove template.
+	for _, name in { "MotherGraftTrunk", "LastWardenGraft", "FallenCrownBranch", "ThornCagedSeed", "WardenRootShrine" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "SILK"), name .. " has no Pale Band")
+	end
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -279,6 +381,17 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[24] ~= nil, "floor 24 (Ironflame Bulwark) has its siege-red night grade")
 	assert(Light.FloorGrades[25] ~= nil, "floor 25 (Titan's Crucible) has its molten-heart grade")
 	assert(Light.FloorGrades[26] ~= nil, "floor 26 (Stormgrass Rise) has its storm-breaking dawn grade")
+	assert(Light.FloorGrades[31] ~= nil, "floor 31 (Blighted Verge) has its sickly gold afternoon grade")
+	assert(Light.FloorGrades[31].AtmosphereHaze < Light.BiomeGrades[7].AtmosphereHaze, "floor 31 is the least murky Corrupted floor")
+	assert(Light.FloorGrades[32] ~= nil, "floor 32 (Twisted Orchard) has its overripe rose dusk grade")
+	assert(Light.FloorGrades[32].AtmosphereHaze > Light.FloorGrades[31].AtmosphereHaze, "floor 32 is hazier than floor 31")
+	assert(Light.FloorGrades[33] ~= nil, "floor 33 (Briar Labyrinth) has its hard-shadow noon grade")
+	assert(Light.FloorGrades[33].Contrast >= 0.15, "floor 33 keeps crisp thorn-shadow contrast")
+	assert(Light.FloorGrades[33].AtmosphereHaze < Light.FloorGrades[32].AtmosphereHaze, "floor 33 is clearer than floor 32's dusk haze")
+	assert(Light.FloorGrades[34] ~= nil, "floor 34 (Heartrot Stronghold) has its canopy gloom grade")
+	assert(Light.FloorGrades[34].AtmosphereDensity >= 0.38 and Light.FloorGrades[34].SunRaysIntensity > 0, "floor 34 keeps canopy gloom and sun-ray shafts")
+	assert(Light.FloorGrades[35] ~= nil, "floor 35 (Sovereign's Grove) has its blight-eclipse grade")
+	assert(Light.FloorGrades[35].BloomIntensity >= 0.58, "floor 35 highlights the Mother Graft cavity with eclipse bloom")
 	assert(Light.TowerPreset(6, 27) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400

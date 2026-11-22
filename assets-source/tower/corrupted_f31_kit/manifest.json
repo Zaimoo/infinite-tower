@@ -1,0 +1,283 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AutumnGrassTuft": {
+      "Min": [
+        -1.918,
+        -0.059,
+        -1.561
+      ],
+      "Roles": {
+        "FOLIAGE": 192
+      },
+      "Size": [
+        3.846,
+        2.683,
+        3.213
+      ],
+      "Triangles": 192
+    },
+    "FelledBandLog": {
+      "Min": [
+        -30.411,
+        -2.647,
+        -6.705
+      ],
+      "Roles": {
+        "MOSS": 100,
+        "SILK": 410,
+        "TRIM": 44,
+        "WOOD": 428
+      },
+      "Size": [
+        62.252,
+        14.438,
+        12.748
+      ],
+      "Triangles": 982
+    },
+    "FieldstoneCairn": {
+      "Min": [
+        -7.297,
+        -0.4,
+        -8.92
+      ],
+      "Roles": {
+        "MOSS": 20,
+        "SILK": 300,
+        "STONE": 320,
+        "WOOD": 90
+      },
+      "Size": [
+        14.965,
+        10.525,
+        15.819
+      ],
+      "Triangles": 730
+    },
+    "FieldstoneWeir": {
+      "Min": [
+        -19.272,
+        0.0,
+        -4.699
+      ],
+      "Roles": {
+        "MOSS": 100,
+        "STONE": 600
+      },
+      "Size": [
+        38.339,
+        6.536,
+        12.135
+      ],
+      "Triangles": 700
+    },
+    "GraftKnotPost": {
+      "Min": [
+        -2.261,
+        0.0,
+        -1.363
+      ],
+      "Roles": {
+        "MOSS": 20,
+        "SILK": 50,
+        "TRIM": 160,
+        "WOOD": 112
+      },
+      "Size": [
+        4.521,
+        10.425,
+        3.251
+      ],
+      "Triangles": 342
+    },
+    "HangingLantern": {
+      "Min": [
+        -1.32,
+        0.0,
+        -1.159
+      ],
+      "Roles": {
+        "CANDLE": 20,
+        "GLOW": 80,
+        "TRIM": 14,
+        "WOOD": 188
+      },
+      "Size": [
+        2.64,
+        5.2,
+        2.318
+      ],
+      "Triangles": 302
+    },
+    "HeartrotSpringTrunk": {
+      "Min": [
+        -29.911,
+        -1.939,
+        -31.766
+      ],
+      "Roles": {
+        "GLOW": 282,
+        "MOSS": 140,
+        "STONE": 180,
+        "WOOD": 1850
+      },
+      "Size": [
+        55.326,
+        90.848,
+        61.901
+      ],
+      "Triangles": 2452
+    },
+    "HollinStileArch": {
+      "Min": [
+        -23.964,
+        -0.571,
+        -2.239
+      ],
+      "Roles": {
+        "MOSS": 40,
+        "SILK": 164,
+        "TRIM": 180,
+        "WOOD": 634
+      },
+      "Size": [
+        47.817,
+        28.224,
+        4.484
+      ],
+      "Triangles": 1018
+    },
+    "HollinWaterMill": {
+      "Min": [
+        -13.265,
+        0.0,
+        -9.536
+      ],
+      "Roles": {
+        "ALT": 182,
+        "GLOW": 24,
+        "MOSS": 80,
+        "STONE": 324,
+        "TRIM": 495,
+        "WOOD": 1321
+      },
+      "Size": [
+        27.525,
+        24.9,
+        19.068
+      ],
+      "Triangles": 2426
+    },
+    "MillWheel": {
+      "Min": [
+        -2.8,
+        -0.547,
+        -9.55
+      ],
+      "Roles": {
+        "TRIM": 38,
+        "WOOD": 2254
+      },
+      "Size": [
+        6.2,
+        19.097,
+        19.1
+      ],
+      "Triangles": 2292
+    },
+    "PaleBandTree": {
+      "Min": [
+        -14.329,
+        -0.656,
+        -14.888
+      ],
+      "Roles": {
+        "FOLIAGE": 180,
+        "MOSS": 20,
+        "SILK": 120,
+        "TRIM": 80,
+        "WOOD": 504
+      },
+      "Size": [
+        28.549,
+        35.669,
+        30.963
+      ],
+      "Triangles": 904
+    },
+    "RotBloomCluster": {
+      "Min": [
+        -2.551,
+        -0.024,
+        -2.148
+      ],
+      "Roles": {
+        "CAP": 728,
+        "GLOW": 180,
+        "STEM": 110
+      },
+      "Size": [
+        6.392,
+        3.12,
+        4.563
+      ],
+      "Triangles": 1018
+    },
+    "SawnStumpCluster": {
+      "Min": [
+        -6.718,
+        -0.375,
+        -6.391
+      ],
+      "Roles": {
+        "MOSS": 20,
+        "TRIM": 176,
+        "WOOD": 482
+      },
+      "Size": [
+        14.218,
+        2.975,
+        13.854
+      ],
+      "Triangles": 678
+    },
+    "WardensLeanTo": {
+      "Min": [
+        -8.2,
+        -0.085,
+        -5.009
+      ],
+      "Roles": {
+        "ALT": 44,
+        "GLOW": 64,
+        "SILK": 30,
+        "STONE": 160,
+        "WOOD": 196
+      },
+      "Size": [
+        16.4,
+        8.925,
+        14.452
+      ],
+      "Triangles": 494
+    },
+    "WattleFence": {
+      "Min": [
+        -7.285,
+        -0.5,
+        -0.52
+      ],
+      "Roles": {
+        "WOOD": 452
+      },
+      "Size": [
+        14.571,
+        5.256,
+        1.04
+      ],
+      "Triangles": 452
+    }
+  },
+  "Unit": "studs"
+}

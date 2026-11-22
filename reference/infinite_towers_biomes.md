@@ -63,6 +63,8 @@ A rugged highland region dominated by towering mountains, shattered cliffs, and 
 
 Once a flourishing woodland, this forest has been consumed by a mysterious corrupting force. Trees twist into unnatural shapes, their bark blackened and their roots pulsing with sinister energy. Sickly purple mist blankets the ground, while crimson growths spread across decaying vegetation. Creatures inhabiting the grove have become warped and aggressive, and traces of the forest's former beauty remain trapped beneath the spreading corruption.
 
+**Floors 31–35 (`docs/prompts/corrupted-grove-floor-layouts-prompt.md`):** the grove was tended by the **Hollin**, grove-wardens and grafters who built by growing (pleached arches, wattle hedges, treehouses, cider presses). They grafted every tree of the forest onto one trunk, the Mother Graft; its heartwood rotted (the Heartrot), and it woke as the Blight Sovereign. Their sigil is the **graft-knot**: two branches crossed and bound by a ring. The **Rotpulse** (planned, client-only) is a slow magenta pulse of rot-light out along the roots that beats faster floor by floor. The player follows the wardens' **Pale Bands**, linen bands tied round every tree they saved, clean on Floor 31 and stained, torn and soaked by Floor 35.
+
 ## 8. Sunken Sanctuary
 
 **Theme:** Water / Submerged Civilization

@@ -13,13 +13,18 @@ local InfernalSetPieces = require(script.Parent.TowerSetPieces.InfernalFoundry)
 local ThunderSetPieces = require(script.Parent.TowerSetPieces.ThunderHighlands)
 local InfernalFloor24 = require(script.Parent.TowerSetPieces.InfernalFloor24)
 local InfernalFloor25 = require(script.Parent.TowerSetPieces.InfernalFloor25)
+local CorruptedSetPieces = require(script.Parent.TowerSetPieces.CorruptedGrove)
+local CorruptedFloor32 = require(script.Parent.TowerSetPieces.CorruptedFloor32)
+local CorruptedFloor33 = require(script.Parent.TowerSetPieces.CorruptedFloor33)
+local CorruptedFloor34 = require(script.Parent.TowerSetPieces.CorruptedFloor34)
+local CorruptedFloor35 = require(script.Parent.TowerSetPieces.CorruptedFloor35)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
-local CampExemptKinds = { RampArch = true, GlassArchSpan = true, PortcullisGate = true }
+local CampExemptKinds = { RampArch = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true }
 
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
@@ -64,6 +69,12 @@ end
 Assets.AirborneKinds = table.freeze({
 	Ring = true, Chain = true, Cogwheel = true, Orrery = true, Eclipse = true, CavernSkylight = true, CeilingRoots = true,
 	GalaxyPortal = true, LotusPortal = true, CorruptionCrescent = true, AirborneVineCable = true,
+	-- Floor 31's wicker lanterns hang from trees, the stile and the lean-to (TowerSetPieces/CorruptedGrove).
+	WoodcuttersLantern = true, LastGreenLantern = true, CopseLantern = true, StileLantern = true,
+	-- Floor 32's orchard lanterns hang from the Orchard Gate, Grafters' Yard and cooperage shed.
+	OrchardGateLantern = true, YardLantern = true, VatsLantern = true,
+	-- Floor 33's Hedge Stile arrival lantern & Floor 34's Bog Stair arrival lantern.
+	HedgeStileLantern = true, BogStairLantern = true,
 })
 
 -- field: the floor's TowerTerrain field on a natural floor (the kit imported), else nil.
@@ -79,6 +90,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	local seaLevel = layout.Bottom
 	local bottom = layout.Bottom - 4
 	local scale = 0.85 + index * 0.09
+	-- Authored Corrupted Grove floors (31-35) build their own set pieces (TowerSetPieces/CorruptedGrove) and
+	-- skip the biome's generic thorn arches, corruption dais and citadel wings.
+	local corruptedFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 10) == "corrupted:"
 	local accent = theme.LightColor
 	local cliffColor = theme.CliffColor or theme.WallColor
 	local cliffMat = theme.CliffMaterial or Enum.Material.Rock
@@ -849,7 +863,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		rampArch(stairMid, stairYaw, 42, 34 * scale, 9, gold)
 	end
 
-	if biome == "corrupted_grove" then
+	if biome == "corrupted_grove" and not corruptedFloor then
 		for _, at in { { ramp1Mid, ramp1Yaw }, { ramp2Mid, ramp2Yaw }, { stairMid, stairYaw } } do
 			ring("PathwayThornArch", at[1] + V(0, 8, 0), 28 * scale, 3.2, rgb(24, 16, 28), Enum.Material.Wood, CFrame.Angles(0, at[2], 0), 0.15, math.pi - 0.15, 12)
 		end
@@ -6453,17 +6467,23 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	end
 
 	-- Infernal Foundry authored floors build their set pieces in TowerSetPieces/InfernalFoundry (Floors 21-23)
-	-- and per-floor modules (InfernalFloor24, InfernalFloor25), through these builders.
-	local infernalBuild = if layout.Authored == "infernal:1" then InfernalSetPieces.Floor21
+	-- and per-floor modules (InfernalFloor24, InfernalFloor25), and Corrupted Grove floors in
+	-- TowerSetPieces/CorruptedGrove, through these builders.
+	local setPieceBuild = if layout.Authored == "infernal:1" then InfernalSetPieces.Floor21
 		elseif layout.Authored == "infernal:2" then InfernalSetPieces.Floor22
 		elseif layout.Authored == "infernal:3" then InfernalSetPieces.Floor23
 		elseif layout.Authored == "infernal:4" then InfernalFloor24.Build
 		elseif layout.Authored == "infernal:5" then InfernalFloor25.Build
 		-- Thunder Highlands authored floors (Floor 26 onward): TowerSetPieces/ThunderHighlands.
 		elseif layout.Authored == "thunder:1" then ThunderSetPieces.Floor26
+		elseif layout.Authored == "corrupted:1" then CorruptedSetPieces.Floor31
+		elseif layout.Authored == "corrupted:2" then CorruptedFloor32.Build
+		elseif layout.Authored == "corrupted:3" then CorruptedFloor33.Build
+		elseif layout.Authored == "corrupted:4" then CorruptedFloor34.Build
+		elseif layout.Authored == "corrupted:5" then CorruptedFloor35.Build
 		else nil
-	if infernalBuild then
-		infernalBuild({
+	if setPieceBuild then
+		setPieceBuild({
 			origin = origin, layout = layout, field = field, w = w, d = d, h = h, bottom = bottom,
 			group = group, block = block, beam = beam, cyl = cyl, orb = orb, ring = ring,
 			pointLight = pointLight, kitAt = kitAt, has = KitProps.Has, footprintClear = footprintClear,
@@ -6511,8 +6531,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
-	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" then
-		-- Floors 16-25 own their north horizon backdrops directly (Floors 21-25: TowerSetPieces).
+	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or corruptedFloor then
+		-- Floors 16-25 and 31-35 own their north horizon backdrops directly (Floors 21-25, 31-35: TowerSetPieces).
 	else
 		-- Authored Fungal floors have their own backdrop: the cavern wall itself (Floor 6's Crown Cluster grows on it).
 		for _, s in if fungalFloor then {} else { -1, 1 } do
@@ -7295,6 +7315,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 		beam("ApexLightningBoltMain", backdrop + V(0, 92 * scale, -4), V(0, h - 6, backdrop.Z + 18), 3.0, rgb(215, 238, 255), Enum.Material.Neon)
 
+	elseif corruptedFloor then
+		-- Floors 31-35 build their own Apex landmarks and horizon (TowerSetPieces/CorruptedGrove).
 	elseif biome == "corrupted_grove" then
 		group("CorruptionDais", function()
 			for step = 1, 3 do
@@ -7705,7 +7727,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local understory = if (layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5") and KitProps.Has("CoalHeap") and KitProps.Has("ScrapHeap")
 			then { "CoalHeap", "ScrapHeap", "ForgeScrap", "BoulderCluster" }
 			else eco.Understory
-		for _ = 1, math.floor(w * d / 1800) do
+		-- An authored floor can thin the meadow too (Floor 31: its own autumn and blight ground cover instead).
+		for _ = 1, math.floor(w * d / 1800 * (td.MeadowScale or 1)) do
 			local name = pick(understory)
 			local ms = rand:NextNumber(0.6, 1.1)
 			local mr = radiusOf(name, ms)
