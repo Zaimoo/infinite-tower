@@ -2522,6 +2522,124 @@ local AUTHORED: {[number]: any} = {
 			MeadowScale = 0.04,
 		},
 	},
+	-- Floor 36, Drowned Steps (Sunken Sanctuary Introduction; docs/prompts/sunken-sanctuary-floor-layouts-prompt.md,
+	-- guide image reference/Sunken Sanctuary 36.webp): the Nereth city's sea-front at low tide. A tide-flat of
+	-- turquoise shallows and sandbars; the Pilgrim Stair climbs from the Stair Foot up the First Flight to the
+	-- Pilgrims' Landing, and then stops: its middle flight lies broken in the surf with its bell drowned under it,
+	-- and there is NO link from the Landing to the Bell Landing beyond the gap. Detours run round it east (the Votive
+	-- Pool) and west (the wrecked Hollin barge on its sandbar, then Cantors' Rock), and a scenic one climbs the
+	-- Tidepool Steps to the Upper Pools. The Apex, the Bell Stack, is a sheer limestone sea-stack in the back-west,
+	-- crowned by the shrine of the first Tidebell and reached up the Bell Stair (south) or from Cantors' Rock (west).
+	[36] = {
+		Key = "sunken:1",
+		Name = "Drowned Steps",
+		Size = { Width = 570, Depth = 600, Height = 210 },
+		PathStyle = "NERETH",
+		Basin = { X = 0, Y = 0, Z = 155, Width = 538, Depth = 96 },
+		Crossing = { X = 30, Y = 8, Z = 30, Width = 76, Depth = 60 },
+		WestGallery = { X = -170, Y = 4, Z = 40, Width = 84, Depth = 72 },
+		EastGallery = { X = 195, Y = 12, Z = 45, Width = 84, Depth = 72 },
+		ExtraPlatforms = {
+			Wreck = { X = -185, Y = 6, Z = -62, Width = 64, Depth = 48 },
+			Votive = { X = 85, Y = 10, Z = -55, Width = 56, Depth = 48 },
+			PilgrimLanding = { X = -30, Y = 16, Z = -52, Width = 64, Depth = 52 },
+			CantorRock = { X = -222, Y = 20, Z = -196, Width = 56, Depth = 48 },
+			BellLanding = { X = 10, Y = 24, Z = -140, Width = 64, Depth = 52 },
+			UpperPools = { X = 150, Y = 28, Z = -150, Width = 72, Depth = 60 },
+		},
+		Apex = { X = -85, Y = 32, Z = -228, Width = 116, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "Crossing" },
+			{ "Basin", "EastGallery" },
+			{ "Crossing", "PilgrimLanding" }, -- the First Flight
+			{ "WestGallery", "Wreck" }, -- the Barge Causeway
+			{ "PilgrimLanding", "Wreck" }, -- the Landing Causeway, down to the barge
+			{ "Wreck", "CantorRock" },
+			{ "CantorRock", "Apex" },
+			{ "Crossing", "Votive" }, -- the Votive Causeway
+			{ "PilgrimLanding", "Votive" },
+			{ "Votive", "EastGallery" },
+			{ "EastGallery", "UpperPools" },
+			{ "UpperPools", "BellLanding" },
+			{ "Votive", "BellLanding" }, -- the Bell Causeway, over the fallen flight's surf
+			{ "BellLanding", "Apex" }, -- the Bell Stair
+		},
+		-- The two flights of the Pilgrim Stair that still stand: limestone treads under bell arches.
+		Stairs = { Crossing_PilgrimLanding = true, BellLanding_Apex = true },
+		-- The fallen middle flight (specs: no PilgrimLanding-BellLanding link, and the Apex stays reachable without one).
+		BrokenFlight = { From = "PilgrimLanding", To = "BellLanding" },
+		Names = {
+			Sanctuary = "Pilgrims' Gate",
+			Basin = "The Tide-Flat",
+			WestGallery = "Shell Midden",
+			Crossing = "Stair Foot",
+			EastGallery = "Tidepool Steps",
+			Wreck = "The Hollin Barge",
+			Votive = "Votive Pool",
+			PilgrimLanding = "Pilgrims' Landing",
+			CantorRock = "Cantors' Rock",
+			BellLanding = "Bell Landing",
+			UpperPools = "Upper Pools",
+			Apex = "The Bell Stack",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "NERETH",
+			-- Built: the gate's flagged landing, the barge's deck on its sandbar, the Votive Pool's flagged rim and
+			-- the Pilgrims' Landing (a marble slab on piers over the surf, its north edge sheared off).
+			Decks = { Sanctuary = true, Wreck = true, Votive = true, PilgrimLanding = true },
+			DeckThickness = { PilgrimLanding = 3 },
+			DeckLooks = {
+				Wreck = { Color = Color3.fromRGB(112, 92, 72), Material = Enum.Material.Wood },
+				Votive = { Color = Color3.fromRGB(212, 204, 184), Material = Enum.Material.Limestone },
+				PilgrimLanding = { Color = Color3.fromRGB(222, 218, 204), Material = Enum.Material.Marble },
+			},
+			-- Every terrain terrace is a rounded rock in the surf; the Bell Stack's apron is sheer (a sea-stack).
+			Shapes = {
+				WestGallery = { Round = 2.8, Grow = 4 },
+				Crossing = { Round = 2.4, Grow = 4 },
+				EastGallery = { Round = 2.8, Grow = 4 },
+				CantorRock = { Round = 2.2, Grow = 4 },
+				BellLanding = { Round = 2.6, Grow = 4 },
+				UpperPools = { Round = 2.4, Grow = 4 },
+				Apex = { Round = 2.2, Grow = 6, Sheer = true },
+			},
+			-- The causeways: flagged limestone on arched piers, the surf running on under them.
+			Bridges = { WestGallery_Wreck = true, PilgrimLanding_Wreck = true, Crossing_Votive = true, Votive_BellLanding = true },
+			BridgeStyles = {
+				WestGallery_Wreck = "CAUSEWAY",
+				PilgrimLanding_Wreck = "CAUSEWAY",
+				Crossing_Votive = "CAUSEWAY",
+				Votive_BellLanding = "CAUSEWAY",
+			},
+			-- The Bell Stack is in the back-west: no full-width shelf behind it.
+			NoApexShelf = true,
+			-- The surf: just under the floor's slab (it carries walkers as wading ground), deep enough to read turquoise.
+			LiquidRise = -0.6,
+			FloorDip = 7,
+			-- The north wall is the far shore: a low sea-cliff, so the Tidewall stands over it (TowerSetPieces).
+			WallBand = { Base = 34, Noise = 12, NorthScale = 0.3 },
+			-- The sea: one sheet of shallows over all the open ground. The terraces and their banks, the sandbars and
+			-- the Tide-Flat's beach stand out of it; only the room's far corners stay dry.
+			Pools = {
+				{ X = 0, Z = -60, RX = 330, RZ = 300 },
+			},
+			-- Sandbars: the barge's bar (the largest), the fallen flight's rubble bar and low bars in the shallows.
+			Islands = {
+				{ X = -185, Z = -62, R = 46, Top = -2 },
+				{ X = -62, Z = -118, R = 16, Top = -3 },
+				{ X = 120, Z = -222, R = 22, Top = -3 },
+				{ X = -95, Z = 40, R = 18, Top = -3 },
+				{ X = 230, Z = -120, R = 18, Top = -2 },
+				{ X = 110, Z = 96, R = 20, Top = -3 },
+			},
+			-- The floor places its own coral, kelp and shells (TowerSetPieces/SunkenSanctuary).
+			GroveScale = 0,
+			MeadowScale = 0.1,
+		},
+	},
 }
 
 local function build(index: number, v: any?): any
@@ -2679,7 +2797,7 @@ local function build(index: number, v: any?): any
 		ReplacePatrols=v ~= nil and v.ReplacePatrols == true, Surface=v and v.Surface or nil,
 		Terrain=v and v.Terrain or nil, Skylight=v and v.Skylight or nil, Portals=v and v.Portals or nil,
 		GirderSpans=v and v.GirderSpans or nil, StonePiers=v and v.StonePiers or nil,
-		Fords=v and v.Fords or nil}
+		Fords=v and v.Fords or nil, BrokenFlight=v and v.BrokenFlight or nil}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,

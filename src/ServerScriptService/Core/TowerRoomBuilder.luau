@@ -258,7 +258,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, NerethBellArch = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -395,6 +395,13 @@ function Builder.Build(id: number, generation: number): any
 	local fieldstoneDark = Color3.fromRGB(78, 72, 64)
 	local logBark = Color3.fromRGB(62, 48, 40)
 	local logWood = Color3.fromRGB(128, 98, 70)
+	-- Nereth work (Sunken Sanctuary's tide-priests): pale limestone and marble treads and pavers, and hung
+	-- walkways that can be a flagged causeway on arched piers over the surf (`Terrain.BridgeStyles` CAUSEWAY).
+	local nereth = natural and layout.PathStyle == "NERETH"
+	local nerethStone = Color3.fromRGB(214, 206, 186)
+	local nerethStoneDark = Color3.fromRGB(178, 170, 150)
+	local nerethMarble = Color3.fromRGB(226, 222, 210)
+	local nerethWeed = Color3.fromRGB(70, 112, 72)
 	local matriarchHollow = layout.Authored == "fungal:10"
 	local webCable = Color3.fromRGB(218, 206, 242)
 	local slateIndigo = Color3.fromRGB(62, 56, 94)
@@ -489,6 +496,7 @@ function Builder.Build(id: number, generation: number): any
 		or floorSpec.BiomeId == "ashen_dunes"
 		or floorSpec.BiomeId == "thunder_highlands"
 		or floorSpec.BiomeId == "corrupted_grove"
+		or floorSpec.BiomeId == "sunken_sanctuary"
 
 	local groundPalette = TowerTerrain.Palettes[floorSpec.BiomeId]
 	local naturalGrassColor = if natural and floorSpec.BiomeId == "verdant_ruins"
@@ -887,7 +895,9 @@ function Builder.Build(id: number, generation: number): any
 				slab.Color = slateIndigo
 				slab.Material = Enum.Material.Slate
 			end
-			local look = deckLooks[name] or (if hollin and name == "Sanctuary" then { Color = fieldstone, Material = Enum.Material.Slate } else nil)
+			local look = deckLooks[name] or (if hollin and name == "Sanctuary" then { Color = fieldstone, Material = Enum.Material.Slate }
+				elseif nereth and name == "Sanctuary" then { Color = nerethStone, Material = Enum.Material.Limestone }
+				else nil)
 			if look then
 				slab.Color = look.Color
 				slab.Material = look.Material
@@ -1620,6 +1630,8 @@ function Builder.Build(id: number, generation: number): any
 					proxy(p)
 					p.CanCollide = true
 					p.CanQuery = true
+				elseif bridgeStyles[id] == "CAUSEWAY" then
+					p.Color, p.Material = nerethStone, Enum.Material.Limestone
 				else
 					p.Color, p.Material = plank, Enum.Material.WoodPlanks
 				end
@@ -1704,12 +1716,14 @@ function Builder.Build(id: number, generation: number): any
 				local treadW = baseTreadW - (step % 2) * 0.08
 				local treadCol = if velmari then (if step % 2 == 0 then slateIndigo else slateDark)
 					elseif hollin then (if step % 2 == 0 then fieldstone else fieldstoneDark)
+					elseif nereth then (if step % 2 == 0 then nerethMarble else nerethStone)
 					elseif masonryStyle and masonryStyle.StairColorA
 					then (if step % 2 == 0 then masonryStyle.StairColorA else masonryStyle.StairColorB)
 					elseif pathStyle
 					then (if step % 2 == 0 then pathStyle.StairColorA else pathStyle.StairColorB)
 					else theme.TrimColor
 				local treadMat = if velmari or hollin then Enum.Material.Slate
+					elseif nereth then (if step % 2 == 0 then Enum.Material.Marble else Enum.Material.Limestone)
 					elseif masonryStyle and masonryStyle.StairMatA
 					then (if step % 2 == 0 then masonryStyle.StairMatA else masonryStyle.StairMatB)
 					elseif pathStyle
@@ -1800,6 +1814,53 @@ function Builder.Build(id: number, generation: number): any
 				local worn = decor(model, "FordLogWornTop", Vector3.new(link.Width - 9, 0.2, delta.Magnitude), mid - right * 1.5, logWood, Enum.Material.Wood)
 				worn.CFrame = CFrame.lookAt(mid - right * 1.5, b - right * 1.5) * CFrame.new(0, 0.02, 0)
 				-- The root plate and broken crown stand off the lanes as set pieces (TowerSetPieces/CorruptedGrove).
+			elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "CAUSEWAY" then
+				-- Floor 36's Nereth causeways: a flagged limestone deck on round-arched piers standing in the surf,
+				-- a band of weed at the waterline on every pier. The ramp is the walking surface; piers, arches and
+				-- flags are dressing (no collision).
+				ramp.Color = nerethStone
+				ramp.Material = Enum.Material.Limestone
+				local length = delta.Magnitude
+				local flags = math.max(2, math.floor((length - 2) / 4.4))
+				for i = 1, flags do
+					local at = a:Lerp(b, (i - 0.5) / flags) + right * (math.sin(i * 1.9) * 1.2)
+					local flag = decor(model, "RampStepLip", Vector3.new(link.Width * (0.42 + ((i * 5) % 4) * 0.06), 0.14, 3.2), at,
+						if i % 2 == 0 then nerethStone else nerethStoneDark, Enum.Material.Limestone)
+					flag.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.07, 0) * CFrame.Angles(0, math.rad(((i * 17) % 10) - 5), 0)
+				end
+				local under = decor(model, "CausewayUnderside", Vector3.new(link.Width - 1, 2.6, math.max(1, length - 1)), mid, nerethStoneDark, Enum.Material.Limestone)
+				under.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.9, 0)
+				local seaY = origin.Y + layout.Bottom - 9
+				local spans = math.max(1, math.floor(length / 22))
+				for i = 0, spans do
+					local at = a:Lerp(b, i / spans)
+					local pierTop = at.Y - 3.6
+					local pierH = pierTop - seaY
+					if pierH > 2 and i > 0 and i < spans then
+						local pierAt = Vector3.new(at.X, seaY + pierH / 2, at.Z)
+						local pier = decor(model, "CausewayPier", Vector3.new(link.Width - 2, pierH, 4.2), pierAt, nerethStoneDark, Enum.Material.Limestone)
+						pier.CFrame = CFrame.lookAt(pierAt, pierAt + flat)
+						local weedAt = Vector3.new(at.X, origin.Y + layout.Bottom - 4.2, at.Z)
+						local weed = decor(model, "CausewayPierWeed", Vector3.new(link.Width - 1.4, 1.8, 4.8), weedAt, nerethWeed, Enum.Material.Grass)
+						weed.CFrame = CFrame.lookAt(weedAt, weedAt + flat)
+					end
+					if i < spans then
+						-- A round arch between this pier and the next: segments under the deck's spandrel.
+						local p0, p1 = a:Lerp(b, i / spans), a:Lerp(b, (i + 1) / spans)
+						local span = (p1 - p0).Magnitude
+						local segs = 6
+						for k = 1, segs do
+							local t0, t1 = (k - 1) / segs, k / segs
+							local function archPt(t: number): Vector3
+								local base = p0:Lerp(p1, t)
+								return base - Vector3.new(0, 4.4 + (1 - math.sin(t * math.pi)) * math.min(9, span * 0.4), 0)
+							end
+							local q0, q1 = archPt(t0), archPt(t1)
+							local seg = decor(model, "CausewayArch", Vector3.new(link.Width - 2.4, 1.6, (q1 - q0).Magnitude + 0.4), (q0 + q1) / 2, nerethStone, Enum.Material.Limestone)
+							seg.CFrame = CFrame.lookAt((q0 + q1) / 2, q1)
+						end
+					end
+				end
 			elseif hungLinks[link.Id] then
 				-- Floor 10: Velmari silk-and-slate web spans; Floor 8: Lampkeeper rope-and-plank walkways.
 				ramp.Color = if matriarchHollow then slateIndigo else plank
@@ -1824,6 +1885,7 @@ function Builder.Build(id: number, generation: number): any
 					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.45, 2.2), at,
 						if velmari then (if i % 2 == 0 then slateIndigo else slateDark)
 							elseif hollin then (if i % 2 == 0 then fieldstone else fieldstoneDark)
+							elseif nereth then (if i % 2 == 0 then nerethStone else nerethStoneDark)
 							else flagstoneDark,
 						if velmari or hollin then Enum.Material.Slate else Enum.Material.Limestone)
 					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
@@ -2380,6 +2442,19 @@ function Builder.Build(id: number, generation: number): any
 					rail.CFrame = CFrame.lookAt(mid + rootOffset, b + rootOffset) * CFrame.new(0, 1.3, 0)
 					local vein = decor(curbGroup, "BridgeRootVein", Vector3.new(2.35, 0.55, curbLen * 0.94), mid + rootOffset + Vector3.new(0, 2.35, 0), rootGlow, Enum.Material.Neon)
 					vein.CFrame = CFrame.lookAt(mid + rootOffset, b + rootOffset) * CFrame.new(0, 2.35, 0)
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "CAUSEWAY" then
+					-- Floor 36's causeways: a low limestone parapet with shell-capped posts, outside UsableWidth.
+					local wallOffset = right * (side * (link.Width / 2 - 0.6))
+					local wall = decor(curbGroup, "CausewayParapet", Vector3.new(1.6, 2.2, curbLen), mid + wallOffset, nerethStoneDark, Enum.Material.Limestone)
+					wall.CFrame = CFrame.lookAt(mid + wallOffset, b + wallOffset) * CFrame.new(0, 1.0, 0)
+					local cap = decor(curbGroup, "CausewayParapetCap", Vector3.new(2.0, 0.4, curbLen), mid + wallOffset, nerethMarble, Enum.Material.Marble)
+					cap.CFrame = CFrame.lookAt(mid + wallOffset, b + wallOffset) * CFrame.new(0, 2.25, 0)
+					local posts = math.max(2, math.floor(delta.Magnitude / 16) + 1)
+					for i = 0, posts - 1 do
+						local at = a:Lerp(b, i / (posts - 1)) + wallOffset
+						local post = decor(curbGroup, "CausewayPost", Vector3.new(2.2, 3.6, 2.2), at + Vector3.new(0, 1.7, 0), nerethMarble, Enum.Material.Marble)
+						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+					end
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))
@@ -2579,8 +2654,8 @@ function Builder.Build(id: number, generation: number): any
 	local heartHollow = layout.Authored == "fungal:10"
 	local lanternStep = if rotKeep then 260 elseif heartHollow then 280 elseif sky then (if math.max(width, depth) > 540 then 185 else 150) else 100
 	local lanternIdx = 0
-	-- Open-sky Hollin floors light themselves with their own lanterns (TowerSetPieces/CorruptedGrove).
-	if (not pathStyle or pathStyle.ShowVaultLanterns ~= false) and not hollin then
+	-- Open-sky Hollin and Nereth floors light themselves with their own lanterns (TowerSetPieces/CorruptedGrove).
+	if (not pathStyle or pathStyle.ShowVaultLanterns ~= false) and not hollin and not nereth then
 		for x = -width / 2 + 50, width / 2 - 40, lanternStep do
 			for z = -depth / 2 + 50, depth / 2 - 40, lanternStep do
 				lanternIdx += 1

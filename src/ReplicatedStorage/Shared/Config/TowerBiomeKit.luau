@@ -122,6 +122,10 @@ TowerBiomeKit.Templates = table.freeze({
 --     BriarGatehouse, HedgeWallStraight, HedgeWallCorner, HedgeWallBroken, WattleCroft, ScarecrowProp,
 --     HangingPlanterPergola, FieldstoneWellhead, GibbetCage, RotRoseBush, TopiaryStag, TopiaryGraftKnot,
 --     ThreeArmSignpost, ThornKnotCluster, WardenSkeleton).
+--   sunken_f36_kit (tools/blender/generate_sunken_f36_kit.py): Floor 36, Drowned Steps (GreatTidebell,
+--     GoldenShellCanopy, LancetArchBay, BrokenLancetColumn, BellArch, FallenStairFlight, HollinBarge,
+--     VotiveLampBowl, ShellMidden, RuneTablet, CantorLectern, TidepoolRockRing, GiantClam, KelpStand, SeaFan,
+--     AnemoneCluster, SeagrassTuft).
 TowerBiomeKit.ExtraTemplates = table.freeze({
 	AqueductBrokenSpan = table.freeze({ Size = Vector3.new(23.055, 19.059, 16.419), Min = Vector3.new(-11.167, -0.284, -7.26), Roles = table.freeze({ "ACCENT", "MOSS", "TRIM", "WOOD" }) }),
 	ArmourRack = table.freeze({ Size = Vector3.new(7.9, 8.8, 3.2), Min = Vector3.new(-3.95, 0.0, -1.6), Roles = table.freeze({ "GOLD", "METAL", "TRIM", "WOOD" }) }),
@@ -384,6 +388,24 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	SapfallRibbon = table.freeze({ Size = Vector3.new(12.4, 35.199, 17.992), Min = Vector3.new(-6.2, -1.753, -7.592), Roles = table.freeze({ "CAP", "GLOW", "WOOD" }) }),
 	ThornCagedSeed = table.freeze({ Size = Vector3.new(12.366, 15.015, 12.825), Min = Vector3.new(-6.183, -0.294, -6.183), Roles = table.freeze({ "CANDLE", "GLOW", "SILK", "STONE", "WOOD" }) }),
 	WardenRootShrine = table.freeze({ Size = Vector3.new(9.116, 14.443, 8.085), Min = Vector3.new(-4.324, 1.1, -3.841), Roles = table.freeze({ "CANDLE", "SILK", "STONE", "WOOD" }) }),
+	-- Sunken Sanctuary Floor 36 (Drowned Steps, sunken_f36_kit)
+	AnemoneCluster = table.freeze({ Size = Vector3.new(3.598, 2.2, 4.174), Min = Vector3.new(-1.964, 0.0, -1.783), Roles = table.freeze({ "CORAL", "GLOW", "STONE" }) }),
+	BellArch = table.freeze({ Size = Vector3.new(35.809, 37.844, 7.971), Min = Vector3.new(-18.009, 0.0, -3.924), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "METAL", "MOSS", "STONE", "TRIM" }) }),
+	BrokenLancetColumn = table.freeze({ Size = Vector3.new(20.227, 20.021, 14.084), Min = Vector3.new(-8.811, -0.721, -6.554), Roles = table.freeze({ "ACCENT", "MOSS", "STONE", "TRIM" }) }),
+	CantorLectern = table.freeze({ Size = Vector3.new(3.7, 5.548, 3.0), Min = Vector3.new(-1.85, 0.0, -1.5), Roles = table.freeze({ "ACCENT", "ALT", "STONE", "TRIM" }) }),
+	FallenStairFlight = table.freeze({ Size = Vector3.new(30.902, 18.557, 42.205), Min = Vector3.new(-13.207, -2.2, -25.319), Roles = table.freeze({ "ACCENT", "MOSS", "STONE", "TRIM" }) }),
+	GiantClam = table.freeze({ Size = Vector3.new(8.666, 4.299, 4.667), Min = Vector3.new(-4.333, 0.2, -2.467), Roles = table.freeze({ "ALT", "CORAL", "CRYSTAL" }) }),
+	GoldenShellCanopy = table.freeze({ Size = Vector3.new(56.898, 34.66, 48.06), Min = Vector3.new(-28.461, -0.83, -24.585), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "TRIM" }) }),
+	GreatTidebell = table.freeze({ Size = Vector3.new(16.0, 18.7, 14.2), Min = Vector3.new(-8.0, 0.0, -7.1), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "METAL", "WOOD" }) }),
+	HollinBarge = table.freeze({ Size = Vector3.new(46.149, 27.026, 15.122), Min = Vector3.new(-22.67, -0.897, -6.985), Roles = table.freeze({ "GOLD", "METAL", "MOSS", "SILK", "TRIM", "WOOD" }) }),
+	KelpStand = table.freeze({ Size = Vector3.new(8.742, 26.03, 5.227), Min = Vector3.new(-4.851, -0.023, -2.309), Roles = table.freeze({ "FOLIAGE", "GLOW", "MOSS" }) }),
+	LancetArchBay = table.freeze({ Size = Vector3.new(23.362, 48.4, 5.796), Min = Vector3.new(-11.762, 0.0, -2.929), Roles = table.freeze({ "ACCENT", "GLOW", "MOSS", "STONE", "TRIM" }) }),
+	RuneTablet = table.freeze({ Size = Vector3.new(5.2, 10.4, 3.003), Min = Vector3.new(-2.6, 0.0, -1.703), Roles = table.freeze({ "GLOW", "MOSS", "STONE", "TRIM" }) }),
+	SeaFan = table.freeze({ Size = Vector3.new(8.87, 9.784, 2.283), Min = Vector3.new(-4.259, 0.0, -1.136), Roles = table.freeze({ "CORAL", "STONE" }) }),
+	SeagrassTuft = table.freeze({ Size = Vector3.new(4.108, 2.838, 4.146), Min = Vector3.new(-2.078, -0.044, -2.226), Roles = table.freeze({ "FOLIAGE" }) }),
+	ShellMidden = table.freeze({ Size = Vector3.new(13.542, 5.189, 13.314), Min = Vector3.new(-6.661, 0.0, -6.137), Roles = table.freeze({ "ALT", "CORAL", "STONE" }) }),
+	TidepoolRockRing = table.freeze({ Size = Vector3.new(17.673, 2.899, 16.318), Min = Vector3.new(-8.778, 0.0, -7.818), Roles = table.freeze({ "ALT", "CORAL", "CRYSTAL", "MOSS", "STONE" }) }),
+	VotiveLampBowl = table.freeze({ Size = Vector3.new(2.818, 1.95, 2.82), Min = Vector3.new(-1.41, 0.0, -1.41), Roles = table.freeze({ "CANDLE", "GOLD", "METAL" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -641,6 +663,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	TreehouseKeep = true, ShelfFungusBracket = true, StakePalisadeSegment = true, StiltHut = true, WeepingGallowsTree = true, BranchBridgeHanger = true,
 	MotherGraftTrunk = true, MotherGraftLimbOak = true, MotherGraftLimbPine = true, MotherGraftLimbFruit = true,
 	RootRidgeSegment = true, RootKneeJunction = true, LastWardenGraft = true, FallenCrownBranch = true, HeartrotGeode = true, ThornCagedSeed = true, WardenRootShrine = true,
+	GreatTidebell = true, GoldenShellCanopy = true, LancetArchBay = true, BellArch = true, FallenStairFlight = true, HollinBarge = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit

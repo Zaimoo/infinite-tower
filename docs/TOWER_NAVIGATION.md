@@ -130,3 +130,12 @@ Floor 33 (Briar Labyrinth, `corrupted:3`) adds a corrupted terrain surface/relie
 - **`Terrain.BridgeStyles = "HEDGE"`**: hung labyrinth walkways over the sunken thorn pit keep their solid timber/earth deck and replace rope railings with 5.4-stud-tall clipped hawthorn hedge walls, glowing violet-magenta briar vines and timber posts placed strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).
 - **`Terrain.BridgeStyles = "BRANCH"`** (Floor 34, Heartrot Stronghold): hung tree-to-tree branch bridges over the rot bog carry gnarled dark-wood handrails, rope lanyards and glowing violet-magenta sap tendrils strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).
 - **`Terrain.BridgeStyles = "ROOT"`** (Floor 35, Sovereign's Grove): hung root-burl walkways over the sap mire carry blackened root-bark curbs laced with glowing violet-magenta heartrot veins strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).
+
+Floor 36 (Drowned Steps, `sunken:1`) adds four options to the same system:
+
+- **`Terrain.BridgeStyles = "CAUSEWAY"`**: a hung walkway drawn as a flagged limestone causeway on round-arched piers standing in the surf, with a low parapet and marble posts outside `UsableWidth`. The ramp part stays the solid walking surface; piers, arches and parapets are non-colliding dressing. Navigation is unchanged.
+- **`Terrain.Shapes[id].Sheer`**: a rounded terrain terrace whose apron drops as a near-vertical cliff (about 3.4–4.2 studs of drop per stud, against 1–1.6 for a bank). It only makes the ground steeper, so it never offers a new way onto a walkway.
+- **`Terrain.WallBand.NorthScale`**: scales the wall band's height along the north wall (blending back to full height toward the corners), so a far backdrop (the Tidewall) shows over a low shore.
+- **`BrokenFlight`** (`TowerLayout`): the pair of terraces the fallen middle flight once joined. It is spec data (no link joins them, and the Apex stays reachable), not a connector.
+
+Floor 36's shrine canopy and its great bell hang over the Apex camp above the camp band (`TowerBiomeAssets.AirborneKinds`), and its bell arches span the Pilgrim Stair on purpose (`NerethBellArch` is exempt from the walkway and camp clearance, like `RampArch`): their openings are wider than the flight and their piers stand outside the lane.

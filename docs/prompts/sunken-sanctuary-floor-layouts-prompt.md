@@ -192,12 +192,12 @@ No two neighbours share an Apex position, an approach, a landform or a light (36
 
 *570 × 600 × 210, `Bottom = 0`. Bright turquoise noon.*
 
-**Guide image:** ask for it before building (skill step 2). Until then, build from this section and `reference/Sunken Sanctuary.png` (the golden shell-crowned shrine at the head of a stair, broken arches with cascades).
+**Guide image:** `reference/Sunken Sanctuary 36.webp` (2026-11-23). It follows this plan's map closely, so the layout stands as written. **Taken from it:** the Bell Stack as a pale limestone stack crowned by an open gothic shrine under a golden scallop canopy, the great bell hanging in it; the Bell Stair climbing the stack's south face; the sheared Pilgrims' Landing with the broken flight tumbled in the surf and the drowned bell beside it; an arched causeway toward the Votive Pool, with floating lamp bowls on the water round it; rockpool terraces with anemones and starfish spilling seaward; the tide-queen (west, trident, kelp in her crown) and the tide-king (east, crowned), sunk in the surf; the Hollin barge with its mast and a rag; a crab-strewn shell midden; Cantors' Rock's ring of lecterns; the Pilgrims' Gate as a bell arch with teal shell banners and a rope barrier; bell arches standing in the sea; the Tidewall with the drowned city's cathedral spires beyond; very clear turquoise shallows over pale sand. **Left out or changed:** the statues are pushed to the room's edges (they would dwarf the routes at the image's scale); the canopy covers the whole crown and the shrine's bays stand round its back, clear of the Alpha's camp and the boss portals, so the bell hangs high over the fight instead of at head height; no cascades fall from the Tidewall; gulls and fish movement wait for the client-side ambient pass (§5.6). **Built differently from the first draft (the terrace table and paths below are updated; the §2.1 slope and walk figures are the first draft's, and the spec still holds the walk under 2× the canonical floor):** the Bell Landing and Cantors' Rock swapped heights (Bell Landing Y 24, Cantors' Rock Y 20), because at +12 the Bell Stair's lower landing pad ran 77 studs back out over the gap and raised a terrain ridge under the Bell Causeway. The sea is one shallow pool over all the open ground (`Pools = { { X = 0, Z = -60, RX = 330, RZ = 300 } }`), `LiquidRise = -0.6` (the surf just under the floor's slab), `FloorDip = 7`, with green-grey slate pool beds (over pale sand the teal water read as dry ground) and grey rock banks; `WallBand.NorthScale = 0.3` keeps the north shore low under the Tidewall. The fallen flight lies at (−36, −92), where the water is (the Bell Landing's apron fills the gap's east half), the barge is beached on its sandbar west of the salvage deck, and the colossi face inward so they stay off the Cantors' Rock path.
 
 **Story beat:** the city's sea-front, where the pilgrims came ashore. The **Pilgrim Stair** climbed from the tide-flat to the **Bell Stack**, a limestone sea-stack crowned with a shrine and the first great bell. At low tide the stair stands out of the surf, but its middle flight broke when the ward failed and lies in the shallows, its bell drowned under the treads. The bells on the arches still ring in the swell. A Hollin river barge lies wrecked on the sandbar to the west.
 
 **Shape: a broken processional stair over a tide-flat, with the Apex on a sea-stack in the back-west.** From the arrival you see the stair climb straight up from the **Stair Foot** to the **Pilgrims' Landing**, then nothing, then the **Bell Landing** high beyond the gap and the **Bell Stair** climbing to the Bell Stack. The middle flight is gone:
-- **The east detour (quickest):** Stair Foot → **Votive Pool** (a flooded offering basin) → Bell Landing → the Bell Stair (`STAIRS`, +12) to the Apex.
+- **The east detour (quickest):** Stair Foot → **Votive Pool** (a flooded offering basin) → Bell Landing → the Bell Stair (`STAIRS`, +8) to the Apex.
 - **The stair route:** Stair Foot → the **First Flight** (`STAIRS`, +8) to the Pilgrims' Landing, then down to the Votive Pool (east) or down to the **Hollin Barge** (west), because the next flight is broken.
 - **The west route:** Shell Midden → Hollin Barge on the sandbar → **Cantors' Rock** → the Apex from the west.
 - **The tidepool route (scenic):** Tidepool Steps → **Upper Pools** (Y 28, the highest point before the Apex) → down to the Bell Landing.
@@ -209,8 +209,8 @@ No two neighbours share an Apex position, an approach, a landform or a light (36
    ┌────────────────────────────────────────────────────────┐
    │          [ THE BELL STACK ] Y32                         │
    │ [CANTORS'      ▲ (st) Bell Stair                        │
-   │  ROCK] Y24     ║                                        │
-   │    |   [BELL LANDING] Y20 ◄─────────── [UPPER POOLS] Y28 │
+   │  ROCK] Y20     ║                                        │
+   │    |   [BELL LANDING] Y24 ◄─────────── [UPPER POOLS] Y28 │
    │    |     ╳ the fallen flight  ▲                 |       │
    │    |     ╳ (no way across)    |                 |       │
    │ [HOLLIN BARGE] Y6 ◄─ [PILGRIMS' LANDING] Y16 ─► [VOTIVE POOL] Y10
@@ -233,12 +233,12 @@ No two neighbours share an Apex position, an approach, a landform or a light (36
 | `Votive` (extra) | Votive Pool | 85, 10, −55 | 56 × 48 | deck (a flagged rim round a flooded offering basin) |
 | `EastGallery` | Tidepool Steps | 195, 12, 45 | 84 × 72 | terrain (round, rockpools) |
 | `PilgrimLanding` (extra) | Pilgrims' Landing | −30, 16, −52 | 64 × 52 | deck (the stair's first landing, on piers) |
-| `BellLanding` (extra) | Bell Landing | 10, 20, −140 | 64 × 52 | terrain |
-| `CantorRock` (extra) | Cantors' Rock | −222, 24, −196 | 56 × 48 | terrain (round) |
+| `BellLanding` (extra) | Bell Landing | 10, 24, −140 | 64 × 52 | terrain |
+| `CantorRock` (extra) | Cantors' Rock | −222, 20, −196 | 56 × 48 | terrain (round) |
 | `UpperPools` (extra) | Upper Pools | 150, 28, −150 | 72 × 60 | terrain (round) |
 | `Apex` | The Bell Stack | −85, 32, −228 | 116 × 84 | terrain (round, sheer: the sea-stack) |
 
-**Paths (16 links):** `Sanctuary→Basin` (−8), `Basin→WestGallery` (+4), `Basin→Crossing` (+8), `Basin→EastGallery` (+12), `Crossing→PilgrimLanding` (`STAIRS`: the First Flight, +8, 14.53°), `WestGallery→Wreck` (+2), `PilgrimLanding→Wreck` (−10), `Wreck→CantorRock` (+18), `CantorRock→Apex` (+8), `Crossing→Votive` (+2), `PilgrimLanding→Votive` (−6), `Votive→EastGallery` (+2), `EastGallery→UpperPools` (+16), `UpperPools→BellLanding` (−8), `Votive→BellLanding` (+10, 14.63°), `BellLanding→Apex` (`STAIRS`: the Bell Stair, +12, 14.69°).
+**Paths (16 links):** `Sanctuary→Basin` (−8), `Basin→WestGallery` (+4), `Basin→Crossing` (+8), `Basin→EastGallery` (+12), `Crossing→PilgrimLanding` (`STAIRS`: the First Flight, +8, 14.53°), `WestGallery→Wreck` (+2), `PilgrimLanding→Wreck` (−10), `Wreck→CantorRock` (+14), `CantorRock→Apex` (+12), `Crossing→Votive` (+2), `PilgrimLanding→Votive` (−6), `Votive→EastGallery` (+2), `EastGallery→UpperPools` (+16), `UpperPools→BellLanding` (−4), `Votive→BellLanding` (+14), `BellLanding→Apex` (`STAIRS`: the Bell Stair, +8).
 *The broken flight:* there is **no** `PilgrimLanding→BellLanding` link. The gap between them (97 studs centre to centre) is the fallen flight: broken treads and a drowned bell in the surf below, the landing's far edge sheared off, no plank or rope across it (the "no fake bridges" rule). The links that cross open water (`WestGallery→Wreck`, `PilgrimLanding→Wreck`, `Crossing→Votive`, `Votive→BellLanding`) are `Terrain.Bridges` in a new `BridgeStyles = "CAUSEWAY"` style: a low flagged causeway on arched piers with weed at the waterline and a bell arch at one end.
 
 **Camps (16, 1 Elite):** `BASIN_WEST` 4, `BASIN_EAST` 4, `WEST_GALLERY` 4 (Elite: a Coral Warden on the Shell Midden, a Pearlguard who walked ashore), `EAST_GALLERY` 4. **Patrol:** `BASIN_LOOP` (100.6 s). **Portals:** Ascend `(−69, 32, −258)`, Rerun `(−101, 32, −258)`.
@@ -791,3 +791,4 @@ pwsh tests/run.ps1
 ## Status
 
 - 2026-11-22: plan written and the Part 3 layouts validated in Studio (0 `Validate` problems on all five floors; walks 1.83× / 1.98× / 1.80× / 1.95× / 1.91×; every patrol under 240 s).
+- 2026-11-23: **Floor 36 built** (`feat/sunken-sanctuary-floor-36`): `AUTHORED[36]` with the `NERETH` surface and path style, `Terrain.Shapes` `Sheer`, `BridgeStyles = "CAUSEWAY"`, `WallBand.NorthScale`, `BrokenFlight`; `sunken_sanctuary` added to the builder's natural-biome list; set pieces in `TowerSetPieces/SunkenSanctuary.luau`; kit `tools/blender/generate_sunken_f36_kit.py` (17 templates, not yet uploaded to Roblox, so the part-built fallbacks show until it is imported); `HubLighting.FloorGrades[36]`. The client-side Tidecall (§5.6) is not built yet.

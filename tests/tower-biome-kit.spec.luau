@@ -401,4 +401,30 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.TowerFloorAt(0, 0) == nil)
 end)
 
+test("Floor 36 has its own Drowned Steps kit: at least nine new templates, a great Tidebell and a golden shell canopy", function()
+	local f36 = { "GreatTidebell", "GoldenShellCanopy", "LancetArchBay", "BrokenLancetColumn", "BellArch", "FallenStairFlight",
+		"HollinBarge", "VotiveLampBowl", "ShellMidden", "RuneTablet", "CantorLectern", "TidepoolRockRing", "GiantClam",
+		"KelpStand", "SeaFan", "AnemoneCluster", "SeagrassTuft" }
+	for _, name in f36 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 36 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		-- Every template stands on its origin (the fallen flight lies half sunk in the seabed).
+		local sink = if name == "FallenStairFlight" then -2.5 else -1
+		assert(t.Min.Y > sink and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f36 >= 9)
+	-- The shrine canopy (placed at scale 1.9) spans the Bell Stack's crown.
+	assert(Kit.ExtraTemplates.GoldenShellCanopy.Size.X * 1.9 >= 100)
+	-- The Tidebells are bronze and the rune light is aqua glow.
+	for _, name in { "GreatTidebell", "BellArch" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "METAL"), name .. " has no bronze bell")
+	end
+	for _, name in { "RuneTablet", "LancetArchBay", "BellArch" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "GLOW"), name .. " has no tide-spiral glow")
+	end
+	assert(Light.FloorGrades[36] ~= nil, "floor 36 (Drowned Steps) has its turquoise-noon grade")
+	assert(Light.FloorGrades[36].AtmosphereHaze < Light.FloorGrades[35].AtmosphereHaze, "floor 36 is the clearest air after the eclipse")
+end)
+
 print(string.format("tower-biome-kit: %d passed", passed))
