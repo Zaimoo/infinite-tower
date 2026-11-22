@@ -72,6 +72,20 @@ function HubLayout.ReforgeStationCFrame(): CFrame
 	local p = HubLayout.ReforgeStation
 	return CFrame.lookAt(HubLayout.HubPoint(p.X, p.Z), HubLayout.HubPoint(0, 0)) -- LookVector faces the island centre
 end
+-- Plot courtyard origin (`y = IslandSurfaceY`) for Plot_N. Matches `HubOverhaul` (`CenterOffsetZ = 100`),
+-- where local -Z is the front bridge gate and local +Z points inward toward the courtyard centre.
+function HubLayout.PlotCourtyardCFrame(index: number): CFrame
+	return HubLayout.PlotIslandCFrame(index) * CFrame.new(0, 0, -100)
+end
+
+-- Group Chest (one-time Roblox Group reward): placed in plot-courtyard local space in front of the
+-- Gothic wall bay immediately right of the front bridge gate (`Wall_West_Bay_29`), facing into the courtyard.
+HubLayout.GroupChest = { X = 29, Z = -49.5, Scale = 1.0, ClearRadius = 6 }
+function HubLayout.GroupChestCFrame(plotIndex: number?): CFrame
+	local p = HubLayout.GroupChest
+	local courtyard = HubLayout.PlotCourtyardCFrame(plotIndex or 1)
+	return courtyard * CFrame.lookAt(Vector3.new(p.X, 0, p.Z), Vector3.new(p.X, 0, 0))
+end
 -- Safety catch plane & background horizon
 HubLayout.KillZoneCentre = Vector3.new(0, -95, -950)
 HubLayout.KillZoneSize = Vector3.new(2400, 8, 3400)
