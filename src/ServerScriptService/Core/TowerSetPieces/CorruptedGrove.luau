@@ -484,28 +484,54 @@ function CorruptedGrove.Floor31(ctx: any)
 
 	---------------------------------------------------------------------------------------------------
 	-- 13. The two banks' trees: golden banded beeches south of the brook, twisted blight and dead trees north,
-	-- and a wall of both round the room's rim (the forest beyond).
+	-- and a treeline of both along the foot of the room's walls (the forest beyond).
 	---------------------------------------------------------------------------------------------------
+	-- Level ground: the terrain under a trunk of radius r varies by at most `tol` studs, so no root hangs in
+	-- the air on the downhill side.
+	local function level(x: number, z: number, r: number, tol: number): boolean
+		if not field then return true end
+		local lo, hi = math.huge, -math.huge
+		for _, o in { { 0, 0 }, { r, 0 }, { -r, 0 }, { 0, r }, { 0, -r } } do
+			local y = field.Height(x + o[1], z + o[2])
+			lo, hi = math.min(lo, y), math.max(hi, y)
+		end
+		return hi - lo <= tol
+	end
+	-- The foot of a wall: march in from the wall until the cliff gives way to level ground that stays level
+	-- and low further in (so a ledge part-way up the cliff never counts), then step a little further in.
+	local function wallFoot(side: number, along: number): (number?, number?)
+		local function at(inset: number): (number, number)
+			if side == 1 then return -w / 2 + inset, along
+			elseif side == 2 then return w / 2 - inset, along
+			elseif side == 3 then return along, -d / 2 + inset
+			else return along, d / 2 - inset end
+		end
+		for inset = 8, 110, 3 do
+			local x, z = at(inset)
+			local x2, z2 = at(inset + 14)
+			if field and level(x, z, 6, 2.2) and level(x2, z2, 6, 2.2) and math.abs(field.Height(x, z) - field.Height(x2, z2)) < 3 then
+				return at(inset + rng:NextNumber(0, 10))
+			end
+		end
+		return nil, nil
+	end
 	local function grove(count: number, healthy: boolean, rim: boolean)
 		local made = 0
 		for _ = 1, count * 12 do
 			if made >= count then break end
 			local x, z
 			if rim then
-				-- On the wall slopes, inside the room.
 				local side = rng:NextInteger(1, 4)
-				local inset = rng:NextNumber(14, 30)
-				if side == 1 then x, z = -w / 2 + inset, rng:NextNumber(-d / 2 + 30, d / 2 - 80)
-				elseif side == 2 then x, z = w / 2 - inset, rng:NextNumber(-d / 2 + 30, d / 2 - 80)
-				elseif side == 3 then x, z = rng:NextNumber(-w / 2 + 30, w / 2 - 30), -d / 2 + inset
-				else x, z = rng:NextNumber(-w / 2 + 30, w / 2 - 30), d / 2 - 64 - inset * 0.3 end
+				local along = if side <= 2 then rng:NextNumber(-d / 2 + 30, d / 2 - 30) else rng:NextNumber(-w / 2 + 30, w / 2 - 30)
+				x, z = wallFoot(side, along)
+				if not x or not z then continue end
 			else
 				x, z = rng:NextNumber(-w / 2 + 24, w / 2 - 24), rng:NextNumber(-d / 2 + 30, 96)
 			end
 			if CorruptedGrove.HealthyBank(x, z) == healthy and math.abs(z - brookZ(x)) > 14 then
 				local r = if rim then 6 else 5
 				local _, onDeck = surfaceAt(x, z)
-				if not onDeck and (rim or dry(x, z)) and free(x, z, r) then
+				if not onDeck and dry(x, z) and level(x, z, r, if rim then 2.2 else 3) and free(x, z, r) then
 					take(x, z, r)
 					if healthy then
 						local s = rng:NextNumber(0.8, 1.15) * (if rim then 1.3 else 1)
