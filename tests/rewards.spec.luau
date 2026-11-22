@@ -184,13 +184,41 @@ test("rewards: the friend boost is +10% Gold per friend, capped", function()
 end)
 
 test("rewards: damaged or missing saved state is rebuilt without granting anything", function()
-	local profile: any = { Rewards = { Daily = "x", Weekly = { LastClaimWeek = 0 / 0 }, Playtime = { Seconds = -50, Claimed = { true, "yes" } }, Codes = { A = true, B = 1, [3] = true } } }
+	local profile: any = { Rewards = { Daily = "x", Weekly = { LastClaimWeek = 0 / 0 }, Playtime = { Seconds = -50, Claimed = { true, "yes" } }, Codes = { A = true, B = 1, [3] = true }, GroupChest = "bad" } }
 	local state = Rules.EnsureState(profile)
 	assert(state.Daily.Streak == 0 and state.Weekly.LastClaimWeek == 0 and state.Playtime.Seconds == 0, "numbers repaired")
 	assert(state.Playtime.Claimed[1] == true and state.Playtime.Claimed[2] == false and #state.Playtime.Claimed == #Config.Playtime, "claims are booleans")
 	assert(state.Codes.A == true and state.Codes.B == nil and state.Codes[3 :: any] == nil, "only redeemed string codes are kept")
+	assert(type(state.GroupChest) == "table" and state.GroupChest.Claimed == false, "damaged GroupChest repaired to unclaimed")
+
+	local damagedField: any = { Rewards = { GroupChest = { Claimed = "yes" } } }
+	assert(Rules.EnsureState(damagedField).GroupChest.Claimed == false, "non-boolean GroupChest.Claimed repaired to false")
+	local claimedSave: any = { Rewards = { GroupChest = { Claimed = true } } }
+	assert(Rules.EnsureState(claimedSave).GroupChest.Claimed == true, "valid GroupChest.Claimed preserved")
+
 	local fresh: any = {}
-	assert(Rules.EnsureState(fresh) == fresh.Rewards and fresh.Rewards.Daily.LastClaimDay == 0, "old saves gain the table")
+	assert(Rules.EnsureState(fresh) == fresh.Rewards and fresh.Rewards.Daily.LastClaimDay == 0 and fresh.Rewards.GroupChest.Claimed == false, "old saves gain the table")
+end)
+
+test("rewards: group chest pays once for group members and refuses non-members or duplicates", function()
+	assert(Config.GroupChest.Gold == 50000 and Config.GroupChest.Gems == 2000, "GroupChest config matches 50K Gold + 2K Gems")
+	local state = Rules.NewState()
+	local initialView = Rules.View(state, MONDAY)
+	assert(initialView.GroupChest.Claimed == false, "new state starts unclaimed")
+	assert(Rules.ClaimableCount(initialView) == 2, "GroupChest does not alter ClaimableCount")
+
+	local noGroupReward, noGroupErr = Rules.ClaimGroupChest(state, false)
+	assert(noGroupReward == nil and noGroupErr ~= nil, "non-members are refused")
+	assert(not state.GroupChest.Claimed and not Rules.View(state, MONDAY).GroupChest.Claimed, "failed claim does not mark claimed")
+
+	local reward, err = Rules.ClaimGroupChest(state, true)
+	assert(reward == Config.GroupChest and err == nil, "group member receives GroupChest reward")
+	assert(reward ~= nil and reward.Gold == 50000 and reward.Gems == 2000, "GroupChest pays 50,000 Gold and 2,000 Gems")
+	assert(state.GroupChest.Claimed == true and Rules.View(state, MONDAY).GroupChest.Claimed == true, "view reflects claimed GroupChest")
+	assert(Rules.ClaimableCount(Rules.View(state, MONDAY)) == 2, "ClaimableCount stays unchanged after GroupChest claim")
+
+	local dupReward, dupErr = Rules.ClaimGroupChest(state, true)
+	assert(dupReward == nil and dupErr ~= nil, "duplicate GroupChest claim is refused")
 end)
 
 print(string.format("rewards.spec: %d passed", passed))

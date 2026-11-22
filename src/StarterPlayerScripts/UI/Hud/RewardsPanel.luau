@@ -4,6 +4,7 @@
 --   * Friend boost strip: friends in this server and the Gold bonus they give.
 --   * Daily login: the 7-day calendar; today's entry has the CLAIM button.
 --   * Weekly chest: one claim per UTC week.
+--   * Group chest: one-time reward for joining the Roblox Group.
 --   * Playtime: up to 7 tiers within the first hour played this session, each with a countdown.
 --   * Codes: a text box; the server holds the code list and answers valid / used / expired.
 -- Everything shown comes from RewardsStore (the server's State). Buttons only send requests.
@@ -72,6 +73,37 @@ local function rewardCard(order: number, title: string, reward: RewardsConfig.Re
 		Footer = if status ~= "Claim" then Body({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(1, -12, 0, 20), TextSize = 13,
 			TextXAlignment = CENTER, TextColor3 = if status == "Claimed" then TEXT.Good else TEXT.Muted, Text = footer, ZIndex = 4 }) else nil,
 		Done = if status == "Claimed" then IconAt("Check", 22, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), ZIndex = 6 }) else nil,
+	})
+end
+
+local function chestBanner(props: {
+	Order: number,
+	Icon: string,
+	Title: string,
+	RewardText: string,
+	Subtitle: string,
+	Ready: boolean,
+	ReadyTone: { Top: Color3, Bottom: Color3, Rail: Color3 },
+	ClaimedTone: { Top: Color3, Bottom: Color3, Rail: Color3 }?,
+	Bottom: Color3?,
+	Busy: boolean,
+	OnClaim: () -> (),
+})
+	local tone = if props.Ready then props.ReadyTone else (props.ClaimedTone or Tones.Deep)
+	return Panel({
+		LayoutOrder = props.Order, Size = UDim2.new(1, 0, 0, 84), Radius = 14,
+		Top = tone.Top, Bottom = props.Bottom or Tones.Deep.Bottom, Rail = tone.Rail,
+	}, {
+		Icon = IconAt(props.Icon, 56, { Position = UDim2.fromOffset(12, 14), ZIndex = 4 }),
+		Title = Heavy({ Position = UDim2.fromOffset(80, 12), Size = UDim2.new(1, -260, 0, 26), MaxSize = 22, TextXAlignment = Enum.TextXAlignment.Left,
+			Text = props.Title, ZIndex = 4 }),
+		Reward = Body({ Position = UDim2.fromOffset(80, 40), Size = UDim2.new(1, -260, 0, 18), TextSize = 14, Text = props.RewardText, ZIndex = 4 }),
+		Sub = Body({ Position = UDim2.fromOffset(80, 58), Size = UDim2.new(1, -260, 0, 16), TextSize = 12, TextColor3 = TEXT.Muted,
+			Text = props.Subtitle, ZIndex = 4 }),
+		Claim = if props.Ready then claimButton({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(150, 44),
+			Disabled = props.Busy, OnClaim = props.OnClaim }) else nil,
+		Done = if not props.Ready then Body({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(150, 20), TextSize = 15,
+			TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = TEXT.Good, Text = "Claimed", ZIndex = 4 }) else nil,
 	})
 end
 
@@ -179,22 +211,36 @@ local function RewardsPanel(props: { Width: number, OnClose: () -> () })
 
 		-- Weekly chest ---------------------------------------------------------------------------
 		local weeklyReady = state.Weekly.CanClaim
-		rows.Weekly = Panel({ LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 84), Radius = 14,
-			Top = if weeklyReady then Tones.Void.Top else Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = if weeklyReady then Tones.Void.Rail else Tones.Deep.Rail }, {
-			Icon = IconAt("Shop", 56, { Position = UDim2.fromOffset(12, 14), ZIndex = 4 }),
-			Title = Heavy({ Position = UDim2.fromOffset(80, 12), Size = UDim2.new(1, -260, 0, 26), MaxSize = 22, TextXAlignment = Enum.TextXAlignment.Left,
-				Text = "WEEKLY CHEST", ZIndex = 4 }),
-			Reward = Body({ Position = UDim2.fromOffset(80, 40), Size = UDim2.new(1, -260, 0, 18), TextSize = 14, Text = RewardRules.Describe(RewardsConfig.Weekly, false), ZIndex = 4 }),
-			Reset = Body({ Position = UDim2.fromOffset(80, 58), Size = UDim2.new(1, -260, 0, 16), TextSize = 12, TextColor3 = TEXT.Muted,
-				Text = "New chest every Monday · resets in " .. RewardRules.FormatDuration(weekLeft), ZIndex = 4 }),
-			Claim = if weeklyReady then claimButton({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(150, 44),
-				Disabled = busy, OnClaim = function() send("CLAIM_WEEKLY") end }) else nil,
-			Done = if not weeklyReady then Body({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(150, 20), TextSize = 15,
-				TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = TEXT.Good, Text = "Claimed", ZIndex = 4 }) else nil,
+		rows.Weekly = chestBanner({
+			Order = 4,
+			Icon = "Shop",
+			Title = "WEEKLY CHEST",
+			RewardText = RewardRules.Describe(RewardsConfig.Weekly, false),
+			Subtitle = "New chest every Monday · resets in " .. RewardRules.FormatDuration(weekLeft),
+			Ready = weeklyReady,
+			ReadyTone = Tones.Void,
+			Busy = busy,
+			OnClaim = function() send("CLAIM_WEEKLY") end,
+		})
+
+		-- Group chest ----------------------------------------------------------------------------
+		local groupClaimed = type(state.GroupChest) == "table" and state.GroupChest.Claimed == true
+		rows.GroupChest = chestBanner({
+			Order = 5,
+			Icon = "Gems",
+			Title = "GROUP CHEST",
+			RewardText = RewardRules.Describe(RewardsConfig.GroupChest, false),
+			Subtitle = "Join our Roblox Group for a one-time freebie",
+			Ready = not groupClaimed,
+			ReadyTone = Tones.Azure,
+			ClaimedTone = Tones.Deep,
+			Bottom = if not groupClaimed then Tones.Azure.Bottom else Tones.Deep.Bottom,
+			Busy = busy,
+			OnClaim = function() send("CLAIM_GROUP_CHEST") end,
 		})
 
 		-- Playtime -------------------------------------------------------------------------------
-		rows.PlayHeader = sectionHeader(5, "EventHourglass", "PLAYTIME REWARDS",
+		rows.PlayHeader = sectionHeader(6, "EventHourglass", "PLAYTIME REWARDS",
 			string.format("Played this session: %s of %d min · resets on leave or in %s", RewardRules.FormatDuration(played), lastTier.Minutes, RewardRules.FormatDuration(dayLeft)))
 		local playtime: { [string]: any } = {}
 		for i, tier in RewardsConfig.Playtime do
@@ -204,11 +250,11 @@ local function RewardsPanel(props: { Width: number, OnClose: () -> () })
 				if cardStatus == "Claimed" then "Claimed" else "in " .. RewardRules.FormatDuration(left), busy,
 				function() send("CLAIM_PLAYTIME", i) end)
 		end
-		rows.Playtime = cardRow(6, playtime)
+		rows.Playtime = cardRow(7, playtime)
 
 		-- Codes ----------------------------------------------------------------------------------
-		rows.CodeHeader = sectionHeader(7, "Spark", "CODES", "Enter a code from the community for a one-time reward")
-		rows.Codes = e("Frame", { LayoutOrder = 8, Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1 }, {
+		rows.CodeHeader = sectionHeader(8, "Spark", "CODES", "Enter a code from the community for a one-time reward")
+		rows.Codes = e("Frame", { LayoutOrder = 9, Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1 }, {
 			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
 				VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 			Field = Panel({ LayoutOrder = 1, Size = UDim2.fromOffset(if narrow then 200 else 320, 44), Radius = 10, Top = Tones.Slate.Top, Bottom = Tones.Slate.Bottom, Rail = Tones.Slate.Rail }, {

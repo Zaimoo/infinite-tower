@@ -8,8 +8,9 @@
 -- State lives at profile.Rewards:
 --   Daily    = { Streak, LastClaimDay }           -- UTC day numbers (floor(unix / 86400))
 --   Weekly   = { LastClaimWeek }                  -- UTC week numbers, Monday-based
---   Playtime = { Day, Seconds, Claimed = { bool x tiers } }
---   Codes    = { [CODE] = true }
+--   Playtime   = { Day, Seconds, Claimed = { bool x tiers } }
+--   Codes      = { [CODE] = true }
+--   GroupChest = { Claimed = bool }
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config.RewardsConfig)
@@ -22,6 +23,7 @@ export type State = {
 	Weekly: { LastClaimWeek: number },
 	Playtime: { Day: number, Seconds: number, Claimed: { boolean } },
 	Codes: { [string]: boolean },
+	GroupChest: { Claimed: boolean },
 }
 export type View = {
 	Now: number,
@@ -30,6 +32,7 @@ export type View = {
 	Daily: { CanClaim: boolean, Index: number, Streak: number },
 	Weekly: { CanClaim: boolean },
 	Playtime: { Seconds: number, Claimed: { boolean } },
+	GroupChest: { Claimed: boolean },
 }
 
 local DAY = 86400
@@ -58,6 +61,7 @@ function RewardRules.NewState(): State
 		Weekly = { LastClaimWeek = 0 },
 		Playtime = { Day = 0, Seconds = 0, Claimed = {} },
 		Codes = {},
+		GroupChest = { Claimed = false },
 	}
 end
 
@@ -94,6 +98,11 @@ function RewardRules.EnsureState(profile: any): State
 		end
 	end
 	raw.Codes = codes
+
+	local groupChest = if type(raw.GroupChest) == "table" then raw.GroupChest else {}
+	raw.GroupChest = groupChest
+	groupChest.Claimed = groupChest.Claimed == true
+
 	return raw
 end
 
@@ -186,6 +195,13 @@ function RewardRules.RedeemCode(state: State, now: number, raw: any, codes: { [s
 	return entry.Reward, nil, code
 end
 
+function RewardRules.ClaimGroupChest(state: State, inGroup: boolean): (Reward?, string?)
+	if state.GroupChest.Claimed then return nil, "You already claimed the Group Chest." end
+	if not inGroup then return nil, "Join our Roblox Group to unlock the Group Chest!" end
+	state.GroupChest.Claimed = true
+	return Config.GroupChest, nil
+end
+
 -- Adds a reward to the profile's balances.
 function RewardRules.Grant(profile: any, reward: Reward)
 	profile.Currencies = profile.Currencies or {}
@@ -267,6 +283,7 @@ function RewardRules.View(state: State, now: number): View
 		Daily = { CanClaim = canDaily, Index = index, Streak = if canDaily then streak - 1 else streak },
 		Weekly = { CanClaim = RewardRules.WeekOf(now) > state.Weekly.LastClaimWeek },
 		Playtime = { Seconds = if today then state.Playtime.Seconds else 0, Claimed = claimed },
+		GroupChest = { Claimed = state.GroupChest.Claimed },
 	}
 end
 
