@@ -526,6 +526,13 @@ function Builder.Build(id: number, generation: number): any
 	local sootRust = Color3.fromRGB(112, 62, 40)
 	local railTimber = Color3.fromRGB(58, 44, 36)
 	local railSteel = Color3.fromRGB(128, 122, 118)
+	-- Kairnfolk (Thunder Highlands) slate, granite, turf, hammered copper and verdigris.
+	local kairnSlate = Color3.fromRGB(98, 102, 106)
+	local kairnSlateDark = Color3.fromRGB(66, 70, 76)
+	local kairnGranite = Color3.fromRGB(132, 130, 122)
+	local kairnTurf = Color3.fromRGB(76, 108, 60)
+	local kairnCopper = Color3.fromRGB(186, 110, 62)
+	local kairnVerdigris = Color3.fromRGB(88, 150, 132)
 
 	local MASONRY_STYLES: { [string]: { [string]: any } } = {
 		ORGANIC = {
@@ -650,6 +657,21 @@ function Builder.Build(id: number, generation: number): any
 			StairMatB = Enum.Material.Metal,
 			StairNosing = sootBrass,
 		},
+		-- Thunder Highlands (Kairnfolk): battered dry-stone platforms with turf lips and copper corner bands,
+		-- dry-stone causeways with slate flags and coped parapets, slate stairs with hammered-copper nosing.
+		KAIRN_STONE = {
+			DeckKind = "KAIRN_STONE",
+			LandingProxy = true,
+			BridgeKind = "KAIRN_CAUSEWAY",
+			CurbColor = kairnSlateDark,
+			CurbMaterial = Enum.Material.Slate,
+			CurbMode = "KAIRN_WALL",
+			StairColorA = kairnSlate,
+			StairColorB = kairnSlateDark,
+			StairMatA = Enum.Material.Slate,
+			StairMatB = Enum.Material.Slate,
+			StairNosing = kairnCopper,
+		},
 	}
 
 	local PATH_STYLES: { [string]: { [string]: any } } = {
@@ -766,6 +788,31 @@ function Builder.Build(id: number, generation: number): any
 			GrassStepLipStep = 3.6,
 			GrassStepLipStagger = 0,
 			RailInlay = true,
+			AllowRootStair = false,
+			ShowVaultLanterns = false,
+		},
+		-- Thunder Highlands (Kairnfolk): stormgrass trails with worn slate stepping flags down their spines.
+		KAIRN = {
+			VisibleCurb = true,
+			CurbColor = kairnSlateDark,
+			CurbMaterial = Enum.Material.Slate,
+			CurbCapColor = kairnTurf,
+			CurbCapMaterial = Enum.Material.Grass,
+			LandingColor = kairnSlate,
+			LandingMaterial = Enum.Material.Slate,
+			StairColorA = kairnSlate,
+			StairColorB = kairnSlateDark,
+			StairMatA = Enum.Material.Slate,
+			StairMatB = Enum.Material.Slate,
+			GrassStepLipColorA = kairnSlate,
+			GrassStepLipColorB = kairnGranite,
+			GrassStepLipMatA = Enum.Material.Slate,
+			GrassStepLipMatB = Enum.Material.Slate,
+			GrassStepLipWBase = 0.3,
+			GrassStepLipWStep = 0.05,
+			GrassStepLipWMod = 5,
+			GrassStepLipH = 0.4,
+			GrassStepLipY = 0.05,
 			AllowRootStair = false,
 			ShowVaultLanterns = false,
 		},
@@ -1394,6 +1441,54 @@ function Builder.Build(id: number, generation: number): any
 							flatRail("DeckSidingRail", topCenter + Vector3.new(-terrace.Width / 2 + 4, 0.2, side * 2.6 + sidingZ), topCenter + Vector3.new(terrace.Width / 2 - 4, 0.2, side * 2.6 + sidingZ), 0.45, 0.32, railSteel, Enum.Material.Metal)
 						end
 					end
+				elseif deckKind == "KAIRN_STONE" then
+					-- Thunder Highlands dry-stone platforms: a battered slate plinth down into the moor, laid in rough
+					-- courses (each lower course standing a little prouder), a turf lip round the top, flag paving,
+					-- and hammered-copper bands with verdigris caps at the corners.
+					local deepBottom = origin.Y + layout.Bottom - 7
+					local fullH = math.max(4, (origin.Y + terrace.Y) - deepBottom)
+					slab.Size = Vector3.new(terrace.Width, fullH, terrace.Depth)
+					slab.Position = Vector3.new(topCenter.X, topCenter.Y - fullH / 2, topCenter.Z)
+					slab.Color = kairnSlate
+					slab.Material = Enum.Material.Slate
+					local courses = math.max(2, math.floor((fullH - 1.5) / 2.3))
+					for c = 1, courses do
+						local cy = topCenter.Y - 1.3 - (c - 1) * 2.3
+						local out = 0.25 + (c - 1) * 0.16
+						local col = if c % 3 == 0 then kairnGranite elseif c % 2 == 0 then kairnSlateDark else kairnSlate
+						local jog = if c % 2 == 0 then 1.1 else -1.1
+						for _, sz in { -1, 1 } do
+							decor(model, "KairnCourseZ", Vector3.new(terrace.Width + out * 2, 1.9, 0.6), Vector3.new(topCenter.X + jog, cy, topCenter.Z + sz * (terrace.Depth / 2 + out - 0.25)), col, Enum.Material.Slate)
+						end
+						for _, sx in { -1, 1 } do
+							decor(model, "KairnCourseX", Vector3.new(0.6, 1.9, terrace.Depth + out * 2 - 1.2), Vector3.new(topCenter.X + sx * (terrace.Width / 2 + out - 0.25), cy, topCenter.Z - jog), col, Enum.Material.Slate)
+						end
+					end
+					-- Turf creeping over the top edge.
+					for _, sz in { -1, 1 } do
+						decor(model, "KairnTurfLip", Vector3.new(terrace.Width - 3, 0.3, 1.6), topCenter + Vector3.new(0, 0.1, sz * (terrace.Depth / 2 - 0.8)), kairnTurf, Enum.Material.Grass)
+					end
+					for _, sx in { -1, 1 } do
+						decor(model, "KairnTurfLip", Vector3.new(1.6, 0.3, terrace.Depth - 3), topCenter + Vector3.new(sx * (terrace.Width / 2 - 0.8), 0.1, 0), kairnTurf, Enum.Material.Grass)
+						for _, sz in { -1, 1 } do
+							local cp = Vector3.new(topCenter.X + sx * (terrace.Width / 2 - 1.2), deepBottom + (fullH - 0.4) / 2, topCenter.Z + sz * (terrace.Depth / 2 - 1.2))
+							local corner = part(model, "KairnCornerStone", Vector3.new(4.8, fullH - 0.4, 4.8), cp, kairnGranite, Enum.Material.Slate, true)
+							corner.CanQuery = true
+							corner.CanTouch = false
+							for _, band in { 0.3, 0.7 } do
+								decor(model, "KairnCopperBand", Vector3.new(5.3, 0.7, 5.3), Vector3.new(cp.X, deepBottom + fullH * band, cp.Z), kairnCopper, Enum.Material.Metal)
+							end
+							decor(model, "KairnVerdigrisCap", Vector3.new(5.2, 0.5, 5.2), Vector3.new(cp.X, topCenter.Y + 0.02, cp.Z), kairnVerdigris, Enum.Material.Metal)
+						end
+					end
+					for k = 1, 8 do
+						local ang = k * 2.4 + terrace.X * 0.017
+						local rx = math.cos(ang) * (terrace.Width * 0.33)
+						local rz = math.sin(ang) * (terrace.Depth * 0.31)
+						local pPos = topCenter + Vector3.new(rx, 0.06 + k * 0.02, rz)
+						local paver = decor(model, "KairnFlagstone", Vector3.new(7.5 + (k % 3) * 2.2, 0.1, 6 + ((k + 1) % 3) * 1.6), pPos, if k % 2 == 0 then kairnGranite else kairnSlateDark, Enum.Material.Slate)
+						paver.CFrame = CFrame.new(pPos) * CFrame.Angles(0, math.rad((k * 23) % 30 - 15), 0)
+					end
 				elseif deckKind == "GLACIER_SLAB" then
 					-- Jagged lake ice floe slabs (Floor 16 & Frozen Iceway): snow-packed walking cap over translucent glacier keel
 					local deepBottom = origin.Y + layout.Bottom - 5
@@ -1510,7 +1605,7 @@ function Builder.Build(id: number, generation: number): any
 		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
 		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
 		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
-		local isFoundryBridgehead = layout.Masonry == "FOUNDRY_IRON"
+		local isFoundryBridgehead = (layout.Masonry == "FOUNDRY_IRON" or layout.Masonry == "KAIRN_STONE")
 			and (isSuspendedLink(layout, id) or isArchitecturalDeck(layout, terraceName))
 			and (not isArchitecturalDeck(layout, terraceName) or landingOutsideTerrace(pad, terraceName))
 		if direct then
@@ -1538,13 +1633,21 @@ function Builder.Build(id: number, generation: number): any
 			-- Exposed FOUNDRY_IRON bridgehead apron: a diagonal bridge or chasm span's landing extends past the
 			-- terrace edge (or lands onto a terrain terrace where voxel ground stops short of the suspended link).
 			-- Keep it solid, visible diamond-plate with a dark-iron underside flange so every bridge joins flush.
-			p.Color = sootIron
-			p.Material = Enum.Material.DiamondPlate
+			-- (Kairn causeways: a slate-flagged apron on a dry-stone footing down into the moor.)
+			local kairn = layout.Masonry == "KAIRN_STONE"
+			p.Color = if kairn then kairnSlate else sootIron
+			p.Material = if kairn then Enum.Material.Slate else Enum.Material.DiamondPlate
 			p.CanCollide = true
 			p.CanQuery = true
 			p.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -0.98, 0)
-			local keel = decor(model, "FoundryLandingKeel", Vector3.new(pad.Width + 0.8, 1.8, (b - a).Magnitude + 0.4), (a + b) / 2, sootIronDark, Enum.Material.Metal)
-			keel.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -2.05, 0)
+			if kairn then
+				local footH = math.max(2, (a.Y + b.Y) / 2 - 2 - (origin.Y + layout.Bottom - 6))
+				local foot = decor(model, "KairnLandingFooting", Vector3.new(pad.Width - 0.4, footH, (b - a).Magnitude - 0.4), (a + b) / 2, kairnSlateDark, Enum.Material.Slate)
+				foot.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -1.98 - footH / 2, 0)
+			else
+				local keel = decor(model, "FoundryLandingKeel", Vector3.new(pad.Width + 0.8, 1.8, (b - a).Magnitude + 0.4), (a + b) / 2, sootIronDark, Enum.Material.Metal)
+				keel.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -2.05, 0)
+			end
 		elseif isArchitecturalDeck(layout, terraceName) then
 			if masonryStyle and masonryStyle.LandingProxy then
 				-- Keep landing collider solid & flush atop organic/fortress decks without showing protruding rectangles.
@@ -1623,7 +1726,7 @@ function Builder.Build(id: number, generation: number): any
 				tread.CFrame = CFrame.lookAt(tread.Position, tread.Position + flat) * (if rootStair then CFrame.Angles(0, math.rad(math.sin(step * 1.7) * 2.5), 0) else CFrame.identity)
 				structure(tread,link.Id)
 				if masonryStyle and masonryStyle.StairNosing then
-					-- Brass nosing along each tread's front edge (Sootwright iron stairs).
+					-- Brass (Sootwright) or hammered-copper (Kairnfolk) nosing along each tread's front edge.
 					local nosing = decor(model, "StairBrassNosing", Vector3.new(treadW - 1.2, 0.22, 0.55), Vector3.new(center.X, top + 0.02, center.Z), masonryStyle.StairNosing, Enum.Material.Metal)
 					nosing.CFrame = CFrame.lookAt(nosing.Position, nosing.Position + flat) * CFrame.new(0, 0, (flat.Magnitude / steps) * 0.5 - 0.3)
 				end
@@ -1943,6 +2046,39 @@ function Builder.Build(id: number, generation: number): any
 					local at = stoneA:Lerp(stoneB, t)
 					local plank = decor(model, "BridgePlankSleeper", Vector3.new(link.Width + 0.6, 0.14, 2.6), at, if i % 2 == 0 then bridgeWoodA else bridgeWoodB, Enum.Material.Wood)
 					plank.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.06 + (i % 2) * 0.015, 0)
+				end
+			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "KAIRN_CAUSEWAY" then
+				-- Thunder Highlands dry-stone causeway: a slate deck carried on coursed dry-stone walling down into
+				-- the moor (sections tilted with the deck, so no daylight shows under it), culvert arches where it
+				-- stands tall, and slate flags laid askew along its spine.
+				ramp.Color = kairnSlate
+				ramp.Material = Enum.Material.Slate
+				local deepBottom = origin.Y + layout.Bottom - 6
+				local length = delta.Magnitude
+				local segs = math.max(2, math.floor(length / 9))
+				local pitch = CFrame.lookAt(Vector3.zero, delta)
+				for i = 1, segs do
+					local at = a:Lerp(b, (i - 0.5) / segs)
+					local h = at.Y - 2 - deepBottom
+					if h > 0.5 then
+						local centre = Vector3.new(at.X, at.Y - 2 - h / 2, at.Z)
+						local course = decor(model, "CausewayDryStone", Vector3.new(link.Width - 0.8 + (i % 2) * 0.5, h, length / segs + 0.4), centre, if i % 3 == 0 then kairnGranite elseif i % 2 == 0 then kairnSlate else kairnSlateDark, Enum.Material.Slate)
+						course.CFrame = CFrame.new(centre) * pitch
+						if h > 9 and i % 2 == 0 then
+							-- A culvert arch through the tall middle of the causeway (dark recess, both faces).
+							local archAt = Vector3.new(at.X, deepBottom + 4.5, at.Z)
+							local culvert = decor(model, "CausewayCulvert", Vector3.new(link.Width + 0.2, 5, 4.2), archAt, Color3.fromRGB(34, 36, 40), Enum.Material.Slate)
+							culvert.CFrame = CFrame.new(archAt) * CFrame.lookAt(Vector3.zero, flat)
+						end
+					end
+				end
+				local stones = math.max(3, math.floor((length - 3) / 4.4))
+				for i = 1, stones do
+					local t = (i - 0.5) / stones
+					local at = a:Lerp(b, t) + right * (math.sin(i * 2.3) * 2.2)
+					local stoneW = link.Width * (0.32 + ((i * 5) % 4) * 0.05)
+					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.12, 3.4), at, if i % 2 == 0 then kairnGranite else kairnSlateDark, Enum.Material.Slate)
+					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.08 + (i % 3) * 0.02, 0) * CFrame.Angles(0, math.rad(((i * 21) % 16) - 8), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "FOUNDRY_GIRDER" then
 				-- Floor 21 Sootwright girder spur: a diamond-plate deck on two lattice side girders, rails and
@@ -2323,6 +2459,28 @@ function Builder.Build(id: number, generation: number): any
 							local pt = a:Lerp(b, pIdx / (posts + 1)) + curbOffset
 							local post = decor(curbGroup, "BridgeRailPost", Vector3.new(1.1, 3.6, 1.1), pt, bridgeWood, Enum.Material.Wood)
 							post.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.65, 0)
+						end
+					elseif curbMode == "KAIRN_WALL" then
+						-- A coped dry-stone parapet: a low coursed wall, through-stones standing proud every few
+						-- studs, and copper-banded bollards at both ends where the causeway meets the ground.
+						curb.Size = Vector3.new(2.0, 2.4, curbLen)
+						curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 0.1, 0)
+						local coping = decor(curbGroup, "KairnParapetCoping", Vector3.new(2.5, 0.5, math.max(1, curbLen - 0.6)), mid + curbOffset, kairnGranite, Enum.Material.Slate)
+						coping.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.5, 0)
+						local throughs = math.max(1, math.floor(curbLen / 9))
+						for tIdx = 1, throughs do
+							local pt = a:Lerp(b, tIdx / (throughs + 1)) + curbOffset
+							local through = decor(curbGroup, "KairnThroughStone", Vector3.new(2.9, 0.9, 1.6), pt, kairnSlateDark, Enum.Material.Slate)
+							through.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.7, 0) * CFrame.Angles(0, 0, math.rad((tIdx * 13) % 10 - 5))
+						end
+						for _, endPt in { a:Lerp(b, 0.015), a:Lerp(b, 0.985) } do
+							local np = endPt + curbOffset
+							local bollard = decor(curbGroup, "BridgeNewelPost", Vector3.new(2.6, 4.6, 2.6), np, kairnGranite, Enum.Material.Slate)
+							bollard.CFrame = CFrame.lookAt(np, np + flat) * CFrame.new(0, 2.0, 0)
+							local band = decor(curbGroup, "KairnCopperBand", Vector3.new(2.9, 0.6, 2.9), np, kairnCopper, Enum.Material.Metal)
+							band.CFrame = CFrame.lookAt(np, np + flat) * CFrame.new(0, 3.0, 0)
+							local cap = decor(curbGroup, "BridgeNewelCap", Vector3.new(3.0, 0.5, 3.0), np, kairnVerdigris, Enum.Material.Metal)
+							cap.CFrame = CFrame.lookAt(np, np + flat) * CFrame.new(0, 4.5, 0)
 						end
 					elseif curbMode == "FOUNDRY_RAIL" then
 						-- Sootwright iron handrail: a low riveted kerb, a top rail and a mid rail on posts.
