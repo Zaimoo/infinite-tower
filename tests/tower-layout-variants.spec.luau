@@ -1412,6 +1412,166 @@ test("Floor 31's landmarks stand clear of every walkway and camp", function()
 	assert(Grove.HealthyBank(0, 150) and not Grove.HealthyBank(130, -205))
 end)
 
+test("Floor 32 is the hand-authored Twisted Orchard: up and over the Graft Ridge into the hidden Pressing Hollow", function()
+	local room = Layout.ForFloor(32)
+	assert(room.Authored == "corrupted:2" and room.Name == "Twisted Orchard" and room.PathStyle == "HOLLIN")
+	assert(same(room, Layout.Get(2, 32)), "the authored floor is not fixed")
+	assert(not same(room, Layout.Get(2)), "floor 32 should not be the canonical layout")
+	assert(room.Width == 620 and room.Depth == 640 and room.Height == 220 and room.Bottom == 0)
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	assert(#room.Links == 15)
+	assert(paths.Crossing_GraftedCrown == "STAIRS", "the Grafters' Stair is not stairs")
+	assert(paths.GraftedCrown_Apex == "STAIRS", "the Press Stair is not stairs")
+	for id, kind in paths do
+		if id ~= "Crossing_GraftedCrown" and id ~= "GraftedCrown_Apex" then
+			assert(kind == "RAMP", id .. " should be a ramp")
+		end
+	end
+	-- The up-and-over rule: the Grafted Crown sits higher than the Apex, every link entering the Apex descends,
+	-- and no link runs straight from the Basin, Galleries or Crossing to the Apex.
+	local crown, apex = room.Platforms.GraftedCrown, room.Platforms.Apex
+	assert(crown.Y > apex.Y, "the Grafted Crown must sit higher than the Pressing Hollow")
+	local directBlocked = { Basin = true, WestGallery = true, EastGallery = true, Crossing = true }
+	local intoApex = 0
+	for _, link in room.Links do
+		if link.To == "Apex" then
+			intoApex += 1
+			assert(not directBlocked[link.From], link.Id .. " bypasses the Graft Ridge")
+			assert(room.Platforms[link.From].Y > apex.Y, link.Id .. " does not descend into the Pressing Hollow")
+		elseif link.From == "Apex" then
+			intoApex += 1
+			assert(not directBlocked[link.To], link.Id .. " bypasses the Graft Ridge")
+			assert(room.Platforms[link.To].Y > apex.Y, link.Id .. " does not descend into the Pressing Hollow")
+		end
+	end
+	assert(intoApex == 3, "exactly three ridge crossings descend into the Pressing Hollow")
+	-- Camps: 22 mobs, 2 Elites, none on an extra platform.
+	local mobs = 0
+	for _, camp in room.Camps do
+		if camp.Id ~= "APEX_SANCTUM" then mobs += camp.Size end
+		assert(({ Basin = true, WestGallery = true, EastGallery = true, Crossing = true, Apex = true })[camp.Platform], camp.Id .. " stands on an extra platform")
+	end
+	assert(mobs == 22 and room.EliteCount == 2)
+	-- Terrain terraces on the 4-stud grid; every terrace except Sanctuary has its own walk height.
+	local td = room.Terrain
+	local heights = {}
+	for id, t in room.Platforms do
+		if not td.Decks[id] then assert(t.Y % 4 == 0, id .. " (terrain) is not on a 4-stud plane") end
+		if id ~= "Sanctuary" then
+			assert(not heights[t.Y], id .. " shares a walk height")
+			heights[t.Y] = true
+		end
+	end
+end)
+
+test("Floor 32 climbs the escalation ladder: bigger and more elaborate than Floor 31 and every earlier second floor", function()
+	local room = Layout.ForFloor(32)
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 13 and links == 15 and levels == 12, string.format("Floor 32 has %d/%d/%d", terraces, links, levels))
+	for _, earlier in { 2, 7, 12, 17, 22, 31 } do
+		local r = Layout.ForFloor(earlier)
+		local t, l, v = ladderCounts(r)
+		assert(terraces > t and links > l and levels > v, "Floor 32 does not beat floor " .. earlier)
+		assert(room.Width * room.Depth > r.Width * r.Depth and room.Height > r.Height, "Floor 32's room is not grander than floor " .. earlier)
+		assert(room.Platforms.Apex.Y > r.Platforms.Apex.Y, "Floor 32's Apex is not higher than floor " .. earlier .. "'s")
+	end
+	local walk, base = routeLength(room), routeLength(Layout.Get(2))
+	assert(walk <= 2 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+end)
+
+test("Floor 32's terrain is the walking surface: Hollin ground, orchard slope and solid Graft Ridge", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(32)
+	local field = Terrain.Field(room, "corrupted_grove", 32)
+	assert(field.Surface == Terrain.Surfaces.HOLLIN, "floor 32 uses the Hollin surface palette")
+	for id, t in room.Platforms do
+		local y, kind = field.Sample(t.X + 3, t.Z - 3)
+		if room.Terrain.Decks[id] then
+			assert(y <= t.Y - 4.5 + 1e-6, id .. ": the terrain rises into a deck")
+		else
+			assert(math.abs(y - (t.Y - 2)) < 1e-6, string.format("%s: ground %.2f is not flush with the walking plane %.2f", id, y, t.Y))
+			assert(kind == "WALK" or kind == "TRAIL", id .. " is not walkway ground (" .. kind .. ")")
+		end
+	end
+	-- The solid East Graft Ridge between GraftedCrown and Thorn Saddle rises above Y 52 to hide the hollow.
+	local ridgeY = field.Height(76, -168)
+	assert(ridgeY >= 52, string.format("the East Graft Ridge dips to %.1f (below Y 52)", ridgeY))
+	-- Every earthen ramp's centreline is walkable ground at its own height.
+	for _, link in room.Links do
+		if link.Kind ~= "STAIRS" and not (room.Terrain.Bridges and room.Terrain.Bridges[link.Id]) then
+			for step = 1, 9 do
+				local t = step / 10
+				local x, z = link.AX + (link.BX - link.AX) * t, link.AZ + (link.BZ - link.AZ) * t
+				local want = link.AY + (link.BY - link.AY) * t
+				local y = field.Sample(x, z)
+				assert(math.abs(y - (want - 2)) < 0.05 or y < want - 2, link.Id .. " ground rises over the ramp")
+				assert(y > want - 2.6, string.format("%s ground sags under the ramp (%.2f vs %.2f)", link.Id, y, want))
+			end
+		end
+	end
+end)
+
+test("Floor 32's landmarks stand clear of every walkway, camp and boss portal", function()
+	local F32 = require(nodes["ServerScriptService.Core.TowerSetPieces.CorruptedFloor32"])
+	local list = F32.Landmarks
+	assert(#list >= 15, "Floor 32 needs at least 15 landmark footprints")
+	local room = Layout.ForFloor(32)
+	local lanes = Layout.Lanes(2, 32)
+	local portals = Layout.PortalSpots(2, 32)
+	local function overlaps(lm: any, lane: any): boolean
+		local dx, dz = lane.BX - lane.AX, lane.BZ - lane.AZ
+		local len = math.max(math.sqrt(dx * dx + dz * dz), 1e-6)
+		local ux, uz = dx / len, dz / len
+		local cx, cz = (lane.AX + lane.BX) / 2, (lane.AZ + lane.BZ) / 2
+		local laneCorners, rectCorners = {}, {}
+		for _, sgn in { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } } do
+			table.insert(laneCorners, { cx + ux * len / 2 * sgn[1] - uz * lane.HalfWidth * sgn[2], cz + uz * len / 2 * sgn[1] + ux * lane.HalfWidth * sgn[2] })
+			table.insert(rectCorners, { lm.X + lm.HalfX * sgn[1], lm.Z + lm.HalfZ * sgn[2] })
+		end
+		for _, axis in { { 1, 0 }, { 0, 1 }, { ux, uz }, { -uz, ux } } do
+			local aMin, aMax, bMin, bMax = math.huge, -math.huge, math.huge, -math.huge
+			for _, c in rectCorners do
+				local v = c[1] * axis[1] + c[2] * axis[2]
+				aMin, aMax = math.min(aMin, v), math.max(aMax, v)
+			end
+			for _, c in laneCorners do
+				local v = c[1] * axis[1] + c[2] * axis[2]
+				bMin, bMax = math.min(bMin, v), math.max(bMax, v)
+			end
+			if aMax < bMin or bMax < aMin then return false end
+		end
+		return true
+	end
+	local tallest = 0
+	for _, lm in list do
+		local y0 = lm.Y or (room.Bottom - 4)
+		local y1 = y0 + lm.Top
+		tallest = math.max(tallest, lm.Top)
+		for _, lane in lanes do
+			local ly0 = math.min(lane.AY, lane.BY) - lane.Below
+			local ly1 = math.max(lane.AY, lane.BY) + lane.Above
+			if y1 > ly0 and y0 < ly1 then
+				assert(not overlaps(lm, lane), lm.Id .. " stands on walkway " .. lane.Id)
+			end
+		end
+		for _, camp in room.Camps do
+			if y1 > camp.Y - 2 and y0 < camp.Y + 22 then
+				local nx = math.clamp(camp.X, lm.X - lm.HalfX, lm.X + lm.HalfX)
+				local nz = math.clamp(camp.Z, lm.Z - lm.HalfZ, lm.Z + lm.HalfZ)
+				assert((nx - camp.X) ^ 2 + (nz - camp.Z) ^ 2 >= 34 * 34, lm.Id .. " reaches into camp " .. camp.Id)
+			end
+		end
+		for pName, p in portals do
+			local nx = math.clamp(p.X, lm.X - lm.HalfX, lm.X + lm.HalfX)
+			local nz = math.clamp(p.Z, lm.Z - lm.HalfZ, lm.Z + lm.HalfZ)
+			assert((nx - p.X) ^ 2 + (nz - p.Z) ^ 2 >= 12 * 12, lm.Id .. " covers portal " .. pName)
+		end
+		assert(math.abs(lm.X) + lm.HalfX <= room.Width / 2 and math.abs(lm.Z) + lm.HalfZ <= room.Depth / 2, lm.Id .. " leaves the room")
+	end
+	assert(tallest >= 125, "Floor 32's tallest landmark is under the ladder's 125 studs")
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do
@@ -1425,8 +1585,8 @@ test("Every floor but the authored ones reshapes its own layout, the same way ev
 		end
 	end
 	assert(varied >= 40, "only " .. varied .. " of 49 floors are reshaped")
-	-- Hand-authored floors (1-25 and 31) have no seeded bends, so the count falls as more floors are authored.
-	assert(bends >= 14, "only " .. bends .. " winding paths")
+	-- Hand-authored floors (1-25, 31-32) have no seeded bends, so the count falls as more floors are authored.
+	assert(bends >= 13, "only " .. bends .. " winding paths")
 end)
 
 test("Every floor's layout is sound: no new problems, terraces in the room, ramps at most 15 degrees", function()

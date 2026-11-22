@@ -547,6 +547,62 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				end
 			end
 		end
+		-- Authored south-facing slope (Terrain.Slope, Floor 32's orchard slope): rises smoothly from ZStart to
+		-- ZEnd with shallow E-W terraced benches, then falls off over FadeNorth into a hollow behind the crest.
+		local slopeCfg = td and td.Slope
+		if slopeCfg and kind == "CHASM" then
+			local z0, z1 = slopeCfg.ZStart, slopeCfg.ZEnd
+			local fade = slopeCfg.FadeNorth or 44
+			if z <= z0 and z >= z1 - fade then
+				local t = if z >= z1
+					then math.clamp((z0 - z) / math.max(1, z0 - z1), 0, 1)
+					else math.clamp((z - (z1 - fade)) / math.max(1, fade), 0, 1)
+				local yRise = slopeCfg.YStart + (slopeCfg.YEnd - slopeCfg.YStart) * (t * t * (3 - 2 * t))
+				local benchSpan = slopeCfg.BenchSpan or 34
+				local benchStep = slopeCfg.BenchStep or 2.4
+				if z >= z1 and benchStep > 0 then
+					local phase = ((z0 - z) % benchSpan) / benchSpan
+					local step = if phase < 0.25 then phase / 0.25 else 1
+					yRise += (step - 0.5) * benchStep
+				end
+				yRise += 1.2 * fbm(x / 32, z / 32, seed + 41, 2)
+				if yRise > base then
+					base = yRise
+				end
+			end
+		end
+		-- Authored ridges (Terrain.Ridges, Floor 32's Graft Ridge): a continuous earthen ridge crest along a
+		-- polyline of { X, Z, Top } points. High crests take kind MOUNTAIN so walkway caps never crater the
+		-- ridge between terraces while walkways still take priority inside MOAT.
+		for rIdx, ridge in (td and td.Ridges) or {} do
+			local pts = ridge.Points
+			local hw = ridge.HalfWidth or 34
+			local bestH = -math.huge
+			for i = 1, #pts - 1 do
+				local a, b = pts[i], pts[i + 1]
+				local dx, dz = b[1] - a[1], b[2] - a[2]
+				local len2 = math.max(dx * dx + dz * dz, 1e-3)
+				local t = math.clamp(((x - a[1]) * dx + (z - a[2]) * dz) / len2, 0, 1)
+				local cx, cz = a[1] + dx * t, a[2] + dz * t
+				local top = a[3] + (b[3] - a[3]) * t
+				local dist = math.sqrt((x - cx) ^ 2 + (z - cz) ^ 2)
+				local warp = (ridge.NoiseAmp or 4.0) * fbm(x / 24, z / 24, seed + 61 + rIdx * 7, 2)
+				local u = math.max(0, dist + warp) / hw
+				if u < 1 then
+					local profile = (1 - u * u) ^ 1.2
+					local yR = bottom + (top - bottom) * profile + 1.2 * fbm(x / 18, z / 18, seed + 67 + rIdx * 7, 2) * profile
+					if yR > bestH then
+						bestH = yR
+					end
+				end
+			end
+			if bestH > base then
+				base = bestH
+				if bestH >= bottom + 14 then
+					kind = "MOUNTAIN"
+				end
+			end
+		end
 		return base, kind
 	end
 

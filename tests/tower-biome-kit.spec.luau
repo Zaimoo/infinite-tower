@@ -186,6 +186,29 @@ test("Floor 31 has its own Blighted Verge kit: at least eight new templates and 
 	end
 end)
 
+test("Floor 32 has its own Twisted Orchard kit: at least nine new templates and a 125+ stud Great Cider Press", function()
+	local f32 = {
+		"GreatCiderPress", "PressHouseRoof", "GraftedCrownTree", "GraftedFruitTreeA", "GraftedFruitTreeB",
+		"GraftedFruitTreeC", "PleachedArch", "EspalierWall", "BeeSkepBench", "CiderVatSplit",
+		"GraftingBench", "FruitBasketPile", "CrutchPoleProp", "ThornBrambleArch", "HollinBench",
+	}
+	for _, name in f32 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 32 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f32 >= 9)
+	-- The Great Cider Press (placed at scale 1.2) clears the ladder's 125 studs.
+	assert(Kit.ExtraTemplates.GreatCiderPress.Size.Y * 1.2 >= 125)
+	-- The Grafted Crown carries five distinct seasonal crown roles plus linen Pale Bands.
+	for _, role in { "CORAL", "ALT", "FOLIAGE", "CAP", "ACCENT", "SILK" } do
+		assert(table.find(Kit.ExtraTemplates.GraftedCrownTree.Roles, role), "GraftedCrownTree missing role " .. role)
+	end
+	-- Pale Bands are linen (SILK) on every banded orchard template.
+	for _, name in { "GraftedCrownTree", "GraftedFruitTreeA", "GraftedFruitTreeB", "GraftedFruitTreeC", "PleachedArch" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "SILK"), name .. " has no Pale Band")
+	end
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -281,6 +304,8 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[25] ~= nil, "floor 25 (Titan's Crucible) has its molten-heart grade")
 	assert(Light.FloorGrades[31] ~= nil, "floor 31 (Blighted Verge) has its sickly gold afternoon grade")
 	assert(Light.FloorGrades[31].AtmosphereHaze < Light.BiomeGrades[7].AtmosphereHaze, "floor 31 is the least murky Corrupted floor")
+	assert(Light.FloorGrades[32] ~= nil, "floor 32 (Twisted Orchard) has its overripe rose dusk grade")
+	assert(Light.FloorGrades[32].AtmosphereHaze > Light.FloorGrades[31].AtmosphereHaze, "floor 32 is hazier than floor 31")
 	assert(Light.TowerPreset(6, 26) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400

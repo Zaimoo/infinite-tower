@@ -433,6 +433,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.26, AtmosphereColor = c(168, 118, 126), AtmosphereDecay = c(110, 56, 96), AtmosphereHaze = 0.75,
 		TintColor = c(255, 238, 222), Saturation = 0.16, Contrast = 0.12, ExposureCompensation = 0.04, BloomIntensity = 0.42,
 	},
+	-- Floor 32, Twisted Orchard: overripe rose dusk. Warm rose-amber low sun over the terraced orchard slope,
+	-- heavy sweet rose-violet haze, glowing rot-fruit and magenta cider must against warm timber and blossoms.
+	[32] = {
+		Ambient = c(96, 58, 72), OutdoorAmbient = c(144, 92, 102), ColorShift_Top = c(255, 174, 152), ColorShift_Bottom = c(112, 46, 82),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(194, 116, 146), AtmosphereDecay = c(132, 56, 106), AtmosphereHaze = 1.2,
+		TintColor = c(255, 226, 230), Saturation = 0.12, Contrast = 0.06, ExposureCompensation = 0.05, BloomIntensity = 0.46,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

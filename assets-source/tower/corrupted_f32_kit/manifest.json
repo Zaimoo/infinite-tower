@@ -1,0 +1,323 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BeeSkepBench": {
+      "Min": [
+        -10.8,
+        0.0,
+        -2.508
+      ],
+      "Roles": {
+        "ALT": 820,
+        "CANDLE": 72,
+        "GLOW": 400,
+        "STONE": 60,
+        "TRIM": 600,
+        "WOOD": 168
+      },
+      "Size": [
+        21.6,
+        9.614,
+        4.843
+      ],
+      "Triangles": 2120
+    },
+    "CiderVatSplit": {
+      "Min": [
+        -8.803,
+        -0.38,
+        -6.859
+      ],
+      "Roles": {
+        "CAP": 164,
+        "GLOW": 294,
+        "METAL": 600,
+        "TRIM": 106,
+        "WOOD": 1537
+      },
+      "Size": [
+        21.617,
+        9.58,
+        22.985
+      ],
+      "Triangles": 2701
+    },
+    "CrutchPoleProp": {
+      "Min": [
+        -3.65,
+        -0.073,
+        -1.79
+      ],
+      "Roles": {
+        "ALT": 68,
+        "CORAL": 108,
+        "GLOW": 36,
+        "TRIM": 130,
+        "WOOD": 36
+      },
+      "Size": [
+        6.712,
+        10.788,
+        4.44
+      ],
+      "Triangles": 378
+    },
+    "EspalierWall": {
+      "Min": [
+        -14.756,
+        -0.152,
+        -2.477
+      ],
+      "Roles": {
+        "CORAL": 640,
+        "FOLIAGE": 80,
+        "GLOW": 348,
+        "MOSS": 100,
+        "SILK": 28,
+        "STONE": 384,
+        "WOOD": 280
+      },
+      "Size": [
+        29.013,
+        13.854,
+        8.846
+      ],
+      "Triangles": 1860
+    },
+    "FruitBasketPile": {
+      "Min": [
+        -6.91,
+        -0.1,
+        -4.92
+      ],
+      "Roles": {
+        "ALT": 136,
+        "CAP": 1196,
+        "CORAL": 944,
+        "GLOW": 772,
+        "TRIM": 192,
+        "WOOD": 508
+      },
+      "Size": [
+        13.615,
+        4.449,
+        11.62
+      ],
+      "Triangles": 3748
+    },
+    "GraftedCrownTree": {
+      "Min": [
+        -39.362,
+        -1.671,
+        -20.35
+      ],
+      "Roles": {
+        "ACCENT": 160,
+        "ALT": 240,
+        "CAP": 240,
+        "CORAL": 240,
+        "FOLIAGE": 240,
+        "GLOW": 700,
+        "MOSS": 100,
+        "SILK": 270,
+        "STONE": 80,
+        "WOOD": 1192
+      },
+      "Size": [
+        80.795,
+        60.997,
+        36.712
+      ],
+      "Triangles": 3462
+    },
+    "GraftedFruitTreeA": {
+      "Min": [
+        -14.513,
+        -0.997,
+        -12.555
+      ],
+      "Roles": {
+        "CORAL": 480,
+        "FOLIAGE": 320,
+        "GLOW": 450,
+        "MOSS": 20,
+        "SILK": 82,
+        "TRIM": 58,
+        "WOOD": 470
+      },
+      "Size": [
+        30.645,
+        28.542,
+        21.311
+      ],
+      "Triangles": 1880
+    },
+    "GraftedFruitTreeB": {
+      "Min": [
+        -18.25,
+        -0.9,
+        -9.092
+      ],
+      "Roles": {
+        "CAP": 160,
+        "FOLIAGE": 160,
+        "GLOW": 400,
+        "MOSS": 20,
+        "SILK": 126,
+        "TRIM": 112,
+        "WOOD": 310
+      },
+      "Size": [
+        36.299,
+        32.467,
+        19.476
+      ],
+      "Triangles": 1288
+    },
+    "GraftedFruitTreeC": {
+      "Min": [
+        -11.113,
+        -0.856,
+        -8.08
+      ],
+      "Roles": {
+        "CORAL": 80,
+        "FOLIAGE": 160,
+        "GLOW": 320,
+        "MOSS": 20,
+        "SILK": 82,
+        "WOOD": 252
+      },
+      "Size": [
+        26.424,
+        22.853,
+        15.369
+      ],
+      "Triangles": 914
+    },
+    "GraftingBench": {
+      "Min": [
+        -6.25,
+        0.0,
+        -2.179
+      ],
+      "Roles": {
+        "ALT": 456,
+        "CORAL": 120,
+        "GLOW": 128,
+        "STONE": 340,
+        "TRIM": 138,
+        "WOOD": 564
+      },
+      "Size": [
+        14.591,
+        7.8,
+        6.182
+      ],
+      "Triangles": 1746
+    },
+    "GreatCiderPress": {
+      "Min": [
+        -20.77,
+        -0.642,
+        -18.079
+      ],
+      "Roles": {
+        "CAP": 360,
+        "GLOW": 442,
+        "METAL": 800,
+        "STONE": 440,
+        "TRIM": 1400,
+        "WOOD": 2154
+      },
+      "Size": [
+        41.541,
+        108.773,
+        44.659
+      ],
+      "Triangles": 5596
+    },
+    "HollinBench": {
+      "Min": [
+        -5.141,
+        0.0,
+        -2.517
+      ],
+      "Roles": {
+        "MOSS": 40,
+        "SILK": 28,
+        "TRIM": 330,
+        "WOOD": 759
+      },
+      "Size": [
+        10.177,
+        5.174,
+        4.497
+      ],
+      "Triangles": 1157
+    },
+    "PleachedArch": {
+      "Min": [
+        -24.898,
+        0.0,
+        -6.856
+      ],
+      "Roles": {
+        "CORAL": 400,
+        "FOLIAGE": 320,
+        "GLOW": 320,
+        "SILK": 164,
+        "STONE": 128,
+        "TRIM": 160,
+        "WOOD": 818
+      },
+      "Size": [
+        49.717,
+        34.877,
+        13.748
+      ],
+      "Triangles": 2310
+    },
+    "PressHouseRoof": {
+      "Min": [
+        -31.836,
+        0.0,
+        -30.884
+      ],
+      "Roles": {
+        "ALT": 1200,
+        "FOLIAGE": 800,
+        "MOSS": 200,
+        "STONE": 456,
+        "WOOD": 2918
+      },
+      "Size": [
+        63.083,
+        51.769,
+        61.325
+      ],
+      "Triangles": 5574
+    },
+    "ThornBrambleArch": {
+      "Min": [
+        -18.031,
+        -0.969,
+        -5.191
+      ],
+      "Roles": {
+        "CAP": 560,
+        "GLOW": 168,
+        "MOSS": 40,
+        "SILK": 56,
+        "WOOD": 1310
+      },
+      "Size": [
+        36.24,
+        25.349,
+        10.275
+      ],
+      "Triangles": 2134
+    }
+  },
+  "Unit": "studs"
+}

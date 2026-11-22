@@ -118,3 +118,8 @@ Floor 31 (Blighted Verge, `corrupted:1`) adds three walkway options to the same 
 - **Fords** (`TowerLayout` `Fords`): which links cross the floor's brook. These are data for the specs (no route to the Apex avoids them), not a new connector kind: two are hung walkways and two are earthen causeways.
 
 Set pieces placed at a deliberate height in water (a mill footing, a weir, lilies) are tagged `OnTerrain`, and hanging ones (lanterns) are listed in `TowerBiomeAssets.AirborneKinds`, so `TowerPropClearance.Settle` leaves them where they are.
+
+Floor 32 (Twisted Orchard, `corrupted:2`) adds two authored terrain landforms to `Terrain.Direct`:
+
+- **`Terrain.Slope`**: a continuous south-facing slope (`ZStart`, `ZEnd`, `YStart`, `YEnd`, optional `BenchSpan`/`BenchStep` E–W orchard benches and `FadeNorth` drop into a bowl behind the crest). Because it keeps kind `CHASM`, walkway caps and aprons protect every terrace and ramp identically to flat chasm ground.
+- **`Terrain.Ridges`**: polylines of `{ X, Z, Top }` points forming continuous earthen ridge crests (the Graft Ridge). High crests take kind `MOUNTAIN` so walkway caps never crater the solid ridge between terraces while walkways still take priority inside `MOAT`.

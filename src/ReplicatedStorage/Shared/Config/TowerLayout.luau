@@ -1795,6 +1795,163 @@ local AUTHORED: {[number]: any} = {
 			MeadowScale = 0.15,
 		},
 	},
+	-- Floor 32, Twisted Orchard (Corrupted Grove Expanded Encounter; docs/prompts/corrupted-grove-floor-layouts-prompt.md):
+	-- the Hollin's grafting orchard climbing a south-facing terraced slope to the E-W Graft Ridge (Crookback Ridge
+	-- Y 40, The Grafted Crown Y 48, Thorn Saddle Y 44) and then descending behind the crest into the hidden
+	-- Pressing Hollow (Apex Y 36, lower than the crest!) where the Great Cider Press draws the orchard's rot.
+	-- Three routes cross the ridge: centre up the Grafters' Stair (+32) to the Grafted Crown and down the Press
+	-- Stair (-12); west via West Rows -> West Espalier -> Crookback Ridge (-4 to Apex, plus ridge-walk to Crown);
+	-- east via East Rows -> Skep Terrace -> Thorn Saddle (-8 to Apex, with Cider Vats as a dead-end spur).
+	[32] = {
+		Key = "corrupted:2",
+		Name = "Twisted Orchard",
+		Size = { Width = 620, Depth = 640, Height = 220 },
+		PathStyle = "HOLLIN",
+		Basin = { X = 0, Y = 0, Z = 180, Width = 588, Depth = 100 },
+		WestGallery = { X = -200, Y = 8, Z = 60, Width = 88, Depth = 76 },
+		EastGallery = { X = 200, Y = 12, Z = 55, Width = 88, Depth = 76 },
+		Crossing = { X = 0, Y = 16, Z = 40, Width = 80, Depth = 64 },
+		ExtraPlatforms = {
+			Windfall = { X = -100, Y = 6, Z = 20, Width = 56, Depth = 48 },
+			CiderVats = { X = 250, Y = 20, Z = -110, Width = 60, Depth = 52 },
+			WestEspalier = { X = -170, Y = 24, Z = -70, Width = 76, Depth = 62 },
+			EastEspalier = { X = 150, Y = 28, Z = -80, Width = 76, Depth = 62 },
+			RidgeWest = { X = -130, Y = 40, Z = -175, Width = 72, Depth = 56 },
+			RidgeEast = { X = 145, Y = 44, Z = -185, Width = 72, Depth = 56 },
+			GraftedCrown = { X = 0, Y = 48, Z = -140, Width = 84, Depth = 60 },
+		},
+		Apex = { X = 0, Y = 36, Z = -250, Width = 120, Depth = 88 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "Crossing" },
+			{ "Basin", "EastGallery" },
+			{ "Basin", "Windfall" },
+			{ "WestGallery", "WestEspalier" },
+			{ "EastGallery", "EastEspalier" },
+			{ "Crossing", "GraftedCrown" }, -- Grafters' Stair (+32)
+			{ "GraftedCrown", "Apex" }, -- Press Stair (-12)
+			{ "WestEspalier", "RidgeWest" },
+			{ "EastEspalier", "RidgeEast" },
+			{ "RidgeWest", "Apex" },
+			{ "RidgeEast", "Apex" },
+			{ "EastEspalier", "CiderVats" },
+			{ "RidgeWest", "GraftedCrown" }, -- Ridge-walk
+		},
+		Stairs = {
+			Crossing_GraftedCrown = true,
+			GraftedCrown_Apex = true,
+		},
+		Names = {
+			Sanctuary = "Orchard Gate",
+			Basin = "Orchard Lawn",
+			Windfall = "Windfall Hollow",
+			WestGallery = "West Rows",
+			EastGallery = "East Rows",
+			Crossing = "Grafters' Yard",
+			CiderVats = "Cider Vats",
+			WestEspalier = "West Espalier",
+			EastEspalier = "Skep Terrace",
+			RidgeWest = "Crookback Ridge",
+			RidgeEast = "Thorn Saddle",
+			GraftedCrown = "The Grafted Crown",
+			Apex = "Pressing Hollow",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "HOLLIN",
+			-- Built: the Orchard Gate landing and Windfall Hollow's slatted timber fruit-drying deck.
+			Decks = { Sanctuary = true, Windfall = true },
+			DeckLooks = {
+				Windfall = { Color = Color3.fromRGB(108, 76, 52), Material = Enum.Material.Wood },
+			},
+			-- Organic rounded terrain terraces and the round Pressing Hollow bowl.
+			Shapes = {
+				WestGallery = { Round = 3.2, Grow = 4 },
+				EastGallery = { Round = 3.2, Grow = 4 },
+				Crossing = { Round = 3.0, Grow = 4 },
+				CiderVats = { Round = 2.8, Grow = 4 },
+				WestEspalier = { Round = 3.0, Grow = 4 },
+				EastEspalier = { Round = 3.0, Grow = 4 },
+				RidgeWest = { Round = 2.8, Grow = 4 },
+				RidgeEast = { Round = 2.8, Grow = 4 },
+				GraftedCrown = { Round = 2.4, Grow = 5 },
+				Apex = { Round = 2.4, Grow = 5 },
+			},
+			LiquidRise = 0.8,
+			FloorDip = 3.4,
+			WallBand = { Base = 42, Noise = 14 },
+			-- Shallow rot-fruit puddles along the lower orchard edge (Orchard Lawn & south orchard rows).
+			Pools = {
+				{ X = -238, Z = 132, RX = 14, RZ = 10 },
+				{ X = -142, Z = 112, RX = 12, RZ = 9 },
+				{ X = 112, Z = 114, RX = 13, RZ = 9 },
+				{ X = 236, Z = 130, RX = 14, RZ = 10 },
+				{ X = -58, Z = 98, RX = 11, RZ = 8 },
+				{ X = 70, Z = 102, RX = 11, RZ = 8 },
+			},
+			-- Solid earthen knoll under the Great Cider Press & Press-House Roof on the back-west hollow rim
+			-- (expressed in Ridges below so walkway caps never crater it).
+			-- Continuous south-facing orchard slope with shallow E-W terrain benches climbing to the Graft Ridge.
+			Slope = {
+				ZStart = 126,
+				ZEnd = -132,
+				YStart = -4,
+				YEnd = 36,
+				BenchSpan = 34,
+				BenchStep = 2.6,
+				FadeNorth = 46,
+			},
+			-- The E-W Graft Ridge: solid earthen ridge crests joining Crookback Ridge, The Grafted Crown and
+			-- Thorn Saddle into the room's east/west walls, hiding the Pressing Hollow (Y 36) from arrival.
+			Ridges = {
+				{
+					HalfWidth = 34,
+					NoiseAmp = 3.8,
+					Points = {
+						{ -310, -190, 68 },
+						{ -188, -182, 62 },
+					},
+				},
+				{
+					HalfWidth = 26,
+					NoiseAmp = 3.0,
+					Points = {
+						{ -90, -184, 60 },
+						{ -56, -182, 60 },
+					},
+				},
+				{
+					HalfWidth = 42,
+					NoiseAmp = 3.8,
+					Points = {
+						{ 48, -162, 62 },
+						{ 104, -174, 62 },
+					},
+				},
+				{
+					HalfWidth = 34,
+					NoiseAmp = 3.8,
+					Points = {
+						{ 194, -186, 62 },
+						{ 310, -196, 68 },
+					},
+				},
+				-- Raised press-house knoll on the Pressing Hollow's back-west rim under the Great Cider Press.
+				{
+					HalfWidth = 58,
+					NoiseAmp = 2.0,
+					Points = {
+						{ -126, -290, 48 },
+						{ -96, -274, 48 },
+					},
+				},
+			},
+			-- Floor 32 places all of its orchard rows, grafted trees and ground cover by hand.
+			GroveScale = 0,
+			MeadowScale = 0.1,
+		},
+	},
 }
 
 local function build(index: number, v: any?): any
