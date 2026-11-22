@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [31] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -2072,6 +2072,198 @@ test("Floor 35's landmarks stand clear of every walkway, camp, Boss Arena and bo
 	assert(tallest >= 230, "Floor 35's tallest landmark is under the ladder's 230 studs")
 end)
 
+test("Floor 26 is the hand-authored Stormgrass Rise: wind-tacking contours round a sheer central headwall", function()
+	local room = Layout.ForFloor(26)
+	assert(room.Authored == "thunder:1" and room.Name == "Stormgrass Rise" and room.PathStyle == "KAIRN")
+	assert(room.DirectTerrain == true and room.Surface == "KAIRN" and room.Masonry == "KAIRN_STONE")
+	assert(room.Width == 510 and room.Depth == 550 and room.Height == 180, "Floor 26 overrides its room size")
+	assert(room.Bottom == 0 and #room.ReturnLinks == 0, "Floor 26 has no chasm")
+	assert(same(room, Layout.Get(1, 26)) and not same(room, Layout.Get(1)))
+	assert(#Layout.Validate(room) == 0, "Floor 26's layout has problems")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- No way up the headwall's face: every ascent tacks out to a wind-crag first.
+	assert(paths.Crossing_Apex == nil, "the Cairn Fold must not climb straight to the Crown")
+	assert(paths.Crossing_WestCrag and paths.WestGallery_WestCrag and paths.EastGallery_EastCrag)
+	assert(paths.WestCrag_Apex == "STAIRS" and paths.EastCrag_Apex == "RAMP", "the west ascent ends on the slate stair")
+	local apexLinks = 0
+	for _, link in room.Links do
+		if link.To == "Apex" or link.From == "Apex" then
+			apexLinks += 1
+			assert(link.From == "WestCrag" or link.From == "EastCrag", link.Id .. " reaches the Crown past the crags")
+		end
+	end
+	assert(apexLinks == 2)
+	-- Every link touching an off-grid dry-stone deck is a built causeway; terrain terraces sit on 4-stud planes.
+	local p = room.Platforms
+	for id, t in p do
+		if room.Decks[id] then
+			assert(t.Y % 4 ~= 0, id .. " is a deck on the terrain grid: make it terrain")
+		else
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	for _, link in room.Links do
+		if room.Decks[link.From] or room.Decks[link.To] then
+			assert(room.Suspended.Links[link.Id], link.Id .. " touches a deck but is not a built causeway")
+		end
+	end
+	assert(p.Crossing.Name == "Cairn Fold" and p.WestGallery.Name == "Windmill Knoll" and p.EastGallery.Name == "Standing Stones")
+	assert(p.ShepherdWatch.Name == "Shepherd's Watch" and p.FulguriteSpur.Name == "Fulgurite Outcrop" and p.Apex.Name == "Stormgrass Crown")
+	-- The headwall stands between the wind-crags, north of the Fold.
+	local headwall
+	for _, feat in room.TerrainFeatures do
+		if feat.Kind == "HEADWALL" then headwall = feat end
+	end
+	assert(headwall, "Floor 26 has no headwall")
+	assert(headwall.X - headwall.HalfX > p.WestCrag.X + p.WestCrag.Width / 2 and headwall.X + headwall.HalfX < p.EastCrag.X - p.EastCrag.Width / 2,
+		"the headwall stands between the wind-crags")
+	assert(headwall.Z + headwall.HalfZ < p.Crossing.Z - p.Crossing.Depth / 2 and headwall.Z - headwall.HalfZ > p.Apex.Z + p.Apex.Depth / 2,
+		"the headwall stands between the Cairn Fold and the Crown")
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		assert(camp.Platform ~= "ShepherdWatch" and camp.Platform ~= "FulguriteSpur" and camp.Platform ~= "WestCrag" and camp.Platform ~= "EastCrag",
+			"ExtraPlatforms hold no camps")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 16 and room.EliteCount == 1, "Floor 26 keeps 16 live camp mobs and 1 Elite")
+	assert(Layout.PatrolRoutes(1, 26).BASIN_LOOP ~= nil)
+end)
+
+test("Floor 26 climbs the escalation ladder: grander than every earlier first floor, the walk still brisk", function()
+	local room = Layout.ForFloor(26)
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 10 and links == 11 and levels == 9, string.format("Floor 26 has %d/%d/%d", terraces, links, levels))
+	for _, earlier in { 1, 6, 11, 16, 21 } do
+		local r = Layout.ForFloor(earlier)
+		local t, l, v = ladderCounts(r)
+		assert(terraces > t and links > l and levels > v, "Floor 26 does not beat floor " .. earlier)
+		assert(room.Platforms.Apex.Y > r.Platforms.Apex.Y, "Floor 26's Crown is not higher than floor " .. earlier .. "'s Apex")
+	end
+	local f21 = Layout.ForFloor(21)
+	assert(room.Width * room.Depth > f21.Width * f21.Depth and room.Height > f21.Height, "Floor 26's room is not grander than Floor 21's")
+	local walk, base = routeLength(room), routeLength(Layout.Get(1))
+	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+end)
+
+test("Floor 26's terrain: Kairn ground, a sheer headwall over the Fold, a strike crater, walkways untouched", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(26)
+	local field = Terrain.Field(room, "thunder_highlands", 26)
+	assert(field.Surface == Terrain.Surfaces.KAIRN, "floor 26 uses the Kairn surface")
+	for key, m in Terrain.Surfaces.KAIRN :: any do
+		for _, fungal in Terrain.FungalMaterials do
+			assert(m ~= fungal, "Kairn surface " .. key .. " uses a Fungal-owned material")
+		end
+	end
+	-- The headwall towers over the Crown, and its face is sheer: it rises 40 studs within 12 of its foot.
+	local apex = room.Platforms.Apex
+	assert(field.Height(4, -96) > apex.Y + 25, "the headwall does not tower over the Crown")
+	local foot, face = math.huge, -math.huge
+	for z = -50, -40, 2 do foot = math.min(foot, field.Height(4, z)) end
+	for z = -66, -62, 2 do face = math.max(face, field.Height(4, z)) end
+	assert(face - foot > 40, "the headwall's face is not sheer")
+	assert(field.Kind(4, -96) == "MOUNTAIN", "the headwall is not rock")
+	-- The strike crater: a scorched ring wall on the slope, fused glass in its bowl.
+	assert(field.Accent ~= nil and field.Accent(150, -204) ~= nil, "the strike crater has no scorched ground")
+	local rim = -math.huge
+	for a = 0, 330, 30 do
+		rim = math.max(rim, field.Height(150 + math.cos(math.rad(a)) * 27, -204 + math.sin(math.rad(a)) * 27))
+	end
+	assert(rim > field.Bottom + 2, "the strike crater has no rim")
+	-- Terraces stay flush; no link is buried by the headwall or the crater.
+	for id, t in room.Platforms do
+		assert(field.Height(t.X, t.Z) <= t.Y + 0.01, id .. " is buried")
+	end
+	for _, link in room.Links do
+		for t = 0, 1, 0.05 do
+			local x, z = link.AX + (link.BX - link.AX) * t, link.AZ + (link.BZ - link.AZ) * t
+			assert(field.Height(x, z) <= link.AY + (link.BY - link.AY) * t + 0.01, link.Id .. " is buried")
+		end
+	end
+end)
+
+test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock never showing through", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
+	local field = Terrain.Field(Layout.ForFloor(26), "thunder_highlands", 26)
+	local hw = Thunder.FallHalfWidth
+	assert(#Thunder.FallXs == 2)
+	assert(math.abs(Thunder.FallXs[1] - Thunder.FallXs[2]) > 2 * hw, "the falls overlap each other")
+	for _, fx in Thunder.FallXs do
+		local fy = field.LiquidLevel - 0.6
+		local fit = Thunder.FitFall(field, fx, fy, hw)
+		local sinT, cosT, cosY, sinY = math.sin(fit.Tilt), math.cos(fit.Tilt), math.cos(fit.Yaw), math.sin(fit.Yaw)
+		local function at(u: number, v: number): (number, number, number)
+			return fx + u * cosY + v * sinT * sinY, fy + v * cosT, fit.Z0 - u * sinY + v * sinT * cosY
+		end
+		for k = -4, 4 do
+			local u = hw * k / 4
+			-- Never behind the rock (smooth terrain renders up to 2.5 studs over the field's height).
+			for f = 0.03, 1, 0.03 do
+				local x, y, z = at(u, f * fit.Length)
+				assert(field.Height(x, z) + 2.5 <= y + 1e-6, string.format("rock shows through the fall at x %.0f at height %.0f", x, y))
+			end
+			-- Its top edge meets the lip: rock within 4 studs behind it, and the turf no lower than it.
+			local x, y, z = at(u, fit.Length - 1)
+			local touches = false
+			for d = 0, 4, 0.5 do
+				if field.Height(x, z - d) + 1 >= y then touches = true end
+			end
+			assert(touches, string.format("the fall at x %.0f stands away from the lip", x))
+		end
+	end
+end)
+
+test("Floor 26's landmarks stand clear of every walkway, camp and mob slot", function()
+	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
+	local list = Thunder.Floor26Landmarks
+	assert(#list >= 12, "Floor 26 needs at least 12 landmarks")
+	local room = Layout.ForFloor(26)
+	local lanes = Layout.Lanes(1, 26)
+	local function nearestDistSq(px: number, pz: number, lm: any): number
+		local nx = math.clamp(px, lm.X - lm.HalfX, lm.X + lm.HalfX)
+		local nz = math.clamp(pz, lm.Z - lm.HalfZ, lm.Z + lm.HalfZ)
+		return (nx - px) ^ 2 + (nz - pz) ^ 2
+	end
+	-- Distance from a footprint to a lane's centre segment (sampled along the segment).
+	local function laneGap(lm: any, lane: any): number
+		local best = math.huge
+		for k = 0, 40 do
+			local t = k / 40
+			local x, z = lane.AX + (lane.BX - lane.AX) * t, lane.AZ + (lane.BZ - lane.AZ) * t
+			best = math.min(best, math.sqrt(nearestDistSq(x, z, lm)))
+		end
+		return best - lane.HalfWidth
+	end
+	local tallest = 0
+	for _, lm in list do
+		local y0 = lm.Y or (room.Bottom - 4)
+		local y1 = y0 + lm.Top
+		tallest = math.max(tallest, y1)
+		for _, lane in lanes do
+			local ly0 = math.min(lane.AY, lane.BY) - lane.Below
+			local ly1 = math.max(lane.AY, lane.BY) + lane.Above
+			if y1 > ly0 and y0 < ly1 then
+				assert(laneGap(lm, lane) > 0, lm.Id .. " stands on walkway " .. lane.Id)
+			end
+		end
+		-- Mirrors TowerBiomeAssets.CampHitTest: nothing centred within 34 studs of a camp, no box within 7 of a
+		-- mob's slot, inside the camp's height band.
+		for _, camp in room.Camps do
+			if y1 > camp.Y - 2 and y0 < camp.Y + 22 then
+				assert((lm.X - camp.X) ^ 2 + (lm.Z - camp.Z) ^ 2 >= 34 * 34, lm.Id .. " is centred in camp " .. camp.Id)
+				for _, slot in { { 0, 0 }, { 18, 12 }, { -18, 12 }, { 12, -16 }, { -12, -16 } } do
+					assert(nearestDistSq(camp.X + slot[1], camp.Z + slot[2], lm) >= 7 * 7, lm.Id .. " crowds a mob slot of " .. camp.Id)
+				end
+			end
+		end
+		assert(math.abs(lm.X) + lm.HalfX <= room.Width / 2 and math.abs(lm.Z) + lm.HalfZ <= room.Depth / 2, lm.Id .. " leaves the room")
+	end
+	-- The tor and its crown totem: the tallest landmark on any first floor, far above the moor.
+	assert(tallest >= 95 + room.Platforms.Apex.Y, string.format("Floor 26's skyline tops out at %.0f", tallest))
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do
@@ -2086,7 +2278,7 @@ test("Every floor but the authored ones reshapes its own layout, the same way ev
 	end
 	assert(varied >= 40, "only " .. varied .. " of 49 floors are reshaped")
 	-- Hand-authored floors (1-25, 31-32) have no seeded bends, so the count falls as more floors are authored.
-	assert(bends >= 13, "only " .. bends .. " winding paths")
+	assert(bends >= 12, "only " .. bends .. " winding paths")
 end)
 
 test("Every floor's layout is sound: no new problems, terraces in the room, ramps at most 15 degrees", function()

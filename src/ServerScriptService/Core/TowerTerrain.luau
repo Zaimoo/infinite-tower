@@ -75,6 +75,10 @@ local Surfaces: { [string]: Surface } = {
 	-- slate banks and cracked-lava sumps. (Never Brick or WoodPlanks: see BlockyMaterials.)
 	SOOTWRIGHT = { Trail = M.Slate, Walk = M.Basalt, WalkAccent = M.Ground, Bank = M.Slate,
 		Cliff = M.Basalt, Peak = M.Slate, PoolBed = M.CrackedLava, Lush = M.Basalt },
+	-- Thunder Highlands (the Kairnfolk): wet stormgrass slopes, slate flag trails, rock banks, slate cliffs and
+	-- peat-mud tarn beds. Shared highland materials only, none of them blocky or Fungal-owned.
+	KAIRN = { Trail = M.Slate, Walk = M.Grass, WalkAccent = M.LeafyGrass, Bank = M.Rock,
+		Cliff = M.Slate, Peak = M.Rock, PoolBed = M.Mud, Lush = M.LeafyGrass },
 	-- Corrupted Grove early floors (31–32): pale trodden trails over brown earth, patches of dry autumn
 	-- ground, earthen banks, slate cliffs, basalt peaks and muddy brook beds. Mud stays under water: its rippled
 	-- texture reads as water on dry ground.
@@ -248,6 +252,12 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	local slagTips = {}
 	local pourPits = {}
 	local lavaFalls = {}
+	-- Headwalls (TerrainFeatures HEADWALL, Thunder Highlands): a sheer, turf-capped slate block HalfX by HalfZ
+	-- studs about (X, Z), Top studs over the floor; its sides fall almost straight down. Lightning scars
+	-- (LIGHTNING_SCAR): a strike crater Radius studs across, its scorched rim Rim studs high, radial furrows
+	-- blasted into it.
+	local headwalls = {}
+	local scars = {}
 	for _, feat in features or {} do
 		if feat.Kind == "SLAG_TIP" then
 			local yaw = math.rad(feat.Yaw or 0)
@@ -261,6 +271,10 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				NoiseAmp = feat.NoiseAmp or 0.14, NoiseSeed = feat.NoiseSeed or 141,
 				Gain = feat.Gain or 0.42,
 			})
+		elseif feat.Kind == "HEADWALL" then
+			table.insert(headwalls, { X = feat.X, Z = feat.Z, HX = feat.HalfX, HZ = feat.HalfZ, Top = feat.Top })
+		elseif feat.Kind == "LIGHTNING_SCAR" then
+			table.insert(scars, { X = feat.X, Z = feat.Z, R = feat.Radius or 28, Rim = feat.Rim or 6 })
 		elseif feat.Kind == "LAVA_FALL" then
 			table.insert(lavaFalls, {
 				X = feat.X or 0, Z = feat.Z or 0,
@@ -273,6 +287,42 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	local function pourPitDist(pit: any, x: number, z: number): number
 		return math.sqrt(((x - pit.X) / pit.RX) ^ 2 + ((z - pit.Z) / pit.RZ) ^ 2)
 			+ pit.NoiseAmp * fbm(x / 22, z / 22, seed + pit.NoiseSeed, 2)
+	end
+	-- A headwall's height over the floor at (x, z) and how far in from its lip the spot is (0 at the foot,
+	-- 1 on the flat top), or 0, 0 off it.
+	local function headwall(x: number, z: number): (number, number)
+		local bestH, bestT = 0, 0
+		for i, hw in headwalls do
+			local u = ((math.abs(x - hw.X) / hw.HX) ^ 4 + (math.abs(z - hw.Z) / hw.HZ) ^ 4) ^ 0.25
+				+ 0.07 * fbm(x / 14, z / 14, seed + 171 + i, 2)
+			-- The face is a near-vertical cliff: it falls the block's full height over about 3 studs (so the
+			-- falls down it hang straight against the rock), stepped by a few rough ledges.
+			local t = math.clamp((1.08 - u) / 0.08, 0, 1)
+			if t > 0 then
+				local crown = 0.9 + 0.1 * fbm(x / 22, z / 22, seed + 177 + i, 2)
+				local height = hw.Top * crown * (t ^ 0.6)
+				-- Slate courses break the face into a few rough ledges.
+				height -= (height % 11) * 0.35 * (1 - t)
+				if height > bestH then
+					bestH, bestT = height, t
+				end
+			end
+		end
+		return bestH, bestT
+	end
+	-- A strike crater's rim height over the floor at (x, z), and its normalised distance from the centre.
+	local function scar(x: number, z: number): (number, number)
+		for i, sc in scars do
+			local dx, dz = x - sc.X, z - sc.Z
+			local r = math.sqrt(dx * dx + dz * dz) / sc.R + 0.08 * fbm(x / 9, z / 9, seed + 181 + i, 2)
+			if r < 1.5 then
+				-- A ring wall peaking at the crater's edge, furrowed by the radial blast.
+				local ring = math.max(0, 1 - math.abs(r - 0.95) / 0.42)
+				local furrow = 0.75 + 0.25 * math.cos(math.atan2(dz, dx) * 9)
+				return sc.Rim * ring * ring * furrow, r
+			end
+		end
+		return 0, math.huge
 	end
 	local function slagTip(x: number, z: number): (number, number)
 		local bestH, bestW = 0, 0
@@ -339,6 +389,20 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			local heap = slagTip(x, z)
 			if heap > 0.5 and bottom + heap > base then
 				base, kind = bottom + heap, "MOUNTAIN"
+			end
+		end
+		-- Headwalls stand sheer out of open ground; the walkway caps and moat keep them off every path.
+		if #headwalls > 0 then
+			local wall = headwall(x, z)
+			if wall > 0.5 and bottom + wall > base then
+				base, kind = bottom + wall, "MOUNTAIN"
+			end
+		end
+		-- Strike craters: a scorched ring wall on open ground, the blasted bowl left at the floor.
+		if #scars > 0 and kind == "CHASM" then
+			local rim = scar(x, z)
+			if rim > 0.2 then
+				base = math.max(base, bottom + rim)
 			end
 		end
 		-- Lava falls: volcanic cascade chutes banked into the outer cavern mountain walls.
@@ -888,8 +952,33 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		Palette = palette,
 		Surface = surface,
 		-- Authored feature materials: slag tips, glowing pour-pit rims, and volcanic lava-fall chutes.
-		Accent = if #slagTips > 0 or #pourPits > 0 or #lavaFalls > 0
+		Accent = if #slagTips > 0 or #pourPits > 0 or #lavaFalls > 0 or #headwalls > 0 or #scars > 0
 			then function(x: number, z: number): Enum.Material?
+				for _, sc in scars do
+					local dx, dz = x - sc.X, z - sc.Z
+					local r = math.sqrt(dx * dx + dz * dz) / sc.R
+					if r < 1.9 then
+						-- Fused black glass in the bowl, scorch rays blasted out across the grass.
+						local ray = math.abs(math.cos(math.atan2(dz, dx) * 7 + 0.6 * fbm(x / 12, z / 12, seed + 187, 1)))
+						if r < 0.72 then
+							return if math.noise(x / 5, z / 5, seed + 189) > 0.25 then M.Slate else M.Basalt
+						elseif r < 1.25 or ray > 1.02 - 0.18 * (1.9 - r) then
+							return M.Basalt
+						end
+					end
+				end
+				if #headwalls > 0 then
+					local wall, t = headwall(x, z)
+					if wall > 2 then
+						if t >= 1 then
+							-- A turf cap on the flat top.
+							return if math.noise(x / 15, z / 15, seed + 191) > 0.15 then M.Grass else M.LeafyGrass
+						end
+						-- The face: pale rock courses broken by dark wet slate ribs (mostly rock: all-slate read as a black
+						-- mass from the gameplay camera).
+						return if math.noise(x / 7, z / 7, seed + 193) > -0.3 then M.Rock else M.Slate
+					end
+				end
 				for i, fall in lavaFalls do
 					local fx, fz = math.abs(x - fall.X), math.abs(z - fall.Z)
 					if fx < fall.HalfW and fz < fall.HalfD then
@@ -1074,7 +1163,14 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 			local gz = (heights[i][math.min(k + 1, nz)] - heights[i][math.max(k - 1, 1)]) / (2 * RES)
 			local x = x0 + (i - 0.5) * RES
 			local z = z0 + (k - 0.5) * RES
-			mats[i][k] = materialFor(field, palette, kinds[i][k], y, math.sqrt(gx * gx + gz * gz), x, z, seed, layout.DirectTerrain == true)
+			local kind = kinds[i][k]
+			local material = materialFor(field, palette, kind, y, math.sqrt(gx * gx + gz * gz), x, z, seed, layout.DirectTerrain == true)
+			-- An authored feature's own ground (slag, scorch, a headwall's turf and ribs) shows wherever it is
+			-- not a walkway or under water.
+			if field.Accent and kind ~= "WALK" and kind ~= "TRAIL" and kind ~= "BRIDGE" and kind ~= "POOL" then
+				material = field.Accent(x, z) or material
+			end
+			mats[i][k] = material
 		end
 	end
 
