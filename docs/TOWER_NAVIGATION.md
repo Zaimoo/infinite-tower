@@ -110,3 +110,23 @@ Destination policy for a hero that already has a target. It follows the same spl
 ## Authored terrain walkways (`Terrain.Direct`)
 
 On a hand-authored floor with `Terrain.Direct` (floor 6), natural terraces, landings and ramps are the voxel terrain itself: their parts are invisible proxies (`CanCollide`, `CanQuery` and `CanTouch` off), and `TowerTerrain` puts the field 2 studs (`SOFT`) under each walking plane, which is where smooth terrain renders its surface. Built decks (`Terrain.Decks`, e.g. the Sanctuary and floor 6's Veinspan bridge) and stair treads stay solid parts. Navigation needs no change: `HeroNavigation` raycasts exclude only the actors, so they hit the terrain, and the connector graph is the same layout geometry. Server raycasts that include only the room model (`TowerFloorService` arrival and loot drops, `TowerEncounterRuntime.findGrounded`) also include `workspace.Terrain` and ignore water.
+
+Floor 31 (Blighted Verge, `corrupted:1`) adds three walkway options to the same system:
+
+- **`Terrain.BridgeStyles`**: a hung walkway (`Terrain.Bridges`) can be a `LOG` instead of planks. The ramp part stays as the solid walking surface but is hidden, and a colossal fallen trunk with a split limb is drawn under it as non-colliding dressing, with no rope rails. Its landings are solid, unseen proxies. Navigation is unchanged.
+- **`Terrain.DeckLooks`**: a built deck's colour and material (for example fieldstone or a log floor) without a masonry style.
+- **Fords** (`TowerLayout` `Fords`): which links cross the floor's brook. These are data for the specs (no route to the Apex avoids them), not a new connector kind: two are hung walkways and two are earthen causeways.
+
+Set pieces placed at a deliberate height in water (a mill footing, a weir, lilies) are tagged `OnTerrain`, and hanging ones (lanterns) are listed in `TowerBiomeAssets.AirborneKinds`, so `TowerPropClearance.Settle` leaves them where they are.
+
+Floor 32 (Twisted Orchard, `corrupted:2`) adds two authored terrain landforms to `Terrain.Direct`:
+
+- **`Terrain.Slope`**: a continuous south-facing slope (`ZStart`, `ZEnd`, `YStart`, `YEnd`, optional `BenchSpan`/`BenchStep` E–W orchard benches and `FadeNorth` drop into a bowl behind the crest). Because it keeps kind `CHASM`, walkway caps and aprons protect every terrace and ramp identically to flat chasm ground.
+- **`Terrain.Ridges`**: polylines of `{ X, Z, Top }` points forming continuous earthen ridge crests (the Graft Ridge). High crests take kind `MOUNTAIN` so walkway caps never crater the solid ridge between terraces while walkways still take priority inside `MOAT`.
+
+Floor 33 (Briar Labyrinth, `corrupted:3`) adds a corrupted terrain surface/relief tier (used from Floor 33 onwards across the deep Corrupted Grove) and a second `Terrain.BridgeStyles` option:
+
+- **`Surfaces.BLIGHT` & `Terrain.Blight`**: violet cobble trails (`Cobblestone`), deep indigo blighted earth (`Concrete`), blackened basalt cliffs/seams (`Basalt`), dark violet-slate banks (`Pavement`) and abyssal pit beds (`Asphalt`) with ridged corruption veining and sunken pit fissures/jagged crags (`FissureDepth`, `CragHeight`). Reuses existing place-wide material colours so Floors 1–32 remain byte-identical.
+- **`Terrain.BridgeStyles = "HEDGE"`**: hung labyrinth walkways over the sunken thorn pit keep their solid timber/earth deck and replace rope railings with 5.4-stud-tall clipped hawthorn hedge walls, glowing violet-magenta briar vines and timber posts placed strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).
+- **`Terrain.BridgeStyles = "BRANCH"`** (Floor 34, Heartrot Stronghold): hung tree-to-tree branch bridges over the rot bog carry gnarled dark-wood handrails, rope lanyards and glowing violet-magenta sap tendrils strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).
+- **`Terrain.BridgeStyles = "ROOT"`** (Floor 35, Sovereign's Grove): hung root-burl walkways over the sap mire carry blackened root-bark curbs laced with glowing violet-magenta heartrot veins strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).

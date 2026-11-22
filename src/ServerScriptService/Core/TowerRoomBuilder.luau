@@ -258,7 +258,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -386,6 +386,15 @@ function Builder.Build(id: number, generation: number): any
 	local proxy = disableTerrainProxyPart
 	-- Velmari masonry (Fungal Hollow's lamp-masons): indigo slate decks and stairs, violet cobble.
 	local velmari = natural and layout.PathStyle == "VELMARI"
+	-- Hollin work (Corrupted Grove's grove-wardens): mossy fieldstone treads and pavers, per-deck looks
+	-- (`Terrain.DeckLooks`), and hung walkways that can be a fallen log instead of planks (`Terrain.BridgeStyles`).
+	local hollin = natural and layout.PathStyle == "HOLLIN"
+	local deckLooks = if direct then td.DeckLooks or {} else {}
+	local bridgeStyles = if direct then td.BridgeStyles or {} else {}
+	local fieldstone = Color3.fromRGB(112, 104, 90)
+	local fieldstoneDark = Color3.fromRGB(78, 72, 64)
+	local logBark = Color3.fromRGB(62, 48, 40)
+	local logWood = Color3.fromRGB(128, 98, 70)
 	local matriarchHollow = layout.Authored == "fungal:10"
 	local webCable = Color3.fromRGB(218, 206, 242)
 	local slateIndigo = Color3.fromRGB(62, 56, 94)
@@ -830,6 +839,11 @@ function Builder.Build(id: number, generation: number): any
 			if velmari and name ~= "Sanctuary" then
 				slab.Color = slateIndigo
 				slab.Material = Enum.Material.Slate
+			end
+			local look = deckLooks[name] or (if hollin and name == "Sanctuary" then { Color = fieldstone, Material = Enum.Material.Slate } else nil)
+			if look then
+				slab.Color = look.Color
+				slab.Material = look.Material
 			end
 			continue
 		elseif direct then
@@ -1505,6 +1519,12 @@ function Builder.Build(id: number, generation: number): any
 			if hungLinks[id] then
 				if matriarchHollow then
 					p.Color, p.Material = slateIndigo, Enum.Material.Slate
+				elseif bridgeStyles[id] == "LOG" then
+					-- A fallen log's ends: its root plate and its crown, dressed by the log itself; the landing
+					-- underfoot stays solid but unseen.
+					proxy(p)
+					p.CanCollide = true
+					p.CanQuery = true
 				else
 					p.Color, p.Material = plank, Enum.Material.WoodPlanks
 				end
@@ -1580,12 +1600,13 @@ function Builder.Build(id: number, generation: number): any
 				local baseTreadW = if rootStair then link.Width * (0.84 + 0.14 * math.sin(step * 1.15)) else link.Width
 				local treadW = baseTreadW - (step % 2) * 0.08
 				local treadCol = if velmari then (if step % 2 == 0 then slateIndigo else slateDark)
+					elseif hollin then (if step % 2 == 0 then fieldstone else fieldstoneDark)
 					elseif masonryStyle and masonryStyle.StairColorA
 					then (if step % 2 == 0 then masonryStyle.StairColorA else masonryStyle.StairColorB)
 					elseif pathStyle
 					then (if step % 2 == 0 then pathStyle.StairColorA else pathStyle.StairColorB)
 					else theme.TrimColor
-				local treadMat = if velmari then Enum.Material.Slate
+				local treadMat = if velmari or hollin then Enum.Material.Slate
 					elseif masonryStyle and masonryStyle.StairMatA
 					then (if step % 2 == 0 then masonryStyle.StairMatA else masonryStyle.StairMatB)
 					elseif pathStyle
@@ -1656,7 +1677,27 @@ function Builder.Build(id: number, generation: number): any
 			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, if masonryStyle and masonryStyle.RampYOffset then masonryStyle.RampYOffset else -0.96, 0)
 			structure(ramp,link.Id)
 			local bridgeKind = masonryStyle and masonryStyle.BridgeKind
-			if hungLinks[link.Id] then
+			if hungLinks[link.Id] and bridgeStyles[link.Id] == "LOG" then
+				-- Floor 31's Fallen-Log Ford: a colossal fallen trunk laid across the brook with a split limb
+				-- beside it, so the whole walkway's width stands on wood. The ramp stays as the solid, unseen
+				-- walking surface; the logs are dressing (no collision, no queries).
+				ramp.Transparency = 1
+				local trunkR, limbR = 10.5, 5.5
+				local function log(name: string, offset: Vector3, r: number, overhang: number)
+					local axis = delta.Unit
+					local p0, p1 = a - axis * overhang + offset, b + axis * overhang + offset
+					local trunk = decor(model, name, Vector3.new((p1 - p0).Magnitude, r * 2, r * 2), (p0 + p1) / 2, logBark, Enum.Material.Wood)
+					trunk.Shape = Enum.PartType.Cylinder
+					trunk.CFrame = CFrame.lookAt((p0 + p1) / 2, p1) * CFrame.Angles(0, math.pi / 2, 0)
+					return trunk
+				end
+				log("FordLogTrunk", right * -3.5 - Vector3.new(0, trunkR - 0.15, 0), trunkR, 6)
+				log("FordLogLimb", right * 9.6 - Vector3.new(0, limbR + 0.05, 0), limbR, 1)
+				-- The trunk's top is worn flat where the wardens walked: a strip of pale heartwood.
+				local worn = decor(model, "FordLogWornTop", Vector3.new(link.Width - 9, 0.2, delta.Magnitude), mid - right * 1.5, logWood, Enum.Material.Wood)
+				worn.CFrame = CFrame.lookAt(mid - right * 1.5, b - right * 1.5) * CFrame.new(0, 0.02, 0)
+				-- The root plate and broken crown stand off the lanes as set pieces (TowerSetPieces/CorruptedGrove).
+			elseif hungLinks[link.Id] then
 				-- Floor 10: Velmari silk-and-slate web spans; Floor 8: Lampkeeper rope-and-plank walkways.
 				ramp.Color = if matriarchHollow then slateIndigo else plank
 				ramp.Material = if matriarchHollow then Enum.Material.Slate else Enum.Material.WoodPlanks
@@ -1678,8 +1719,10 @@ function Builder.Build(id: number, generation: number): any
 					local at = a:Lerp(b, (i - 0.5) / stones) + right * stagger
 					local stoneW = link.Width * (0.26 + ((i * 7) % 3) * 0.04)
 					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.45, 2.2), at,
-						if velmari then (if i % 2 == 0 then slateIndigo else slateDark) else flagstoneDark,
-						if velmari then Enum.Material.Slate else Enum.Material.Limestone)
+						if velmari then (if i % 2 == 0 then slateIndigo else slateDark)
+							elseif hollin then (if i % 2 == 0 then fieldstone else fieldstoneDark)
+							else flagstoneDark,
+						if velmari or hollin then Enum.Material.Slate else Enum.Material.Limestone)
 					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "SOLMERE_ARCH" then
@@ -2156,7 +2199,52 @@ function Builder.Build(id: number, generation: number): any
 				local curbGroup = propGroup(model, "BridgeCurb")
 				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, curbCol, curbMat, if visibleCurb then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.35, 0)
-				if hungLinks[link.Id] then
+				if hungLinks[link.Id] and bridgeStyles[link.Id] == "HEDGE" then
+					-- Floor 33's hedge-walled maze bridges: low thorny hawthorn hedges (5.4 studs tall, <= 9 so the
+					-- camera reads the maze from above) laced with glowing violet-magenta briar veins, outside UsableWidth.
+					local hedgeOffset = right * (side * (link.Width / 2 - 0.55))
+					local hedgeCol = Color3.fromRGB(48, 56, 62)
+					local briarCol = Color3.fromRGB(204, 58, 236)
+					local hedge = decor(curbGroup, "BridgeHedgeWall", Vector3.new(2.2, 5.4, curbLen), mid + hedgeOffset + Vector3.new(0, 2.5, 0), hedgeCol, Enum.Material.Grass)
+					hedge.CFrame = CFrame.lookAt(mid + hedgeOffset, b + hedgeOffset) * CFrame.new(0, 2.5, 0)
+					local vine = decor(curbGroup, "BridgeHedgeBriar", Vector3.new(2.45, 0.55, curbLen * 0.94), mid + hedgeOffset + Vector3.new(0, 4.3, 0), briarCol, Enum.Material.Neon)
+					vine.CFrame = CFrame.lookAt(mid + hedgeOffset, b + hedgeOffset) * CFrame.new(0, 4.3, 0)
+					local posts = math.max(2, math.floor(delta.Magnitude / 14) + 1)
+					for i = 0, posts - 1 do
+						local at = a:Lerp(b, i / (posts - 1)) + hedgeOffset
+						local post = decor(curbGroup, "BridgeHedgePost", Vector3.new(0.75, 5.8, 0.75), at + Vector3.new(0, 2.7, 0), plankDark, Enum.Material.Wood)
+						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+					end
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "BRANCH" then
+					-- Floor 34's tree-to-tree branch bridges over the rot bog: gnarled timber handrails, taut rope
+					-- lanyards and glowing violet-magenta sap tendrils strictly outside UsableWidth.
+					local railOffset = right * (side * (link.Width / 2 - 0.55))
+					local branchBark = Color3.fromRGB(54, 34, 62)
+					local sapGlow = Color3.fromRGB(218, 66, 246)
+					for idx, h in { 1.7, 3.6 } do
+						local r0, r1 = a + railOffset + Vector3.new(0, h, 0), b + railOffset + Vector3.new(0, h, 0)
+						local railPart = decor(curbGroup, "BridgeBranchRail", Vector3.new(if idx == 2 then 0.65 else 0.32, if idx == 2 then 0.65 else 0.32, (r1 - r0).Magnitude), (r0 + r1) / 2, if idx == 2 then branchBark else rope, if idx == 2 then Enum.Material.Wood else Enum.Material.Fabric)
+						railPart.CFrame = CFrame.lookAt((r0 + r1) / 2, r1)
+					end
+					local sapLine = decor(curbGroup, "BridgeBranchSap", Vector3.new(0.32, 0.32, curbLen * 0.92), mid + railOffset + Vector3.new(0, 3.95, 0), sapGlow, Enum.Material.Neon)
+					sapLine.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 3.95, 0)
+					local posts = math.max(2, math.floor(delta.Magnitude / 13) + 1)
+					for i = 0, posts - 1 do
+						local at = a:Lerp(b, i / (posts - 1)) + railOffset
+						local post = decor(curbGroup, "BridgeBranchPost", Vector3.new(0.85, 4.8, 0.85), at + Vector3.new(0, 2.2, 0), branchBark, Enum.Material.Wood)
+						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+					end
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "ROOT" then
+					-- Floor 35's colossal root-burl walkways over the sap mire: gnarled blackened root-bark curbs
+					-- with pulsing violet-magenta heartrot seams strictly outside UsableWidth.
+					local rootOffset = right * (side * (link.Width / 2 - 0.5))
+					local rootBark = Color3.fromRGB(46, 24, 56)
+					local rootGlow = Color3.fromRGB(234, 62, 252)
+					local rail = decor(curbGroup, "BridgeRootCurb", Vector3.new(2.1, 3.0, curbLen), mid + rootOffset + Vector3.new(0, 1.3, 0), rootBark, Enum.Material.Wood)
+					rail.CFrame = CFrame.lookAt(mid + rootOffset, b + rootOffset) * CFrame.new(0, 1.3, 0)
+					local vein = decor(curbGroup, "BridgeRootVein", Vector3.new(2.35, 0.55, curbLen * 0.94), mid + rootOffset + Vector3.new(0, 2.35, 0), rootGlow, Enum.Material.Neon)
+					vein.CFrame = CFrame.lookAt(mid + rootOffset, b + rootOffset) * CFrame.new(0, 2.35, 0)
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))
 					for _, h in { 1.6, 3.4 } do
@@ -2333,7 +2421,8 @@ function Builder.Build(id: number, generation: number): any
 	local heartHollow = layout.Authored == "fungal:10"
 	local lanternStep = if rotKeep then 260 elseif heartHollow then 280 elseif sky then (if math.max(width, depth) > 540 then 185 else 150) else 100
 	local lanternIdx = 0
-	if not pathStyle or pathStyle.ShowVaultLanterns ~= false then
+	-- Open-sky Hollin floors light themselves with their own lanterns (TowerSetPieces/CorruptedGrove).
+	if (not pathStyle or pathStyle.ShowVaultLanterns ~= false) and not hollin then
 		for x = -width / 2 + 50, width / 2 - 40, lanternStep do
 			for z = -depth / 2 + 50, depth / 2 - 40, lanternStep do
 				lanternIdx += 1

@@ -425,6 +425,46 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 234, 204), Saturation = 0.12, Contrast = 0.22, ExposureCompensation = 0.12, BloomIntensity = 0.66,
 		SunRaysIntensity = 0.08, SunRaysSpread = 0.44,
 	},
+	-- Floor 31, Blighted Verge: a sickly gold late afternoon. Warm low light over the autumn bank, the magenta
+	-- murk of the biome thinned to a rose haze that thickens toward the rotten north-east; the least murky
+	-- Corrupted floor.
+	[31] = {
+		Ambient = c(84, 62, 58), OutdoorAmbient = c(128, 96, 80), ColorShift_Top = c(255, 196, 128), ColorShift_Bottom = c(92, 46, 70),
+		AtmosphereDensity = 0.26, AtmosphereColor = c(168, 118, 126), AtmosphereDecay = c(110, 56, 96), AtmosphereHaze = 0.75,
+		TintColor = c(255, 238, 222), Saturation = 0.16, Contrast = 0.12, ExposureCompensation = 0.04, BloomIntensity = 0.42,
+	},
+	-- Floor 32, Twisted Orchard: overripe rose-violet dusk. Deep purple-violet dusk sky and haze,
+	-- lush royal-violet shadows, glowing violet-magenta rot-fruit and cider must across the orchard slope.
+	[32] = {
+		Ambient = c(74, 34, 126), OutdoorAmbient = c(116, 58, 176), ColorShift_Top = c(198, 114, 255), ColorShift_Bottom = c(96, 30, 152),
+		AtmosphereDensity = 0.35, AtmosphereColor = c(146, 58, 198), AtmosphereDecay = c(84, 24, 138), AtmosphereHaze = 1.3,
+		TintColor = c(222, 184, 255), Saturation = 0.24, Contrast = 0.10, ExposureCompensation = 0.08, BloomIntensity = 0.52,
+	},
+	-- Floor 33, Briar Labyrinth: hard overhead thorn-shadow noon with deep corrupted violet-amethyst shadows
+	-- over the blighted pit and low haze so the hedge maze and glowing magenta briars read crisply from above.
+	[33] = {
+		Ambient = c(84, 42, 134), OutdoorAmbient = c(128, 78, 186), ColorShift_Top = c(228, 184, 255), ColorShift_Bottom = c(96, 30, 148),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(144, 78, 198), AtmosphereDecay = c(88, 36, 142), AtmosphereHaze = 0.90,
+		TintColor = c(236, 210, 255), Saturation = 0.14, Contrast = 0.18, ExposureCompensation = 0.08, BloomIntensity = 0.52,
+	},
+	-- Floor 34, Heartrot Stronghold: deep violet-black canopy gloom pierced by sun-ray shafts through
+	-- high crown gaps and electric violet-magenta heartrot cavities; the darkest Corrupted floor while
+	-- keeping camps, branch bridges and red enemy telegraphs clear.
+	[34] = {
+		Ambient = c(56, 30, 96), OutdoorAmbient = c(84, 52, 134), ColorShift_Top = c(186, 148, 242), ColorShift_Bottom = c(88, 22, 138),
+		AtmosphereDensity = 0.40, AtmosphereColor = c(104, 54, 152), AtmosphereDecay = c(62, 24, 108), AtmosphereHaze = 1.40,
+		TintColor = c(226, 200, 255), Saturation = 0.10, Contrast = 0.16, ExposureCompensation = -0.02, BloomIntensity = 0.54,
+		SunRaysIntensity = 0.24, SunRaysSpread = 0.78,
+	},
+	-- Floor 35, Sovereign's Grove (Biome Boss: Blight Sovereign): blight eclipse — imperial crimson-violet
+	-- sky and eclipse horizon with a cool lilac key on the Sovereign's Dais so the 252-stud Mother Graft,
+	-- the Sovereign and every crimson boss telegraph read cleanly across the 795-stud sap mire.
+	[35] = {
+		Ambient = c(74, 34, 118), OutdoorAmbient = c(114, 64, 168), ColorShift_Top = c(216, 176, 255), ColorShift_Bottom = c(128, 24, 134),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(148, 48, 166), AtmosphereDecay = c(102, 22, 114), AtmosphereHaze = 0.95,
+		TintColor = c(234, 210, 255), Saturation = 0.16, Contrast = 0.14, ExposureCompensation = 0.05, BloomIntensity = 0.60,
+		SunRaysIntensity = 0.14, SunRaysSpread = 0.62,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 
