@@ -456,6 +456,15 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(226, 200, 255), Saturation = 0.10, Contrast = 0.16, ExposureCompensation = -0.02, BloomIntensity = 0.54,
 		SunRaysIntensity = 0.24, SunRaysSpread = 0.78,
 	},
+	-- Floor 35, Sovereign's Grove (Biome Boss: Blight Sovereign): blight eclipse — imperial crimson-violet
+	-- sky and eclipse horizon with a cool lilac key on the Sovereign's Dais so the 252-stud Mother Graft,
+	-- the Sovereign and every crimson boss telegraph read cleanly across the 795-stud sap mire.
+	[35] = {
+		Ambient = c(74, 34, 118), OutdoorAmbient = c(114, 64, 168), ColorShift_Top = c(216, 176, 255), ColorShift_Bottom = c(128, 24, 134),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(148, 48, 166), AtmosphereDecay = c(102, 22, 114), AtmosphereHaze = 0.95,
+		TintColor = c(234, 210, 255), Saturation = 0.16, Contrast = 0.14, ExposureCompensation = 0.05, BloomIntensity = 0.60,
+		SunRaysIntensity = 0.14, SunRaysSpread = 0.62,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

@@ -183,4 +183,19 @@ test("Floor 34 authored patrols replace generic gallery/bastion routes with BOLE
 	end
 end)
 
+test("Floor 35 authored patrols replace generic routes with WEST_ROOT, EAST_ROOT, TAPROOT, KNEE_CHORD and CROWN_RING", function()
+	local room = Layout.ForFloor(35)
+	local routes = Layout.PatrolRoutes(5, 35)
+	assert(routes.BASIN_LOOP and routes.WEST_ROOT and routes.EAST_ROOT and routes.TAPROOT and routes.KNEE_CHORD and routes.CROWN_RING)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil and routes.BASTION_RING == nil)
+	for id, route in routes do
+		assert(#route >= 2, id .. " is too short")
+		for _, wp in route do
+			assert(onWalkable(room, wp), id .. " waypoint off the walkways on Floor 35")
+		end
+		local seconds = PatrolPath.LoopLength(route) / PatrolPath.Speed
+		assert(seconds > 5 and seconds < 240, id .. " loop takes " .. seconds .. " s")
+	end
+end)
+
 print("Patrol tests: " .. passed .. " passed, 0 failed")

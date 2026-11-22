@@ -16,6 +16,7 @@ local CorruptedSetPieces = require(script.Parent.TowerSetPieces.CorruptedGrove)
 local CorruptedFloor32 = require(script.Parent.TowerSetPieces.CorruptedFloor32)
 local CorruptedFloor33 = require(script.Parent.TowerSetPieces.CorruptedFloor33)
 local CorruptedFloor34 = require(script.Parent.TowerSetPieces.CorruptedFloor34)
+local CorruptedFloor35 = require(script.Parent.TowerSetPieces.CorruptedFloor35)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
@@ -6474,6 +6475,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "corrupted:2" then CorruptedFloor32.Build
 		elseif layout.Authored == "corrupted:3" then CorruptedFloor33.Build
 		elseif layout.Authored == "corrupted:4" then CorruptedFloor34.Build
+		elseif layout.Authored == "corrupted:5" then CorruptedFloor35.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({

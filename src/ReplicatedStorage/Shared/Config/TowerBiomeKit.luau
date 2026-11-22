@@ -350,6 +350,21 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	SunkenWardenBoat = table.freeze({ Size = Vector3.new(16.495, 7.03, 10.057), Min = Vector3.new(-8.536, -0.837, -5.751), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "WOOD" }) }),
 	TreehouseKeep = table.freeze({ Size = Vector3.new(24.8, 22.6, 20.982), Min = Vector3.new(-12.4, 0.0, -10.491), Roles = table.freeze({ "ALT", "CANDLE", "GLOW", "SILK", "TRIM", "WOOD" }) }),
 	WeepingGallowsTree = table.freeze({ Size = Vector3.new(26.881, 35.43, 13.008), Min = Vector3.new(-13.0, -0.599, -6.476), Roles = table.freeze({ "MOSS", "SILK", "TRIM", "WOOD" }) }),
+	-- Corrupted Grove Floor 35 (Sovereign's Grove, corrupted_f35_kit)
+	FallenCrownBranch = table.freeze({ Size = Vector3.new(24.134, 17.128, 24.245), Min = Vector3.new(-12.067, 0.687, -12.152), Roles = table.freeze({ "GLOW", "MOSS", "SILK", "WOOD" }) }),
+	HeartrotGeode = table.freeze({ Size = Vector3.new(17.117, 20.412, 15.121), Min = Vector3.new(-8.568, -0.329, -7.56), Roles = table.freeze({ "CAP", "GLOW", "STONE", "WOOD" }) }),
+	LastWardenGraft = table.freeze({ Size = Vector3.new(15.086, 16.367, 15.086), Min = Vector3.new(-7.543, -0.542, -7.543), Roles = table.freeze({ "FOLIAGE", "METAL", "MOSS", "SILK", "TRIM", "WOOD" }) }),
+	MossMantle = table.freeze({ Size = Vector3.new(28.227, 26.756, 4.85), Min = Vector3.new(-13.781, 0.149, -3.0), Roles = table.freeze({ "GLOW", "MOSS", "WOOD" }) }),
+	MotherGraftLimbFruit = table.freeze({ Size = Vector3.new(40.405, 23.628, 9.89), Min = Vector3.new(-20.033, -1.025, -4.59), Roles = table.freeze({ "CAP", "GLOW", "WOOD" }) }),
+	MotherGraftLimbOak = table.freeze({ Size = Vector3.new(44.813, 31.16, 22.368), Min = Vector3.new(-22.397, -1.79, -9.919), Roles = table.freeze({ "GLOW", "MOSS", "WOOD" }) }),
+	MotherGraftLimbPine = table.freeze({ Size = Vector3.new(48.741, 34.989, 23.816), Min = Vector3.new(-20.908, -1.945, -11.947), Roles = table.freeze({ "FOLIAGE", "GLOW", "WOOD" }) }),
+	MotherGraftTrunk = table.freeze({ Size = Vector3.new(93.733, 219.261, 80.037), Min = Vector3.new(-50.544, -2.743, -50.786), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "SILK", "WOOD" }) }),
+	RootKneeJunction = table.freeze({ Size = Vector3.new(20.118, 14.001, 26.266), Min = Vector3.new(-7.251, -1.041, -13.133), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "WOOD" }) }),
+	RootRidgeSegment = table.freeze({ Size = Vector3.new(35.241, 13.951, 17.546), Min = Vector3.new(-17.376, -2.149, -8.773), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "WOOD" }) }),
+	RotbloomGiant = table.freeze({ Size = Vector3.new(17.746, 12.957, 16.439), Min = Vector3.new(-8.903, -0.281, -8.608), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "WOOD" }) }),
+	SapfallRibbon = table.freeze({ Size = Vector3.new(12.4, 35.199, 17.992), Min = Vector3.new(-6.2, -1.753, -7.592), Roles = table.freeze({ "CAP", "GLOW", "WOOD" }) }),
+	ThornCagedSeed = table.freeze({ Size = Vector3.new(12.366, 15.015, 12.825), Min = Vector3.new(-6.183, -0.294, -6.183), Roles = table.freeze({ "CANDLE", "GLOW", "SILK", "STONE", "WOOD" }) }),
+	WardenRootShrine = table.freeze({ Size = Vector3.new(9.116, 14.443, 8.085), Min = Vector3.new(-4.324, 1.1, -3.841), Roles = table.freeze({ "CANDLE", "SILK", "STONE", "WOOD" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -604,6 +619,8 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	WattleCroft = true, HangingPlanterPergola = true, FieldstoneWellhead = true, GibbetCage = true, TopiaryStag = true, TopiaryGraftKnot = true,
 	GreatRotwoodCavity = true, ElderTrunkRootFlare = true, ElderTrunkBoleA = true, ElderTrunkBoleB = true, ElderTrunkFork = true,
 	TreehouseKeep = true, ShelfFungusBracket = true, StakePalisadeSegment = true, StiltHut = true, WeepingGallowsTree = true, BranchBridgeHanger = true,
+	MotherGraftTrunk = true, MotherGraftLimbOak = true, MotherGraftLimbPine = true, MotherGraftLimbFruit = true,
+	RootRidgeSegment = true, RootKneeJunction = true, LastWardenGraft = true, FallenCrownBranch = true, HeartrotGeode = true, ThornCagedSeed = true, WardenRootShrine = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit

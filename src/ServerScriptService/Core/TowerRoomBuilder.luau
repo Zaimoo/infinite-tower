@@ -2234,6 +2234,16 @@ function Builder.Build(id: number, generation: number): any
 						local post = decor(curbGroup, "BridgeBranchPost", Vector3.new(0.85, 4.8, 0.85), at + Vector3.new(0, 2.2, 0), branchBark, Enum.Material.Wood)
 						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
 					end
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "ROOT" then
+					-- Floor 35's colossal root-burl walkways over the sap mire: gnarled blackened root-bark curbs
+					-- with pulsing violet-magenta heartrot seams strictly outside UsableWidth.
+					local rootOffset = right * (side * (link.Width / 2 - 0.5))
+					local rootBark = Color3.fromRGB(46, 24, 56)
+					local rootGlow = Color3.fromRGB(234, 62, 252)
+					local rail = decor(curbGroup, "BridgeRootCurb", Vector3.new(2.1, 3.0, curbLen), mid + rootOffset + Vector3.new(0, 1.3, 0), rootBark, Enum.Material.Wood)
+					rail.CFrame = CFrame.lookAt(mid + rootOffset, b + rootOffset) * CFrame.new(0, 1.3, 0)
+					local vein = decor(curbGroup, "BridgeRootVein", Vector3.new(2.35, 0.55, curbLen * 0.94), mid + rootOffset + Vector3.new(0, 2.35, 0), rootGlow, Enum.Material.Neon)
+					vein.CFrame = CFrame.lookAt(mid + rootOffset, b + rootOffset) * CFrame.new(0, 2.35, 0)
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))

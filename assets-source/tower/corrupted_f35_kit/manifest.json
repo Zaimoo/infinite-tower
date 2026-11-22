@@ -1,0 +1,271 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "FallenCrownBranch": {
+      "Min": [
+        -12.067,
+        0.687,
+        -12.152
+      ],
+      "Roles": {
+        "GLOW": 28,
+        "MOSS": 160,
+        "SILK": 182,
+        "WOOD": 328
+      },
+      "Size": [
+        24.134,
+        17.128,
+        24.245
+      ],
+      "Triangles": 698
+    },
+    "HeartrotGeode": {
+      "Min": [
+        -8.568,
+        -0.329,
+        -7.56
+      ],
+      "Roles": {
+        "CAP": 500,
+        "GLOW": 196,
+        "STONE": 160,
+        "WOOD": 72
+      },
+      "Size": [
+        17.117,
+        20.412,
+        15.121
+      ],
+      "Triangles": 928
+    },
+    "LastWardenGraft": {
+      "Min": [
+        -7.543,
+        -0.542,
+        -7.543
+      ],
+      "Roles": {
+        "FOLIAGE": 96,
+        "METAL": 12,
+        "MOSS": 640,
+        "SILK": 222,
+        "TRIM": 186,
+        "WOOD": 136
+      },
+      "Size": [
+        15.086,
+        16.367,
+        15.086
+      ],
+      "Triangles": 1292
+    },
+    "MossMantle": {
+      "Min": [
+        -13.781,
+        0.149,
+        -3.0
+      ],
+      "Roles": {
+        "GLOW": 28,
+        "MOSS": 196,
+        "WOOD": 34
+      },
+      "Size": [
+        28.227,
+        26.756,
+        4.85
+      ],
+      "Triangles": 258
+    },
+    "MotherGraftLimbFruit": {
+      "Min": [
+        -20.033,
+        -1.025,
+        -4.59
+      ],
+      "Roles": {
+        "CAP": 320,
+        "GLOW": 144,
+        "WOOD": 110
+      },
+      "Size": [
+        40.405,
+        23.628,
+        9.89
+      ],
+      "Triangles": 574
+    },
+    "MotherGraftLimbOak": {
+      "Min": [
+        -22.397,
+        -1.79,
+        -9.919
+      ],
+      "Roles": {
+        "GLOW": 22,
+        "MOSS": 80,
+        "WOOD": 106
+      },
+      "Size": [
+        44.813,
+        31.16,
+        22.368
+      ],
+      "Triangles": 208
+    },
+    "MotherGraftLimbPine": {
+      "Min": [
+        -20.908,
+        -1.945,
+        -11.947
+      ],
+      "Roles": {
+        "FOLIAGE": 120,
+        "GLOW": 14,
+        "WOOD": 162
+      },
+      "Size": [
+        48.741,
+        34.989,
+        23.816
+      ],
+      "Triangles": 296
+    },
+    "MotherGraftTrunk": {
+      "Min": [
+        -50.544,
+        -2.743,
+        -50.786
+      ],
+      "Roles": {
+        "CAP": 700,
+        "GLOW": 640,
+        "MOSS": 400,
+        "SILK": 342,
+        "WOOD": 1356
+      },
+      "Size": [
+        93.733,
+        219.261,
+        80.037
+      ],
+      "Triangles": 3438
+    },
+    "RootKneeJunction": {
+      "Min": [
+        -7.251,
+        -1.041,
+        -13.133
+      ],
+      "Roles": {
+        "CAP": 280,
+        "GLOW": 250,
+        "MOSS": 80,
+        "WOOD": 280
+      },
+      "Size": [
+        20.118,
+        14.001,
+        26.266
+      ],
+      "Triangles": 890
+    },
+    "RootRidgeSegment": {
+      "Min": [
+        -17.376,
+        -2.149,
+        -8.773
+      ],
+      "Roles": {
+        "CAP": 400,
+        "GLOW": 94,
+        "MOSS": 80,
+        "WOOD": 214
+      },
+      "Size": [
+        35.241,
+        13.951,
+        17.546
+      ],
+      "Triangles": 788
+    },
+    "RotbloomGiant": {
+      "Min": [
+        -8.903,
+        -0.281,
+        -8.608
+      ],
+      "Roles": {
+        "CAP": 1800,
+        "GLOW": 224,
+        "MOSS": 80,
+        "WOOD": 208
+      },
+      "Size": [
+        17.746,
+        12.957,
+        16.439
+      ],
+      "Triangles": 2312
+    },
+    "SapfallRibbon": {
+      "Min": [
+        -6.2,
+        -1.753,
+        -7.592
+      ],
+      "Roles": {
+        "CAP": 280,
+        "GLOW": 534,
+        "WOOD": 40
+      },
+      "Size": [
+        12.4,
+        35.199,
+        17.992
+      ],
+      "Triangles": 854
+    },
+    "ThornCagedSeed": {
+      "Min": [
+        -6.183,
+        -0.294,
+        -6.183
+      ],
+      "Roles": {
+        "CANDLE": 140,
+        "GLOW": 56,
+        "SILK": 222,
+        "STONE": 80,
+        "WOOD": 464
+      },
+      "Size": [
+        12.366,
+        15.015,
+        12.825
+      ],
+      "Triangles": 962
+    },
+    "WardenRootShrine": {
+      "Min": [
+        -4.324,
+        1.1,
+        -3.841
+      ],
+      "Roles": {
+        "CANDLE": 80,
+        "SILK": 222,
+        "STONE": 160,
+        "WOOD": 184
+      },
+      "Size": [
+        9.116,
+        14.443,
+        8.085
+      ],
+      "Triangles": 646
+    }
+  },
+  "Unit": "studs"
+}
