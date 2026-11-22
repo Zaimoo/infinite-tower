@@ -2215,6 +2215,25 @@ function Builder.Build(id: number, generation: number): any
 						local post = decor(curbGroup, "BridgeHedgePost", Vector3.new(0.75, 5.8, 0.75), at + Vector3.new(0, 2.7, 0), plankDark, Enum.Material.Wood)
 						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
 					end
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "BRANCH" then
+					-- Floor 34's tree-to-tree branch bridges over the rot bog: gnarled timber handrails, taut rope
+					-- lanyards and glowing violet-magenta sap tendrils strictly outside UsableWidth.
+					local railOffset = right * (side * (link.Width / 2 - 0.55))
+					local branchBark = Color3.fromRGB(54, 34, 62)
+					local sapGlow = Color3.fromRGB(218, 66, 246)
+					for idx, h in { 1.7, 3.6 } do
+						local r0, r1 = a + railOffset + Vector3.new(0, h, 0), b + railOffset + Vector3.new(0, h, 0)
+						local railPart = decor(curbGroup, "BridgeBranchRail", Vector3.new(if idx == 2 then 0.65 else 0.32, if idx == 2 then 0.65 else 0.32, (r1 - r0).Magnitude), (r0 + r1) / 2, if idx == 2 then branchBark else rope, if idx == 2 then Enum.Material.Wood else Enum.Material.Fabric)
+						railPart.CFrame = CFrame.lookAt((r0 + r1) / 2, r1)
+					end
+					local sapLine = decor(curbGroup, "BridgeBranchSap", Vector3.new(0.32, 0.32, curbLen * 0.92), mid + railOffset + Vector3.new(0, 3.95, 0), sapGlow, Enum.Material.Neon)
+					sapLine.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 3.95, 0)
+					local posts = math.max(2, math.floor(delta.Magnitude / 13) + 1)
+					for i = 0, posts - 1 do
+						local at = a:Lerp(b, i / (posts - 1)) + railOffset
+						local post = decor(curbGroup, "BridgeBranchPost", Vector3.new(0.85, 4.8, 0.85), at + Vector3.new(0, 2.2, 0), branchBark, Enum.Material.Wood)
+						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+					end
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))

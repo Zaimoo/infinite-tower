@@ -1,0 +1,278 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BranchBridgeHanger": {
+      "Min": [
+        -2.065,
+        -0.049,
+        -2.065
+      ],
+      "Roles": {
+        "CANDLE": 80,
+        "MOSS": 76,
+        "SILK": 182,
+        "WOOD": 106
+      },
+      "Size": [
+        10.986,
+        20.178,
+        4.824
+      ],
+      "Triangles": 444
+    },
+    "ElderTrunkBoleA": {
+      "Min": [
+        -8.204,
+        -0.315,
+        -8.202
+      ],
+      "Roles": {
+        "GLOW": 28,
+        "METAL": 120,
+        "SILK": 500,
+        "WOOD": 218
+      },
+      "Size": [
+        16.404,
+        65.671,
+        16.407
+      ],
+      "Triangles": 866
+    },
+    "ElderTrunkBoleB": {
+      "Min": [
+        -9.071,
+        -0.312,
+        -10.681
+      ],
+      "Roles": {
+        "CAP": 900,
+        "GLOW": 428,
+        "MOSS": 152,
+        "WOOD": 78
+      },
+      "Size": [
+        20.245,
+        65.667,
+        21.797
+      ],
+      "Triangles": 1558
+    },
+    "ElderTrunkFork": {
+      "Min": [
+        -21.326,
+        0.0,
+        -26.869
+      ],
+      "Roles": {
+        "FOLIAGE": 400,
+        "GLOW": 42,
+        "MOSS": 190,
+        "WOOD": 204
+      },
+      "Size": [
+        43.328,
+        48.97,
+        49.017
+      ],
+      "Triangles": 836
+    },
+    "ElderTrunkRootFlare": {
+      "Min": [
+        -15.081,
+        -0.984,
+        -14.054
+      ],
+      "Roles": {
+        "GLOW": 88,
+        "MOSS": 320,
+        "STONE": 320,
+        "WOOD": 316
+      },
+      "Size": [
+        28.19,
+        48.819,
+        29.685
+      ],
+      "Triangles": 1044
+    },
+    "GreatRotwoodCavity": {
+      "Min": [
+        -27.124,
+        -2.043,
+        -34.518
+      ],
+      "Roles": {
+        "CAP": 700,
+        "GLOW": 616,
+        "MOSS": 266,
+        "SILK": 302,
+        "WOOD": 1034
+      },
+      "Size": [
+        61.378,
+        162.528,
+        68.176
+      ],
+      "Triangles": 2918
+    },
+    "SapTapCistern": {
+      "Min": [
+        -7.35,
+        0.0,
+        -6.9
+      ],
+      "Roles": {
+        "GLOW": 250,
+        "METAL": 420,
+        "TRIM": 12,
+        "WOOD": 306
+      },
+      "Size": [
+        14.5,
+        13.5,
+        11.931
+      ],
+      "Triangles": 988
+    },
+    "SeedJarStack": {
+      "Min": [
+        -6.93,
+        -1.0,
+        -5.19
+      ],
+      "Roles": {
+        "CANDLE": 256,
+        "GLOW": 80,
+        "METAL": 48,
+        "SILK": 160,
+        "WOOD": 270
+      },
+      "Size": [
+        14.635,
+        13.585,
+        8.39
+      ],
+      "Triangles": 814
+    },
+    "ShelfFungusBracket": {
+      "Min": [
+        -14.871,
+        0.392,
+        -15.98
+      ],
+      "Roles": {
+        "CAP": 1200,
+        "GLOW": 256,
+        "MOSS": 80,
+        "WOOD": 34
+      },
+      "Size": [
+        29.499,
+        12.184,
+        27.0
+      ],
+      "Triangles": 1570
+    },
+    "StakePalisadeSegment": {
+      "Min": [
+        -10.829,
+        1.522,
+        -1.69
+      ],
+      "Roles": {
+        "GLOW": 38,
+        "SILK": 182,
+        "TRIM": 24,
+        "WOOD": 264
+      },
+      "Size": [
+        21.657,
+        16.403,
+        4.105
+      ],
+      "Triangles": 508
+    },
+    "StiltHut": {
+      "Min": [
+        -9.8,
+        -0.046,
+        -8.648
+      ],
+      "Roles": {
+        "ALT": 24,
+        "CANDLE": 68,
+        "MOSS": 80,
+        "SILK": 182,
+        "TRIM": 12,
+        "WOOD": 212
+      },
+      "Size": [
+        19.6,
+        20.875,
+        17.576
+      ],
+      "Triangles": 578
+    },
+    "SunkenWardenBoat": {
+      "Min": [
+        -8.536,
+        -0.837,
+        -5.751
+      ],
+      "Roles": {
+        "CAP": 168,
+        "GLOW": 108,
+        "MOSS": 240,
+        "WOOD": 194
+      },
+      "Size": [
+        16.495,
+        7.03,
+        10.057
+      ],
+      "Triangles": 710
+    },
+    "TreehouseKeep": {
+      "Min": [
+        -12.4,
+        0.0,
+        -10.491
+      ],
+      "Roles": {
+        "ALT": 24,
+        "CANDLE": 24,
+        "GLOW": 22,
+        "SILK": 206,
+        "TRIM": 12,
+        "WOOD": 216
+      },
+      "Size": [
+        24.8,
+        22.6,
+        20.982
+      ],
+      "Triangles": 504
+    },
+    "WeepingGallowsTree": {
+      "Min": [
+        -13.0,
+        -0.599,
+        -6.476
+      ],
+      "Roles": {
+        "MOSS": 76,
+        "SILK": 534,
+        "TRIM": 112,
+        "WOOD": 220
+      },
+      "Size": [
+        26.881,
+        35.43,
+        13.008
+      ],
+      "Triangles": 942
+    }
+  },
+  "Unit": "studs"
+}

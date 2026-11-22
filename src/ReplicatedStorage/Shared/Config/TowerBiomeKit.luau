@@ -335,6 +335,21 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	WattleFence = table.freeze({ Size = Vector3.new(14.571, 5.256, 1.04), Min = Vector3.new(-7.285, -0.5, -0.52), Roles = table.freeze({ "WOOD" }) }),
 	WebbedArchway = table.freeze({ Size = Vector3.new(18.2, 15.9, 4.79), Min = Vector3.new(-9.1, 0.0, -2.0), Roles = table.freeze({ "BULB", "CAP", "GLOW", "STEM", "STONE", "TRIM" }) }),
 	WhiteguardTower = table.freeze({ Size = Vector3.new(20.668, 62.7, 26.662), Min = Vector3.new(-10.334, -1.2, -10.6), Roles = table.freeze({ "ALT", "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE", "TRIM" }) }),
+	-- Corrupted Grove Floor 34 (Heartrot Stronghold, corrupted_f34_kit)
+	BranchBridgeHanger = table.freeze({ Size = Vector3.new(10.986, 20.178, 4.824), Min = Vector3.new(-2.065, -0.049, -2.065), Roles = table.freeze({ "CANDLE", "MOSS", "SILK", "WOOD" }) }),
+	ElderTrunkBoleA = table.freeze({ Size = Vector3.new(16.404, 65.671, 16.407), Min = Vector3.new(-8.204, -0.315, -8.202), Roles = table.freeze({ "GLOW", "METAL", "SILK", "WOOD" }) }),
+	ElderTrunkBoleB = table.freeze({ Size = Vector3.new(20.245, 65.667, 21.797), Min = Vector3.new(-9.071, -0.312, -10.681), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "WOOD" }) }),
+	ElderTrunkFork = table.freeze({ Size = Vector3.new(43.328, 48.97, 49.017), Min = Vector3.new(-21.326, 0.0, -26.869), Roles = table.freeze({ "FOLIAGE", "GLOW", "MOSS", "WOOD" }) }),
+	ElderTrunkRootFlare = table.freeze({ Size = Vector3.new(28.19, 48.819, 29.685), Min = Vector3.new(-15.081, -0.984, -14.054), Roles = table.freeze({ "GLOW", "MOSS", "STONE", "WOOD" }) }),
+	GreatRotwoodCavity = table.freeze({ Size = Vector3.new(61.378, 162.528, 68.176), Min = Vector3.new(-27.124, -2.043, -34.518), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "SILK", "WOOD" }) }),
+	SapTapCistern = table.freeze({ Size = Vector3.new(14.5, 13.5, 11.931), Min = Vector3.new(-7.35, 0.0, -6.9), Roles = table.freeze({ "GLOW", "METAL", "TRIM", "WOOD" }) }),
+	SeedJarStack = table.freeze({ Size = Vector3.new(14.635, 13.585, 8.39), Min = Vector3.new(-6.93, -1.0, -5.19), Roles = table.freeze({ "CANDLE", "GLOW", "METAL", "SILK", "WOOD" }) }),
+	ShelfFungusBracket = table.freeze({ Size = Vector3.new(29.499, 12.184, 27.0), Min = Vector3.new(-14.871, 0.392, -15.98), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "WOOD" }) }),
+	StakePalisadeSegment = table.freeze({ Size = Vector3.new(21.657, 16.403, 4.105), Min = Vector3.new(-10.829, 1.522, -1.69), Roles = table.freeze({ "GLOW", "SILK", "TRIM", "WOOD" }) }),
+	StiltHut = table.freeze({ Size = Vector3.new(19.6, 20.875, 17.576), Min = Vector3.new(-9.8, -0.046, -8.648), Roles = table.freeze({ "ALT", "CANDLE", "MOSS", "SILK", "TRIM", "WOOD" }) }),
+	SunkenWardenBoat = table.freeze({ Size = Vector3.new(16.495, 7.03, 10.057), Min = Vector3.new(-8.536, -0.837, -5.751), Roles = table.freeze({ "CAP", "GLOW", "MOSS", "WOOD" }) }),
+	TreehouseKeep = table.freeze({ Size = Vector3.new(24.8, 22.6, 20.982), Min = Vector3.new(-12.4, 0.0, -10.491), Roles = table.freeze({ "ALT", "CANDLE", "GLOW", "SILK", "TRIM", "WOOD" }) }),
+	WeepingGallowsTree = table.freeze({ Size = Vector3.new(26.881, 35.43, 13.008), Min = Vector3.new(-13.0, -0.599, -6.476), Roles = table.freeze({ "MOSS", "SILK", "TRIM", "WOOD" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -587,6 +602,8 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	GraftedFruitTreeC = true, PleachedArch = true, EspalierWall = true, CiderVatSplit = true, ThornBrambleArch = true,
 	ThornheartKnot = true, BriarGatehouse = true, HedgeWallStraight = true, HedgeWallCorner = true, HedgeWallBroken = true,
 	WattleCroft = true, HangingPlanterPergola = true, FieldstoneWellhead = true, GibbetCage = true, TopiaryStag = true, TopiaryGraftKnot = true,
+	GreatRotwoodCavity = true, ElderTrunkRootFlare = true, ElderTrunkBoleA = true, ElderTrunkBoleB = true, ElderTrunkFork = true,
+	TreehouseKeep = true, ShelfFungusBracket = true, StakePalisadeSegment = true, StiltHut = true, WeepingGallowsTree = true, BranchBridgeHanger = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit

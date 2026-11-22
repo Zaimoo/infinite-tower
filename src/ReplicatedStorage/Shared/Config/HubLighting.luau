@@ -447,6 +447,15 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.30, AtmosphereColor = c(144, 78, 198), AtmosphereDecay = c(88, 36, 142), AtmosphereHaze = 0.90,
 		TintColor = c(236, 210, 255), Saturation = 0.14, Contrast = 0.18, ExposureCompensation = 0.08, BloomIntensity = 0.52,
 	},
+	-- Floor 34, Heartrot Stronghold: deep violet-black canopy gloom pierced by sun-ray shafts through
+	-- high crown gaps and electric violet-magenta heartrot cavities; the darkest Corrupted floor while
+	-- keeping camps, branch bridges and red enemy telegraphs clear.
+	[34] = {
+		Ambient = c(56, 30, 96), OutdoorAmbient = c(84, 52, 134), ColorShift_Top = c(186, 148, 242), ColorShift_Bottom = c(88, 22, 138),
+		AtmosphereDensity = 0.40, AtmosphereColor = c(104, 54, 152), AtmosphereDecay = c(62, 24, 108), AtmosphereHaze = 1.40,
+		TintColor = c(226, 200, 255), Saturation = 0.10, Contrast = 0.16, ExposureCompensation = -0.02, BloomIntensity = 0.54,
+		SunRaysIntensity = 0.24, SunRaysSpread = 0.78,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

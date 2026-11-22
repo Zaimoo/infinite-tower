@@ -233,6 +233,25 @@ test("Floor 33 has its own Briar Labyrinth kit: at least ten new templates, low 
 	end
 end)
 
+test("Floor 34 has its own Heartrot Stronghold kit: at least eleven new templates and a 175+ stud Great Rotwood", function()
+	local f34 = {
+		"GreatRotwoodCavity", "ElderTrunkRootFlare", "ElderTrunkBoleA", "ElderTrunkBoleB", "ElderTrunkFork",
+		"TreehouseKeep", "ShelfFungusBracket", "SapTapCistern", "SeedJarStack", "StakePalisadeSegment",
+		"StiltHut", "WeepingGallowsTree", "SunkenWardenBoat", "BranchBridgeHanger",
+	}
+	for _, name in f34 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 34 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f34 >= 11)
+	-- The Great Rotwood centrepiece (placed at Y scale 1.15) clears the ladder's 175 studs.
+	assert(Kit.ExtraTemplates.GreatRotwoodCavity.Size.Y * 1.15 >= 175)
+	-- Pale Bands are linen (SILK) on every banded stronghold template.
+	for _, name in { "GreatRotwoodCavity", "ElderTrunkBoleA", "TreehouseKeep", "StakePalisadeSegment", "WeepingGallowsTree", "BranchBridgeHanger" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "SILK"), name .. " has no Pale Band")
+	end
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -333,6 +352,8 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[33] ~= nil, "floor 33 (Briar Labyrinth) has its hard-shadow noon grade")
 	assert(Light.FloorGrades[33].Contrast >= 0.15, "floor 33 keeps crisp thorn-shadow contrast")
 	assert(Light.FloorGrades[33].AtmosphereHaze < Light.FloorGrades[32].AtmosphereHaze, "floor 33 is clearer than floor 32's dusk haze")
+	assert(Light.FloorGrades[34] ~= nil, "floor 34 (Heartrot Stronghold) has its canopy gloom grade")
+	assert(Light.FloorGrades[34].AtmosphereDensity >= 0.38 and Light.FloorGrades[34].SunRaysIntensity > 0, "floor 34 keeps canopy gloom and sun-ray shafts")
 	assert(Light.TowerPreset(6, 26) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
