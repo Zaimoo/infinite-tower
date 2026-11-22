@@ -10,6 +10,7 @@ local KitProps = require(script.Parent.TowerKitProps)
 local TowerLayout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local Kit = require(game.ReplicatedStorage.Shared.Config.TowerBiomeKit)
 local InfernalSetPieces = require(script.Parent.TowerSetPieces.InfernalFoundry)
+local ThunderSetPieces = require(script.Parent.TowerSetPieces.ThunderHighlands)
 local InfernalFloor24 = require(script.Parent.TowerSetPieces.InfernalFloor24)
 local InfernalFloor25 = require(script.Parent.TowerSetPieces.InfernalFloor25)
 local Assets = {}
@@ -696,6 +697,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	local isCloud = biome == "thunder_highlands"
 	local isCosmic = biome == "astral_archives"
 	local isAbyss = biome == "abyssal_throne"
+	-- Hand-authored Thunder Highlands floors (Floor 26 onward) replace the generic henge, peaks and vortex.
+	local thunderAuthored = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 8) == "thunder:"
 
 	if seaLevel < 0 and not natural then
 		local basinSurface = block(
@@ -1006,7 +1009,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		statue(V(westGal.X + 12, westGal.Y, westGal.Z - 18), 1.45 * scale, "StaffGoddess", -1)
 		statue(V(eastGal.X - 12, eastGal.Y, eastGal.Z - 18), 1.45 * scale, "TridentKing", 1)
 
-	elseif biome == "thunder_highlands" then
+	elseif biome == "thunder_highlands" and not thunderAuthored then
 		-- West Ridge: Circular Stone Henge Portal Ring struck by vertical lightning (from Thunder Highlands.jpeg)
 		local hengeAt = V(westGal.X - 10, westGal.Y, westGal.Z - 10)
 		group("StormHenge", function()
@@ -6456,6 +6459,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "infernal:3" then InfernalSetPieces.Floor23
 		elseif layout.Authored == "infernal:4" then InfernalFloor24.Build
 		elseif layout.Authored == "infernal:5" then InfernalFloor25.Build
+		-- Thunder Highlands authored floors (Floor 26 onward): TowerSetPieces/ThunderHighlands.
+		elseif layout.Authored == "thunder:1" then ThunderSetPieces.Floor26
 		else nil
 	if infernalBuild then
 		infernalBuild({
@@ -7264,6 +7269,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			orb("CrucibleSplashPool", backdrop + V(0, 2, 14), V(40 * scale, 5 * scale, 28 * scale), rgb(255, 145, 35), Enum.Material.SmoothPlastic, 0.2)
 		end)
 
+	elseif biome == "thunder_highlands" and thunderAuthored then
+		-- Floors 26+ build their own tor, totems and ridges in TowerSetPieces.
 	elseif biome == "thunder_highlands" then
 		group("StormPeaks", function()
 			for k = 1, 7 do
@@ -7667,7 +7674,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- An authored floor can thin its groves (Floor 6: one giant, the Elder Cap, not a forest of them).
 		local td = layout.Terrain or {}
 		local groveScale = td.GroveScale or 1
-		local groveCount = if layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" then 0 else math.round(eco.Groves * 1.5 * density * groveScale)
+		-- (Floor 26 plants its own wind-bent pines, all leaning down the one gale.)
+		local groveCount = if layout.Authored == "thunder:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" then 0 else math.round(eco.Groves * 1.5 * density * groveScale)
 		for _ = 1, groveCount do
 			local name = pick(eco.Trees)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2])
@@ -7722,7 +7730,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 		-- Trees climbing the mountain slopes (skipped on Floors 18-20)
-		local slopeTreeCount = if layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then 0 else math.round(eco.SlopeForestCount * 1.5 * density)
+		local slopeTreeCount = if layout.Authored == "thunder:1" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then 0 else math.round(eco.SlopeForestCount * 1.5 * density)
 		for _ = 1, slopeTreeCount do
 			local name = pick(eco.SlopeForest)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2]) * 0.85

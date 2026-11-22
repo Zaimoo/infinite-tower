@@ -1670,6 +1670,94 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Titan's Crucible",
 		},
 	},
+	-- Floor 26, Stormgrass Rise (Thunder Highlands): the Kairnfolk's lower grazing slopes. The moor climbs
+	-- into three staggered contours (the Windmill Knoll, the Cairn Fold, the Standing Stones), and north of the
+	-- Fold a sheer turf-and-slate headwall rises, twin falls spilling down it, with no way up its face: every
+	-- ascent tacks across the wind, west through the West Wind-Crag and up the slate stair, or east over the
+	-- dry-stone causeways through the East Wind-Crag. Two cairn spurs (the Shepherd's Watch croft, the
+	-- Fulgurite Outcrop) overlook the moor, and a split granite tor crowned by a copper forked-bolt totem
+	-- stands behind the Stormgrass Crown. 10 terraces, 11 links, 9 walk heights.
+	[26] = {
+		Key = "thunder:1",
+		Name = "Stormgrass Rise",
+		Size = { Width = 510, Depth = 550, Height = 180 },
+		PathStyle = "KAIRN",
+		DirectTerrain = true,
+		Surface = "KAIRN",
+		Masonry = "KAIRN_STONE",
+		-- Off-grid dry-stone platforms (Y 6, 10, 18); every link touching one is a built causeway.
+		Decks = {
+			EastGallery = true,
+			ShepherdWatch = true,
+			EastCrag = true,
+		},
+		Suspended = {
+			Links = {
+				Basin_EastGallery = true,
+				WestGallery_ShepherdWatch = true,
+				EastGallery_FulguriteSpur = true,
+				EastGallery_EastCrag = true,
+				EastCrag_Apex = true,
+			},
+		},
+		-- Moorland tarns: water sits just under the moor.
+		Liquid = { LevelOffset = 3.2, FloorDip = 2.2 },
+		TerrainFeatures = {
+			-- The headwall: a sheer turf-capped slate wall north of the Cairn Fold, between the two wind-crags.
+			{ Kind = "HEADWALL", X = 4, Z = -96, HalfX = 26, HalfZ = 40, Top = 74 },
+			-- The fulgurite strike crater: a scorched bowl in the slope north of the Fulgurite Outcrop.
+			{ Kind = "LIGHTNING_SCAR", X = 150, Z = -204, Radius = 28, Rim = 7 },
+			-- The plunge tarn under the twin falls, and a moorland pool off the west trail.
+			{
+				Kind = "POOL_ELLIPSES_SQ",
+				Strength = 0.28,
+				Gain = 0.34,
+				Ellipses = {
+					{ X = 6, Z = -46, RX = 26, RZ = 10 },
+					{ X = -214, Z = 72, RX = 18, RZ = 12 },
+				},
+			},
+		},
+		Basin = { X = 0, Y = 0, Z = 132, Width = 420, Depth = 92 },
+		Crossing = { X = -6, Y = 8, Z = 16, Width = 78, Depth = 62 },
+		-- The knoll is broad enough for the windmill to stand on it, outside the Elite's camp.
+		WestGallery = { X = -150, Y = 4, Z = 10, Width = 112, Depth = 88 },
+		EastGallery = { X = 152, Y = 6, Z = 2, Width = 86, Depth = 76 },
+		ExtraPlatforms = {
+			-- Broad enough for the croft to stand on its north edge, clear of the landing.
+			ShepherdWatch = { X = -178, Y = 10, Z = -124, Width = 86, Depth = 70 },
+			FulguriteSpur = { X = 180, Y = 12, Z = -124, Width = 64, Depth = 52 },
+			WestCrag = { X = -76, Y = 16, Z = -96, Width = 72, Depth = 60 },
+			EastCrag = { X = 80, Y = 18, Z = -102, Width = 72, Depth = 60 },
+		},
+		Apex = { X = 0, Y = 24, Z = -206, Width = 120, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "Crossing" },
+			{ "Basin", "EastGallery" },
+			{ "WestGallery", "ShepherdWatch" },
+			{ "EastGallery", "FulguriteSpur" },
+			{ "WestGallery", "WestCrag" },
+			{ "Crossing", "WestCrag" },
+			{ "EastGallery", "EastCrag" },
+			{ "WestCrag", "Apex" },
+			{ "EastCrag", "Apex" },
+		},
+		Stairs = { WestCrag_Apex = true },
+		Names = {
+			Sanctuary = "Bell-Gate Fold",
+			Basin = "Shepherd's Moor",
+			WestGallery = "Windmill Knoll",
+			Crossing = "Cairn Fold",
+			EastGallery = "Standing Stones",
+			ShepherdWatch = "Shepherd's Watch",
+			FulguriteSpur = "Fulgurite Outcrop",
+			WestCrag = "West Wind-Crag",
+			EastCrag = "East Wind-Crag",
+			Apex = "Stormgrass Crown",
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

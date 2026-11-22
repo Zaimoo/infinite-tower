@@ -169,6 +169,22 @@ test("Floor 25 has its own Titan's Crucible kit: at least ten new templates and 
 	assert(Kit.ExtraTemplates.GreatCrucible.Size.Y * 1.85 >= 170)
 end)
 
+test("Floor 26 has its own Kairnfolk kit: at least eight new templates and a 95+ stud tor", function()
+	local f26 = { "ForkedBoltTotem", "SplitGraniteTor", "HighlandWindmill", "RuneStandingStone", "ShepherdCroft",
+		"DryStoneWall", "RamHurdleFence", "TrailCairnTall", "WindBentPine", "StormgrassTuft", "DolmenBellGate",
+		"HighlandSheep", "WaterfallRibbon", "PrayerFlagLine", "StormCrystalSpikes" }
+	for _, name in f26 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 26 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f26 >= 8)
+	-- The split granite tor (scale 0.62) and the forked-bolt totem on its crown (0.95) rise past 95 studs together.
+	assert(Kit.ExtraTemplates.SplitGraniteTor.Size.Y * 0.62 + Kit.ExtraTemplates.ForkedBoltTotem.Size.Y * 0.95 >= 95)
+	-- The bell-gate's uprights (scale 1.45) stand clear of the 20-stud arrival causeway either side.
+	local gate = Kit.ExtraTemplates.DolmenBellGate
+	assert(gate.Size.Y * 1.45 > 30, "the bell-gate does not clear the walk")
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -262,7 +278,8 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[23] ~= nil, "floor 23 (Furnace Causeway) has its furnace-glare grade")
 	assert(Light.FloorGrades[24] ~= nil, "floor 24 (Ironflame Bulwark) has its siege-red night grade")
 	assert(Light.FloorGrades[25] ~= nil, "floor 25 (Titan's Crucible) has its molten-heart grade")
-	assert(Light.TowerPreset(6, 26) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
+	assert(Light.FloorGrades[26] ~= nil, "floor 26 (Stormgrass Rise) has its storm-breaking dawn grade")
+	assert(Light.TowerPreset(6, 27) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400

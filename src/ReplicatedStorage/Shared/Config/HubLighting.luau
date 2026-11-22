@@ -425,6 +425,15 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 234, 204), Saturation = 0.12, Contrast = 0.22, ExposureCompensation = 0.12, BloomIntensity = 0.66,
 		SunRaysIntensity = 0.08, SunRaysSpread = 0.44,
 	},
+	-- Floor 26 (Stormgrass Rise): storm-breaking highland dawn. A cool slate-blue ambient under a pale gold top
+	-- light breaking through the clouds, a light valley mist that keeps the moor, the headwall tor and the far
+	-- ridges in three distinct layers, and crisp contrast on the wet stormgrass.
+	[26] = {
+		Ambient = c(70, 78, 98), OutdoorAmbient = c(96, 106, 128), ColorShift_Top = c(255, 226, 178), ColorShift_Bottom = c(92, 84, 140),
+		AtmosphereDensity = 0.26, AtmosphereColor = c(150, 158, 178), AtmosphereDecay = c(96, 92, 132), AtmosphereHaze = 1.0,
+		TintColor = c(240, 242, 255), Saturation = 0.1, Contrast = 0.14, ExposureCompensation = 0.04, BloomIntensity = 0.42,
+		SunRaysIntensity = 0.12, SunRaysSpread = 0.4,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

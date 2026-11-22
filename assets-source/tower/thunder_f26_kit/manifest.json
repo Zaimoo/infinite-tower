@@ -1,0 +1,279 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "DolmenBellGate": {
+      "Min": [
+        -22.875,
+        -0.649,
+        -3.969
+      ],
+      "Roles": {
+        "GOLD": 540,
+        "MOSS": 140,
+        "STONE": 240,
+        "TRIM": 144
+      },
+      "Size": [
+        45.891,
+        24.654,
+        7.996
+      ],
+      "Triangles": 1064
+    },
+    "DryStoneWall": {
+      "Min": [
+        -12.0,
+        -0.126,
+        -1.563
+      ],
+      "Roles": {
+        "MOSS": 100,
+        "STONE": 2172
+      },
+      "Size": [
+        26.082,
+        3.961,
+        3.252
+      ],
+      "Triangles": 2272
+    },
+    "ForkedBoltTotem": {
+      "Min": [
+        -9.496,
+        -0.282,
+        -5.642
+      ],
+      "Roles": {
+        "ACCENT": 812,
+        "GLOW": 364,
+        "METAL": 960,
+        "MOSS": 120,
+        "STONE": 432
+      },
+      "Size": [
+        18.993,
+        42.882,
+        11.852
+      ],
+      "Triangles": 2688
+    },
+    "HighlandSheep": {
+      "Min": [
+        -1.363,
+        0.0,
+        -2.236
+      ],
+      "Roles": {
+        "ALT": 80,
+        "TRIM": 228
+      },
+      "Size": [
+        2.555,
+        3.119,
+        5.537
+      ],
+      "Triangles": 308
+    },
+    "HighlandWindmill": {
+      "Min": [
+        -13.678,
+        0.0,
+        -23.396
+      ],
+      "Roles": {
+        "ALT": 60,
+        "METAL": 36,
+        "STONE": 844,
+        "TRIM": 220,
+        "WOOD": 696
+      },
+      "Size": [
+        32.431,
+        46.753,
+        33.08
+      ],
+      "Triangles": 1856
+    },
+    "PrayerFlagLine": {
+      "Min": [
+        -18.058,
+        -0.014,
+        -0.225
+      ],
+      "Roles": {
+        "ACCENT": 60,
+        "ALT": 48,
+        "GOLD": 60,
+        "TRIM": 204,
+        "WOOD": 24
+      },
+      "Size": [
+        36.117,
+        11.071,
+        0.45
+      ],
+      "Triangles": 396
+    },
+    "RamHurdleFence": {
+      "Min": [
+        -6.39,
+        -0.01,
+        -0.3
+      ],
+      "Roles": {
+        "WOOD": 132
+      },
+      "Size": [
+        12.707,
+        4.62,
+        0.6
+      ],
+      "Triangles": 132
+    },
+    "RuneStandingStone": {
+      "Min": [
+        -2.792,
+        -0.5,
+        -2.571
+      ],
+      "Roles": {
+        "GLOW": 60,
+        "MOSS": 60,
+        "STONE": 160
+      },
+      "Size": [
+        6.529,
+        13.261,
+        5.387
+      ],
+      "Triangles": 280
+    },
+    "ShepherdCroft": {
+      "Min": [
+        -10.8,
+        -0.134,
+        -7.705
+      ],
+      "Roles": {
+        "GLOW": 12,
+        "MOSS": 260,
+        "STONE": 1382,
+        "TRIM": 32,
+        "WOOD": 24
+      },
+      "Size": [
+        22.569,
+        14.084,
+        15.354
+      ],
+      "Triangles": 1710
+    },
+    "SplitGraniteTor": {
+      "Min": [
+        -33.315,
+        -0.591,
+        -24.2
+      ],
+      "Roles": {
+        "ALT": 320,
+        "MOSS": 340,
+        "STONE": 3666
+      },
+      "Size": [
+        65.568,
+        93.935,
+        52.922
+      ],
+      "Triangles": 4326
+    },
+    "StormCrystalSpikes": {
+      "Min": [
+        -6.739,
+        -0.3,
+        -4.408
+      ],
+      "Roles": {
+        "CRYSTAL": 220,
+        "GLOW": 12,
+        "STONE": 80
+      },
+      "Size": [
+        12.197,
+        14.471,
+        9.431
+      ],
+      "Triangles": 312
+    },
+    "StormgrassTuft": {
+      "Min": [
+        -1.567,
+        -0.1,
+        -1.32
+      ],
+      "Roles": {
+        "FOLIAGE": 264,
+        "MOSS": 20
+      },
+      "Size": [
+        3.902,
+        2.851,
+        2.583
+      ],
+      "Triangles": 284
+    },
+    "TrailCairnTall": {
+      "Min": [
+        -2.214,
+        -0.156,
+        -1.921
+      ],
+      "Roles": {
+        "GLOW": 108,
+        "METAL": 88,
+        "MOSS": 20,
+        "STONE": 140
+      },
+      "Size": [
+        4.673,
+        13.322,
+        4.032
+      ],
+      "Triangles": 356
+    },
+    "WaterfallRibbon": {
+      "Min": [
+        -9.0,
+        -0.84,
+        -1.803
+      ],
+      "Roles": {
+        "ALT": 252,
+        "CRYSTAL": 112
+      },
+      "Size": [
+        18.0,
+        60.84,
+        6.825
+      ],
+      "Triangles": 364
+    },
+    "WindBentPine": {
+      "Min": [
+        -3.188,
+        -0.565,
+        -3.938
+      ],
+      "Roles": {
+        "FOLIAGE": 300,
+        "WOOD": 262
+      },
+      "Size": [
+        24.141,
+        28.797,
+        8.176
+      ],
+      "Triangles": 562
+    }
+  },
+  "Unit": "studs"
+}
