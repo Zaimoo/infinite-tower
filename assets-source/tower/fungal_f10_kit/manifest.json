@@ -1,0 +1,151 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BroodEggClutch": {
+      "Min": [
+        -4.794,
+        0.15,
+        -3.9
+      ],
+      "Roles": {
+        "BULB": 480,
+        "CAP": 200,
+        "GLOW": 450,
+        "MOSS": 100,
+        "STEM": 112
+      },
+      "Size": [
+        9.169,
+        4.4,
+        7.8
+      ],
+      "Triangles": 1342
+    },
+    "LastLampShrine": {
+      "Min": [
+        -6.769,
+        0.0,
+        -4.9
+      ],
+      "Roles": {
+        "BULB": 56,
+        "CANDLE": 120,
+        "GLOW": 78,
+        "STEM": 88,
+        "STONE": 72,
+        "TRIM": 144,
+        "WOOD": 24
+      },
+      "Size": [
+        13.538,
+        10.703,
+        9.8
+      ],
+      "Triangles": 582
+    },
+    "SilkSpire": {
+      "Min": [
+        -4.8,
+        0.0,
+        -5.023
+      ],
+      "Roles": {
+        "BULB": 360,
+        "CAP": 300,
+        "GLOW": 449,
+        "STEM": 232,
+        "STONE": 76,
+        "TRIM": 204
+      },
+      "Size": [
+        9.797,
+        25.4,
+        9.823
+      ],
+      "Triangles": 1621
+    },
+    "SilkWebCurtain": {
+      "Min": [
+        -8.874,
+        0.0,
+        -1.317
+      ],
+      "Roles": {
+        "BULB": 360,
+        "CAP": 200,
+        "GLOW": 400,
+        "STEM": 478
+      },
+      "Size": [
+        17.748,
+        6.37,
+        2.635
+      ],
+      "Triangles": 1438
+    },
+    "SilkWindlass": {
+      "Min": [
+        -4.6,
+        0.0,
+        -2.8
+      ],
+      "Roles": {
+        "BULB": 160,
+        "GLOW": 96,
+        "METAL": 220,
+        "STEM": 774,
+        "TRIM": 24,
+        "WOOD": 110
+      },
+      "Size": [
+        10.796,
+        6.352,
+        5.64
+      ],
+      "Triangles": 1384
+    },
+    "StolenLampCocoon": {
+      "Min": [
+        -2.1,
+        0.0,
+        -2.5
+      ],
+      "Roles": {
+        "BULB": 120,
+        "CAP": 100,
+        "GLOW": 160,
+        "METAL": 138,
+        "STEM": 32,
+        "TRIM": 12
+      },
+      "Size": [
+        4.2,
+        12.509,
+        5.982
+      ],
+      "Triangles": 562
+    },
+    "WebbedArchway": {
+      "Min": [
+        -9.1,
+        0.0,
+        -2.0
+      ],
+      "Roles": {
+        "BULB": 480,
+        "CAP": 300,
+        "GLOW": 449,
+        "STEM": 776,
+        "STONE": 120,
+        "TRIM": 120
+      },
+      "Size": [
+        18.2,
+        15.9,
+        4.798
+      ],
+      "Triangles": 2245
+    }
+  },
+  "Unit": "studs"
+}
