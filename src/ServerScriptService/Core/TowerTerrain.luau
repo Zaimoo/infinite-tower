@@ -75,12 +75,17 @@ local Surfaces: { [string]: Surface } = {
 	-- slate banks and cracked-lava sumps. (Never Brick or WoodPlanks: see BlockyMaterials.)
 	SOOTWRIGHT = { Trail = M.Slate, Walk = M.Basalt, WalkAccent = M.Ground, Bank = M.Slate,
 		Cliff = M.Basalt, Peak = M.Slate, PoolBed = M.CrackedLava, Lush = M.Basalt },
-	-- Corrupted Grove (the Hollin grove-wardens): pale trodden trails over brown earth, patches of dry autumn
+	-- Corrupted Grove early floors (31–32): pale trodden trails over brown earth, patches of dry autumn
 	-- ground, earthen banks, slate cliffs, basalt peaks and muddy brook beds. Mud stays under water: its rippled
-	-- texture reads as water on dry ground. The magenta of the rot comes from props and light, never from
-	-- recoloured terrain (MaterialColors are place-wide).
+	-- texture reads as water on dry ground.
 	HOLLIN = { Trail = M.Sand, Walk = M.Ground, WalkAccent = M.Sand, Bank = M.Ground,
 		Cliff = M.Slate, Peak = M.Basalt, PoolBed = M.Mud, Lush = M.Ground },
+	-- Corrupted Grove deep floors (33–35): deeply corrupted violet-indigo and blackened basalt terrain.
+	-- Cracked violet cobble trails over indigo blighted earth, charred basalt corruption seams, dark
+	-- violet-slate banks, sheer blackened cliffs and abyssal pit/mire beds. Reuses existing place-wide
+	-- material colours so no other biome changes.
+	BLIGHT = { Trail = M.Cobblestone, Walk = M.Concrete, WalkAccent = M.Basalt, Bank = M.Pavement,
+		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Asphalt, Lush = M.Pavement },
 }
 TowerTerrain.Surfaces = Surfaces
 
@@ -603,6 +608,24 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				end
 			end
 		end
+		-- Corrupted terrain relief (Terrain.Blight, Corrupted Grove Floors 33–35): carves twisting sunken
+		-- blight-fissures and jagged corrupted basalt outcrops into open chasm/pit ground. Walkway caps and
+		-- aprons in shapedDirect keep every terrace, ramp and return ramp clean.
+		local blightCfg = td and td.Blight
+		if blightCfg and kind == "CHASM" then
+			local vein = math.abs(fbm(x / 26, z / 26, seed + 173, 3))
+			local fissureDepth = blightCfg.FissureDepth or 4.0
+			local cragHeight = blightCfg.CragHeight or 12.0
+			if vein < 0.16 then
+				local f = 1 - vein / 0.16
+				base -= fissureDepth * f * f
+			else
+				local crag = math.max(0, fbm(x / 34, z / 34, seed + 179, 3) - 0.12)
+				if crag > 0 then
+					base += cragHeight * (crag * 1.8) ^ 1.3
+				end
+			end
+		end
 		return base, kind
 	end
 
@@ -913,6 +936,42 @@ local function materialFor(field: Field, palette: Palette, kind: string, y: numb
 		-- banks on the steeper ground, cliffs where it can't be walked.
 		local tuft = math.noise(x / 17, z / 17, seed + 5)
 		local patch = math.noise(x / 29, z / 29, seed + 13)
+		if s == Surfaces.BLIGHT then
+			-- Ridged corruption veins snaking through terraces, cliffs and pit floor so the ground reads as
+			-- deeply blighted rather than flat earth.
+			local vein = math.abs(fbm(x / 18, z / 18, seed + 173, 2))
+			local seam = math.abs(fbm(x / 28, z / 28, seed + 181, 2))
+			if kind == "TRAIL" then
+				return if vein < 0.08 then s.WalkAccent elseif tuft > 0.25 then s.Walk else s.Trail
+			elseif kind == "BRIDGE" or kind == "WALK" then
+				if vein < 0.09 then
+					return s.WalkAccent
+				elseif patch > 0.24 then
+					return s.Trail
+				elseif tuft > 0.22 then
+					return s.Bank
+				end
+				return s.Walk
+			elseif kind == "POOL" then
+				return s.PoolBed
+			elseif kind == "ISLAND" then
+				return if slopeValue > 0.9 or vein < 0.14 then s.Cliff else s.Bank
+			elseif slopeValue > 1.2 then
+				return if seam < 0.12 then s.Trail else s.Cliff
+			elseif slopeValue > 0.8 then
+				return if vein < 0.15 then s.Cliff else s.Bank
+			elseif kind == "MOUNTAIN" and y - field.Bottom > 30 then
+				return if seam < 0.14 then s.Bank else s.Peak
+			end
+			if vein < 0.15 then
+				return s.PoolBed
+			elseif seam < 0.11 then
+				return s.Trail
+			elseif patch > 0.18 then
+				return s.WalkAccent
+			end
+			return s.Lush
+		end
 		if kind == "TRAIL" then
 			return if tuft > 0.3 then s.WalkAccent else s.Trail
 		elseif kind == "BRIDGE" or kind == "WALK" then
@@ -1019,6 +1078,7 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 		end
 	end
 
+	local deepCliff = if field.Surface == Surfaces.BLIGHT then field.Surface.Cliff else palette.Cliff
 	-- Voxels, written in strips of columns so no single write grows large. Each strip only spans up to its
 	-- tallest column (most of the room is low; the mountain strips go up to the ceiling).
 	local strip = 24
@@ -1041,7 +1101,7 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 					local y = heights[i][k]
 					local fill = math.clamp((y - cellBottom) / RES, 0, 1)
 					if fill > 0 then
-						mRow[k] = if y - cellBottom < RES * 2 then mats[i][k] else palette.Cliff
+						mRow[k] = if y - cellBottom < RES * 2 then mats[i][k] else deepCliff
 						oRow[k] = fill
 					elseif not palette.LiquidSolid and kinds[i][k] == "POOL" and cellBottom < field.LiquidLevel then
 						mRow[k] = palette.Liquid

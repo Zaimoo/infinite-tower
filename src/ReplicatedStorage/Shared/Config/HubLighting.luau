@@ -440,6 +440,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.35, AtmosphereColor = c(146, 58, 198), AtmosphereDecay = c(84, 24, 138), AtmosphereHaze = 1.3,
 		TintColor = c(222, 184, 255), Saturation = 0.24, Contrast = 0.10, ExposureCompensation = 0.08, BloomIntensity = 0.52,
 	},
+	-- Floor 33, Briar Labyrinth: hard overhead thorn-shadow noon with deep corrupted violet-amethyst shadows
+	-- over the blighted pit and low haze so the hedge maze and glowing magenta briars read crisply from above.
+	[33] = {
+		Ambient = c(84, 42, 134), OutdoorAmbient = c(128, 78, 186), ColorShift_Top = c(228, 184, 255), ColorShift_Bottom = c(96, 30, 148),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(144, 78, 198), AtmosphereDecay = c(88, 36, 142), AtmosphereHaze = 0.90,
+		TintColor = c(236, 210, 255), Saturation = 0.14, Contrast = 0.18, ExposureCompensation = 0.08, BloomIntensity = 0.52,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

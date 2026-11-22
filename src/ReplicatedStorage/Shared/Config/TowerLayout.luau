@@ -1952,6 +1952,180 @@ local AUTHORED: {[number]: any} = {
 			MeadowScale = 0.1,
 		},
 	},
+	-- Floor 33, Briar Labyrinth (Corrupted Grove Terrain Variation; docs/prompts/corrupted-grove-floor-layouts-prompt.md):
+	-- the hedge-maze the Hollin wardens planted over a sunken thorn pit (Bottom = -6) to wall in the Thornheart.
+	-- Thornheart Court (Apex, Y 44) stands in the exact centre of the room, visible over the low hedges from the
+	-- arrival, with the Briar Gate (Crossing, Y 8) directly in front and NO path across the pit. East leads to
+	-- the false dead-end Thornwrack (Y 22, unbanded); west (marked with Pale Bands) climbs via Nettle Turn ->
+	-- Hanging Garden -> Garden Stair into the Court, or around the long outer ring (Briar Cloister -> North
+	-- Hedge Gate -> Gibbet Thicket -> East Rosary -> Thornheart Steps STAIRS into the Court from the south-east).
+	[33] = {
+		Key = "corrupted:3",
+		Name = "Briar Labyrinth",
+		Size = { Width = 680, Depth = 720, Height = 250, Bottom = -6 },
+		PathStyle = "HOLLIN",
+		Basin = { X = 0, Y = 0, Z = 200, Width = 648, Depth = 96 },
+		Crossing = { X = 0, Y = 8, Z = 80, Width = 84, Depth = 64 },
+		WestGallery = { X = -200, Y = 12, Z = 60, Width = 88, Depth = 76 },
+		EastGallery = { X = 200, Y = 16, Z = 60, Width = 88, Depth = 76 },
+		ExtraPlatforms = {
+			MenderCroft = { X = -100, Y = 4, Z = 118, Width = 56, Depth = 44 },
+			NettleThicket = { X = -235, Y = 20, Z = -130, Width = 72, Depth = 60 },
+			Thornwrack = { X = 255, Y = 22, Z = -60, Width = 60, Depth = 56 },
+			BriarCloister = { X = -150, Y = 24, Z = -255, Width = 64, Depth = 52 },
+			HangingGarden = { X = -150, Y = 26, Z = -30, Width = 64, Depth = 56 },
+			NorthGate = { X = 0, Y = 28, Z = -255, Width = 80, Depth = 60 },
+			HangingThicket = { X = 150, Y = 32, Z = -250, Width = 64, Depth = 56 },
+			EastRosary = { X = 170, Y = 36, Z = -120, Width = 64, Depth = 56 },
+			ThornheartSteps = { X = 110, Y = 40, Z = -10, Width = 64, Depth = 56 },
+		},
+		Apex = { X = 0, Y = 44, Z = -60, Width = 124, Depth = 92 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "Crossing" },
+			{ "Basin", "MenderCroft" },
+			{ "MenderCroft", "WestGallery" },
+			{ "Crossing", "WestGallery" },
+			{ "Crossing", "EastGallery" },
+			{ "EastGallery", "Thornwrack" }, -- false path (dead end, unbanded)
+			{ "WestGallery", "NettleThicket" },
+			{ "NettleThicket", "HangingGarden" },
+			{ "NettleThicket", "BriarCloister" },
+			{ "HangingGarden", "BriarCloister" },
+			{ "HangingGarden", "Apex" }, -- Garden Stair (+18)
+			{ "BriarCloister", "NorthGate" },
+			{ "NorthGate", "HangingThicket" },
+			{ "HangingThicket", "EastRosary" },
+			{ "EastRosary", "ThornheartSteps" },
+			{ "ThornheartSteps", "Apex" }, -- Thornheart Steps (STAIRS, +4)
+		},
+		Stairs = {
+			ThornheartSteps_Apex = true,
+		},
+		Patrols = {
+			GATE_WALK = { "WestGallery", "Crossing", "EastGallery" },
+			WEST_MAZE = { "WestGallery", "NettleThicket", "HangingGarden" },
+			OUTER_RING = { "BriarCloister", "NorthGate", "HangingThicket", "EastRosary" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Hedge Stile",
+			Basin = "Briar Lawn",
+			MenderCroft = "Mender's Croft",
+			Crossing = "Briar Gate",
+			WestGallery = "West Walk",
+			EastGallery = "East Walk",
+			NettleThicket = "Nettle Turn",
+			Thornwrack = "Thornwrack",
+			BriarCloister = "Briar Cloister",
+			HangingGarden = "Hanging Garden",
+			NorthGate = "North Hedge Gate",
+			HangingThicket = "Gibbet Thicket",
+			EastRosary = "East Rosary",
+			ThornheartSteps = "Thornheart Steps",
+			Apex = "Thornheart Court",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "BLIGHT",
+			Blight = { FissureDepth = 4.5, CragHeight = 14 },
+			Decks = { Sanctuary = true, Thornwrack = true, HangingGarden = true },
+			DeckLooks = {
+				Thornwrack = { Color = Color3.fromRGB(68, 44, 58), Material = Enum.Material.Wood },
+				HangingGarden = { Color = Color3.fromRGB(108, 82, 62), Material = Enum.Material.Wood },
+			},
+			Shapes = {
+				MenderCroft = { Round = 3.2, Grow = 4 },
+				Crossing = { Round = 3.2, Grow = 4 },
+				WestGallery = { Round = 3.0, Grow = 4 },
+				EastGallery = { Round = 3.0, Grow = 4 },
+				NettleThicket = { Round = 3.0, Grow = 4 },
+				BriarCloister = { Round = 3.0, Grow = 4 },
+				NorthGate = { Round = 3.0, Grow = 4 },
+				HangingThicket = { Round = 3.0, Grow = 4 },
+				EastRosary = { Round = 3.0, Grow = 4 },
+				ThornheartSteps = { Round = 2.8, Grow = 4 },
+				Apex = { Round = 2.2, Grow = 5 },
+			},
+			-- Every link spanning the sunken thorn pit is a hedge-walled bridge over the pit floor.
+			Bridges = {
+				EastGallery_Thornwrack = true,
+				WestGallery_NettleThicket = true,
+				NettleThicket_HangingGarden = true,
+				NettleThicket_BriarCloister = true,
+				HangingGarden_BriarCloister = true,
+				HangingGarden_Apex = true,
+				BriarCloister_NorthGate = true,
+				NorthGate_HangingThicket = true,
+				HangingThicket_EastRosary = true,
+				EastRosary_ThornheartSteps = true,
+			},
+			BridgeStyles = {
+				EastGallery_Thornwrack = "HEDGE",
+				WestGallery_NettleThicket = "HEDGE",
+				NettleThicket_HangingGarden = "HEDGE",
+				NettleThicket_BriarCloister = "HEDGE",
+				HangingGarden_BriarCloister = "HEDGE",
+				HangingGarden_Apex = "HEDGE",
+				BriarCloister_NorthGate = "HEDGE",
+				NorthGate_HangingThicket = "HEDGE",
+				HangingThicket_EastRosary = "HEDGE",
+				EastRosary_ThornheartSteps = "HEDGE",
+			},
+			-- The Apex sits in the middle of the room: no shelf behind it (NorthGate stands behind it across the pit).
+			NoApexShelf = true,
+			-- Dry thorn pit: no water pools. A raised rocky briar mound in the northern pit seats the Thornheart
+			-- high enough that its glowing magenta cavity looms directly over the north rim of Thornheart Court,
+			-- while jagged corrupted basalt crags jut from open pit pockets around the central mesa.
+			LiquidRise = -10,
+			Pools = {},
+			Ridges = {
+				{
+					HalfWidth = 38,
+					NoiseAmp = 2.6,
+					Points = {
+						{ -16, -166, 28 },
+						{ 16, -166, 28 },
+					},
+				},
+				{
+					HalfWidth = 22,
+					NoiseAmp = 3.2,
+					Points = {
+						{ -104, -142, 18 },
+						{ -86, -130, 18 },
+					},
+				},
+				{
+					HalfWidth = 22,
+					NoiseAmp = 3.2,
+					Points = {
+						{ 86, -160, 18 },
+						{ 104, -148, 18 },
+					},
+				},
+				{
+					HalfWidth = 20,
+					NoiseAmp = 3.0,
+					Points = {
+						{ -100, 14, 14 },
+						{ -84, 24, 14 },
+					},
+				},
+				{
+					HalfWidth = 20,
+					NoiseAmp = 3.0,
+					Points = {
+						{ 94, 56, 14 },
+						{ 112, 66, 14 },
+					},
+				},
+			},
+			WallBand = { Base = 48, Noise = 18 },
+			GroveScale = 0,
+			MeadowScale = 0.05,
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

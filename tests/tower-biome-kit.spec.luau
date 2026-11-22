@@ -209,6 +209,30 @@ test("Floor 32 has its own Twisted Orchard kit: at least nine new templates and 
 	end
 end)
 
+test("Floor 33 has its own Briar Labyrinth kit: at least ten new templates, low hedges and a 150+ stud Thornheart", function()
+	local f33 = {
+		"ThornheartKnot", "BriarGatehouse", "HedgeWallStraight", "HedgeWallCorner", "HedgeWallBroken",
+		"WattleCroft", "ScarecrowProp", "HangingPlanterPergola", "FieldstoneWellhead", "GibbetCage",
+		"RotRoseBush", "TopiaryStag", "TopiaryGraftKnot", "ThreeArmSignpost", "ThornKnotCluster",
+		"WardenSkeleton",
+	}
+	for _, name in f33 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 33 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f33 >= 10)
+	-- The Thornheart centrepiece (placed at scale 1.1) clears the ladder's 150 studs.
+	assert(Kit.ExtraTemplates.ThornheartKnot.Size.Y * 1.1 >= 150)
+	-- Every labyrinth hedge piece stays at or under 9 studs so the gameplay camera reads the maze from above.
+	for _, name in { "HedgeWallStraight", "HedgeWallCorner", "HedgeWallBroken" } do
+		assert(Kit.ExtraTemplates[name].Size.Y <= 9, name .. " is taller than the 9-stud hedge limit")
+	end
+	-- Pale Bands are linen (SILK) on the banded labyrinth templates.
+	for _, name in { "BriarGatehouse", "ThreeArmSignpost", "ScarecrowProp", "WardenSkeleton", "GibbetCage" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "SILK"), name .. " has no Pale Band")
+	end
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -306,6 +330,9 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[31].AtmosphereHaze < Light.BiomeGrades[7].AtmosphereHaze, "floor 31 is the least murky Corrupted floor")
 	assert(Light.FloorGrades[32] ~= nil, "floor 32 (Twisted Orchard) has its overripe rose dusk grade")
 	assert(Light.FloorGrades[32].AtmosphereHaze > Light.FloorGrades[31].AtmosphereHaze, "floor 32 is hazier than floor 31")
+	assert(Light.FloorGrades[33] ~= nil, "floor 33 (Briar Labyrinth) has its hard-shadow noon grade")
+	assert(Light.FloorGrades[33].Contrast >= 0.15, "floor 33 keeps crisp thorn-shadow contrast")
+	assert(Light.FloorGrades[33].AtmosphereHaze < Light.FloorGrades[32].AtmosphereHaze, "floor 33 is clearer than floor 32's dusk haze")
 	assert(Light.TowerPreset(6, 26) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400

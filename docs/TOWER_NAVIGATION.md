@@ -123,3 +123,8 @@ Floor 32 (Twisted Orchard, `corrupted:2`) adds two authored terrain landforms to
 
 - **`Terrain.Slope`**: a continuous south-facing slope (`ZStart`, `ZEnd`, `YStart`, `YEnd`, optional `BenchSpan`/`BenchStep` E–W orchard benches and `FadeNorth` drop into a bowl behind the crest). Because it keeps kind `CHASM`, walkway caps and aprons protect every terrace and ramp identically to flat chasm ground.
 - **`Terrain.Ridges`**: polylines of `{ X, Z, Top }` points forming continuous earthen ridge crests (the Graft Ridge). High crests take kind `MOUNTAIN` so walkway caps never crater the solid ridge between terraces while walkways still take priority inside `MOAT`.
+
+Floor 33 (Briar Labyrinth, `corrupted:3`) adds a corrupted terrain surface/relief tier (used from Floor 33 onwards across the deep Corrupted Grove) and a second `Terrain.BridgeStyles` option:
+
+- **`Surfaces.BLIGHT` & `Terrain.Blight`**: violet cobble trails (`Cobblestone`), deep indigo blighted earth (`Concrete`), blackened basalt cliffs/seams (`Basalt`), dark violet-slate banks (`Pavement`) and abyssal pit beds (`Asphalt`) with ridged corruption veining and sunken pit fissures/jagged crags (`FissureDepth`, `CragHeight`). Reuses existing place-wide material colours so Floors 1–32 remain byte-identical.
+- **`Terrain.BridgeStyles = "HEDGE"`**: hung labyrinth walkways over the sunken thorn pit keep their solid timber/earth deck and replace rope railings with 5.4-stud-tall clipped hawthorn hedge walls, glowing violet-magenta briar vines and timber posts placed strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).

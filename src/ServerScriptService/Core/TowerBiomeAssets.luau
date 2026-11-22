@@ -14,6 +14,7 @@ local InfernalFloor24 = require(script.Parent.TowerSetPieces.InfernalFloor24)
 local InfernalFloor25 = require(script.Parent.TowerSetPieces.InfernalFloor25)
 local CorruptedSetPieces = require(script.Parent.TowerSetPieces.CorruptedGrove)
 local CorruptedFloor32 = require(script.Parent.TowerSetPieces.CorruptedFloor32)
+local CorruptedFloor33 = require(script.Parent.TowerSetPieces.CorruptedFloor33)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
@@ -69,6 +70,8 @@ Assets.AirborneKinds = table.freeze({
 	WoodcuttersLantern = true, LastGreenLantern = true, CopseLantern = true, StileLantern = true,
 	-- Floor 32's orchard lanterns hang from the Orchard Gate, Grafters' Yard and cooperage shed.
 	OrchardGateLantern = true, YardLantern = true, VatsLantern = true,
+	-- Floor 33's Hedge Stile arrival lantern.
+	HedgeStileLantern = true,
 })
 
 -- field: the floor's TowerTerrain field on a natural floor (the kit imported), else nil.
@@ -6468,6 +6471,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "infernal:5" then InfernalFloor25.Build
 		elseif layout.Authored == "corrupted:1" then CorruptedSetPieces.Floor31
 		elseif layout.Authored == "corrupted:2" then CorruptedFloor32.Build
+		elseif layout.Authored == "corrupted:3" then CorruptedFloor33.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({

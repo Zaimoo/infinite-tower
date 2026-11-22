@@ -1,0 +1,325 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BriarGatehouse": {
+      "Min": [
+        -16.51,
+        0.0,
+        -5.712
+      ],
+      "Roles": {
+        "CORAL": 320,
+        "FOLIAGE": 400,
+        "GLOW": 174,
+        "SILK": 88,
+        "STONE": 138,
+        "WOOD": 962
+      },
+      "Size": [
+        33.989,
+        27.901,
+        11.104
+      ],
+      "Triangles": 2082
+    },
+    "FieldstoneWellhead": {
+      "Min": [
+        -4.129,
+        0.0,
+        -4.076
+      ],
+      "Roles": {
+        "ALT": 138,
+        "FOLIAGE": 80,
+        "MOSS": 20,
+        "STONE": 400,
+        "WOOD": 74
+      },
+      "Size": [
+        8.377,
+        11.763,
+        8.126
+      ],
+      "Triangles": 712
+    },
+    "GibbetCage": {
+      "Min": [
+        -8.79,
+        -0.795,
+        -4.766
+      ],
+      "Roles": {
+        "ALT": 384,
+        "METAL": 676,
+        "SILK": 82,
+        "WOOD": 238
+      },
+      "Size": [
+        16.975,
+        29.167,
+        9.531
+      ],
+      "Triangles": 1380
+    },
+    "HangingPlanterPergola": {
+      "Min": [
+        -12.347,
+        -0.4,
+        -4.1
+      ],
+      "Roles": {
+        "ALT": 280,
+        "CORAL": 300,
+        "FOLIAGE": 280,
+        "GLOW": 72,
+        "WOOD": 871
+      },
+      "Size": [
+        24.601,
+        14.437,
+        8.2
+      ],
+      "Triangles": 1803
+    },
+    "HedgeWallBroken": {
+      "Min": [
+        -9.23,
+        -0.239,
+        -2.525
+      ],
+      "Roles": {
+        "CAP": 80,
+        "FOLIAGE": 320,
+        "GLOW": 180,
+        "WOOD": 140
+      },
+      "Size": [
+        19.004,
+        8.109,
+        4.998
+      ],
+      "Triangles": 720
+    },
+    "HedgeWallCorner": {
+      "Min": [
+        -3.152,
+        0.0,
+        -2.344
+      ],
+      "Roles": {
+        "CAP": 60,
+        "FOLIAGE": 480,
+        "GLOW": 108,
+        "STONE": 44,
+        "WOOD": 48
+      },
+      "Size": [
+        14.827,
+        8.109,
+        13.51
+      ],
+      "Triangles": 740
+    },
+    "HedgeWallStraight": {
+      "Min": [
+        -10.086,
+        0.0,
+        -3.193
+      ],
+      "Roles": {
+        "CAP": 120,
+        "FOLIAGE": 400,
+        "GLOW": 216,
+        "MOSS": 20,
+        "WOOD": 176
+      },
+      "Size": [
+        20.207,
+        7.886,
+        6.426
+      ],
+      "Triangles": 932
+    },
+    "RotRoseBush": {
+      "Min": [
+        -6.341,
+        -2.117,
+        -6.834
+      ],
+      "Roles": {
+        "CAP": 1790,
+        "FOLIAGE": 240,
+        "GLOW": 168,
+        "MOSS": 20,
+        "STONE": 244,
+        "WOOD": 48
+      },
+      "Size": [
+        12.845,
+        15.27,
+        18.493
+      ],
+      "Triangles": 2510
+    },
+    "ScarecrowProp": {
+      "Min": [
+        -4.701,
+        -0.407,
+        -2.234
+      ],
+      "Roles": {
+        "ALT": 156,
+        "GLOW": 56,
+        "SILK": 36,
+        "TRIM": 58,
+        "WOOD": 92
+      },
+      "Size": [
+        9.509,
+        11.799,
+        4.368
+      ],
+      "Triangles": 398
+    },
+    "ThornKnotCluster": {
+      "Min": [
+        -6.293,
+        -0.679,
+        -4.958
+      ],
+      "Roles": {
+        "CAP": 20,
+        "GLOW": 64,
+        "MOSS": 20,
+        "WOOD": 252
+      },
+      "Size": [
+        12.556,
+        8.532,
+        9.916
+      ],
+      "Triangles": 356
+    },
+    "ThornheartKnot": {
+      "Min": [
+        -44.583,
+        -1.612,
+        -48.962
+      ],
+      "Roles": {
+        "CAP": 640,
+        "GLOW": 360,
+        "MOSS": 160,
+        "STONE": 160,
+        "WOOD": 2484
+      },
+      "Size": [
+        89.167,
+        139.555,
+        96.674
+      ],
+      "Triangles": 3804
+    },
+    "ThreeArmSignpost": {
+      "Min": [
+        -3.457,
+        0.0,
+        -1.817
+      ],
+      "Roles": {
+        "MOSS": 20,
+        "SILK": 66,
+        "STONE": 20,
+        "TRIM": 236,
+        "WOOD": 44
+      },
+      "Size": [
+        7.954,
+        10.8,
+        4.488
+      ],
+      "Triangles": 386
+    },
+    "TopiaryGraftKnot": {
+      "Min": [
+        -6.683,
+        0.0,
+        -5.8
+      ],
+      "Roles": {
+        "FOLIAGE": 756,
+        "GLOW": 108,
+        "MOSS": 20,
+        "STONE": 44,
+        "WOOD": 384
+      },
+      "Size": [
+        13.35,
+        13.615,
+        11.6
+      ],
+      "Triangles": 1312
+    },
+    "TopiaryStag": {
+      "Min": [
+        -4.9,
+        0.0,
+        -2.8
+      ],
+      "Roles": {
+        "FOLIAGE": 288,
+        "GLOW": 72,
+        "MOSS": 20,
+        "STONE": 138,
+        "WOOD": 106
+      },
+      "Size": [
+        11.206,
+        14.652,
+        5.6
+      ],
+      "Triangles": 624
+    },
+    "WardenSkeleton": {
+      "Min": [
+        -7.88,
+        -0.094,
+        -7.88
+      ],
+      "Roles": {
+        "GLOW": 36,
+        "SILK": 72,
+        "TRIM": 462,
+        "WOOD": 780
+      },
+      "Size": [
+        15.75,
+        7.177,
+        15.76
+      ],
+      "Triangles": 1350
+    },
+    "WattleCroft": {
+      "Min": [
+        -11.2,
+        0.0,
+        -7.389
+      ],
+      "Roles": {
+        "ALT": 182,
+        "GLOW": 12,
+        "MOSS": 80,
+        "STONE": 236,
+        "TRIM": 44,
+        "WOOD": 927
+      },
+      "Size": [
+        22.39,
+        17.35,
+        14.635
+      ],
+      "Triangles": 1481
+    }
+  },
+  "Unit": "studs"
+}

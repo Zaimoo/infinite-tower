@@ -2199,7 +2199,23 @@ function Builder.Build(id: number, generation: number): any
 				local curbGroup = propGroup(model, "BridgeCurb")
 				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, curbCol, curbMat, if visibleCurb then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.35, 0)
-				if hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
+				if hungLinks[link.Id] and bridgeStyles[link.Id] == "HEDGE" then
+					-- Floor 33's hedge-walled maze bridges: low thorny hawthorn hedges (5.4 studs tall, <= 9 so the
+					-- camera reads the maze from above) laced with glowing violet-magenta briar veins, outside UsableWidth.
+					local hedgeOffset = right * (side * (link.Width / 2 - 0.55))
+					local hedgeCol = Color3.fromRGB(48, 56, 62)
+					local briarCol = Color3.fromRGB(204, 58, 236)
+					local hedge = decor(curbGroup, "BridgeHedgeWall", Vector3.new(2.2, 5.4, curbLen), mid + hedgeOffset + Vector3.new(0, 2.5, 0), hedgeCol, Enum.Material.Grass)
+					hedge.CFrame = CFrame.lookAt(mid + hedgeOffset, b + hedgeOffset) * CFrame.new(0, 2.5, 0)
+					local vine = decor(curbGroup, "BridgeHedgeBriar", Vector3.new(2.45, 0.55, curbLen * 0.94), mid + hedgeOffset + Vector3.new(0, 4.3, 0), briarCol, Enum.Material.Neon)
+					vine.CFrame = CFrame.lookAt(mid + hedgeOffset, b + hedgeOffset) * CFrame.new(0, 4.3, 0)
+					local posts = math.max(2, math.floor(delta.Magnitude / 14) + 1)
+					for i = 0, posts - 1 do
+						local at = a:Lerp(b, i / (posts - 1)) + hedgeOffset
+						local post = decor(curbGroup, "BridgeHedgePost", Vector3.new(0.75, 5.8, 0.75), at + Vector3.new(0, 2.7, 0), plankDark, Enum.Material.Wood)
+						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+					end
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))
 					for _, h in { 1.6, 3.4 } do
