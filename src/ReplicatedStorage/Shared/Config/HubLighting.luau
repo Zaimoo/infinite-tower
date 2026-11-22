@@ -425,6 +425,14 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(255, 234, 204), Saturation = 0.12, Contrast = 0.22, ExposureCompensation = 0.12, BloomIntensity = 0.66,
 		SunRaysIntensity = 0.08, SunRaysSpread = 0.44,
 	},
+	-- Floor 31, Blighted Verge: a sickly gold late afternoon. Warm low light over the autumn bank, the magenta
+	-- murk of the biome thinned to a rose haze that thickens toward the rotten north-east; the least murky
+	-- Corrupted floor.
+	[31] = {
+		Ambient = c(84, 62, 58), OutdoorAmbient = c(128, 96, 80), ColorShift_Top = c(255, 196, 128), ColorShift_Bottom = c(92, 46, 70),
+		AtmosphereDensity = 0.26, AtmosphereColor = c(168, 118, 126), AtmosphereDecay = c(110, 56, 96), AtmosphereHaze = 0.75,
+		TintColor = c(255, 238, 222), Saturation = 0.16, Contrast = 0.12, ExposureCompensation = 0.04, BloomIntensity = 0.42,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

@@ -258,7 +258,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -386,6 +386,15 @@ function Builder.Build(id: number, generation: number): any
 	local proxy = disableTerrainProxyPart
 	-- Velmari masonry (Fungal Hollow's lamp-masons): indigo slate decks and stairs, violet cobble.
 	local velmari = natural and layout.PathStyle == "VELMARI"
+	-- Hollin work (Corrupted Grove's grove-wardens): mossy fieldstone treads and pavers, per-deck looks
+	-- (`Terrain.DeckLooks`), and hung walkways that can be a fallen log instead of planks (`Terrain.BridgeStyles`).
+	local hollin = natural and layout.PathStyle == "HOLLIN"
+	local deckLooks = if direct then td.DeckLooks or {} else {}
+	local bridgeStyles = if direct then td.BridgeStyles or {} else {}
+	local fieldstone = Color3.fromRGB(112, 104, 90)
+	local fieldstoneDark = Color3.fromRGB(78, 72, 64)
+	local logBark = Color3.fromRGB(62, 48, 40)
+	local logWood = Color3.fromRGB(128, 98, 70)
 	local matriarchHollow = layout.Authored == "fungal:10"
 	local webCable = Color3.fromRGB(218, 206, 242)
 	local slateIndigo = Color3.fromRGB(62, 56, 94)
@@ -830,6 +839,11 @@ function Builder.Build(id: number, generation: number): any
 			if velmari and name ~= "Sanctuary" then
 				slab.Color = slateIndigo
 				slab.Material = Enum.Material.Slate
+			end
+			local look = deckLooks[name] or (if hollin and name == "Sanctuary" then { Color = fieldstone, Material = Enum.Material.Slate } else nil)
+			if look then
+				slab.Color = look.Color
+				slab.Material = look.Material
 			end
 			continue
 		elseif direct then
@@ -1505,6 +1519,12 @@ function Builder.Build(id: number, generation: number): any
 			if hungLinks[id] then
 				if matriarchHollow then
 					p.Color, p.Material = slateIndigo, Enum.Material.Slate
+				elseif bridgeStyles[id] == "LOG" then
+					-- A fallen log's ends: its root plate and its crown, dressed by the log itself; the landing
+					-- underfoot stays solid but unseen.
+					proxy(p)
+					p.CanCollide = true
+					p.CanQuery = true
 				else
 					p.Color, p.Material = plank, Enum.Material.WoodPlanks
 				end
@@ -1580,12 +1600,13 @@ function Builder.Build(id: number, generation: number): any
 				local baseTreadW = if rootStair then link.Width * (0.84 + 0.14 * math.sin(step * 1.15)) else link.Width
 				local treadW = baseTreadW - (step % 2) * 0.08
 				local treadCol = if velmari then (if step % 2 == 0 then slateIndigo else slateDark)
+					elseif hollin then (if step % 2 == 0 then fieldstone else fieldstoneDark)
 					elseif masonryStyle and masonryStyle.StairColorA
 					then (if step % 2 == 0 then masonryStyle.StairColorA else masonryStyle.StairColorB)
 					elseif pathStyle
 					then (if step % 2 == 0 then pathStyle.StairColorA else pathStyle.StairColorB)
 					else theme.TrimColor
-				local treadMat = if velmari then Enum.Material.Slate
+				local treadMat = if velmari or hollin then Enum.Material.Slate
 					elseif masonryStyle and masonryStyle.StairMatA
 					then (if step % 2 == 0 then masonryStyle.StairMatA else masonryStyle.StairMatB)
 					elseif pathStyle
@@ -1656,7 +1677,27 @@ function Builder.Build(id: number, generation: number): any
 			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, if masonryStyle and masonryStyle.RampYOffset then masonryStyle.RampYOffset else -0.96, 0)
 			structure(ramp,link.Id)
 			local bridgeKind = masonryStyle and masonryStyle.BridgeKind
-			if hungLinks[link.Id] then
+			if hungLinks[link.Id] and bridgeStyles[link.Id] == "LOG" then
+				-- Floor 31's Fallen-Log Ford: a colossal fallen trunk laid across the brook with a split limb
+				-- beside it, so the whole walkway's width stands on wood. The ramp stays as the solid, unseen
+				-- walking surface; the logs are dressing (no collision, no queries).
+				ramp.Transparency = 1
+				local trunkR, limbR = 10.5, 5.5
+				local function log(name: string, offset: Vector3, r: number, overhang: number)
+					local axis = delta.Unit
+					local p0, p1 = a - axis * overhang + offset, b + axis * overhang + offset
+					local trunk = decor(model, name, Vector3.new((p1 - p0).Magnitude, r * 2, r * 2), (p0 + p1) / 2, logBark, Enum.Material.Wood)
+					trunk.Shape = Enum.PartType.Cylinder
+					trunk.CFrame = CFrame.lookAt((p0 + p1) / 2, p1) * CFrame.Angles(0, math.pi / 2, 0)
+					return trunk
+				end
+				log("FordLogTrunk", right * -3.5 - Vector3.new(0, trunkR - 0.15, 0), trunkR, 6)
+				log("FordLogLimb", right * 9.6 - Vector3.new(0, limbR + 0.05, 0), limbR, 1)
+				-- The trunk's top is worn flat where the wardens walked: a strip of pale heartwood.
+				local worn = decor(model, "FordLogWornTop", Vector3.new(link.Width - 9, 0.2, delta.Magnitude), mid - right * 1.5, logWood, Enum.Material.Wood)
+				worn.CFrame = CFrame.lookAt(mid - right * 1.5, b - right * 1.5) * CFrame.new(0, 0.02, 0)
+				-- The root plate and broken crown stand off the lanes as set pieces (TowerSetPieces/CorruptedGrove).
+			elseif hungLinks[link.Id] then
 				-- Floor 10: Velmari silk-and-slate web spans; Floor 8: Lampkeeper rope-and-plank walkways.
 				ramp.Color = if matriarchHollow then slateIndigo else plank
 				ramp.Material = if matriarchHollow then Enum.Material.Slate else Enum.Material.WoodPlanks
@@ -1678,8 +1719,10 @@ function Builder.Build(id: number, generation: number): any
 					local at = a:Lerp(b, (i - 0.5) / stones) + right * stagger
 					local stoneW = link.Width * (0.26 + ((i * 7) % 3) * 0.04)
 					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.45, 2.2), at,
-						if velmari then (if i % 2 == 0 then slateIndigo else slateDark) else flagstoneDark,
-						if velmari then Enum.Material.Slate else Enum.Material.Limestone)
+						if velmari then (if i % 2 == 0 then slateIndigo else slateDark)
+							elseif hollin then (if i % 2 == 0 then fieldstone else fieldstoneDark)
+							else flagstoneDark,
+						if velmari or hollin then Enum.Material.Slate else Enum.Material.Limestone)
 					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "SOLMERE_ARCH" then
@@ -2156,7 +2199,7 @@ function Builder.Build(id: number, generation: number): any
 				local curbGroup = propGroup(model, "BridgeCurb")
 				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, curbCol, curbMat, if visibleCurb then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.35, 0)
-				if hungLinks[link.Id] then
+				if hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))
 					for _, h in { 1.6, 3.4 } do
@@ -2333,7 +2376,8 @@ function Builder.Build(id: number, generation: number): any
 	local heartHollow = layout.Authored == "fungal:10"
 	local lanternStep = if rotKeep then 260 elseif heartHollow then 280 elseif sky then (if math.max(width, depth) > 540 then 185 else 150) else 100
 	local lanternIdx = 0
-	if not pathStyle or pathStyle.ShowVaultLanterns ~= false then
+	-- Open-sky Hollin floors light themselves with their own lanterns (TowerSetPieces/CorruptedGrove).
+	if (not pathStyle or pathStyle.ShowVaultLanterns ~= false) and not hollin then
 		for x = -width / 2 + 50, width / 2 - 40, lanternStep do
 			for z = -depth / 2 + 50, depth / 2 - 40, lanternStep do
 				lanternIdx += 1

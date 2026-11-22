@@ -1670,6 +1670,131 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Titan's Crucible",
 		},
 	},
+	-- Floor 31, Blighted Verge (Corrupted Grove Introduction; docs/prompts/corrupted-grove-floor-layouts-prompt.md):
+	-- the edge of the grove, where the Hollin grove-wardens still held the line. A blight-brook rises at the
+	-- Heartrot Spring in the north-east corner and meanders west-south-west to a sinkhole in the west wall,
+	-- splitting the floor into an autumn-gold south bank and a rotten north bank. Four fords cross it (stepping
+	-- stones and a fieldstone weir as causeways, a mill-race plank and a fallen log hung over the water), and
+	-- every route to the Apex fords at least once: the quick way once (the Last Green, the Lantern Copse, the
+	-- Weir Ford), the zigzag three times (the Pale Glade, the Weir Mill, the Lantern Copse, Rothollow), and a
+	-- back path along the rotten bank (the Warding Shrine, the Blight Line) reaches the Apex from the west.
+	[31] = {
+		Key = "corrupted:1",
+		Name = "Blighted Verge",
+		Size = { Width = 540, Depth = 580, Height = 195 },
+		PathStyle = "HOLLIN",
+		Basin = { X = 0, Y = 0, Z = 150, Width = 508, Depth = 96 },
+		WestGallery = { X = -160, Y = 4, Z = 40, Width = 86, Depth = 72 },
+		Crossing = { X = -20, Y = 8, Z = -40, Width = 76, Depth = 60 },
+		EastGallery = { X = 175, Y = 12, Z = -10, Width = 86, Depth = 72 },
+		ExtraPlatforms = {
+			LastGreen = { X = 60, Y = 6, Z = 45, Width = 64, Depth = 52 },
+			Woodcutters = { X = -205, Y = 10, Z = -40, Width = 64, Depth = 52 },
+			WardingShrine = { X = -170, Y = 16, Z = -120, Width = 68, Depth = 56 },
+			Rothollow = { X = 175, Y = 20, Z = -112, Width = 70, Depth = 56 },
+			BlightLine = { X = -40, Y = 24, Z = -150, Width = 68, Depth = 56 },
+		},
+		Apex = { X = 130, Y = 28, Z = -205, Width = 116, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "LastGreen" },
+			{ "WestGallery", "Woodcutters" },
+			{ "WestGallery", "Crossing" }, -- the Stepping-Stone Ford
+			{ "LastGreen", "Crossing" }, -- the Mill-Race Ford
+			{ "LastGreen", "EastGallery" },
+			{ "Crossing", "EastGallery" }, -- the Fallen-Log Ford
+			{ "Crossing", "WardingShrine" },
+			{ "EastGallery", "Rothollow" }, -- the Weir Ford
+			{ "Rothollow", "Apex" },
+			{ "WardingShrine", "BlightLine" },
+			{ "BlightLine", "Apex" },
+		},
+		-- The Rootstep Stairs: fieldstone treads up through the Heartrot Spring's roots.
+		Stairs = { Rothollow_Apex = true },
+		-- The four links that cross the blight-brook (specs: without them the Apex is out of reach).
+		Fords = {
+			WestGallery_Crossing = "STEPPING_STONES",
+			LastGreen_Crossing = "MILL_RACE",
+			Crossing_EastGallery = "FALLEN_LOG",
+			EastGallery_Rothollow = "WEIR",
+		},
+		Names = {
+			Sanctuary = "Warden's Stile",
+			Basin = "Verge Meadow",
+			WestGallery = "Pale Glade",
+			LastGreen = "The Last Green",
+			Woodcutters = "Woodcutters' Ring",
+			Crossing = "Weir Mill",
+			EastGallery = "Lantern Copse",
+			WardingShrine = "Warding Shrine",
+			Rothollow = "Rothollow",
+			BlightLine = "The Blight Line",
+			Apex = "Heartrot Spring",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "HOLLIN",
+			-- Built: the stile's landing, the Last Green's fieldstone knoll top and the Woodcutters' log floor.
+			Decks = { Sanctuary = true, LastGreen = true, Woodcutters = true },
+			DeckLooks = {
+				LastGreen = { Color = Color3.fromRGB(104, 96, 82), Material = Enum.Material.Slate },
+				Woodcutters = { Color = Color3.fromRGB(96, 70, 48), Material = Enum.Material.Wood },
+			},
+			-- Every terrain terrace is a rounded rise, never a square plinth.
+			Shapes = {
+				WestGallery = { Round = 3.0, Grow = 4 },
+				Crossing = { Round = 2.6, Grow = 4 },
+				EastGallery = { Round = 3.0, Grow = 4 },
+				WardingShrine = { Round = 2.8, Grow = 4 },
+				Rothollow = { Round = 2.6, Grow = 4 },
+				BlightLine = { Round = 3.2, Grow = 4 },
+				Apex = { Round = 3.0, Grow = 4 },
+			},
+			-- The hung fords: the mill-race plank and the fallen log (the brook runs on under them). The
+			-- stepping stones and the weir are earthen causeways across it.
+			Bridges = { LastGreen_Crossing = true, Crossing_EastGallery = true },
+			BridgeStyles = { Crossing_EastGallery = "LOG" },
+			-- The Apex is in the north-east corner: no full-width shelf behind it, the wall's own slopes instead.
+			NoApexShelf = true,
+			-- The brook runs in a channel about 1.5 studs below its banks (the floor's slab carries walkers over it).
+			LiquidRise = -1.6,
+			FloorDip = 6,
+			WallBand = { Base = 40, Noise = 14 },
+			-- The blight-brook: from the spring (north-east) down a meander to the sinkhole (west wall).
+			Pools = {
+				{ X = 214, Z = -236, RX = 14, RZ = 13 }, { X = 220, Z = -212, RX = 15, RZ = 13 },
+				{ X = 222, Z = -188, RX = 15, RZ = 13 }, { X = 223, Z = -164, RX = 15, RZ = 13 },
+				{ X = 225, Z = -140, RX = 15, RZ = 13 }, { X = 227, Z = -116, RX = 15, RZ = 13 },
+				{ X = 229, Z = -92, RX = 15, RZ = 13 }, { X = 230, Z = -70, RX = 15, RZ = 13 },
+				{ X = 210, Z = -69, RX = 15, RZ = 13 }, { X = 187, Z = -68, RX = 19, RZ = 17 },
+				{ X = 165, Z = -66, RX = 19, RZ = 17 }, { X = 142, Z = -65, RX = 19, RZ = 17 },
+				{ X = 120, Z = -64, RX = 19, RZ = 17 }, { X = 100, Z = -50, RX = 19, RZ = 17 },
+				{ X = 80, Z = -36, RX = 19, RZ = 17 }, { X = 60, Z = -22, RX = 19, RZ = 17 },
+				{ X = 40, Z = -8, RX = 19, RZ = 17 }, { X = 20, Z = -5, RX = 19, RZ = 17 },
+				{ X = 0, Z = -1, RX = 19, RZ = 17 }, { X = -20, Z = 2, RX = 19, RZ = 17 },
+				{ X = -47, Z = -3, RX = 19, RZ = 17 }, { X = -73, Z = -9, RX = 19, RZ = 17 },
+				{ X = -100, Z = -14, RX = 19, RZ = 17 }, { X = -120, Z = -30, RX = 19, RZ = 17 },
+				{ X = -140, Z = -46, RX = 19, RZ = 17 }, { X = -160, Z = -62, RX = 16, RZ = 14 },
+				{ X = -180, Z = -78, RX = 16, RZ = 14 }, { X = -207, Z = -80, RX = 16, RZ = 14 },
+				{ X = -235, Z = -82, RX = 16, RZ = 14 }, { X = -262, Z = -84, RX = 16, RZ = 14 },
+			},
+			-- Low hillocks rolling the open ground of both banks (walkways cap them where they pass).
+			Islands = {
+				{ X = -70, Z = 58, R = 30, Top = -1 },
+				{ X = 140, Z = 80, R = 30, Top = 0 },
+				{ X = -235, Z = 120, R = 26, Top = 2 },
+				{ X = -100, Z = -105, R = 30, Top = 4 },
+				{ X = 45, Z = -110, R = 34, Top = 8 },
+				{ X = -205, Z = -200, R = 32, Top = 12 },
+				{ X = 55, Z = -245, R = 30, Top = 16 },
+			},
+			-- The floor's trees are placed by hand (TowerSetPieces/CorruptedGrove): golden on the south bank,
+			-- twisted on the north. The biome's random groves and meadow pods would mix them up.
+			GroveScale = 0,
+			MeadowScale = 0.15,
+		},
+	},
 }
 
 local function build(index: number, v: any?): any
@@ -1826,7 +1951,8 @@ local function build(index: number, v: any?): any
 		Patrols=v and v.Patrols or nil,
 		ReplacePatrols=v ~= nil and v.ReplacePatrols == true, Surface=v and v.Surface or nil,
 		Terrain=v and v.Terrain or nil, Skylight=v and v.Skylight or nil, Portals=v and v.Portals or nil,
-		GirderSpans=v and v.GirderSpans or nil, StonePiers=v and v.StonePiers or nil}
+		GirderSpans=v and v.GirderSpans or nil, StonePiers=v and v.StonePiers or nil,
+		Fords=v and v.Fords or nil}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,

@@ -75,6 +75,12 @@ local Surfaces: { [string]: Surface } = {
 	-- slate banks and cracked-lava sumps. (Never Brick or WoodPlanks: see BlockyMaterials.)
 	SOOTWRIGHT = { Trail = M.Slate, Walk = M.Basalt, WalkAccent = M.Ground, Bank = M.Slate,
 		Cliff = M.Basalt, Peak = M.Slate, PoolBed = M.CrackedLava, Lush = M.Basalt },
+	-- Corrupted Grove (the Hollin grove-wardens): pale trodden trails over brown earth, patches of dry autumn
+	-- ground, earthen banks, slate cliffs, basalt peaks and muddy brook beds. Mud stays under water: its rippled
+	-- texture reads as water on dry ground. The magenta of the rot comes from props and light, never from
+	-- recoloured terrain (MaterialColors are place-wide).
+	HOLLIN = { Trail = M.Sand, Walk = M.Ground, WalkAccent = M.Sand, Bank = M.Ground,
+		Cliff = M.Slate, Peak = M.Basalt, PoolBed = M.Mud, Lush = M.Ground },
 }
 TowerTerrain.Surfaces = Surfaces
 

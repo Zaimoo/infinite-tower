@@ -110,3 +110,11 @@ Destination policy for a hero that already has a target. It follows the same spl
 ## Authored terrain walkways (`Terrain.Direct`)
 
 On a hand-authored floor with `Terrain.Direct` (floor 6), natural terraces, landings and ramps are the voxel terrain itself: their parts are invisible proxies (`CanCollide`, `CanQuery` and `CanTouch` off), and `TowerTerrain` puts the field 2 studs (`SOFT`) under each walking plane, which is where smooth terrain renders its surface. Built decks (`Terrain.Decks`, e.g. the Sanctuary and floor 6's Veinspan bridge) and stair treads stay solid parts. Navigation needs no change: `HeroNavigation` raycasts exclude only the actors, so they hit the terrain, and the connector graph is the same layout geometry. Server raycasts that include only the room model (`TowerFloorService` arrival and loot drops, `TowerEncounterRuntime.findGrounded`) also include `workspace.Terrain` and ignore water.
+
+Floor 31 (Blighted Verge, `corrupted:1`) adds three walkway options to the same system:
+
+- **`Terrain.BridgeStyles`**: a hung walkway (`Terrain.Bridges`) can be a `LOG` instead of planks. The ramp part stays as the solid walking surface but is hidden, and a colossal fallen trunk with a split limb is drawn under it as non-colliding dressing, with no rope rails. Its landings are solid, unseen proxies. Navigation is unchanged.
+- **`Terrain.DeckLooks`**: a built deck's colour and material (for example fieldstone or a log floor) without a masonry style.
+- **Fords** (`TowerLayout` `Fords`): which links cross the floor's brook. These are data for the specs (no route to the Apex avoids them), not a new connector kind: two are hung walkways and two are earthen causeways.
+
+Set pieces placed at a deliberate height in water (a mill footing, a weir, lilies) are tagged `OnTerrain`, and hanging ones (lanterns) are listed in `TowerBiomeAssets.AirborneKinds`, so `TowerPropClearance.Settle` leaves them where they are.
