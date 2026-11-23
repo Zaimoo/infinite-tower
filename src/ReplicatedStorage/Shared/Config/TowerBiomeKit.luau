@@ -116,6 +116,10 @@ TowerBiomeKit.Templates = table.freeze({
 --   thunder_f28_kit (tools/blender/generate_thunder_f28_kit.py): Floor 28, Skybridge Cliffs (CrownAnchorTower,
 --     SeaStackSpire, CloudBankLayer, CableWinchCapstan, SupplyHoistWindlass, ShedRocFeather, TalonNestPlatform,
 --     FulguriteSpireTall, AnemometerMast, CliffGroundingChain, SnappedBridgeStub, SkybridgeWaystone, SquallHornPerch).
+--   thunder_f29_kit (tools/blender/generate_thunder_f29_kit.py): Floor 29, Tempest Redoubt (RedoubtCitadelKeep,
+--     CapacitorCoilSpire, StormBellGatehouse, StormkeepRoundTower, BarbicanGatehouse, CurtainWallSegment,
+--     ShatteredWatchtower, FaultRetainingButtress, SignalHornCannon, ThunderRamStable, LightningSpearBallista,
+--     NexusBrazierPedestal, WarBannerPole).
 --   corrupted_f31_kit (tools/blender/generate_corrupted_f31_kit.py): Floor 31, Blighted Verge (HollinWaterMill,
 --     MillWheel, FieldstoneWeir, PaleBandTree, GraftKnotPost, WardensLeanTo, SawnStumpCluster,
 --     HeartrotSpringTrunk, HollinStileArch, WattleFence, FieldstoneCairn, FelledBandLog, HangingLantern,
@@ -418,6 +422,20 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	SquallHornPerch = table.freeze({ Size = Vector3.new(9.461, 20.2, 7.441), Min = Vector3.new(-4.73, -0.2, -2.5), Roles = table.freeze({ "ACCENT", "ALT", "METAL", "STONE", "WOOD" }) }),
 	SupplyHoistWindlass = table.freeze({ Size = Vector3.new(10.672, 16.874, 19.159), Min = Vector3.new(-5.072, -0.274, -9.459), Roles = table.freeze({ "ALT", "METAL", "STONE", "TRIM", "WOOD" }) }),
 	TalonNestPlatform = table.freeze({ Size = Vector3.new(23.724, 5.912, 24.693), Min = Vector3.new(-11.253, -0.4, -12.504), Roles = table.freeze({ "ALT", "STONE", "TRIM", "WOOD" }) }),
+	-- Thunder Highlands Floor 29 (Tempest Redoubt, thunder_f29_kit)
+	BarbicanGatehouse = table.freeze({ Size = Vector3.new(73.83, 31.812, 16.141), Min = Vector3.new(-36.78, -0.012, -8.071), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
+	CapacitorCoilSpire = table.freeze({ Size = Vector3.new(17.615, 65.3, 16.04), Min = Vector3.new(-8.812, -0.4, -7.789), Roles = table.freeze({ "ACCENT", "CRYSTAL", "GLOW", "METAL", "STONE", "TRIM" }) }),
+	CurtainWallSegment = table.freeze({ Size = Vector3.new(17.103, 10.463, 3.42), Min = Vector3.new(-8.0, -0.063, -1.434), Roles = table.freeze({ "ACCENT", "METAL", "MOSS", "STONE" }) }),
+	FaultRetainingButtress = table.freeze({ Size = Vector3.new(10.109, 31.104, 18.036), Min = Vector3.new(-5.049, -0.091, -9.186), Roles = table.freeze({ "METAL", "MOSS", "STONE" }) }),
+	LightningSpearBallista = table.freeze({ Size = Vector3.new(13.406, 7.797, 16.348), Min = Vector3.new(-6.703, 0.0, -6.537), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "STONE", "TRIM", "WOOD" }) }),
+	NexusBrazierPedestal = table.freeze({ Size = Vector3.new(4.317, 10.9, 4.32), Min = Vector3.new(-2.16, 0.0, -2.16), Roles = table.freeze({ "ACCENT", "CRYSTAL", "GLOW", "METAL", "STONE" }) }),
+	RedoubtCitadelKeep = table.freeze({ Size = Vector3.new(44.8, 129.189, 32.6), Min = Vector3.new(-22.4, -0.61, -16.3), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "MOSS", "STONE", "TRIM" }) }),
+	ShatteredWatchtower = table.freeze({ Size = Vector3.new(22.894, 26.0, 20.091), Min = Vector3.new(-7.667, -0.135, -11.662), Roles = table.freeze({ "MOSS", "STONE", "TRIM", "WOOD" }) }),
+	SignalHornCannon = table.freeze({ Size = Vector3.new(12.897, 18.099, 29.682), Min = Vector3.new(-6.45, -0.081, -10.674), Roles = table.freeze({ "ACCENT", "METAL", "STONE", "TRIM", "WOOD" }) }),
+	StormBellGatehouse = table.freeze({ Size = Vector3.new(68.799, 42.446, 13.1), Min = Vector3.new(-34.323, -0.046, -6.55), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
+	StormkeepRoundTower = table.freeze({ Size = Vector3.new(20.78, 44.8, 20.6), Min = Vector3.new(-10.402, -0.4, -10.3), Roles = table.freeze({ "ACCENT", "ALT", "METAL", "MOSS", "STONE", "TRIM" }) }),
+	ThunderRamStable = table.freeze({ Size = Vector3.new(22.139, 13.103, 12.954), Min = Vector3.new(-11.139, -0.06, -6.177), Roles = table.freeze({ "ALT", "METAL", "STONE", "TRIM", "WOOD" }) }),
+	WarBannerPole = table.freeze({ Size = Vector3.new(5.2, 18.6, 3.875), Min = Vector3.new(-2.6, -0.2, -1.953), Roles = table.freeze({ "ACCENT", "ALT", "METAL", "STONE", "TRIM", "WOOD" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -669,6 +687,8 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	BrochKeepTower = true, WindHarpTower = true, InnerGateArch = true, LonghouseRuin = true, CopperForgeHearth = true,
 	CrownAnchorTower = true, SeaStackSpire = true, CableWinchCapstan = true, SupplyHoistWindlass = true, TalonNestPlatform = true,
 	SnappedBridgeStub = true,
+	RedoubtCitadelKeep = true, CapacitorCoilSpire = true, StormBellGatehouse = true, StormkeepRoundTower = true,
+	BarbicanGatehouse = true, ShatteredWatchtower = true, FaultRetainingButtress = true, ThunderRamStable = true,
 	HollinWaterMill = true, MillWheel = true, PaleBandTree = true, HeartrotSpringTrunk = true, HollinStileArch = true, FelledBandLog = true,
 	GreatCiderPress = true, PressHouseRoof = true, GraftedCrownTree = true, GraftedFruitTreeA = true, GraftedFruitTreeB = true,
 	GraftedFruitTreeC = true, PleachedArch = true, EspalierWall = true, CiderVatSplit = true, ThornBrambleArch = true,

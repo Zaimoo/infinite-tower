@@ -451,6 +451,15 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(228, 230, 250), Saturation = 0.06, Contrast = 0.18, ExposureCompensation = 0.03, BloomIntensity = 0.5,
 		SunRaysIntensity = 0.04, SunRaysSpread = 0.3,
 	},
+	-- Floor 29, Tempest Redoubt: electric dusk. A deep indigo-violet storm light, the last of the sun a bruised
+	-- violet glow low behind the citadel, heavier haze in the chasm and strong bloom so the storm spire, the
+	-- capacitor and the nexus braziers crackle against the dark masonry.
+	[29] = {
+		Ambient = c(58, 54, 92), OutdoorAmbient = c(92, 86, 140), ColorShift_Top = c(168, 156, 232), ColorShift_Bottom = c(190, 140, 246),
+		AtmosphereDensity = 0.33, AtmosphereColor = c(124, 112, 172), AtmosphereDecay = c(78, 62, 128), AtmosphereHaze = 1.4,
+		TintColor = c(220, 214, 250), Saturation = 0.1, Contrast = 0.22, ExposureCompensation = -0.02, BloomIntensity = 0.62,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.36,
+	},
 	-- Floor 31, Blighted Verge: a sickly gold late afternoon. Warm low light over the autumn bank, the magenta
 	-- murk of the biome thinned to a rose haze that thickens toward the rotten north-east; the least murky
 	-- Corrupted floor.

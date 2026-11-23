@@ -1,0 +1,270 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BarbicanGatehouse": {
+      "Min": [
+        -36.78,
+        -0.012,
+        -8.071
+      ],
+      "Roles": {
+        "ACCENT": 96,
+        "ALT": 120,
+        "GLOW": 48,
+        "METAL": 376,
+        "STONE": 9984,
+        "TRIM": 348
+      },
+      "Size": [
+        73.83,
+        31.812,
+        16.141
+      ],
+      "Triangles": 10972
+    },
+    "CapacitorCoilSpire": {
+      "Min": [
+        -8.812,
+        -0.4,
+        -7.789
+      ],
+      "Roles": {
+        "ACCENT": 960,
+        "CRYSTAL": 252,
+        "GLOW": 236,
+        "METAL": 2712,
+        "STONE": 4968,
+        "TRIM": 108
+      },
+      "Size": [
+        17.615,
+        65.3,
+        16.04
+      ],
+      "Triangles": 9236
+    },
+    "CurtainWallSegment": {
+      "Min": [
+        -8.0,
+        -0.063,
+        -1.434
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "METAL": 12,
+        "MOSS": 60,
+        "STONE": 1032
+      },
+      "Size": [
+        17.103,
+        10.463,
+        3.42
+      ],
+      "Triangles": 1116
+    },
+    "FaultRetainingButtress": {
+      "Min": [
+        -5.049,
+        -0.091,
+        -9.186
+      ],
+      "Roles": {
+        "METAL": 24,
+        "MOSS": 20,
+        "STONE": 3600
+      },
+      "Size": [
+        10.109,
+        31.104,
+        18.036
+      ],
+      "Triangles": 3644
+    },
+    "LightningSpearBallista": {
+      "Min": [
+        -6.703,
+        0.0,
+        -6.537
+      ],
+      "Roles": {
+        "CRYSTAL": 140,
+        "GLOW": 48,
+        "METAL": 364,
+        "STONE": 36,
+        "TRIM": 24,
+        "WOOD": 48
+      },
+      "Size": [
+        13.406,
+        7.797,
+        16.348
+      ],
+      "Triangles": 660
+    },
+    "NexusBrazierPedestal": {
+      "Min": [
+        -2.16,
+        0.0,
+        -2.16
+      ],
+      "Roles": {
+        "ACCENT": 128,
+        "CRYSTAL": 140,
+        "GLOW": 80,
+        "METAL": 500,
+        "STONE": 84
+      },
+      "Size": [
+        4.317,
+        10.9,
+        4.32
+      ],
+      "Triangles": 932
+    },
+    "RedoubtCitadelKeep": {
+      "Min": [
+        -22.4,
+        -0.61,
+        -16.3
+      ],
+      "Roles": {
+        "ACCENT": 1012,
+        "ALT": 60,
+        "GLOW": 188,
+        "METAL": 2224,
+        "MOSS": 120,
+        "STONE": 12000,
+        "TRIM": 412
+      },
+      "Size": [
+        44.8,
+        129.189,
+        32.6
+      ],
+      "Triangles": 16016
+    },
+    "ShatteredWatchtower": {
+      "Min": [
+        -7.667,
+        -0.135,
+        -11.662
+      ],
+      "Roles": {
+        "MOSS": 80,
+        "STONE": 3140,
+        "TRIM": 60,
+        "WOOD": 24
+      },
+      "Size": [
+        22.894,
+        26.0,
+        20.091
+      ],
+      "Triangles": 3304
+    },
+    "SignalHornCannon": {
+      "Min": [
+        -6.45,
+        -0.081,
+        -10.674
+      ],
+      "Roles": {
+        "ACCENT": 784,
+        "METAL": 362,
+        "STONE": 732,
+        "TRIM": 80,
+        "WOOD": 48
+      },
+      "Size": [
+        12.897,
+        18.099,
+        29.682
+      ],
+      "Triangles": 2006
+    },
+    "StormBellGatehouse": {
+      "Min": [
+        -34.323,
+        -0.046,
+        -6.55
+      ],
+      "Roles": {
+        "ACCENT": 804,
+        "ALT": 120,
+        "GLOW": 48,
+        "METAL": 324,
+        "STONE": 9000,
+        "TRIM": 204
+      },
+      "Size": [
+        68.799,
+        42.446,
+        13.1
+      ],
+      "Triangles": 10500
+    },
+    "StormkeepRoundTower": {
+      "Min": [
+        -10.402,
+        -0.4,
+        -10.3
+      ],
+      "Roles": {
+        "ACCENT": 192,
+        "ALT": 36,
+        "METAL": 192,
+        "MOSS": 100,
+        "STONE": 6906,
+        "TRIM": 56
+      },
+      "Size": [
+        20.78,
+        44.8,
+        20.6
+      ],
+      "Triangles": 7482
+    },
+    "ThunderRamStable": {
+      "Min": [
+        -11.139,
+        -0.06,
+        -6.177
+      ],
+      "Roles": {
+        "ALT": 80,
+        "METAL": 68,
+        "STONE": 2400,
+        "TRIM": 84,
+        "WOOD": 252
+      },
+      "Size": [
+        22.139,
+        13.103,
+        12.954
+      ],
+      "Triangles": 2884
+    },
+    "WarBannerPole": {
+      "Min": [
+        -2.6,
+        -0.2,
+        -1.953
+      ],
+      "Roles": {
+        "ACCENT": 48,
+        "ALT": 60,
+        "METAL": 20,
+        "STONE": 100,
+        "TRIM": 12,
+        "WOOD": 28
+      },
+      "Size": [
+        5.2,
+        18.6,
+        3.875
+      ],
+      "Triangles": 268
+    }
+  },
+  "Unit": "studs"
+}

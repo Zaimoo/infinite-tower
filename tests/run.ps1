@@ -150,6 +150,7 @@ $modulePaths = @(
     'ServerScriptService/Core/TowerSetPieces/ThunderHighlands.luau',
     'ServerScriptService/Core/TowerSetPieces/ThunderFloor27.luau',
     'ServerScriptService/Core/TowerSetPieces/ThunderFloor28.luau',
+    'ServerScriptService/Core/TowerSetPieces/ThunderFloor29.luau',
     'ServerScriptService/Core/TowerSetPieces/CorruptedGrove.luau',
     'ServerScriptService/Core/TowerSetPieces/CorruptedFloor32.luau',
     'ServerScriptService/Core/TowerSetPieces/CorruptedFloor33.luau',

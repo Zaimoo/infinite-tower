@@ -1699,6 +1699,101 @@ function Builder.Build(id: number, generation: number): any
 		end
 		structure(p,id)
 	end
+	-- Floor 29's Thunder-Viaduct (layout.Viaducts, KAIRN_STONE): the deck (a ramp or a flight of steps) rides
+	-- on a band of dressed slate carried by open round arches on tall dry-stone piers out of the chasm, with
+	-- braided copper conduits running along both faces under the parapets and down the piers.
+	local function kairnViaduct(link: any, a: Vector3, b: Vector3)
+		local delta = b - a
+		local flat = Vector3.new(delta.X, 0, delta.Z)
+		local flatUnit = if flat.Magnitude > 0.01 then flat.Unit else Vector3.new(0, 0, -1)
+		local right = Vector3.new(-flatUnit.Z, 0, flatUnit.X)
+		local facing = CFrame.lookAt(Vector3.zero, flatUnit)
+		local deepBottom = origin.Y + layout.Bottom - 6
+		local length = flat.Magnitude
+		local wide = link.Width - 1.6
+		-- The band under the deck, pitched with it.
+		local mid = (a + b) / 2
+		local band = decor(model, "ViaductDeckBand", Vector3.new(wide, 3.2, delta.Magnitude + 0.4), mid, kairnSlateDark, Enum.Material.Slate)
+		band.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -3.6, 0)
+		for _, side in { -1, 1 } do
+			local stringer = decor(model, "ViaductStringCourse", Vector3.new(0.9, 1, delta.Magnitude + 0.4), mid + right * (side * (wide / 2 + 0.2)), kairnGranite, Enum.Material.Slate)
+			stringer.CFrame = CFrame.lookAt(stringer.Position, stringer.Position + delta) * CFrame.new(0, -2.1, 0)
+		end
+		local bays = math.max(2, math.round(length / 16))
+		local bay = length / bays
+		local pierT = 5.6
+		local r = (bay - pierT) / 2
+		local function deckAt(t: number): number
+			return a.Y + delta.Y * t
+		end
+		-- Piers between the bays (the ends stand on the terraces and the viaduct pier).
+		for i = 1, bays - 1 do
+			local t = i / bays
+			local at = a:Lerp(b, t)
+			local top = deckAt(t) - 5.2
+			local h = top - deepBottom
+			if h > 2 then
+				local pier = decor(model, "ViaductPier", Vector3.new(wide, h, pierT), Vector3.new(at.X, deepBottom + h / 2, at.Z), if i % 2 == 0 then kairnSlate else kairnGranite, Enum.Material.Slate)
+				pier.CFrame = CFrame.new(pier.Position) * facing
+				local foot = decor(model, "ViaductPierFooting", Vector3.new(wide + 2.4, 5, pierT + 2.4), Vector3.new(at.X, deepBottom + 2.5, at.Z), kairnSlateDark, Enum.Material.Basalt)
+				foot.CFrame = CFrame.new(foot.Position) * facing
+				local ring = decor(model, "ViaductCopperBand", Vector3.new(wide + 0.5, 0.8, pierT + 0.5), Vector3.new(at.X, top - 1.6, at.Z), kairnCopper, Enum.Material.Metal)
+				ring.CFrame = CFrame.new(ring.Position) * facing
+				-- A conduit dropping down every other pier's outer face to the chasm floor.
+				if i % 2 == 1 then
+					for _, side in { -1, 1 } do
+						local x0 = at + right * (side * (wide / 2 + 0.45))
+						local pipe = decor(model, "ViaductConduit", Vector3.new(0.7, h - 3, 0.7), Vector3.new(x0.X, deepBottom + 3 + (h - 3) / 2, x0.Z), kairnCopper, Enum.Material.Metal)
+						pipe.CFrame = CFrame.new(pipe.Position) * facing
+					end
+				end
+			end
+		end
+		-- An arch over each bay: a ring of voussoirs springing from the piers, the spandrels filled up to the band.
+		for i = 0, bays - 1 do
+			local t0, t1 = i / bays, (i + 1) / bays
+			local crownY = math.min(deckAt(t0), deckAt(t1)) - 5.4
+			local springY = crownY - r
+			if springY - deepBottom < 3 then
+				continue
+			end
+			local centre = a:Lerp(b, (t0 + t1) / 2)
+			local c = Vector3.new(centre.X, springY, centre.Z)
+			local pieces = 13
+			for k = 0, pieces - 1 do
+				local ang = math.pi * (k + 0.5) / pieces
+				local along, up = -math.cos(ang) * (r + 1.3), math.sin(ang) * (r + 1.3)
+				local pos = c + flatUnit * along + Vector3.new(0, up, 0)
+				local v = decor(model, "ViaductVoussoir", Vector3.new(wide + 0.3, 2.6, math.pi * (r + 1.3) / pieces + 0.7), pos, if k % 2 == 0 then kairnGranite else kairnSlate, Enum.Material.Slate)
+				v.CFrame = CFrame.new(pos) * facing * CFrame.Angles(ang - math.pi / 2, 0, 0)
+			end
+			-- The spandrels: masonry over each haunch, from the arch's shoulder up to the band.
+			for _, e in { -1, 1 } do
+				local x = centre + flatUnit * (e * (r * 0.78 + 0.6))
+				local y0 = springY + r * 0.62
+				local y1 = crownY + 1.6
+				if y1 - y0 > 0.5 then
+					local fill = decor(model, "ViaductSpandrel", Vector3.new(wide, y1 - y0, r * 0.62 + 1.4), Vector3.new(x.X, (y0 + y1) / 2, x.Z), kairnSlate, Enum.Material.Slate)
+					fill.CFrame = CFrame.new(fill.Position) * facing
+				end
+			end
+		end
+		-- Braided copper conduits along both faces under the parapet, with verdigris clamps.
+		for _, side in { -1, 1 } do
+			for k, dy in { -1.4, -2.5 } do
+				local o = right * (side * (wide / 2 + 0.55 + (k - 1) * 0.15)) + Vector3.new(0, dy - 1.2, 0)
+				local p0, p1 = a + o, b + o
+				local pipe = decor(model, "ViaductConduit", Vector3.new(0.55, 0.55, (p1 - p0).Magnitude), (p0 + p1) / 2, kairnCopper, Enum.Material.Metal)
+				pipe.CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+			end
+			local clamps = math.max(2, math.floor(delta.Magnitude / 8))
+			for k = 1, clamps do
+				local at = a:Lerp(b, k / (clamps + 1)) + right * (side * (wide / 2 + 0.6)) + Vector3.new(0, -3.1, 0)
+				local clamp = decor(model, "ViaductConduitClamp", Vector3.new(0.5, 2, 0.8), at, kairnVerdigris, Enum.Material.Metal)
+				clamp.CFrame = CFrame.lookAt(at, at + flat)
+			end
+		end
+	end
 	for _, link in layout.Links do
 		local a = origin + Vector3.new(link.AX, link.AY, link.AZ)
 		local b = origin + Vector3.new(link.BX, link.BY, link.BZ)
@@ -1756,6 +1851,9 @@ function Builder.Build(id: number, generation: number): any
 				if natural then continue end
 				local runner = decor(model, "GrandStairRunner", Vector3.new(link.Width * 0.36, 0.12, flat.Magnitude / steps + 0.2), Vector3.new(center.X, top + 0.08, center.Z), theme.AccentColor, theme.TrimMaterial)
 				runner.CFrame = CFrame.lookAt(runner.Position, runner.Position + flat)
+			end
+			if layout.Viaducts and layout.Viaducts[link.Id] then
+				kairnViaduct(link, a, b)
 			end
 			if suspended and masonryStyle and masonryStyle.StairUnder then
 				-- Stringer keel underneath suspended stairs (granite on F20 royal stair, obsidian/basalt on F13/F15)
@@ -2074,8 +2172,12 @@ function Builder.Build(id: number, generation: number): any
 				ramp.Material = Enum.Material.Slate
 				local deepBottom = origin.Y + layout.Bottom - 6
 				local length = delta.Magnitude
-				local segs = math.max(2, math.floor(length / 9))
+				local viaduct = layout.Viaducts ~= nil and layout.Viaducts[link.Id] == true
+				local segs = if viaduct then 0 else math.max(2, math.floor(length / 9))
 				local pitch = CFrame.lookAt(Vector3.zero, delta)
+				if viaduct then
+					kairnViaduct(link, a, b)
+				end
 				for i = 1, segs do
 					local at = a:Lerp(b, (i - 0.5) / segs)
 					local h = at.Y - 2 - deepBottom

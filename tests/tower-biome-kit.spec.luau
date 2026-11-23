@@ -220,6 +220,21 @@ test("Floor 28 has its own skybridge kit: at least ten new templates and 135+ st
 	assert(Kit.ExtraTemplates.CliffGroundingChain.Size.Y >= 40)
 end)
 
+test("Floor 29 has its own redoubt kit: at least eleven new templates and a 160+ stud citadel keep", function()
+	local f29 = { "RedoubtCitadelKeep", "CapacitorCoilSpire", "StormBellGatehouse", "StormkeepRoundTower", "BarbicanGatehouse",
+		"CurtainWallSegment", "ShatteredWatchtower", "FaultRetainingButtress", "SignalHornCannon", "ThunderRamStable",
+		"LightningSpearBallista", "NexusBrazierPedestal", "WarBannerPole" }
+	for _, name in f29 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 29 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f29 >= 11)
+	-- The citadel keep (placed at scale 1.26) clears the ladder's 160 studs.
+	assert(Kit.ExtraTemplates.RedoubtCitadelKeep.Size.Y * 1.26 >= 160)
+	-- The gates straddle a walkway: wide enough for a 28-stud link and its landing lane between their towers.
+	assert(Kit.ExtraTemplates.StormBellGatehouse.Size.X >= 60 and Kit.ExtraTemplates.BarbicanGatehouse.Size.X >= 60)
+end)
+
 test("Floor 31 has its own Blighted Verge kit: at least eight new templates and a 105+ stud Heartrot Spring", function()
 	local f31 = { "HollinWaterMill", "MillWheel", "FieldstoneWeir", "PaleBandTree", "GraftKnotPost", "WardensLeanTo",
 		"SawnStumpCluster", "HeartrotSpringTrunk", "HollinStileArch", "WattleFence", "FieldstoneCairn", "FelledBandLog",
@@ -434,7 +449,12 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[34].AtmosphereDensity >= 0.38 and Light.FloorGrades[34].SunRaysIntensity > 0, "floor 34 keeps canopy gloom and sun-ray shafts")
 	assert(Light.FloorGrades[35] ~= nil, "floor 35 (Sovereign's Grove) has its blight-eclipse grade")
 	assert(Light.FloorGrades[35].BloomIntensity >= 0.58, "floor 35 highlights the Mother Graft cavity with eclipse bloom")
-	assert(Light.TowerPreset(6, 29) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
+	assert(Light.FloorGrades[29] ~= nil, "floor 29 (Tempest Redoubt) has its electric dusk grade")
+	-- Electric dusk: darker than the squall afternoon, hazier, the storm light blooming hardest.
+	local g29 = Light.FloorGrades[29]
+	assert(lum(g29.OutdoorAmbient) < lum(g28.OutdoorAmbient) and g29.AtmosphereHaze > g28.AtmosphereHaze and g29.BloomIntensity > g28.BloomIntensity,
+		"floor 29's dusk is darker, hazier and blooms harder than floor 28's afternoon")
+	assert(Light.TowerPreset(6, 30) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400
