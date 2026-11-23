@@ -263,8 +263,14 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	-- is bare dark slate (under the cloud sea) instead of turf.
 	local stackSteep = 1
 	local abyssSlate = false
+	-- A cliff fault (CLIFF_FAULT, Floor 29): north of a wavering east-west line near Z the ground is a plateau
+	-- Top studs over the chasm floor, its south face a sheer scarp stepped into rough strata. The plateau is a
+	-- floor: walkway caps never dig under it, so every walkway that crosses it must stand above it.
+	local fault: any = nil
 	for _, feat in features or {} do
-		if feat.Kind == "SEA_STACK_APRON" then
+		if feat.Kind == "CLIFF_FAULT" then
+			fault = { Z = feat.Z or 0, Top = feat.Top or 24, Amp = feat.Amp or 6, Run = feat.Run or 4 }
+		elseif feat.Kind == "SEA_STACK_APRON" then
 			stackSteep = feat.Steep or 3
 			abyssSlate = true
 		elseif feat.Kind == "SLAG_TIP" then
@@ -317,6 +323,22 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			end
 		end
 		return bestH, bestT
+	end
+	-- The fault's height over the chasm floor at (x, z) and how far up its face the spot is (0 south of the
+	-- scarp's foot, 1 on the plateau), or 0, 0 with no fault.
+	local function faultHeight(x: number, z: number): (number, number)
+		if not fault then
+			return 0, 0
+		end
+		local line = fault.Z + fault.Amp * fbm(x / 70, 0.5, seed + 211, 2) + 2.2 * fbm(x / 13, 1.5, seed + 213, 1)
+		local t = math.clamp((line - z) / fault.Run, 0, 1)
+		if t <= 0 then
+			return 0, 0
+		end
+		local h = fault.Top * (0.95 + 0.05 * fbm(x / 30, z / 30, seed + 215, 2)) * (t ^ 0.55)
+		-- Strata break the face into rough ledges.
+		h -= (h % 7) * 0.4 * (1 - t)
+		return h, t
 	end
 	-- A strike crater's rim height over the floor at (x, z), and its normalised distance from the centre.
 	local function scar(x: number, z: number): (number, number)
@@ -404,6 +426,13 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			local wall = headwall(x, z)
 			if wall > 0.5 and bottom + wall > base then
 				base, kind = bottom + wall, "MOUNTAIN"
+			end
+		end
+		-- The fault plateau and its scarp.
+		if fault then
+			local fh = faultHeight(x, z)
+			if fh > 0.2 and bottom + fh > base then
+				base = bottom + fh
 			end
 		end
 		-- Strike craters: a scorched ring wall on open ground, the blasted bowl left at the floor.
@@ -782,8 +811,8 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			end
 		end
 		-- Clearance never digs under the chasm floor: every walkway stands above it, and digging deeper would
-		-- only leave pits and walking-on-air spots over the invisible Ground slab.
-		cap = math.max(cap, bottom)
+		-- only leave pits and walking-on-air spots over the invisible Ground slab. (Nor under a fault plateau.)
+		cap = math.max(cap, if fault then bottom + (faultHeight(x, z)) else bottom)
 		if ownSurface > -math.huge and directGrassLayout then
 			-- A terrace or ramp directly under (x, z) is never cratered down by an adjacent lower terrace's cap.
 			if ownIsDeck then
@@ -906,7 +935,7 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				kind = "APRON"
 			end
 		end
-		cap = math.max(cap, bottom)
+		cap = math.max(cap, if fault then bottom + (faultHeight(x, z)) else bottom)
 		if own > -math.huge then
 			-- A walkway directly overhead sets the ground itself; a lower neighbour's cap never craters it.
 			y = if ownDeck then math.min(y, own - UNDER) elseif ownStair then own - STAIR_UNDER else own - SOFT
@@ -960,8 +989,17 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		Palette = palette,
 		Surface = surface,
 		-- Authored feature materials: slag tips, glowing pour-pit rims, and volcanic lava-fall chutes.
-		Accent = if #slagTips > 0 or #pourPits > 0 or #lavaFalls > 0 or #headwalls > 0 or #scars > 0 or abyssSlate
+		Accent = if #slagTips > 0 or #pourPits > 0 or #lavaFalls > 0 or #headwalls > 0 or #scars > 0 or abyssSlate or fault
 			then function(x: number, z: number): Enum.Material?
+				if fault then
+					local fh, t = faultHeight(x, z)
+					local y = height(x, z)
+					if t > 0 and t < 1 and fh > 2 and y <= bottom + fh + 0.5 then
+						-- The scarp: pale rock and dark slate strata in rough bands.
+						local band = math.floor((y + 1.5 * fbm(x / 20, z / 20, seed + 217, 1)) / 3.5) % 3
+						return if band == 0 then M.Slate elseif band == 1 then M.Rock else M.Basalt
+					end
+				end
 				if abyssSlate and height(x, z) < bottom + 1.5 then
 					-- The abyss floor: bare wet slate and rock rubble under the cloud sea.
 					return if math.noise(x / 13, z / 13, seed + 197) > 0.1 then M.Slate else M.Rock

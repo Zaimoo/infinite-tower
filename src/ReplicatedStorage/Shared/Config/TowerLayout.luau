@@ -1946,6 +1946,124 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Skybridge Crown",
 		},
 	},
+	-- Floor 29, Tempest Redoubt (Thunder Highlands): the Kairnfolk's two-tier mountain acropolis, split by an
+	-- east-west cliff fault. South of it the lower ward stands on rock over a misty chasm (Bottom = -6): the walled
+	-- causeway into the Lower Barbican, the two Ram Yards and the Horn Posts on the outer cliff edges. North of
+	-- it the upper citadel stands on a plateau: both Stormkeeps, the Storm-Bell Gate, the Capacitor Spire and the
+	-- Tempest Redoubt. Three ways climb the fault: the west and east switchbacks (causeways out to buttressed
+	-- ledges on the cliff's lip, then on up to the Stormkeeps) and, in the middle, the arched Thunder-Viaduct
+	-- from the Barbican to its pier and up the grand steps under the Storm-Bell Gate. 15 terraces, 17 links,
+	-- 13 walk heights.
+	[29] = {
+		Key = "thunder:4",
+		Name = "Tempest Redoubt",
+		Size = { Width = 735, Depth = 790, Height = 260, Bottom = -6 },
+		PathStyle = "KAIRN",
+		DirectTerrain = true,
+		Surface = "KAIRN",
+		Masonry = "KAIRN_STONE",
+		-- Off-grid dry-stone platforms (Y 14, 22, 30, 38) and the viaduct's masonry pier (Y 20).
+		Decks = {
+			EastGallery = true,
+			ViaductPier = true,
+			WestSwitchback = true,
+			WestBastion = true,
+			WestCoilSpire = true,
+		},
+		-- Every causeway over the chasm, every link touching a deck, and the walled causeway into the Barbican.
+		Suspended = {
+			Links = {
+				Basin_Crossing = true,
+				Basin_EastGallery = true,
+				Crossing_ViaductPier = true,
+				ViaductPier_UpperGate = true,
+				EastGallery_EastHornPost = true,
+				WestGallery_WestSwitchback = true,
+				EastGallery_EastSwitchback = true,
+				WestSwitchback_WestBastion = true,
+				WestBastion_UpperGate = true,
+				WestBastion_WestCoilSpire = true,
+				WestBastion_Apex = true,
+				EastBastion_Apex = true,
+			},
+		},
+		-- The Thunder-Viaduct: open masonry arches on tall piers out of the chasm, copper conduits along both
+		-- parapets (TowerRoomBuilder, KAIRN_STONE).
+		Viaducts = { Crossing_ViaductPier = true, ViaductPier_UpperGate = true },
+		-- The chasm floor is dry slate under the mist.
+		Liquid = { Dry = true },
+		-- The boss portals stand wide on the Redoubt, either side of the citadel keep behind it.
+		Portals = { Spread = 46 },
+		TerrainFeatures = {
+			-- The mountain wall falls back behind the Redoubt, leaving a shelf for the citadel keep.
+			{ Kind = "APEX_ALCOVE", Width = 120, Feather = 30 },
+			-- The fault: north of Z -88 (wavering with the strata) the ground is a plateau 28 studs over the chasm
+			-- floor, its south face a sheer stepped scarp.
+			{ Kind = "CLIFF_FAULT", Z = -88, Top = 28, Amp = 7 },
+			-- Every terrace stands on sheer rock (sides 2.2 times as steep), the chasm floor bare slate.
+			{ Kind = "SEA_STACK_APRON", Steep = 2.2 },
+		},
+		Basin = { X = 0, Y = 0, Z = 230, Width = 630, Depth = 112 },
+		Crossing = { X = 0, Y = 8, Z = 102, Width = 88, Depth = 68 },
+		WestGallery = { X = -208, Y = 12, Z = 84, Width = 92, Depth = 80 },
+		EastGallery = { X = 208, Y = 14, Z = 84, Width = 92, Depth = 80 },
+		WestBastion = { X = -212, Y = 30, Z = -176, Width = 92, Depth = 82 },
+		EastBastion = { X = 212, Y = 32, Z = -176, Width = 92, Depth = 82 },
+		ExtraPlatforms = {
+			WestHornPost = { X = -302, Y = 16, Z = -28, Width = 62, Depth = 56 },
+			EastHornPost = { X = 302, Y = 16, Z = -28, Width = 62, Depth = 56 },
+			ViaductPier = { X = 0, Y = 20, Z = -24, Width = 68, Depth = 58 },
+			WestSwitchback = { X = -194, Y = 22, Z = -48, Width = 72, Depth = 60 },
+			EastSwitchback = { X = 194, Y = 24, Z = -48, Width = 72, Depth = 60 },
+			UpperGate = { X = 0, Y = 36, Z = -160, Width = 84, Depth = 64 },
+			WestCoilSpire = { X = -282, Y = 38, Z = -304, Width = 68, Depth = 56 },
+		},
+		Apex = { X = 0, Y = 48, Z = -306, Width = 136, Depth = 98 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "Crossing" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "EastGallery" },
+			{ "Crossing", "ViaductPier" },
+			{ "WestGallery", "WestHornPost" },
+			{ "EastGallery", "EastHornPost" },
+			{ "WestGallery", "WestSwitchback" },
+			{ "EastGallery", "EastSwitchback" },
+			{ "WestSwitchback", "WestBastion" },
+			{ "EastSwitchback", "EastBastion" },
+			{ "ViaductPier", "UpperGate" },
+			{ "WestBastion", "UpperGate" },
+			{ "WestBastion", "WestCoilSpire" },
+			{ "WestBastion", "Apex" },
+			{ "EastBastion", "Apex" },
+			{ "UpperGate", "Apex" },
+		},
+		-- The viaduct's grand steps up under the Storm-Bell Gate, and the Redoubt's keep steps.
+		Stairs = { ViaductPier_UpperGate = true, UpperGate_Apex = true },
+		Patrols = {
+			LOWER_WALL = { "WestGallery", "Basin", "EastGallery" },
+			FAULT_VIADUCT = { "Crossing", "ViaductPier", "UpperGate" },
+			UPPER_REDOUBT = { "WestBastion", "Apex", "EastBastion" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Storm Road",
+			Basin = "Outer Causeway",
+			Crossing = "Lower Barbican",
+			WestGallery = "West Ram Yard",
+			EastGallery = "East Ram Yard",
+			WestHornPost = "West Horn Post",
+			EastHornPost = "East Horn Post",
+			ViaductPier = "Thunder-Viaduct Pier",
+			WestSwitchback = "West Fault Switchback",
+			EastSwitchback = "East Fault Switchback",
+			WestBastion = "West Stormkeep",
+			EastBastion = "East Stormkeep",
+			UpperGate = "Storm-Bell Gate",
+			WestCoilSpire = "Capacitor Spire",
+			Apex = "Tempest Redoubt",
+		},
+	},
 	-- Floor 31, Blighted Verge (Corrupted Grove Introduction; docs/prompts/corrupted-grove-floor-layouts-prompt.md):
 	-- the edge of the grove, where the Hollin grove-wardens still held the line. A blight-brook rises at the
 	-- Heartrot Spring in the north-east corner and meanders west-south-west to a sinkhole in the west wall,
@@ -2866,7 +2984,7 @@ local function build(index: number, v: any?): any
 		Patrols=v and v.Patrols or nil,
 		ReplacePatrols=v ~= nil and v.ReplacePatrols == true, Surface=v and v.Surface or nil,
 		Terrain=v and v.Terrain or nil, Skylight=v and v.Skylight or nil, Portals=v and v.Portals or nil,
-		GirderSpans=v and v.GirderSpans or nil, StonePiers=v and v.StonePiers or nil,
+		GirderSpans=v and v.GirderSpans or nil, StonePiers=v and v.StonePiers or nil, Viaducts=v and v.Viaducts or nil,
 		Fords=v and v.Fords or nil}
 end
 

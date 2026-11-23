@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -2377,6 +2377,131 @@ test("Floor 28's terrain is the walking surface: Kairn needles out of a dry abys
 	end
 end)
 
+test("Floor 29 is the hand-authored Tempest Redoubt: a two-tier acropolis on a cliff fault, three ways up it", function()
+	local room = Layout.ForFloor(29)
+	assert(room.Authored == "thunder:4" and room.Name == "Tempest Redoubt" and room.PathStyle == "KAIRN")
+	assert(room.DirectTerrain == true and room.Surface == "KAIRN" and room.Masonry == "KAIRN_STONE")
+	assert(room.Width == 735 and room.Depth == 790 and room.Height == 260 and room.Bottom == -6, "Floor 29 overrides its room size")
+	assert(#room.ReturnLinks == 2, "two return ramps climb out of the chasm")
+	assert(room.Liquid and room.Liquid.Dry == true, "the chasm floor holds no water")
+	assert(same(room, Layout.Get(4, 29)) and not same(room, Layout.Get(4)))
+	assert(#Layout.Validate(room) == 0, "Floor 29's layout has problems: " .. table.concat(Layout.Validate(room), "; "))
+	local fault
+	for _, feat in room.TerrainFeatures do
+		if feat.Kind == "CLIFF_FAULT" then fault = feat end
+	end
+	assert(fault and fault.Top >= 20, "the cliff fault shears the room in two")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- Three ways up the fault: the west and east switchbacks, and the Thunder-Viaduct through the Storm-Bell Gate.
+	assert(paths.WestGallery_WestSwitchback and paths.WestSwitchback_WestBastion, "the west switchback")
+	assert(paths.EastGallery_EastSwitchback and paths.EastSwitchback_EastBastion, "the east switchback")
+	assert(paths.Crossing_ViaductPier and paths.ViaductPier_UpperGate == "STAIRS" and paths.UpperGate_Apex == "STAIRS", "the viaduct and the keep steps")
+	assert(room.Viaducts and room.Viaducts.Crossing_ViaductPier and room.Viaducts.ViaductPier_UpperGate, "the viaduct spans are arched")
+	-- The lower ward lies south of the fault, the citadel north of it (the switchbacks and the pier stand at its
+	-- foot), and every link that crosses the fault line climbs above the plateau.
+	local p = room.Platforms
+	for _, id in { "Basin", "Crossing", "WestGallery", "EastGallery", "WestHornPost", "EastHornPost" } do
+		assert(p[id].Z - p[id].Depth / 2 > fault.Z + fault.Amp + 10 and p[id].Y <= 16, id .. " belongs to the lower ward")
+	end
+	for _, id in { "WestBastion", "EastBastion", "UpperGate", "WestCoilSpire", "Apex" } do
+		assert(p[id].Z + p[id].Depth / 2 < fault.Z - fault.Amp - 10 and p[id].Y >= 30, id .. " belongs to the citadel")
+	end
+	local plateau = room.Bottom - 4 + fault.Top
+	for _, link in room.Links do
+		local a, b = p[link.From], p[link.To]
+		if (a.Z > fault.Z) ~= (b.Z > fault.Z) then
+			assert(math.max(a.Y, b.Y) > plateau + 4, link.Id .. " crosses the fault without climbing it")
+		end
+	end
+	-- The Capacitor Spire is a dead end off the West Stormkeep.
+	local n = 0
+	for _, link in room.Links do
+		if link.From == "WestCoilSpire" or link.To == "WestCoilSpire" then n += 1 end
+	end
+	assert(n == 1, "the Capacitor Spire is a dead end")
+	for id, t in p do
+		if room.Decks[id] then
+			assert(id == "ViaductPier" or t.Y % 4 ~= 0, id .. " is a deck on the terrain grid: make it terrain")
+		else
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	assert(p.Basin.Name == "Outer Causeway" and p.Crossing.Name == "Lower Barbican" and p.Apex.Name == "Tempest Redoubt")
+	assert(p.UpperGate.Name == "Storm-Bell Gate" and p.WestCoilSpire.Name == "Capacitor Spire" and p.ViaductPier.Name == "Thunder-Viaduct Pier")
+	local totalMobs, raised = 0, 0
+	for _, camp in room.Camps do
+		assert(not ({ WestHornPost = true, EastHornPost = true, ViaductPier = true, WestSwitchback = true, EastSwitchback = true,
+			UpperGate = true, WestCoilSpire = true })[camp.Platform], "ExtraPlatforms hold no camps")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+		if camp.Elite and camp.Y >= 30 and camp.Platform ~= "Apex" then raised += 1 end
+	end
+	assert(totalMobs == 35 and room.EliteCount == 4, "Floor 29 keeps 35 live camp mobs and 4 Elites")
+	assert(raised == 2, "both Stormkeeps hold an Elite camp above the fault")
+	local routes = Layout.PatrolRoutes(4, 29)
+	assert(routes.BASIN_LOOP and routes.LOWER_WALL and routes.FAULT_VIADUCT and routes.UPPER_REDOUBT)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil)
+end)
+
+test("Floor 29 climbs the escalation ladder: grander than Floor 28 and every earlier fourth floor", function()
+	local room = Layout.ForFloor(29)
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 15 and links == 17 and levels == 13, string.format("Floor 29 has %d/%d/%d", terraces, links, levels))
+	for _, earlier in { 4, 9, 14, 19, 24, 28 } do
+		local r = Layout.ForFloor(earlier)
+		local t, l, v = ladderCounts(r)
+		assert(terraces > t and links > l and levels > v, "Floor 29 does not beat floor " .. earlier)
+		assert(room.Platforms.Apex.Y > r.Platforms.Apex.Y, "Floor 29's Redoubt is not higher than floor " .. earlier .. "'s Apex")
+	end
+	for _, earlier in { 24, 28 } do
+		local r = Layout.ForFloor(earlier)
+		assert(room.Width * room.Depth > r.Width * r.Depth and room.Height > r.Height, "Floor 29's room is not grander than floor " .. earlier .. "'s")
+	end
+	local walk, base = routeLength(room), routeLength(Layout.Get(4))
+	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+end)
+
+test("Floor 29's terrain is the walking surface: a sheer fault scarp under the citadel plateau, nothing buried", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(29)
+	local field = Terrain.Field(room, "thunder_highlands", 29)
+	assert(field.Surface == Terrain.Surfaces.KAIRN, "floor 29 uses the Kairn surface")
+	for id, t in room.Platforms do
+		assert(field.Height(t.X, t.Z) <= t.Y + 0.01, id .. " is buried")
+	end
+	for _, link in room.Links do
+		for t = 0, 1, 0.05 do
+			local x, z = link.AX + (link.BX - link.AX) * t, link.AZ + (link.BZ - link.AZ) * t
+			assert(field.Height(x, z) <= link.AY + (link.BY - link.AY) * t + 0.01, link.Id .. " is buried")
+		end
+	end
+	-- Away from the walkways the plateau north of the fault stands 20+ studs over the chasm floor south of it,
+	-- and the scarp between them is a cliff, not a slope.
+	local fault
+	for _, feat in room.TerrainFeatures do
+		if feat.Kind == "CLIFF_FAULT" then fault = feat end
+	end
+	for _, x in { -110, 110, 290 } do
+		local south = field.Height(x, fault.Z + fault.Amp + 20)
+		local north = field.Height(x, fault.Z - fault.Amp - 20)
+		assert(south < field.Bottom + 3 and north > field.Bottom + 20, string.format("no fault at x %d (%.1f / %.1f)", x, south, north))
+		local steepest = 0
+		for z = fault.Z + fault.Amp + 6, fault.Z - fault.Amp - 6, -1 do
+			steepest = math.max(steepest, field.Height(x, z - 1) - field.Height(x, z))
+		end
+		assert(steepest > 5, string.format("the scarp at x %d is a slope, not a cliff", x))
+	end
+	-- Under the middle of every causeway over the chasm the ground falls away: no land bridge under it.
+	for _, id in { "Basin_Crossing", "Basin_EastGallery", "Crossing_ViaductPier", "WestGallery_WestSwitchback", "EastGallery_EastSwitchback" } do
+		local link
+		for _, l in room.Links do
+			if l.Id == id then link = l end
+		end
+		local x, z = (link.AX + link.BX) / 2, (link.AZ + link.BZ) / 2
+		assert(field.Height(x, z) < (link.AY + link.BY) / 2 - 8, id .. " has ground under its middle")
+	end
+end)
+
 test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock never showing through", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
@@ -2409,14 +2534,16 @@ test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock
 	end
 end)
 
-test("Floors 26-28's landmarks stand clear of every walkway, camp and mob slot", function()
+test("Floors 26-29's landmarks stand clear of every walkway, camp and mob slot", function()
 	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
 	local Thunder27 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor27"])
 	local Thunder28 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor28"])
+	local Thunder29 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor29"])
 	assert(#Thunder.Floor26Landmarks >= 12, "Floor 26 needs at least 12 landmarks")
 	assert(#Thunder27.Landmarks >= 14, "Floor 27 needs at least 14 landmarks")
 	assert(#Thunder28.Landmarks >= 16, "Floor 28 needs at least 16 landmarks")
-	for floorId, list in { [26] = Thunder.Floor26Landmarks, [27] = Thunder27.Landmarks, [28] = Thunder28.Landmarks } do
+	assert(#Thunder29.Landmarks >= 18, "Floor 29 needs at least 18 landmarks")
+	for floorId, list in { [26] = Thunder.Floor26Landmarks, [27] = Thunder27.Landmarks, [28] = Thunder28.Landmarks, [29] = Thunder29.Landmarks } do
 	local room = Layout.ForFloor(floorId)
 	local lanes = Layout.Lanes((floorId - 1) % 5 + 1, floorId)
 	local function nearestDistSq(px: number, pz: number, lm: any): number
@@ -2442,7 +2569,7 @@ test("Floors 26-28's landmarks stand clear of every walkway, camp and mob slot",
 		for _, lane in lanes do
 			local ly0 = math.min(lane.AY, lane.BY) - lane.Below
 			local ly1 = math.max(lane.AY, lane.BY) + lane.Above
-			if y1 > ly0 and y0 < ly1 then
+			if y1 > ly0 and y0 < ly1 and not lm.Straddles then
 				assert(laneGap(lm, lane) > 0, string.format("%s stands on walkway %s ((%.0f, %.0f) to (%.0f, %.0f), half-width %.0f)",
 					lm.Id, lane.Id, lane.AX, lane.AZ, lane.BX, lane.BZ, lane.HalfWidth))
 			end
@@ -2467,6 +2594,11 @@ test("Floors 26-28's landmarks stand clear of every walkway, camp and mob slot",
 		local keepTop = 0
 		for _, lm in list do keepTop = math.max(keepTop, lm.Top) end
 		assert(keepTop >= 115, string.format("Floor 27's tallest landmark is %.0f studs", keepTop))
+	elseif floorId == 29 then
+		-- The citadel keep: the ladder's 160 studs.
+		local keepTop = 0
+		for _, lm in list do keepTop = math.max(keepTop, lm.Top) end
+		assert(keepTop >= 160, string.format("Floor 29's tallest landmark is %.0f studs", keepTop))
 	else
 		-- The twin crown towers: the ladder's 135 studs. The sea-stacks rise out of open abyss, not off a
 		-- needle's flank, and no landmark stands where a skybridge hangs over the gorge.

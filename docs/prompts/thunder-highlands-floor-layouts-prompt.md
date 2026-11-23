@@ -2,6 +2,14 @@
 
 Copy everything below the line into a Claude Code session opened at the repo root.
 
+> **Status (2026-11-24, Floor 29):** Floor 29 (Tempest Redoubt) is built on `feat/thunder-highlands-floor-29`, from the plan and the guide image `reference/Thunder Highlands 29.jpg`. What changed in the build:
+> - **From the image:** the barbican gatehouse with twin drum towers, a raised portcullis and forked-bolt war banners; the walled causeway into it; copper signal horns on the outer walls; a sheep fold and timber ram stables in the yards; the arched viaduct with copper conduits climbing to the bell gatehouse and its giant verdigris bell; round towers and crenellated curtain walls on the upper ward; the keep's copper-ringed storm spire with copper cables strung to the towers; the capacitor spire's nested rings and caged violet sphere; waterfalls down the cliff into the mist.
+> - **The cliff fault (`CLIFF_FAULT`)** is a plateau, not a ridge: walkway caps never dig under it, so the plateau sits at about Y 18 (28 studs over the chasm floor). The switchbacks and the viaduct pier stand on its lip rather than halfway up it, and every walkway that crosses it stays above it.
+> - **The barbican gate stands at the causeway's mouth on the Outer Causeway**, not on the Barbican itself: on the Barbican it would stand inside the central camp's clearance. The walled causeway runs on from it into the Barbican.
+> - **The boss portals spread to ±46 (`Portals.Spread`)** so the citadel keep (scale 1.26, about 163 studs) stands between them on the shelf behind the Redoubt.
+> - **No generic citadel wings** behind the Redoubt (they clashed with the keep).
+> - Lights 17, emitters 12, about 520 props, 560 ground cover, 75 curtain-wall runs, 96 mist banks; clearance removed 14 small pieces for lanes and none for camps (Studio Edit-mode build, kit fallbacks); 39/39 spawns, 34/34 link walks (17 links both ways), both portals and both return ramps grounded.
+>
 > **Status (2026-11-23, Floor 28):** Floor 28 (Skybridge Cliffs) is built on `feat/thunder-highlands-floor-28` (on top of Floor 27), from the plan and the guide image `reference/Thunder Highlands 28.jpg`. What changed in the build:
 > - **From the image:** plank-decked suspension skybridges on twin copper-banded dry-stone pylons with sagging copper main cables and hemp hangers (a new `SKYBRIDGE` masonry in `TowerRoomBuilder`), granite needles out of a cloud sea, the twin crown towers with lightning arcing between their heads, the A-frame supply windlass on the ledge, prayer pennants, cairns, bonsai pines, a snapped rope bridge, copper cables trailing down the needles and a violet-struck fulgurite needle.
 > - **Sheer needles:** with plain aprons the terraces stood as broad grassy mesas on a green abyss floor. The new `SEA_STACK_APRON` terrain feature makes their sides fall 3.4 times as steeply and paints the abyss floor bare slate.
@@ -407,6 +415,17 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
 *735 × 790 × 260, `Bottom = -6` (storm-lashed cliff moat / cloud chasm). Electric dusk.*
 
 **Story beat:** the Kairnfolk's mountain acropolis — a two-tiered stone-and-copper stronghold split across a sheer geological cliff fault, built to channel the mountain's lightning into defensive storm-batteries.
+
+**Guide image (`reference/Thunder Highlands 29.jpg`):**
+- *Taken:*
+  - **Lower ward:** a flagged causeway runs up to a crenellated barbican, twin drum towers with forked-bolt banners either side of a raised portcullis. Inside the lower ward's walls are a sheep fold on the west and timber ram stables on the east. Huge copper signal horns are mounted on the outer wall ends.
+  - **The cliff:** behind the lower ward a sheer cliff rises, with zigzag stone stairs and retaining buttresses climbing it on both flanks. At the centre, an arched viaduct with copper conduits climbs to a gatehouse whose arch holds a giant verdigris bell.
+  - **Upper citadel:** crenellated curtain walls, round towers at both ends, and the central keep crowned by a copper-ringed spire. Braided copper cables are strung from the spire to the towers.
+  - **Capacitor spire:** on the west, nested copper rings and a caged sphere crackle with violet lightning.
+  - **Surroundings:** tattered war banners, waterfalls down the cliffs into the misty depths, and a violet thunderhead sky.
+- *Left out:*
+  - The image's single narrow walled causeway as the only way in. The Outer Causeway stays a broad Basin, so the arrival and both Basin camps still fit, with the image's causeway kept as the walled `Basin→Crossing` ramp into the barbican.
+  - The viaduct's curve. Walkways are straight, so the viaduct runs straight, and it climbs through the Viaduct Pier.
 
 **Shape: two-tiered highland acropolis split by an east–west cliff fault, crossed by twin flanking cliff switchbacks and a soaring central Thunder-Viaduct.** South of the cliff fault sits the lower ward: `Basin` (Outer Causeway, Y 0) feeds the **Lower Barbican** (`Crossing`, Y 8) and twin terraced **Ram Yards** (`WestGallery` Y 12, `EastGallery` Y 14), each flanked by an outer cliff-edge **Horn Post** (`WestHornPost`, `EastHornPost`, Y 16). Across the middle of the room, the ground shears upward by 20+ studs along the **East–West Cliff Fault**. Three dramatic ways scale it:
 - West cliff switchback: `WestGallery` (Y 12) → `WestSwitchback` (Y 22) → `WestBastion` (West Stormkeep, Y 30)
