@@ -11,6 +11,7 @@ local TowerLayout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local Kit = require(game.ReplicatedStorage.Shared.Config.TowerBiomeKit)
 local InfernalSetPieces = require(script.Parent.TowerSetPieces.InfernalFoundry)
 local ThunderSetPieces = require(script.Parent.TowerSetPieces.ThunderHighlands)
+local ThunderFloor27 = require(script.Parent.TowerSetPieces.ThunderFloor27)
 local InfernalFloor24 = require(script.Parent.TowerSetPieces.InfernalFloor24)
 local InfernalFloor25 = require(script.Parent.TowerSetPieces.InfernalFloor25)
 local CorruptedSetPieces = require(script.Parent.TowerSetPieces.CorruptedGrove)
@@ -6476,6 +6477,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "infernal:5" then InfernalFloor25.Build
 		-- Thunder Highlands authored floors (Floor 26 onward): TowerSetPieces/ThunderHighlands.
 		elseif layout.Authored == "thunder:1" then ThunderSetPieces.Floor26
+		elseif layout.Authored == "thunder:2" then ThunderFloor27.Build
 		elseif layout.Authored == "corrupted:1" then CorruptedSetPieces.Floor31
 		elseif layout.Authored == "corrupted:2" then CorruptedFloor32.Build
 		elseif layout.Authored == "corrupted:3" then CorruptedFloor33.Build
@@ -7696,8 +7698,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- An authored floor can thin its groves (Floor 6: one giant, the Elder Cap, not a forest of them).
 		local td = layout.Terrain or {}
 		local groveScale = td.GroveScale or 1
-		-- (Floor 26 plants its own wind-bent pines, all leaning down the one gale.)
-		local groveCount = if layout.Authored == "thunder:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" then 0 else math.round(eco.Groves * 1.5 * density * groveScale)
+		-- (Floors 26+ plant their own wind-bent pines, all leaning down the one gale.)
+		local groveCount = if thunderAuthored or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" then 0 else math.round(eco.Groves * 1.5 * density * groveScale)
 		for _ = 1, groveCount do
 			local name = pick(eco.Trees)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2])
@@ -7753,7 +7755,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 		-- Trees climbing the mountain slopes (skipped on Floors 18-20)
-		local slopeTreeCount = if layout.Authored == "thunder:1" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then 0 else math.round(eco.SlopeForestCount * 1.5 * density)
+		local slopeTreeCount = if thunderAuthored or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" then 0 else math.round(eco.SlopeForestCount * 1.5 * density)
 		for _ = 1, slopeTreeCount do
 			local name = pick(eco.SlopeForest)
 			local s = rand:NextNumber(eco.TreeScale[1], eco.TreeScale[2]) * 0.85

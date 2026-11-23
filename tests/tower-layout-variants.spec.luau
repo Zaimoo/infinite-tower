@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -2183,6 +2183,94 @@ test("Floor 26's terrain: Kairn ground, a sheer headwall over the Fold, a strike
 	end
 end)
 
+test("Floor 27 is the hand-authored Thunderhead Outpost: a concentric ringfort entered only through its twin palisades", function()
+	local room = Layout.ForFloor(27)
+	assert(room.Authored == "thunder:2" and room.Name == "Thunderhead Outpost" and room.PathStyle == "KAIRN")
+	assert(room.DirectTerrain == true and room.Surface == "KAIRN" and room.Masonry == "KAIRN_STONE")
+	assert(room.Width == 600 and room.Depth == 605 and room.Height == 205 and room.Bottom == 0, "Floor 27 overrides its room size")
+	assert(same(room, Layout.Get(2, 27)) and not same(room, Layout.Get(2)))
+	assert(#Layout.Validate(room) == 0, "Floor 27's layout has problems")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- No way straight in: the Stockade Apron reaches only the two palisade bastions.
+	assert(paths.Basin_Crossing == nil, "the Apron must not climb straight to the Signal Broch")
+	for _, link in room.Links do
+		if link.From == "Basin" or link.To == "Basin" then
+			local other = if link.From == "Basin" then link.To else link.From
+			assert(other == "Sanctuary" or other == "WestOuter" or other == "EastOuter", "the Apron reaches " .. other .. " past the palisades")
+		end
+	end
+	assert(paths.WestOuter_WestGallery and paths.EastOuter_EastGallery and paths.WestGallery_Crossing and paths.EastGallery_Crossing)
+	assert(paths.WestGallery_WestHarp and paths.EastGallery_EastHarp, "the yards reach the wind-harp towers")
+	-- Three converging approaches to the Lodge, the middle one the Broch Ascent stair.
+	assert(paths.Crossing_Apex == "STAIRS" and paths.WestInner_Apex and paths.EastInner_Apex)
+	local apexLinks = 0
+	for _, link in room.Links do
+		if link.To == "Apex" then apexLinks += 1 end
+	end
+	assert(apexLinks == 3)
+	local p = room.Platforms
+	for id, t in p do
+		if room.Decks[id] then
+			assert(t.Y % 4 ~= 0, id .. " is a deck on the terrain grid: make it terrain")
+		else
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	for _, link in room.Links do
+		if room.Decks[link.From] or room.Decks[link.To] then
+			assert(room.Suspended.Links[link.Id], link.Id .. " touches a deck but is not a built causeway")
+		end
+	end
+	assert(p.Crossing.Name == "Signal Broch" and p.WestGallery.Name == "West Ram Yard" and p.EastGallery.Name == "East Forge Yard")
+	assert(p.WestHarp.Name == "West Wind-Harp" and p.EastHarp.Name == "East Wind-Harp" and p.Apex.Name == "Thunderhead Lodge")
+	local totalMobs = 0
+	for _, camp in room.Camps do
+		assert(not ({ WestOuter = true, EastOuter = true, WestHarp = true, EastHarp = true, WestInner = true, EastInner = true })[camp.Platform],
+			"ExtraPlatforms hold no camps")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+	end
+	assert(totalMobs == 22 and room.EliteCount == 2, "Floor 27 keeps 22 live camp mobs and 2 Elites")
+	-- The boss portals stand wide on the Lodge, either side of the keep.
+	local portals = Layout.PortalSpots(2, 27)
+	assert(portals.Ascend.X == 44 and portals.Rerun.X == -44 and portals.Ascend.Y == p.Apex.Y)
+end)
+
+test("Floor 27 climbs the escalation ladder: grander than Floor 26 and every earlier second floor", function()
+	local room = Layout.ForFloor(27)
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 12 and links == 14 and levels == 11, string.format("Floor 27 has %d/%d/%d", terraces, links, levels))
+	for _, earlier in { 2, 7, 12, 17, 22, 26 } do
+		local r = Layout.ForFloor(earlier)
+		local t, l, v = ladderCounts(r)
+		assert(terraces > t and links > l and levels > v, "Floor 27 does not beat floor " .. earlier)
+		assert(room.Platforms.Apex.Y > r.Platforms.Apex.Y, "Floor 27's Lodge is not higher than floor " .. earlier .. "'s Apex")
+	end
+	for _, earlier in { 22, 26 } do
+		local r = Layout.ForFloor(earlier)
+		assert(room.Width * room.Depth > r.Width * r.Depth and room.Height > r.Height, "Floor 27's room is not grander than floor " .. earlier .. "'s")
+	end
+	-- The ringfort's outer arc is the signature (no centre bypass), so the walk runs a little over 1.5x.
+	local walk, base = routeLength(room), routeLength(Layout.Get(2))
+	assert(walk <= 1.65 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+end)
+
+test("Floor 27's terrain is the walking surface: Kairn ground, every terrace flush, no link buried", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(27)
+	local field = Terrain.Field(room, "thunder_highlands", 27)
+	assert(field.Surface == Terrain.Surfaces.KAIRN, "floor 27 uses the Kairn surface")
+	for id, t in room.Platforms do
+		assert(field.Height(t.X, t.Z) <= t.Y + 0.01, id .. " is buried")
+	end
+	for _, link in room.Links do
+		for t = 0, 1, 0.05 do
+			local x, z = link.AX + (link.BX - link.AX) * t, link.AZ + (link.BZ - link.AZ) * t
+			assert(field.Height(x, z) <= link.AY + (link.BY - link.AY) * t + 0.01, link.Id .. " is buried")
+		end
+	end
+end)
+
 test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock never showing through", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
@@ -2215,12 +2303,14 @@ test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock
 	end
 end)
 
-test("Floor 26's landmarks stand clear of every walkway, camp and mob slot", function()
+test("Floors 26-27's landmarks stand clear of every walkway, camp and mob slot", function()
 	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
-	local list = Thunder.Floor26Landmarks
-	assert(#list >= 12, "Floor 26 needs at least 12 landmarks")
-	local room = Layout.ForFloor(26)
-	local lanes = Layout.Lanes(1, 26)
+	local Thunder27 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor27"])
+	assert(#Thunder.Floor26Landmarks >= 12, "Floor 26 needs at least 12 landmarks")
+	assert(#Thunder27.Landmarks >= 14, "Floor 27 needs at least 14 landmarks")
+	for floorId, list in { [26] = Thunder.Floor26Landmarks, [27] = Thunder27.Landmarks } do
+	local room = Layout.ForFloor(floorId)
+	local lanes = Layout.Lanes((floorId - 1) % 5 + 1, floorId)
 	local function nearestDistSq(px: number, pz: number, lm: any): number
 		local nx = math.clamp(px, lm.X - lm.HalfX, lm.X + lm.HalfX)
 		local nz = math.clamp(pz, lm.Z - lm.HalfZ, lm.Z + lm.HalfZ)
@@ -2260,8 +2350,16 @@ test("Floor 26's landmarks stand clear of every walkway, camp and mob slot", fun
 		end
 		assert(math.abs(lm.X) + lm.HalfX <= room.Width / 2 and math.abs(lm.Z) + lm.HalfZ <= room.Depth / 2, lm.Id .. " leaves the room")
 	end
-	-- The tor and its crown totem: the tallest landmark on any first floor, far above the moor.
-	assert(tallest >= 95 + room.Platforms.Apex.Y, string.format("Floor 26's skyline tops out at %.0f", tallest))
+	if floorId == 26 then
+		-- The tor and its crown totem: the tallest landmark on any first floor, far above the moor.
+		assert(tallest >= 95 + room.Platforms.Apex.Y, string.format("Floor 26's skyline tops out at %.0f", tallest))
+	else
+		-- The broch keep: the ladder's 115 studs.
+		local keepTop = 0
+		for _, lm in list do keepTop = math.max(keepTop, lm.Top) end
+		assert(keepTop >= 115, string.format("Floor 27's tallest landmark is %.0f studs", keepTop))
+	end
+	end
 end)
 
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()

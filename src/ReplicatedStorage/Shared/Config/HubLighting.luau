@@ -434,6 +434,14 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(240, 242, 255), Saturation = 0.1, Contrast = 0.14, ExposureCompensation = 0.04, BloomIntensity = 0.42,
 		SunRaysIntensity = 0.12, SunRaysSpread = 0.4,
 	},
+	-- Floor 27 (Thunderhead Outpost): gathering thunderhead noon. A silver-indigo overcast, stronger contrast,
+	-- a thickening highland haze bruised violet-grey, and warm copper-fire pools from the beacons and the forge.
+	[27] = {
+		Ambient = c(70, 70, 96), OutdoorAmbient = c(98, 98, 128), ColorShift_Top = c(214, 218, 240), ColorShift_Bottom = c(120, 82, 66),
+		AtmosphereDensity = 0.3, AtmosphereColor = c(128, 128, 156), AtmosphereDecay = c(84, 76, 116), AtmosphereHaze = 1.25,
+		TintColor = c(232, 234, 250), Saturation = 0.04, Contrast = 0.16, ExposureCompensation = 0.02, BloomIntensity = 0.46,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.35,
+	},
 	-- Floor 31, Blighted Verge: a sickly gold late afternoon. Warm low light over the autumn bank, the magenta
 	-- murk of the biome thinned to a rose haze that thickens toward the rotten north-east; the least murky
 	-- Corrupted floor.

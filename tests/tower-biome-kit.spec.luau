@@ -185,6 +185,23 @@ test("Floor 26 has its own Kairnfolk kit: at least eight new templates and a 95+
 	assert(gate.Size.Y * 1.45 > 30, "the bell-gate does not clear the walk")
 end)
 
+test("Floor 27 has its own ringfort kit: at least nine new templates and a 115+ stud broch keep", function()
+	local f27 = { "BrochKeepTower", "WindHarpTower", "RampartWallSegment", "PalisadeWallSpan", "WatchBellGallows",
+		"BeaconBrazier", "CopperWireReel", "CopperForgeHearth", "RamPenChute", "CapacitorCask", "LonghouseRuin",
+		"InnerGateArch", "CopperCableMast" }
+	for _, name in f27 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 27 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f27 >= 9)
+	-- The broch keep (placed at scale 2.15) clears the ladder's 115 studs, and stays narrow enough (46 studs at
+	-- that scale) to stand between the Lodge's spread portals.
+	local keep = Kit.ExtraTemplates.BrochKeepTower
+	assert(keep.Size.Y * 2.15 >= 115 and math.max(keep.Size.X, keep.Size.Z) * 2.15 <= 48)
+	-- The gate-arch (scale 1.08) clears the walk under it by more than the 14-stud lane.
+	assert(Kit.ExtraTemplates.InnerGateArch.Size.Y * 1.08 > 30)
+end)
+
 test("Floor 31 has its own Blighted Verge kit: at least eight new templates and a 105+ stud Heartrot Spring", function()
 	local f31 = { "HollinWaterMill", "MillWheel", "FieldstoneWeir", "PaleBandTree", "GraftKnotPost", "WardensLeanTo",
 		"SawnStumpCluster", "HeartrotSpringTrunk", "HollinStileArch", "WattleFence", "FieldstoneCairn", "FelledBandLog",
@@ -381,6 +398,8 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[24] ~= nil, "floor 24 (Ironflame Bulwark) has its siege-red night grade")
 	assert(Light.FloorGrades[25] ~= nil, "floor 25 (Titan's Crucible) has its molten-heart grade")
 	assert(Light.FloorGrades[26] ~= nil, "floor 26 (Stormgrass Rise) has its storm-breaking dawn grade")
+	assert(Light.FloorGrades[27] ~= nil, "floor 27 (Thunderhead Outpost) has its gathering thunderhead noon grade")
+	assert(Light.FloorGrades[27].AtmosphereHaze > Light.FloorGrades[26].AtmosphereHaze, "floor 27's haze thickens over floor 26's")
 	assert(Light.FloorGrades[31] ~= nil, "floor 31 (Blighted Verge) has its sickly gold afternoon grade")
 	assert(Light.FloorGrades[31].AtmosphereHaze < Light.BiomeGrades[7].AtmosphereHaze, "floor 31 is the least murky Corrupted floor")
 	assert(Light.FloorGrades[32] ~= nil, "floor 32 (Twisted Orchard) has its overripe rose dusk grade")
@@ -392,7 +411,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[34].AtmosphereDensity >= 0.38 and Light.FloorGrades[34].SunRaysIntensity > 0, "floor 34 keeps canopy gloom and sun-ray shafts")
 	assert(Light.FloorGrades[35] ~= nil, "floor 35 (Sovereign's Grove) has its blight-eclipse grade")
 	assert(Light.FloorGrades[35].BloomIntensity >= 0.58, "floor 35 highlights the Mother Graft cavity with eclipse bloom")
-	assert(Light.TowerPreset(6, 27) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
+	assert(Light.TowerPreset(6, 28) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400
