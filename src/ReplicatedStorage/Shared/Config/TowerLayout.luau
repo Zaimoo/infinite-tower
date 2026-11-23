@@ -1758,6 +1758,88 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Stormgrass Crown",
 		},
 	},
+	-- Floor 27, Thunderhead Outpost (Thunder Highlands): the Kairnfolk's hilltop ringfort and signal station, a
+	-- concentric dry-stone broch where the shepherds took refuge and relayed storm warnings down the mountain by
+	-- wind-harp and beacon. The Stockade Apron has no way straight in: it enters only through the twin palisade
+	-- gate-bastions into the flanking yards (the Ram Yard, the Forge Yard). From the yards, routes cut in to the
+	-- Signal Broch and its hearth, push out to the two Wind-Harp towers on the ridge, or sweep round the inner
+	-- rampart arcs; three approaches (both inner ramparts and the Broch Ascent stair) converge on Thunderhead
+	-- Lodge under the stepped broch keep. 12 terraces, 14 links, 11 walk heights.
+	[27] = {
+		Key = "thunder:2",
+		Name = "Thunderhead Outpost",
+		Size = { Width = 600, Depth = 605, Height = 205 },
+		PathStyle = "KAIRN",
+		DirectTerrain = true,
+		Surface = "KAIRN",
+		Masonry = "KAIRN_STONE",
+		-- Off-grid dry-stone platforms (Y 6, 14, 18, 22); every link touching one is a built causeway.
+		Decks = {
+			WestOuter = true,
+			EastGallery = true,
+			WestHarp = true,
+			EastInner = true,
+		},
+		Suspended = {
+			Links = {
+				Basin_WestOuter = true,
+				WestOuter_WestGallery = true,
+				EastOuter_EastGallery = true,
+				EastGallery_Crossing = true,
+				WestGallery_WestHarp = true,
+				EastGallery_EastHarp = true,
+				EastGallery_EastInner = true,
+				EastInner_Apex = true,
+			},
+		},
+		Liquid = { LevelOffset = 3.2, FloorDip = 2.2 },
+		-- The boss portals stand wide on the Lodge, either side of the broch keep that rises behind it.
+		Portals = { Spread = 44 },
+		Basin = { X = 0, Y = 0, Z = 166, Width = 490, Depth = 94 },
+		Crossing = { X = 0, Y = 16, Z = -30, Width = 84, Depth = 72 },
+		WestGallery = { X = -142, Y = 12, Z = -24, Width = 86, Depth = 78 },
+		EastGallery = { X = 142, Y = 14, Z = -24, Width = 86, Depth = 78 },
+		ExtraPlatforms = {
+			WestOuter = { X = -96, Y = 6, Z = 68, Width = 70, Depth = 52 },
+			EastOuter = { X = 96, Y = 8, Z = 68, Width = 70, Depth = 52 },
+			WestHarp = { X = -224, Y = 18, Z = -124, Width = 58, Depth = 52 },
+			EastHarp = { X = 224, Y = 24, Z = -124, Width = 58, Depth = 52 },
+			WestInner = { X = -104, Y = 20, Z = -132, Width = 68, Depth = 54 },
+			EastInner = { X = 104, Y = 22, Z = -132, Width = 68, Depth = 54 },
+		},
+		Apex = { X = 0, Y = 32, Z = -232, Width = 126, Depth = 88 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestOuter" },
+			{ "Basin", "EastOuter" },
+			{ "WestOuter", "WestGallery" },
+			{ "EastOuter", "EastGallery" },
+			{ "WestGallery", "Crossing" },
+			{ "EastGallery", "Crossing" },
+			{ "WestGallery", "WestHarp" },
+			{ "EastGallery", "EastHarp" },
+			{ "WestGallery", "WestInner" },
+			{ "EastGallery", "EastInner" },
+			{ "WestInner", "Apex" },
+			{ "Crossing", "Apex" },
+			{ "EastInner", "Apex" },
+		},
+		Stairs = { Crossing_Apex = true },
+		Names = {
+			Sanctuary = "Stockade Gate",
+			Basin = "Stockade Apron",
+			WestOuter = "West Palisade",
+			EastOuter = "East Palisade",
+			WestGallery = "West Ram Yard",
+			Crossing = "Signal Broch",
+			EastGallery = "East Forge Yard",
+			WestHarp = "West Wind-Harp",
+			EastHarp = "East Wind-Harp",
+			WestInner = "West Inner Rampart",
+			EastInner = "East Inner Rampart",
+			Apex = "Thunderhead Lodge",
+		},
+	},
 	-- Floor 31, Blighted Verge (Corrupted Grove Introduction; docs/prompts/corrupted-grove-floor-layouts-prompt.md):
 	-- the edge of the grove, where the Hollin grove-wardens still held the line. A blight-brook rises at the
 	-- Heartrot Spring in the north-east corner and meanders west-south-west to a sinkhole in the west wall,

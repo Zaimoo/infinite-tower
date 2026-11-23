@@ -1,0 +1,255 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BeaconBrazier": {
+      "Min": [
+        -3.391,
+        0.0,
+        -3.411
+      ],
+      "Roles": {
+        "ACCENT": 192,
+        "GLOW": 120,
+        "METAL": 52,
+        "STONE": 524
+      },
+      "Size": [
+        6.834,
+        7.696,
+        6.836
+      ],
+      "Triangles": 888
+    },
+    "BrochKeepTower": {
+      "Min": [
+        -10.926,
+        -0.022,
+        -11.002
+      ],
+      "Roles": {
+        "ACCENT": 900,
+        "CRYSTAL": 44,
+        "GLOW": 236,
+        "METAL": 436,
+        "MOSS": 796,
+        "STONE": 6000,
+        "TRIM": 108
+      },
+      "Size": [
+        22.05,
+        54.272,
+        21.949
+      ],
+      "Triangles": 8520
+    },
+    "CapacitorCask": {
+      "Min": [
+        -2.053,
+        0.0,
+        -2.053
+      ],
+      "Roles": {
+        "ACCENT": 299,
+        "GLOW": 80,
+        "METAL": 412,
+        "WOOD": 92
+      },
+      "Size": [
+        4.109,
+        7.18,
+        4.113
+      ],
+      "Triangles": 883
+    },
+    "CopperCableMast": {
+      "Min": [
+        -3.5,
+        -0.2,
+        -3.66
+      ],
+      "Roles": {
+        "ACCENT": 56,
+        "METAL": 84,
+        "STONE": 140,
+        "WOOD": 64
+      },
+      "Size": [
+        7.639,
+        31.45,
+        7.319
+      ],
+      "Triangles": 344
+    },
+    "CopperForgeHearth": {
+      "Min": [
+        -4.8,
+        0.0,
+        -2.97
+      ],
+      "Roles": {
+        "GLOW": 12,
+        "METAL": 84,
+        "STONE": 44,
+        "TRIM": 140,
+        "WOOD": 60
+      },
+      "Size": [
+        11.4,
+        19.4,
+        10.17
+      ],
+      "Triangles": 340
+    },
+    "CopperWireReel": {
+      "Min": [
+        -3.1,
+        -0.112,
+        -4.0
+      ],
+      "Roles": {
+        "ACCENT": 132,
+        "METAL": 386,
+        "WOOD": 196
+      },
+      "Size": [
+        6.2,
+        8.512,
+        12.129
+      ],
+      "Triangles": 714
+    },
+    "InnerGateArch": {
+      "Min": [
+        -28.25,
+        -0.004,
+        -3.409
+      ],
+      "Roles": {
+        "ACCENT": 24,
+        "GLOW": 36,
+        "METAL": 36,
+        "MOSS": 120,
+        "STONE": 1584
+      },
+      "Size": [
+        56.5,
+        33.162,
+        6.994
+      ],
+      "Triangles": 1800
+    },
+    "LonghouseRuin": {
+      "Min": [
+        -18.148,
+        -0.2,
+        -6.996
+      ],
+      "Roles": {
+        "MOSS": 200,
+        "STONE": 2012,
+        "WOOD": 24
+      },
+      "Size": [
+        31.922,
+        4.05,
+        12.795
+      ],
+      "Triangles": 2236
+    },
+    "PalisadeWallSpan": {
+      "Min": [
+        -7.499,
+        -0.419,
+        -4.375
+      ],
+      "Roles": {
+        "METAL": 312,
+        "STONE": 120,
+        "TRIM": 24,
+        "WOOD": 348
+      },
+      "Size": [
+        14.907,
+        12.092,
+        5.744
+      ],
+      "Triangles": 804
+    },
+    "RamPenChute": {
+      "Min": [
+        -9.079,
+        -0.2,
+        -5.153
+      ],
+      "Roles": {
+        "STONE": 220,
+        "WOOD": 440
+      },
+      "Size": [
+        22.379,
+        5.108,
+        10.363
+      ],
+      "Triangles": 660
+    },
+    "RampartWallSegment": {
+      "Min": [
+        -8.132,
+        -0.027,
+        -2.016
+      ],
+      "Roles": {
+        "ACCENT": 24,
+        "MOSS": 80,
+        "STONE": 2312
+      },
+      "Size": [
+        18.217,
+        8.498,
+        4.075
+      ],
+      "Triangles": 2416
+    },
+    "WatchBellGallows": {
+      "Min": [
+        -4.2,
+        -0.002,
+        -1.58
+      ],
+      "Roles": {
+        "ALT": 12,
+        "GOLD": 180,
+        "METAL": 48,
+        "WOOD": 72
+      },
+      "Size": [
+        11.677,
+        12.534,
+        3.16
+      ],
+      "Triangles": 312
+    },
+    "WindHarpTower": {
+      "Min": [
+        -4.982,
+        -0.3,
+        -3.61
+      ],
+      "Roles": {
+        "ACCENT": 256,
+        "ALT": 12,
+        "GLOW": 60,
+        "METAL": 448,
+        "STONE": 192,
+        "WOOD": 258
+      },
+      "Size": [
+        11.628,
+        42.589,
+        7.036
+      ],
+      "Triangles": 1226
+    }
+  },
+  "Unit": "studs"
+}

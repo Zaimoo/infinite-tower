@@ -223,14 +223,27 @@ local WATER_TINT = tinted(KAIRN, {
 	ALT = { Color = FOAM, Material = Enum.Material.SmoothPlastic },
 })
 
-function ThunderHighlands.Floor26(ctx: any)
+ThunderHighlands.Palette = table.freeze({
+	SLATE = SLATE, SLATE_DARK = SLATE_DARK, GRANITE = GRANITE, TURF = TURF, COPPER = COPPER, VERDIGRIS = VERDIGRIS,
+	TIMBER = TIMBER, TIMBER_DARK = TIMBER_DARK, WOOL = WOOL, PEAT = PEAT, PINE = PINE, STORM = STORM,
+	STORM_GLASS = STORM_GLASS, LAMP = LAMP, FOAM = FOAM,
+})
+ThunderHighlands.DownwindYaw = DOWNWIND_YAW
+ThunderHighlands.Tints = table.freeze({
+	KAIRN = KAIRN, GRANITE = GRANITE_TINT, CROFT = CROFT_TINT, SAIL = SAIL_TINT, SHEEP = SHEEP_TINT, FLAG = FLAG_TINT,
+	WATER = WATER_TINT,
+})
+ThunderHighlands.Tinted = tinted
+
+-- The builders every Thunder Highlands floor shares: the surface under a spot, parts in local space,
+-- emitters, kit pieces with part-built fallbacks, and the Kairnfolk fallbacks themselves.
+function ThunderHighlands.Helpers(ctx: any): any
 	local origin: Vector3 = ctx.origin
 	local layout = ctx.layout
 	local field = ctx.field
 	local bottom: number = ctx.bottom
 	local w: number, d: number = ctx.w, ctx.d
 	local P = layout.Platforms
-	local landmarks, props, cover = 0, 0, 0
 
 	-- The surface at (x, z): a terrace's or deck's top, else the terrain (or the chasm floor without terrain).
 	local function surfaceAt(x: number, z: number): (number, boolean)
@@ -469,6 +482,52 @@ function ThunderHighlands.Floor26(ctx: any)
 			shard.CanCollide = k % 2 == 0
 		end
 	end
+
+	return {
+		origin = origin,
+		layout = layout,
+		field = field,
+		bottom = bottom,
+		w = w,
+		d = d,
+		P = P,
+		surfaceAt = surfaceAt,
+		lowestGround = lowestGround,
+		boxAt = boxAt,
+		rod = rod,
+		lump = lump,
+		light = light,
+		noCollide = noCollide,
+		emitter = emitter,
+		piece = piece,
+		glowOf = glowOf,
+		fallbackTotem = fallbackTotem,
+		fallbackTor = fallbackTor,
+		fallbackWindmill = fallbackWindmill,
+		fallbackRuneStone = fallbackRuneStone,
+		fallbackCroft = fallbackCroft,
+		fallbackWall = fallbackWall,
+		fallbackHurdle = fallbackHurdle,
+		fallbackCairn = fallbackCairn,
+		fallbackPine = fallbackPine,
+		fallbackTuft = fallbackTuft,
+		fallbackDolmen = fallbackDolmen,
+		fallbackSheep = fallbackSheep,
+		fallbackFall = fallbackFall,
+		fallbackFlags = fallbackFlags,
+		fallbackCrystals = fallbackCrystals,
+	}
+end
+
+function ThunderHighlands.Floor26(ctx: any)
+	local H = ThunderHighlands.Helpers(ctx)
+	local origin, layout, field, bottom, w, d = H.origin, H.layout, H.field, H.bottom, H.w, H.d
+	local P, surfaceAt, lowestGround, boxAt, rod, lump = H.P, H.surfaceAt, H.lowestGround, H.boxAt, H.rod, H.lump
+	local light, noCollide, emitter, piece, glowOf, fallbackTotem = H.light, H.noCollide, H.emitter, H.piece, H.glowOf, H.fallbackTotem
+	local fallbackTor, fallbackWindmill, fallbackRuneStone, fallbackCroft, fallbackWall, fallbackHurdle = H.fallbackTor, H.fallbackWindmill, H.fallbackRuneStone, H.fallbackCroft, H.fallbackWall, H.fallbackHurdle
+	local fallbackCairn, fallbackPine, fallbackTuft, fallbackDolmen, fallbackSheep, fallbackFall = H.fallbackCairn, H.fallbackPine, H.fallbackTuft, H.fallbackDolmen, H.fallbackSheep, H.fallbackFall
+	local fallbackFlags, fallbackCrystals = H.fallbackFlags, H.fallbackCrystals
+	local landmarks, props, cover = 0, 0, 0
 
 	for _, lm in ThunderHighlands.Floor26Landmarks do
 		ctx.reserve(lm.X, lm.Z, math.max(lm.HalfX, lm.HalfZ))

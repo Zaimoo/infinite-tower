@@ -110,6 +110,9 @@ TowerBiomeKit.Templates = table.freeze({
 --     SplitGraniteTor, HighlandWindmill, RuneStandingStone, ShepherdCroft, DryStoneWall, RamHurdleFence,
 --     TrailCairnTall, WindBentPine, StormgrassTuft, DolmenBellGate, HighlandSheep, WaterfallRibbon,
 --     PrayerFlagLine, StormCrystalSpikes).
+--   thunder_f27_kit (tools/blender/generate_thunder_f27_kit.py): Floor 27, Thunderhead Outpost (BrochKeepTower,
+--     WindHarpTower, RampartWallSegment, PalisadeWallSpan, WatchBellGallows, BeaconBrazier, CopperWireReel,
+--     CopperForgeHearth, RamPenChute, CapacitorCask, LonghouseRuin, InnerGateArch, CopperCableMast).
 --   corrupted_f31_kit (tools/blender/generate_corrupted_f31_kit.py): Floor 31, Blighted Verge (HollinWaterMill,
 --     MillWheel, FieldstoneWeir, PaleBandTree, GraftKnotPost, WardensLeanTo, SawnStumpCluster,
 --     HeartrotSpringTrunk, HollinStileArch, WattleFence, FieldstoneCairn, FelledBandLog, HangingLantern,
@@ -384,6 +387,20 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	SapfallRibbon = table.freeze({ Size = Vector3.new(12.4, 35.199, 17.992), Min = Vector3.new(-6.2, -1.753, -7.592), Roles = table.freeze({ "CAP", "GLOW", "WOOD" }) }),
 	ThornCagedSeed = table.freeze({ Size = Vector3.new(12.366, 15.015, 12.825), Min = Vector3.new(-6.183, -0.294, -6.183), Roles = table.freeze({ "CANDLE", "GLOW", "SILK", "STONE", "WOOD" }) }),
 	WardenRootShrine = table.freeze({ Size = Vector3.new(9.116, 14.443, 8.085), Min = Vector3.new(-4.324, 1.1, -3.841), Roles = table.freeze({ "CANDLE", "SILK", "STONE", "WOOD" }) }),
+	-- Thunder Highlands Floor 27 (Thunderhead Outpost, thunder_f27_kit)
+	BeaconBrazier = table.freeze({ Size = Vector3.new(6.834, 7.696, 6.836), Min = Vector3.new(-3.391, 0.0, -3.411), Roles = table.freeze({ "ACCENT", "GLOW", "METAL", "STONE" }) }),
+	BrochKeepTower = table.freeze({ Size = Vector3.new(22.05, 54.272, 21.949), Min = Vector3.new(-10.926, -0.022, -11.002), Roles = table.freeze({ "ACCENT", "CRYSTAL", "GLOW", "METAL", "MOSS", "STONE", "TRIM" }) }),
+	CapacitorCask = table.freeze({ Size = Vector3.new(4.109, 7.18, 4.113), Min = Vector3.new(-2.053, 0.0, -2.053), Roles = table.freeze({ "ACCENT", "GLOW", "METAL", "WOOD" }) }),
+	CopperCableMast = table.freeze({ Size = Vector3.new(7.639, 31.45, 7.319), Min = Vector3.new(-3.5, -0.2, -3.66), Roles = table.freeze({ "ACCENT", "METAL", "STONE", "WOOD" }) }),
+	CopperForgeHearth = table.freeze({ Size = Vector3.new(11.4, 19.4, 10.17), Min = Vector3.new(-4.8, 0.0, -2.97), Roles = table.freeze({ "GLOW", "METAL", "STONE", "TRIM", "WOOD" }) }),
+	CopperWireReel = table.freeze({ Size = Vector3.new(6.2, 8.512, 12.129), Min = Vector3.new(-3.1, -0.112, -4.0), Roles = table.freeze({ "ACCENT", "METAL", "WOOD" }) }),
+	InnerGateArch = table.freeze({ Size = Vector3.new(56.5, 33.162, 6.994), Min = Vector3.new(-28.25, -0.004, -3.409), Roles = table.freeze({ "ACCENT", "GLOW", "METAL", "MOSS", "STONE" }) }),
+	LonghouseRuin = table.freeze({ Size = Vector3.new(31.922, 4.05, 12.795), Min = Vector3.new(-18.148, -0.2, -6.996), Roles = table.freeze({ "MOSS", "STONE", "WOOD" }) }),
+	PalisadeWallSpan = table.freeze({ Size = Vector3.new(14.907, 12.092, 5.744), Min = Vector3.new(-7.499, -0.419, -4.375), Roles = table.freeze({ "METAL", "STONE", "TRIM", "WOOD" }) }),
+	RamPenChute = table.freeze({ Size = Vector3.new(22.379, 5.108, 10.363), Min = Vector3.new(-9.079, -0.2, -5.153), Roles = table.freeze({ "STONE", "WOOD" }) }),
+	RampartWallSegment = table.freeze({ Size = Vector3.new(18.217, 8.498, 4.075), Min = Vector3.new(-8.132, -0.027, -2.016), Roles = table.freeze({ "ACCENT", "MOSS", "STONE" }) }),
+	WatchBellGallows = table.freeze({ Size = Vector3.new(11.677, 12.534, 3.16), Min = Vector3.new(-4.2, -0.002, -1.58), Roles = table.freeze({ "ALT", "GOLD", "METAL", "WOOD" }) }),
+	WindHarpTower = table.freeze({ Size = Vector3.new(11.628, 42.589, 7.036), Min = Vector3.new(-4.982, -0.3, -3.61), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "STONE", "WOOD" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -632,6 +649,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	ConstructShell = true, AssemblyScaffold = true, CraneTrolley = true, ControlCabin = true, FurnaceBox = true, WallGear = true, HydraulicJack = true,
 	FurnaceTower = true, TiltingCrucible = true, FurnaceDoorGiant = true, SlagLadleCart = true, JibCrane = true, BellowsDuctRun = true,
 	ForkedBoltTotem = true, SplitGraniteTor = true, HighlandWindmill = true, ShepherdCroft = true, DolmenBellGate = true, WindBentPine = true,
+	BrochKeepTower = true, WindHarpTower = true, InnerGateArch = true, LonghouseRuin = true, CopperForgeHearth = true,
 	HollinWaterMill = true, MillWheel = true, PaleBandTree = true, HeartrotSpringTrunk = true, HollinStileArch = true, FelledBandLog = true,
 	GreatCiderPress = true, PressHouseRoof = true, GraftedCrownTree = true, GraftedFruitTreeA = true, GraftedFruitTreeB = true,
 	GraftedFruitTreeC = true, PleachedArch = true, EspalierWall = true, CiderVatSplit = true, ThornBrambleArch = true,
