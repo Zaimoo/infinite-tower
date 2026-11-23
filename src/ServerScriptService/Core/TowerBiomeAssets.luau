@@ -19,13 +19,14 @@ local CorruptedFloor33 = require(script.Parent.TowerSetPieces.CorruptedFloor33)
 local CorruptedFloor34 = require(script.Parent.TowerSetPieces.CorruptedFloor34)
 local CorruptedFloor35 = require(script.Parent.TowerSetPieces.CorruptedFloor35)
 local SunkenSetPieces = require(script.Parent.TowerSetPieces.SunkenSanctuary)
+local SunkenFloor37 = require(script.Parent.TowerSetPieces.SunkenFloor37)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
-local CampExemptKinds = { RampArch = true, NerethBellArch = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true }
+local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true }
 
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
@@ -6487,8 +6488,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "corrupted:3" then CorruptedFloor33.Build
 		elseif layout.Authored == "corrupted:4" then CorruptedFloor34.Build
 		elseif layout.Authored == "corrupted:5" then CorruptedFloor35.Build
-		-- Sunken Sanctuary authored floors (Floor 36 onward): TowerSetPieces/SunkenSanctuary.
+		-- Sunken Sanctuary authored floors (Floor 36 onward): TowerSetPieces/SunkenSanctuary & SunkenFloor37+.
 		elseif layout.Authored == "sunken:1" then SunkenSetPieces.Floor36
+		elseif layout.Authored == "sunken:2" then SunkenFloor37.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({

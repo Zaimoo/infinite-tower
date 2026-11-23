@@ -522,7 +522,12 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			-- An authored floor has only its own pools (noisy shores), never random ones in its lanes.
 			local wet = if td and td.Pools then -1 else fbm(x / 75 + 40, z / 75 - 40, seed + 21, 2)
 			for _, pool in (td and td.Pools) or {} do
-				local e = ((x - pool.X) / pool.RX) ^ 2 + ((z - pool.Z) / pool.RZ) ^ 2 + 0.18 * fbm(x / 21, z / 21, seed + 29, 2)
+				-- Optional superellipse exponent `Round` (Floor 37's cloister garths: rounded squares, not ovals).
+				local p = pool.Round
+				local d2 = if p
+					then ((math.abs(x - pool.X) / pool.RX) ^ p + (math.abs(z - pool.Z) / pool.RZ) ^ p) ^ (2 / p)
+					else ((x - pool.X) / pool.RX) ^ 2 + ((z - pool.Z) / pool.RZ) ^ 2
+				local e = d2 + (if p then 0.08 else 0.18) * fbm(x / 21, z / 21, seed + 29, 2)
 				if e < 1 then
 					-- Steep: most of the ellipse is at full depth, so a pool round an island is open water, not a
 					-- shallow ring.

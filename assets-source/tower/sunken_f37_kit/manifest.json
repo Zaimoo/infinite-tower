@@ -1,0 +1,303 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BrainCoralMound": {
+      "Min": [
+        -5.441,
+        0.0,
+        -4.446
+      ],
+      "Roles": {
+        "ALT": 384,
+        "CORAL": 776,
+        "GLOW": 216,
+        "STONE": 80
+      },
+      "Size": [
+        10.976,
+        6.582,
+        9.283
+      ],
+      "Triangles": 1456
+    },
+    "CampanileTower": {
+      "Min": [
+        -14.0,
+        0.0,
+        -14.237
+      ],
+      "Roles": {
+        "ACCENT": 154,
+        "CORAL": 2000,
+        "GLOW": 336,
+        "GOLD": 492,
+        "METAL": 142,
+        "STONE": 2151,
+        "TRIM": 1398,
+        "WOOD": 72
+      },
+      "Size": [
+        28.892,
+        150.0,
+        28.237
+      ],
+      "Triangles": 6745
+    },
+    "CantorNicheStatue": {
+      "Min": [
+        -3.8,
+        0.0,
+        -2.631
+      ],
+      "Roles": {
+        "ACCENT": 22,
+        "ALT": 306,
+        "GLOW": 36,
+        "GOLD": 80,
+        "STONE": 442,
+        "TRIM": 316
+      },
+      "Size": [
+        7.6,
+        18.678,
+        5.131
+      ],
+      "Triangles": 1202
+    },
+    "CantorStall": {
+      "Min": [
+        -5.3,
+        0.0,
+        -2.479
+      ],
+      "Roles": {
+        "ALT": 168,
+        "GLOW": 200,
+        "STONE": 404,
+        "TRIM": 532,
+        "WOOD": 44
+      },
+      "Size": [
+        10.6,
+        7.65,
+        4.879
+      ],
+      "Triangles": 1348
+    },
+    "ChapterHouseRib": {
+      "Min": [
+        -10.4,
+        0.0,
+        -5.3
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "CORAL": 1520,
+        "GLOW": 80,
+        "GOLD": 156,
+        "STONE": 788,
+        "TRIM": 556
+      },
+      "Size": [
+        20.8,
+        41.528,
+        19.261
+      ],
+      "Triangles": 3144
+    },
+    "ConchRack": {
+      "Min": [
+        -3.4,
+        0.0,
+        -1.4
+      ],
+      "Roles": {
+        "ACCENT": 138,
+        "ALT": 184,
+        "GLOW": 144,
+        "GOLD": 320,
+        "STONE": 234
+      },
+      "Size": [
+        6.8,
+        6.03,
+        2.8
+      ],
+      "Triangles": 1020
+    },
+    "CoralArcadeBay": {
+      "Min": [
+        -11.6,
+        -0.002,
+        -4.071
+      ],
+      "Roles": {
+        "ACCENT": 446,
+        "CORAL": 2280,
+        "GOLD": 384,
+        "MOSS": 40,
+        "STONE": 676,
+        "TRIM": 510,
+        "WOOD": 30
+      },
+      "Size": [
+        23.2,
+        30.248,
+        8.143
+      ],
+      "Triangles": 4366
+    },
+    "CoralArcadeCorner": {
+      "Min": [
+        -3.801,
+        0.0,
+        -13.2
+      ],
+      "Roles": {
+        "ACCENT": 384,
+        "CORAL": 1520,
+        "GOLD": 300,
+        "MOSS": 20,
+        "STONE": 396,
+        "TRIM": 500,
+        "WOOD": 60
+      },
+      "Size": [
+        17.001,
+        31.35,
+        16.973
+      ],
+      "Triangles": 3180
+    },
+    "DorterCot": {
+      "Min": [
+        -5.7,
+        0.0,
+        -2.2
+      ],
+      "Roles": {
+        "ALT": 182,
+        "CANDLE": 36,
+        "FOLIAGE": 70,
+        "SILK": 150,
+        "STONE": 138,
+        "WOOD": 368
+      },
+      "Size": [
+        9.6,
+        8.5,
+        4.4
+      ],
+      "Triangles": 944
+    },
+    "DrownedSundial": {
+      "Min": [
+        -11.2,
+        0.0,
+        -11.2
+      ],
+      "Roles": {
+        "ACCENT": 82,
+        "GOLD": 432,
+        "MOSS": 80,
+        "STONE": 332,
+        "TRIM": 236
+      },
+      "Size": [
+        22.4,
+        4.666,
+        22.4
+      ],
+      "Triangles": 1162
+    },
+    "LavaboFountain": {
+      "Min": [
+        -12.73,
+        0.0,
+        -12.6
+      ],
+      "Roles": {
+        "ACCENT": 178,
+        "ALT": 386,
+        "CORAL": 1600,
+        "CRYSTAL": 212,
+        "GLOW": 52,
+        "GOLD": 852,
+        "METAL": 184,
+        "STONE": 1244,
+        "TRIM": 1196
+      },
+      "Size": [
+        25.46,
+        30.1,
+        25.2
+      ],
+      "Triangles": 5904
+    },
+    "RefectoryTable": {
+      "Min": [
+        -8.8,
+        -0.005,
+        -4.3
+      ],
+      "Roles": {
+        "ALT": 288,
+        "CANDLE": 60,
+        "GOLD": 40,
+        "METAL": 224,
+        "STONE": 529,
+        "WOOD": 230
+      },
+      "Size": [
+        17.6,
+        6.205,
+        8.6
+      ],
+      "Triangles": 1371
+    },
+    "SacristyPress": {
+      "Min": [
+        -5.133,
+        0.0,
+        -2.08
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "GOLD": 120,
+        "METAL": 12,
+        "SILK": 72,
+        "STONE": 416,
+        "WOOD": 504
+      },
+      "Size": [
+        12.007,
+        14.025,
+        4.56
+      ],
+      "Triangles": 1168
+    },
+    "ScriptoriumDesk": {
+      "Min": [
+        -4.8,
+        0.0,
+        -2.575
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "GLOW": 340,
+        "GOLD": 176,
+        "SILK": 88,
+        "STONE": 326,
+        "TRIM": 44,
+        "WOOD": 44
+      },
+      "Size": [
+        10.856,
+        13.2,
+        7.325
+      ],
+      "Triangles": 1030
+    }
+  },
+  "Unit": "studs"
+}

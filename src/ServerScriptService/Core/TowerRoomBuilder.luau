@@ -258,7 +258,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, NerethBellArch = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, NerethBellArch = true, CloisterFloorMosaic = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -1789,6 +1789,43 @@ function Builder.Build(id: number, generation: number): any
 				end
 				rootCylinder("RootBridgeSapVein", a - Vector3.new(0, 2.2, 0), b - Vector3.new(0, 2.2, 0), 0.75, rootSapColor, Enum.Material.Neon)
 			end
+			if hungLinks[link.Id] and bridgeStyles[link.Id] == "ARCADE" then
+				-- Floor 37's Isle Stairs: stone stair-bridges carried on arched limestone piers standing in the
+				-- north garth (matching CAUSEWAY undersides, non-collidable dressing under the solid stair treads).
+				local length = delta.Magnitude
+				local under = decor(model, "ArcadeBridgeUnderside", Vector3.new(link.Width - 1.2, 2.8, math.max(1, length - 1)), mid, nerethStoneDark, Enum.Material.Limestone)
+				under.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -3.1, 0)
+				local seaY = origin.Y + layout.Bottom - 9
+				local spans = math.max(1, math.floor(length / 24))
+				for i = 0, spans do
+					local at = a:Lerp(b, i / spans)
+					local pierTop = at.Y - 3.8
+					local pierH = pierTop - seaY
+					if pierH > 2 and i > 0 and i < spans then
+						local pierAt = Vector3.new(at.X, seaY + pierH / 2, at.Z)
+						local pier = decor(model, "ArcadeBridgePier", Vector3.new(link.Width - 2.2, pierH, 4.4), pierAt, nerethStoneDark, Enum.Material.Limestone)
+						pier.CFrame = CFrame.lookAt(pierAt, pierAt + flat)
+						local weedAt = Vector3.new(at.X, origin.Y + layout.Bottom - 4.2, at.Z)
+						local weed = decor(model, "ArcadeBridgePierWeed", Vector3.new(link.Width - 1.6, 1.8, 5.0), weedAt, nerethWeed, Enum.Material.Grass)
+						weed.CFrame = CFrame.lookAt(weedAt, weedAt + flat)
+					end
+					if i < spans then
+						local p0, p1 = a:Lerp(b, i / spans), a:Lerp(b, (i + 1) / spans)
+						local span = (p1 - p0).Magnitude
+						local segs = 6
+						for k = 1, segs do
+							local t0, t1 = (k - 1) / segs, k / segs
+							local function archPt(t: number): Vector3
+								local base = p0:Lerp(p1, t)
+								return base - Vector3.new(0, 4.6 + (1 - math.sin(t * math.pi)) * math.min(10, span * 0.42), 0)
+							end
+							local q0, q1 = archPt(t0), archPt(t1)
+							local seg = decor(model, "ArcadeBridgeUnderArch", Vector3.new(link.Width - 2.6, 1.7, (q1 - q0).Magnitude + 0.4), (q0 + q1) / 2, nerethStone, Enum.Material.Limestone)
+							seg.CFrame = CFrame.lookAt((q0 + q1) / 2, q1)
+						end
+					end
+				end
+			end
 		else
 			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
 			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, if masonryStyle and masonryStyle.RampYOffset then masonryStyle.RampYOffset else -0.96, 0)
@@ -2455,6 +2492,57 @@ function Builder.Build(id: number, generation: number): any
 						local post = decor(curbGroup, "CausewayPost", Vector3.new(2.2, 3.6, 2.2), at + Vector3.new(0, 1.7, 0), nerethMarble, Enum.Material.Marble)
 						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
 					end
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "ARCADE" then
+					-- Floor 37's Isle Stairs: low limestone balustrade plus coral-grown cloister columns and
+					-- overhead arches (clearance >= 20 studs above the treads, columns strictly outside UsableWidth).
+					local wallOffset = right * (side * (link.Width / 2 - 0.5))
+					local wall = decor(curbGroup, "ArcadeParapet", Vector3.new(1.5, 2.4, curbLen), mid + wallOffset, nerethStoneDark, Enum.Material.Limestone)
+					wall.CFrame = CFrame.lookAt(mid + wallOffset, b + wallOffset) * CFrame.new(0, 1.1, 0)
+					local cap = decor(curbGroup, "ArcadeParapetCap", Vector3.new(1.9, 0.45, curbLen), mid + wallOffset, nerethMarble, Enum.Material.Marble)
+					cap.CFrame = CFrame.lookAt(mid + wallOffset, b + wallOffset) * CFrame.new(0, 2.45, 0)
+					local bays = math.max(2, math.floor(delta.Magnitude / 20))
+					local colH = 20.5
+					local coralPink = Color3.fromRGB(214, 132, 190)
+					local coralOchre = Color3.fromRGB(214, 184, 112)
+					local coralAqua = Color3.fromRGB(110, 206, 196)
+					local verdRoof = Color3.fromRGB(96, 172, 152)
+					for i = 0, bays do
+						local at = a:Lerp(b, i / bays) + wallOffset
+						local col = decor(curbGroup, "ArcadeColumn", Vector3.new(colH, 2.0, 2.0), at + Vector3.new(0, colH / 2 + 1.2, 0), nerethStone, Enum.Material.Limestone)
+						col.Shape = Enum.PartType.Cylinder
+						col.CFrame = CFrame.new(at + Vector3.new(0, colH / 2 + 1.2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+						local capBlk = decor(curbGroup, "ArcadeCapital", Vector3.new(2.8, 1.1, 2.8), at + Vector3.new(0, colH + 1.4, 0), nerethMarble, Enum.Material.Marble)
+						capBlk.CFrame = CFrame.lookAt(capBlk.Position, capBlk.Position + flat)
+						-- Side coral bloom on each column crown (never red or orange: telegraph readability)
+						local cCol = if (i + (if side > 0 then 1 else 0)) % 3 == 0 then coralAqua elseif i % 2 == 0 then coralPink else coralOchre
+						local tuft = decor(curbGroup, "ArcadeCoralBloom", Vector3.new(3.6, 2.6, 3.6), at + Vector3.new(0, colH + 3.2, 0), cCol, Enum.Material.SmoothPlastic)
+						tuft.Shape = Enum.PartType.Ball
+						-- Overhead transverse stone arch spanning across the stair (drawn once per bay on side == 1)
+						if side == 1 then
+							local pL = a:Lerp(b, i / bays) - wallOffset + Vector3.new(0, colH + 1.5, 0)
+							local pR = at + Vector3.new(0, colH + 1.5, 0)
+							local archSegs = 6
+							for k = 1, archSegs do
+								local t0, t1 = (k - 1) / archSegs, k / archSegs
+								local function spanPt(t: number): Vector3
+									return pL:Lerp(pR, t) + Vector3.new(0, math.sin(t * math.pi) * 6.5, 0)
+								end
+								local q0, q1 = spanPt(t0), spanPt(t1)
+								local rib = decor(curbGroup, "ArcadeOverheadArch", Vector3.new(2.2, 2.2, (q1 - q0).Magnitude + 0.5), (q0 + q1) / 2, nerethStone, Enum.Material.Limestone)
+								rib.CFrame = CFrame.lookAt((q0 + q1) / 2, q1)
+							end
+							local crown = (pL + pR) / 2 + Vector3.new(0, 6.8, 0)
+							local crownCoral = decor(curbGroup, "ArcadeCrownCoral", Vector3.new(5.4, 3.2, 4.2), crown + Vector3.new(0, 1.8, 0), if i % 2 == 0 then coralPink else coralOchre, Enum.Material.SmoothPlastic)
+							crownCoral.Shape = Enum.PartType.Ball
+							-- Small verdigris bell hanging from the arch crown (well above 20 studs clear)
+							local bell = decor(curbGroup, "ArcadeArchBell", Vector3.new(2.6, 3.0, 2.6), crown - Vector3.new(0, 2.4, 0), verdRoof, Enum.Material.Metal)
+							bell.Shape = Enum.PartType.Cylinder
+							bell.CFrame = CFrame.new(bell.Position) * CFrame.Angles(0, 0, math.pi / 2)
+						end
+					end
+					-- Longitudinal eaves cornice & coral garland along each side of the arcade
+					local eave = decor(curbGroup, "ArcadeEave", Vector3.new(2.4, 1.2, curbLen), mid + wallOffset + Vector3.new(0, colH + 2.2, 0), verdRoof, Enum.Material.Metal)
+					eave.CFrame = CFrame.lookAt(mid + wallOffset + Vector3.new(0, colH + 2.2, 0), b + wallOffset + Vector3.new(0, colH + 2.2, 0))
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))

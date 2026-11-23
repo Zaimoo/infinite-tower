@@ -2640,6 +2640,116 @@ local AUTHORED: {[number]: any} = {
 			MeadowScale = 0.1,
 		},
 	},
+	-- Floor 37, Coral Cloister (Sunken Sanctuary Expanded Encounter; docs/prompts/sunken-sanctuary-floor-layouts-prompt.md,
+	-- guide image reference/Sunken Sanctuary 37.jpg): the Nereth cantors' double cloister, a figure-eight of two
+	-- arcaded walks around two flooded squircle garths. From Lay Court you can cross the south garth directly on
+	-- the flagged Garth Causeway to the Lavabo (the domed fountain house at the waist) or walk either arcaded
+	-- gallery (West Walk, East Walk, each with an Elite). Across the north garth stands Chapter Isle (Apex, sheer
+	-- coral rock) with NO link from the Lavabo or the Bell Tower behind it: walk round by Cantors' Walk (west) or
+	-- Coral Walk (east) and climb one of the twin coral-arched Isle Stairs (`STAIRS`, BridgeStyles = "ARCADE").
+	-- Side spurs house the Dorter, Frater, Choir Loft, Sacristy and Scriptorium.
+	[37] = {
+		Key = "sunken:2",
+		Name = "Coral Cloister",
+		Size = { Width = 640, Depth = 690, Height = 235 },
+		PathStyle = "NERETH",
+		Basin = { X = 0, Y = 0, Z = 200, Width = 608, Depth = 100 },
+		WestGallery = { X = -135, Y = 8, Z = 60, Width = 88, Depth = 76 },
+		EastGallery = { X = 135, Y = 12, Z = 60, Width = 88, Depth = 76 },
+		Crossing = { X = 0, Y = 16, Z = -50, Width = 84, Depth = 64 },
+		ExtraPlatforms = {
+			Dorter = { X = -250, Y = 4, Z = -40, Width = 56, Depth = 48 },
+			Frater = { X = 250, Y = 10, Z = -40, Width = 56, Depth = 48 },
+			CantorsWalk = { X = -164, Y = 20, Z = -185, Width = 80, Depth = 64 },
+			CoralWalk = { X = 150, Y = 24, Z = -185, Width = 80, Depth = 64 },
+			ChoirLoft = { X = -252, Y = 26, Z = -150, Width = 56, Depth = 48 },
+			Sacristy = { X = -255, Y = 28, Z = -300, Width = 56, Depth = 44 },
+			Scriptorium = { X = 252, Y = 30, Z = -150, Width = 56, Depth = 48 },
+			BellTower = { X = 0, Y = 36, Z = -300, Width = 64, Depth = 48 },
+		},
+		Apex = { X = 0, Y = 40, Z = -185, Width = 120, Depth = 88 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "EastGallery" },
+			{ "Basin", "Crossing" }, -- the Garth Causeway
+			{ "WestGallery", "Crossing" },
+			{ "EastGallery", "Crossing" },
+			{ "WestGallery", "Dorter" },
+			{ "EastGallery", "Frater" },
+			{ "Crossing", "CantorsWalk" },
+			{ "Crossing", "CoralWalk" },
+			{ "CantorsWalk", "BellTower" },
+			{ "CoralWalk", "BellTower" },
+			{ "CantorsWalk", "Apex" }, -- the West Isle Stair
+			{ "CoralWalk", "Apex" }, -- the East Isle Stair
+			{ "CantorsWalk", "ChoirLoft" },
+			{ "CoralWalk", "Scriptorium" },
+			{ "CantorsWalk", "Sacristy" },
+		},
+		-- Twin coral-arched stair-bridges climbing onto Chapter Isle from the west and east walks.
+		Stairs = { CantorsWalk_Apex = true, CoralWalk_Apex = true },
+		Names = {
+			Sanctuary = "Lay Gate",
+			Basin = "Lay Court",
+			Dorter = "The Dorter",
+			WestGallery = "West Walk",
+			Frater = "The Frater",
+			EastGallery = "East Walk",
+			Crossing = "The Lavabo",
+			CantorsWalk = "Cantors' Walk",
+			CoralWalk = "Coral Walk",
+			ChoirLoft = "Choir Loft",
+			Sacristy = "Sacristy",
+			Scriptorium = "Scriptorium",
+			BellTower = "Bell Tower",
+			Apex = "Chapter Isle",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "NERETH",
+			-- Built cloister floors on undercrofts/corbels: Lay Gate, Frater, Choir Loft and Scriptorium.
+			Decks = { Sanctuary = true, Frater = true, ChoirLoft = true, Scriptorium = true },
+			DeckThickness = { Frater = 3, ChoirLoft = 3, Scriptorium = 3 },
+			DeckLooks = {
+				Frater = { Color = Color3.fromRGB(214, 206, 186), Material = Enum.Material.Limestone },
+				ChoirLoft = { Color = Color3.fromRGB(224, 218, 204), Material = Enum.Material.Marble },
+				Scriptorium = { Color = Color3.fromRGB(214, 206, 186), Material = Enum.Material.Limestone },
+			},
+			-- Sheer coral-rock & cloister retaining walls keep >= 44 studs of open turquoise water between the
+			-- Lavabo and Chapter Isle and full deep water under both Isle Stairs.
+			Shapes = {
+				WestGallery = { Round = 3.2, Grow = 3 },
+				EastGallery = { Round = 3.2, Grow = 3 },
+				Dorter = { Round = 3.0, Grow = 3 },
+				Crossing = { Round = 2.2, Grow = 2, Sheer = true },
+				CantorsWalk = { Round = 3.2, Grow = 2, Sheer = true },
+				CoralWalk = { Round = 3.2, Grow = 2, Sheer = true },
+				Sacristy = { Round = 3.0, Grow = 3 },
+				BellTower = { Round = 3.2, Grow = 3 },
+				Apex = { Round = 2.2, Grow = 3, Sheer = true },
+			},
+			Bridges = { Basin_Crossing = true, CantorsWalk_Apex = true, CoralWalk_Apex = true },
+			BridgeStyles = {
+				Basin_Crossing = "CAUSEWAY",
+				CantorsWalk_Apex = "ARCADE",
+				CoralWalk_Apex = "ARCADE",
+			},
+			NoApexShelf = true,
+			LiquidRise = 2.0,
+			FloorDip = 9,
+			-- Lower coastal cliffs around the cloister so coral arcades, the Bell Tower and the Tidewall lead the view.
+			WallBand = { Base = 24, Noise = 8, NorthScale = 0.22 },
+			-- Two flooded squircle cloister garths (Round = 5): the south garth crossed by the Garth Causeway,
+			-- and the wide north garth encircling Chapter Isle (impassable from the Lavabo).
+			Pools = {
+				{ X = 0, Z = 65, RX = 122, RZ = 94, Round = 5 },
+				{ X = -6, Z = -182, RX = 178, RZ = 122, Round = 5 },
+			},
+			GroveScale = 0,
+			MeadowScale = 0.06,
+		},
+	},
 }
 
 local function build(index: number, v: any?): any

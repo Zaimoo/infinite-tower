@@ -139,3 +139,10 @@ Floor 36 (Drowned Steps, `sunken:1`) adds four options to the same system:
 - **`BrokenFlight`** (`TowerLayout`): the pair of terraces the fallen middle flight once joined. It is spec data (no link joins them, and the Apex stays reachable), not a connector.
 
 Floor 36's shrine canopy and its great bell hang over the Apex camp above the camp band (`TowerBiomeAssets.AirborneKinds`), and its bell arches span the Pilgrim Stair on purpose (`NerethBellArch` is exempt from the walkway and camp clearance, like `RampArch`): their openings are wider than the flight and their piers stand outside the lane.
+
+Floor 37 (Coral Cloister, `sunken:2`) adds two options to the same system:
+
+- **`Terrain.Pools[i].Round`**: optional superellipse exponent for an authored pool (`(|dx|/RX)^p + (|dz|/RZ)^p <= 1`), so cloister garths carve as rounded squares instead of ovals. Pools without `Round` keep the exact ellipse formula.
+- **`Terrain.BridgeStyles = "ARCADE"`**: a hung `STAIRS` bridge over water carried on arched limestone piers underneath, with a low limestone balustrade, tall coral-grown columns strictly outside `UsableWidth`, and overhead transverse arches ≥ 20 studs clear above the treads (non-colliding dressing inside `BridgeCurb`; navigation is unchanged).
+
+Floor 37's flush tide-spiral floor mosaics (`CloisterFloorMosaic`, non-colliding and `CanQuery = false`) are exempt from walkway and camp clearance so they lie cleanly across Lay Court and Chapter Isle without affecting grounding or combat.

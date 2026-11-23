@@ -482,6 +482,14 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(248, 252, 246), Saturation = 0.18, Contrast = 0.08, ExposureCompensation = 0.1, BloomIntensity = 0.45,
 		SunRaysIntensity = 0.16, SunRaysSpread = 0.5,
 	},
+	-- Floor 37, Coral Cloister: warm gold-green afternoon slanting through coral-grown arcades, with luminous
+	-- turquoise-green fill bouncing off the two flooded garths and soft, dappled arcade shadows.
+	[37] = {
+		Ambient = c(86, 108, 98), OutdoorAmbient = c(148, 176, 152), ColorShift_Top = c(255, 226, 165), ColorShift_Bottom = c(62, 146, 134),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(184, 220, 204), AtmosphereDecay = c(108, 168, 154), AtmosphereHaze = 0.9,
+		TintColor = c(254, 248, 234), Saturation = 0.12, Contrast = 0.06, ExposureCompensation = 0.08, BloomIntensity = 0.42,
+		SunRaysIntensity = 0.18, SunRaysSpread = 0.56,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 
