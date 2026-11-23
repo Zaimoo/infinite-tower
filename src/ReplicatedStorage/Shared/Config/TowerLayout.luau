@@ -1840,6 +1840,112 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Thunderhead Lodge",
 		},
 	},
+	-- Floor 28, Skybridge Cliffs (Thunder Highlands): the mountain breaks into freestanding slate sea-stacks
+	-- over a sea of storm cloud (Bottom = -6), spanned only by the Kairnfolk's rope-and-copper suspension
+	-- skybridges. From the Cloudbreak Ledge three chains climb the archipelago at staggered heights: a sweeping
+	-- western chain (West Sea-Stack, West Pinion Crag, West Cable Pylon), a central chord (the Central Sky-Spire,
+	-- the Thunderstep Crag, then cliff-cut steps to the summit) and a steeper eastern chain (East Sea-Stack, East
+	-- Pinion Crag, East Cable Pylon), cross-linked mid-gorge, with two dead-end roosts (the Gale Roost, the
+	-- Fulgurite Needle) jutting over the clouds. Every span past the ledge but the summit steps hangs over the
+	-- abyss. 13 terraces, 16 links, 12 walk heights.
+	[28] = {
+		Key = "thunder:3",
+		Name = "Skybridge Cliffs",
+		Size = { Width = 655, Depth = 700, Height = 235, Bottom = -6 },
+		PathStyle = "KAIRN",
+		DirectTerrain = true,
+		Surface = "KAIRN",
+		Masonry = "SKYBRIDGE",
+		-- Off-grid dry-stone caps (Y 14, 30, 34) on top of their rock needles.
+		Decks = {
+			GaleRoost = true,
+			SkyAnchorE = true,
+			FulminiteNeedle = true,
+		},
+		-- Every chasm span is a hung skybridge; only the Sanctuary causeway and the summit steps are rock.
+		Suspended = {
+			Links = {
+				Basin_WestGallery = true,
+				Basin_Crossing = true,
+				Basin_EastGallery = true,
+				WestGallery_GaleRoost = true,
+				WestGallery_NeedleWest = true,
+				WestGallery_Crossing = true,
+				EastGallery_Crossing = true,
+				EastGallery_NeedleEast = true,
+				NeedleWest_SkyAnchorW = true,
+				Crossing_CloudSpire = true,
+				NeedleEast_FulminiteNeedle = true,
+				NeedleEast_SkyAnchorE = true,
+				SkyAnchorW_Apex = true,
+				SkyAnchorE_Apex = true,
+			},
+		},
+		-- The abyss floor is dry slate under the cloud banks (no water in the chasm).
+		Liquid = { Dry = true },
+		TerrainFeatures = {
+			-- The mountain wall falls back behind the Crown, leaving a shelf for the twin crown towers.
+			{ Kind = "APEX_ALCOVE", Width = 118, Feather = 30 },
+			-- Every terrace a sheer needle out of the abyss (its sides fall 3.4 times as steeply), the abyss
+			-- floor bare slate under the cloud sea.
+			{ Kind = "SEA_STACK_APRON", Steep = 3.4 },
+		},
+		Basin = { X = 0, Y = 0, Z = 200, Width = 545, Depth = 104 },
+		WestGallery = { X = -178, Y = 8, Z = 40, Width = 88, Depth = 78 },
+		EastGallery = { X = 186, Y = 12, Z = 32, Width = 88, Depth = 78 },
+		Crossing = { X = -6, Y = 20, Z = -28, Width = 86, Depth = 72 },
+		ExtraPlatforms = {
+			GaleRoost = { X = -256, Y = 14, Z = -60, Width = 60, Depth = 54 },
+			NeedleWest = { X = -148, Y = 16, Z = -76, Width = 70, Depth = 60 },
+			NeedleEast = { X = 164, Y = 24, Z = -84, Width = 70, Depth = 60 },
+			SkyAnchorW = { X = -176, Y = 28, Z = -194, Width = 72, Depth = 62 },
+			SkyAnchorE = { X = 172, Y = 30, Z = -198, Width = 72, Depth = 62 },
+			FulminiteNeedle = { X = 258, Y = 34, Z = -102, Width = 56, Depth = 50 },
+			CloudSpire = { X = 22, Y = 36, Z = -164, Width = 68, Depth = 56 },
+		},
+		Apex = { X = -12, Y = 40, Z = -270, Width = 132, Depth = 90 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "Crossing" },
+			{ "Basin", "EastGallery" },
+			{ "WestGallery", "GaleRoost" },
+			{ "WestGallery", "NeedleWest" },
+			{ "WestGallery", "Crossing" },
+			{ "EastGallery", "Crossing" },
+			{ "EastGallery", "NeedleEast" },
+			{ "NeedleWest", "SkyAnchorW" },
+			{ "Crossing", "CloudSpire" },
+			{ "NeedleEast", "FulminiteNeedle" },
+			{ "NeedleEast", "SkyAnchorE" },
+			{ "SkyAnchorW", "Apex" },
+			{ "CloudSpire", "Apex" },
+			{ "SkyAnchorE", "Apex" },
+		},
+		-- The Thunderstep: slate steps cut into the rock saddle up to the summit.
+		Stairs = { CloudSpire_Apex = true },
+		Patrols = {
+			WEST_SKYLINE = { "WestGallery", "NeedleWest", "SkyAnchorW" },
+			EAST_SKYLINE = { "EastGallery", "NeedleEast", "SkyAnchorE" },
+			CLOUD_SPAN = { "WestGallery", "Crossing", "CloudSpire" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Cloudbreak Stair",
+			Basin = "Cloudbreak Ledge",
+			WestGallery = "West Sea-Stack",
+			EastGallery = "East Sea-Stack",
+			GaleRoost = "Gale Roost",
+			NeedleWest = "West Pinion Crag",
+			Crossing = "Central Sky-Spire",
+			NeedleEast = "East Pinion Crag",
+			SkyAnchorW = "West Cable Pylon",
+			SkyAnchorE = "East Cable Pylon",
+			FulminiteNeedle = "Fulgurite Needle",
+			CloudSpire = "Thunderstep Crag",
+			Apex = "Skybridge Crown",
+		},
+	},
 	-- Floor 31, Blighted Verge (Corrupted Grove Introduction; docs/prompts/corrupted-grove-floor-layouts-prompt.md):
 	-- the edge of the grove, where the Hollin grove-wardens still held the line. A blight-brook rises at the
 	-- Heartrot Spring in the north-east corner and meanders west-south-west to a sinkhole in the west wall,

@@ -442,6 +442,15 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(232, 234, 250), Saturation = 0.04, Contrast = 0.16, ExposureCompensation = 0.02, BloomIntensity = 0.46,
 		SunRaysIntensity = 0.06, SunRaysSpread = 0.35,
 	},
+	-- Floor 28, Skybridge Cliffs: a cloud-sea squall afternoon. Dark slate shadows above and a luminous
+	-- silver-violet bounce off the cloud abyss below (ColorShift_Bottom), crisp gorge air with a deep chasm
+	-- mist, the violet fulgurite needles and the skybridge copper popping against the dark sea-stacks.
+	[28] = {
+		Ambient = c(66, 68, 92), OutdoorAmbient = c(104, 106, 140), ColorShift_Top = c(176, 184, 214), ColorShift_Bottom = c(176, 150, 226),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(150, 150, 182), AtmosphereDecay = c(92, 84, 132), AtmosphereHaze = 1.15,
+		TintColor = c(228, 230, 250), Saturation = 0.06, Contrast = 0.18, ExposureCompensation = 0.03, BloomIntensity = 0.5,
+		SunRaysIntensity = 0.04, SunRaysSpread = 0.3,
+	},
 	-- Floor 31, Blighted Verge: a sickly gold late afternoon. Warm low light over the autumn bank, the magenta
 	-- murk of the biome thinned to a rose haze that thickens toward the rotten north-east; the least murky
 	-- Corrupted floor.
