@@ -491,6 +491,15 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(234, 210, 255), Saturation = 0.16, Contrast = 0.14, ExposureCompensation = 0.05, BloomIntensity = 0.60,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.62,
 	},
+	-- Floor 38, Tidal Channels: grey-teal storm tide over the lock flight. Overcast cool flat key and brooding
+	-- storm haze (kept clear enough for the 168-stud Sea-Gate, Tidebell Tower and distant viaduct to silhouette
+	-- cleanly) so the wet basalt waterworks stay moody and glowing aqua tide-runes are the sole saturated accent.
+	[38] = {
+		Ambient = c(52, 70, 76), OutdoorAmbient = c(86, 112, 120), ColorShift_Top = c(156, 188, 196), ColorShift_Bottom = c(28, 56, 66),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(102, 134, 142), AtmosphereDecay = c(56, 86, 94), AtmosphereHaze = 0.95,
+		TintColor = c(226, 240, 244), Saturation = -0.04, Contrast = 0.16, ExposureCompensation = -0.02, BloomIntensity = 0.50,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.36,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

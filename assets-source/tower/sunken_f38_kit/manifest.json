@@ -1,0 +1,278 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BellGallowsBracket": {
+      "Min": [
+        -6.6,
+        0.0,
+        -4.146
+      ],
+      "Roles": {
+        "ACCENT": 166,
+        "GLOW": 112,
+        "GOLD": 176,
+        "METAL": 24,
+        "STONE": 44,
+        "WOOD": 172
+      },
+      "Size": [
+        15.645,
+        22.05,
+        8.292
+      ],
+      "Triangles": 694
+    },
+    "BollardRope": {
+      "Min": [
+        -2.29,
+        0.0,
+        -1.808
+      ],
+      "Roles": {
+        "ALT": 360,
+        "CANDLE": 56,
+        "METAL": 318,
+        "STONE": 36,
+        "WOOD": 36
+      },
+      "Size": [
+        4.946,
+        5.704,
+        3.558
+      ],
+      "Triangles": 806
+    },
+    "EelTrapRack": {
+      "Min": [
+        -10.02,
+        0.0,
+        -3.711
+      ],
+      "Roles": {
+        "ALT": 144,
+        "CANDLE": 36,
+        "METAL": 12,
+        "MOSS": 20,
+        "SILK": 36,
+        "WOOD": 596
+      },
+      "Size": [
+        20.797,
+        9.6,
+        8.395
+      ],
+      "Triangles": 844
+    },
+    "LockChamberWall": {
+      "Min": [
+        -12.6,
+        0.0,
+        -5.7
+      ],
+      "Roles": {
+        "GLOW": 270,
+        "METAL": 160,
+        "MOSS": 20,
+        "STONE": 234,
+        "TRIM": 138
+      },
+      "Size": [
+        25.242,
+        19.4,
+        11.89
+      ],
+      "Triangles": 822
+    },
+    "MitreGatePair": {
+      "Min": [
+        -22.107,
+        -0.427,
+        -3.493
+      ],
+      "Roles": {
+        "ACCENT": 138,
+        "ALT": 80,
+        "CRYSTAL": 138,
+        "GLOW": 210,
+        "METAL": 96,
+        "WOOD": 328
+      },
+      "Size": [
+        44.233,
+        17.627,
+        10.155
+      ],
+      "Triangles": 990
+    },
+    "MooredBarge": {
+      "Min": [
+        -14.314,
+        0.0,
+        -5.619
+      ],
+      "Roles": {
+        "ALT": 120,
+        "METAL": 24,
+        "MOSS": 20,
+        "WOOD": 650
+      },
+      "Size": [
+        28.658,
+        10.465,
+        11.249
+      ],
+      "Triangles": 814
+    },
+    "OverflowRibbon": {
+      "Min": [
+        -8.919,
+        -0.68,
+        -4.428
+      ],
+      "Roles": {
+        "ALT": 160,
+        "CRYSTAL": 340
+      },
+      "Size": [
+        17.841,
+        17.412,
+        10.987
+      ],
+      "Triangles": 500
+    },
+    "SeaGateArch": {
+      "Min": [
+        -47.25,
+        0.0,
+        -14.597
+      ],
+      "Roles": {
+        "ACCENT": 390,
+        "GLOW": 528,
+        "GOLD": 292,
+        "METAL": 232,
+        "MOSS": 40,
+        "STONE": 930,
+        "TRIM": 738
+      },
+      "Size": [
+        94.5,
+        168.5,
+        25.597
+      ],
+      "Triangles": 3150
+    },
+    "SluiceGear": {
+      "Min": [
+        -3.8,
+        0.0,
+        -3.12
+      ],
+      "Roles": {
+        "ACCENT": 160,
+        "GOLD": 108,
+        "METAL": 50,
+        "STONE": 230,
+        "WOOD": 12
+      },
+      "Size": [
+        9.1,
+        10.2,
+        6.24
+      ],
+      "Triangles": 560
+    },
+    "SluiceHouseKeep": {
+      "Min": [
+        -15.4,
+        -1.036,
+        -10.695
+      ],
+      "Roles": {
+        "ACCENT": 138,
+        "ALT": 60,
+        "CANDLE": 36,
+        "CRYSTAL": 138,
+        "GLOW": 120,
+        "SILK": 12,
+        "STONE": 494,
+        "TRIM": 426,
+        "WOOD": 12
+      },
+      "Size": [
+        34.15,
+        36.536,
+        25.241
+      ],
+      "Triangles": 1436
+    },
+    "TideGaugeColumn": {
+      "Min": [
+        -2.4,
+        0.0,
+        -2.4
+      ],
+      "Roles": {
+        "ACCENT": 60,
+        "GLOW": 72,
+        "MOSS": 20,
+        "STONE": 56,
+        "TRIM": 44
+      },
+      "Size": [
+        5.269,
+        20.99,
+        5.031
+      ],
+      "Triangles": 252
+    },
+    "TideMillHouse": {
+      "Min": [
+        -15.979,
+        -0.595,
+        -14.4
+      ],
+      "Roles": {
+        "ACCENT": 138,
+        "ALT": 80,
+        "CANDLE": 36,
+        "CRYSTAL": 170,
+        "GLOW": 60,
+        "METAL": 294,
+        "STONE": 322,
+        "TRIM": 68,
+        "WOOD": 808
+      },
+      "Size": [
+        31.318,
+        36.345,
+        31.713
+      ],
+      "Triangles": 1976
+    },
+    "TidebellTowerSlim": {
+      "Min": [
+        -12.0,
+        0.0,
+        -12.133
+      ],
+      "Roles": {
+        "ACCENT": 76,
+        "GLOW": 626,
+        "GOLD": 196,
+        "METAL": 178,
+        "SILK": 12,
+        "STONE": 1121,
+        "TRIM": 713,
+        "WOOD": 12
+      },
+      "Size": [
+        31.5,
+        149.2,
+        24.133
+      ],
+      "Triangles": 2934
+    }
+  },
+  "Unit": "studs"
+}
