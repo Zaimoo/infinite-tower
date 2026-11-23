@@ -202,6 +202,24 @@ test("Floor 27 has its own ringfort kit: at least nine new templates and a 115+ 
 	assert(Kit.ExtraTemplates.InnerGateArch.Size.Y * 1.08 > 30)
 end)
 
+test("Floor 28 has its own skybridge kit: at least ten new templates and 135+ stud crown towers", function()
+	local f28 = { "CrownAnchorTower", "SeaStackSpire", "CloudBankLayer", "CableWinchCapstan", "SupplyHoistWindlass",
+		"ShedRocFeather", "TalonNestPlatform", "FulguriteSpireTall", "AnemometerMast", "CliffGroundingChain",
+		"SnappedBridgeStub", "SkybridgeWaystone", "SquallHornPerch" }
+	for _, name in f28 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 28 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f28 >= 10)
+	-- The crown towers (placed at scale 2) clear the ladder's 135 studs.
+	assert(Kit.ExtraTemplates.CrownAnchorTower.Size.Y * 2 >= 135)
+	-- The cloud bank is a broad low drift, not a column (the abyss reads as a sea of cloud).
+	local cloud = Kit.ExtraTemplates.CloudBankLayer
+	assert(cloud.Size.X > 3 * cloud.Size.Y and cloud.Size.Z > 2 * cloud.Size.Y and #cloud.Roles == 1 and cloud.Roles[1] == "ALT")
+	-- The hanging chain is long enough to reach from a high span down into the cloud sea.
+	assert(Kit.ExtraTemplates.CliffGroundingChain.Size.Y >= 40)
+end)
+
 test("Floor 31 has its own Blighted Verge kit: at least eight new templates and a 105+ stud Heartrot Spring", function()
 	local f31 = { "HollinWaterMill", "MillWheel", "FieldstoneWeir", "PaleBandTree", "GraftKnotPost", "WardensLeanTo",
 		"SawnStumpCluster", "HeartrotSpringTrunk", "HollinStileArch", "WattleFence", "FieldstoneCairn", "FelledBandLog",
@@ -400,6 +418,11 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[26] ~= nil, "floor 26 (Stormgrass Rise) has its storm-breaking dawn grade")
 	assert(Light.FloorGrades[27] ~= nil, "floor 27 (Thunderhead Outpost) has its gathering thunderhead noon grade")
 	assert(Light.FloorGrades[27].AtmosphereHaze > Light.FloorGrades[26].AtmosphereHaze, "floor 27's haze thickens over floor 26's")
+	assert(Light.FloorGrades[28] ~= nil, "floor 28 (Skybridge Cliffs) has its cloud-sea squall grade")
+	-- The cloud abyss lights the needles from below: the grade's bottom colour shift is brighter than its top's.
+	local g28 = Light.FloorGrades[28]
+	local function lum(c: Color3): number return c.R + c.G + c.B end
+	assert(lum(g28.ColorShift_Bottom) > lum(Light.FloorGrades[27].ColorShift_Bottom), "floor 28's abyss bounce is brighter than floor 27's")
 	assert(Light.FloorGrades[31] ~= nil, "floor 31 (Blighted Verge) has its sickly gold afternoon grade")
 	assert(Light.FloorGrades[31].AtmosphereHaze < Light.BiomeGrades[7].AtmosphereHaze, "floor 31 is the least murky Corrupted floor")
 	assert(Light.FloorGrades[32] ~= nil, "floor 32 (Twisted Orchard) has its overripe rose dusk grade")
@@ -411,7 +434,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[34].AtmosphereDensity >= 0.38 and Light.FloorGrades[34].SunRaysIntensity > 0, "floor 34 keeps canopy gloom and sun-ray shafts")
 	assert(Light.FloorGrades[35] ~= nil, "floor 35 (Sovereign's Grove) has its blight-eclipse grade")
 	assert(Light.FloorGrades[35].BloomIntensity >= 0.58, "floor 35 highlights the Mother Graft cavity with eclipse bloom")
-	assert(Light.TowerPreset(6, 28) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
+	assert(Light.TowerPreset(6, 29) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400

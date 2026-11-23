@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -2271,6 +2271,112 @@ test("Floor 27's terrain is the walking surface: Kairn ground, every terrace flu
 	end
 end)
 
+test("Floor 28 is the hand-authored Skybridge Cliffs: a sea-stack archipelago over a cloud abyss, hung skybridges between", function()
+	local room = Layout.ForFloor(28)
+	assert(room.Authored == "thunder:3" and room.Name == "Skybridge Cliffs" and room.PathStyle == "KAIRN")
+	assert(room.DirectTerrain == true and room.Surface == "KAIRN" and room.Masonry == "SKYBRIDGE")
+	assert(room.Width == 655 and room.Depth == 700 and room.Height == 235 and room.Bottom == -6, "Floor 28 overrides its room size")
+	assert(#room.ReturnLinks == 2, "two return ramps climb out of the cloud abyss")
+	assert(room.Liquid and room.Liquid.Dry == true, "the abyss floor holds no water")
+	assert(same(room, Layout.Get(3, 28)) and not same(room, Layout.Get(3)))
+	assert(#Layout.Validate(room) == 0, "Floor 28's layout has problems: " .. table.concat(Layout.Validate(room), "; "))
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- Three chains climb the archipelago, cross-linked mid-gorge.
+	assert(paths.Basin_WestGallery and paths.Basin_Crossing and paths.Basin_EastGallery)
+	assert(paths.WestGallery_NeedleWest and paths.NeedleWest_SkyAnchorW and paths.SkyAnchorW_Apex, "the western chain")
+	assert(paths.Crossing_CloudSpire and paths.CloudSpire_Apex == "STAIRS", "the central chord ends in the Thunderstep")
+	assert(paths.EastGallery_NeedleEast and paths.NeedleEast_SkyAnchorE and paths.SkyAnchorE_Apex, "the eastern chain")
+	assert(paths.WestGallery_Crossing and paths.EastGallery_Crossing, "the mid-gorge cross-links")
+	-- Two dead-end roosts over the clouds.
+	for _, roost in { "GaleRoost", "FulminiteNeedle" } do
+		local n = 0
+		for _, link in room.Links do
+			if link.From == roost or link.To == roost then n += 1 end
+		end
+		assert(n == 1, roost .. " is a dead end")
+	end
+	-- Every span over the abyss is a hung skybridge: all but the Sanctuary causeway and the summit steps.
+	for _, link in room.Links do
+		local hung = room.Suspended.Links[link.Id] == true
+		local rock = link.Id == "Sanctuary_Basin" or link.Id == "CloudSpire_Apex"
+		assert(hung ~= rock, link.Id .. (if rock then " must stay rock" else " must be a skybridge"))
+	end
+	-- No two neighbouring needles share an axis: each skybridge runs diagonally across the gorge.
+	for _, link in room.Links do
+		if room.Suspended.Links[link.Id] and link.From ~= "Basin" then
+			local a, b = room.Platforms[link.From], room.Platforms[link.To]
+			assert(a.X ~= b.X and a.Z ~= b.Z, link.Id .. " joins needles on one axis")
+		end
+	end
+	local p = room.Platforms
+	for id, t in p do
+		if room.Decks[id] then
+			assert(t.Y % 4 ~= 0, id .. " is a deck on the terrain grid: make it terrain")
+		else
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	assert(p.Basin.Name == "Cloudbreak Ledge" and p.Crossing.Name == "Central Sky-Spire" and p.Apex.Name == "Skybridge Crown")
+	assert(p.GaleRoost.Name == "Gale Roost" and p.FulminiteNeedle.Name == "Fulgurite Needle" and p.CloudSpire.Name == "Thunderstep Crag")
+	local totalMobs, raised = 0, false
+	for _, camp in room.Camps do
+		assert(p[camp.Platform] and room.Platforms[camp.Platform] and not ({ GaleRoost = true, NeedleWest = true, NeedleEast = true,
+			SkyAnchorW = true, SkyAnchorE = true, FulminiteNeedle = true, CloudSpire = true })[camp.Platform], "ExtraPlatforms hold no camps")
+		if camp.Platform ~= "Apex" then totalMobs += camp.Size end
+		if camp.Elite and camp.Y > p.Basin.Y then raised = true end
+	end
+	assert(totalMobs == 25 and room.EliteCount == 3, "Floor 28 keeps 25 live camp mobs and 3 Elites")
+	assert(raised, "an Elite camp stands above the entry level")
+	-- Authored highland patrols replace the generic ones; BASIN_LOOP still sweeps the ledge.
+	local routes = Layout.PatrolRoutes(3, 28)
+	assert(routes.BASIN_LOOP and routes.WEST_SKYLINE and routes.EAST_SKYLINE and routes.CLOUD_SPAN)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil)
+end)
+
+test("Floor 28 climbs the escalation ladder: grander than Floor 27 and every earlier third floor", function()
+	local room = Layout.ForFloor(28)
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 13 and links == 16 and levels == 12, string.format("Floor 28 has %d/%d/%d", terraces, links, levels))
+	for _, earlier in { 3, 8, 13, 18, 23, 27 } do
+		local r = Layout.ForFloor(earlier)
+		local t, l, v = ladderCounts(r)
+		assert(terraces > t and links > l and levels > v, "Floor 28 does not beat floor " .. earlier)
+		assert(room.Platforms.Apex.Y > r.Platforms.Apex.Y, "Floor 28's Crown is not higher than floor " .. earlier .. "'s Apex")
+	end
+	for _, earlier in { 23, 27 } do
+		local r = Layout.ForFloor(earlier)
+		assert(room.Width * room.Depth > r.Width * r.Depth and room.Height > r.Height, "Floor 28's room is not grander than floor " .. earlier .. "'s")
+	end
+	local walk, base = routeLength(room), routeLength(Layout.Get(3))
+	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
+end)
+
+test("Floor 28's terrain is the walking surface: Kairn needles out of a dry abyss, every terrace flush, skybridges hung clear", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(28)
+	local field = Terrain.Field(room, "thunder_highlands", 28)
+	assert(field.Surface == Terrain.Surfaces.KAIRN, "floor 28 uses the Kairn surface")
+	for id, t in room.Platforms do
+		assert(field.Height(t.X, t.Z) <= t.Y + 0.01, id .. " is buried")
+	end
+	for _, link in room.Links do
+		for t = 0, 1, 0.05 do
+			local x, z = link.AX + (link.BX - link.AX) * t, link.AZ + (link.BZ - link.AZ) * t
+			assert(field.Height(x, z) <= link.AY + (link.BY - link.AY) * t + 0.01, link.Id .. " is buried")
+		end
+	end
+	-- Under the middle of every skybridge the gorge falls away to the abyss floor: no land bridge under it.
+	for _, link in room.Links do
+		if room.Suspended.Links[link.Id] then
+			local x, z = (link.AX + link.BX) / 2, (link.AZ + link.BZ) / 2
+			local y = (link.AY + link.BY) / 2
+			assert(field.Height(x, z) < y - 10, string.format("%s has ground %.1f under its middle (deck %.1f)", link.Id, field.Height(x, z), y))
+			assert(field.Kind(x, z) ~= "POOL", link.Id .. " spans water")
+		end
+	end
+end)
+
 test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock never showing through", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
@@ -2303,12 +2409,14 @@ test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock
 	end
 end)
 
-test("Floors 26-27's landmarks stand clear of every walkway, camp and mob slot", function()
+test("Floors 26-28's landmarks stand clear of every walkway, camp and mob slot", function()
 	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
 	local Thunder27 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor27"])
+	local Thunder28 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor28"])
 	assert(#Thunder.Floor26Landmarks >= 12, "Floor 26 needs at least 12 landmarks")
 	assert(#Thunder27.Landmarks >= 14, "Floor 27 needs at least 14 landmarks")
-	for floorId, list in { [26] = Thunder.Floor26Landmarks, [27] = Thunder27.Landmarks } do
+	assert(#Thunder28.Landmarks >= 16, "Floor 28 needs at least 16 landmarks")
+	for floorId, list in { [26] = Thunder.Floor26Landmarks, [27] = Thunder27.Landmarks, [28] = Thunder28.Landmarks } do
 	local room = Layout.ForFloor(floorId)
 	local lanes = Layout.Lanes((floorId - 1) % 5 + 1, floorId)
 	local function nearestDistSq(px: number, pz: number, lm: any): number
@@ -2335,7 +2443,8 @@ test("Floors 26-27's landmarks stand clear of every walkway, camp and mob slot",
 			local ly0 = math.min(lane.AY, lane.BY) - lane.Below
 			local ly1 = math.max(lane.AY, lane.BY) + lane.Above
 			if y1 > ly0 and y0 < ly1 then
-				assert(laneGap(lm, lane) > 0, lm.Id .. " stands on walkway " .. lane.Id)
+				assert(laneGap(lm, lane) > 0, string.format("%s stands on walkway %s ((%.0f, %.0f) to (%.0f, %.0f), half-width %.0f)",
+					lm.Id, lane.Id, lane.AX, lane.AZ, lane.BX, lane.BZ, lane.HalfWidth))
 			end
 		end
 		-- Mirrors TowerBiomeAssets.CampHitTest: nothing centred within 34 studs of a camp, no box within 7 of a
@@ -2353,11 +2462,26 @@ test("Floors 26-27's landmarks stand clear of every walkway, camp and mob slot",
 	if floorId == 26 then
 		-- The tor and its crown totem: the tallest landmark on any first floor, far above the moor.
 		assert(tallest >= 95 + room.Platforms.Apex.Y, string.format("Floor 26's skyline tops out at %.0f", tallest))
-	else
+	elseif floorId == 27 then
 		-- The broch keep: the ladder's 115 studs.
 		local keepTop = 0
 		for _, lm in list do keepTop = math.max(keepTop, lm.Top) end
 		assert(keepTop >= 115, string.format("Floor 27's tallest landmark is %.0f studs", keepTop))
+	else
+		-- The twin crown towers: the ladder's 135 studs. The sea-stacks rise out of open abyss, not off a
+		-- needle's flank, and no landmark stands where a skybridge hangs over the gorge.
+		local crownTop = 0
+		for _, lm in list do
+			if string.find(lm.Id, "CrownTower") then crownTop = math.max(crownTop, lm.Top) end
+		end
+		assert(crownTop >= 135, string.format("Floor 28's crown towers are %.0f studs", crownTop))
+		local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+		local field = Terrain.Field(room, "thunder_highlands", 28)
+		for _, lm in list do
+			if lm.Stack then
+				assert(field.Height(lm.X, lm.Z) < field.Bottom + 3, lm.Id .. " stands on a needle's flank, not in the abyss")
+			end
+		end
 	end
 	end
 end)

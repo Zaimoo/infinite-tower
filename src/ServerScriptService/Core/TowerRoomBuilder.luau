@@ -533,6 +533,9 @@ function Builder.Build(id: number, generation: number): any
 	local kairnTurf = Color3.fromRGB(76, 108, 60)
 	local kairnCopper = Color3.fromRGB(186, 110, 62)
 	local kairnVerdigris = Color3.fromRGB(88, 150, 132)
+	local skyPlank = Color3.fromRGB(112, 90, 66)
+	local skyPlankDark = Color3.fromRGB(74, 58, 44)
+	local skyRope = Color3.fromRGB(148, 126, 92)
 
 	local MASONRY_STYLES: { [string]: { [string]: any } } = {
 		ORGANIC = {
@@ -666,6 +669,21 @@ function Builder.Build(id: number, generation: number): any
 			CurbColor = kairnSlateDark,
 			CurbMaterial = Enum.Material.Slate,
 			CurbMode = "KAIRN_WALL",
+			StairColorA = kairnSlate,
+			StairColorB = kairnSlateDark,
+			StairMatA = Enum.Material.Slate,
+			StairMatB = Enum.Material.Slate,
+			StairNosing = kairnCopper,
+		},
+		-- Floor 28 (Kairnfolk skybridges): the same dry-stone work for the needle caps and summit steps, but every
+		-- chasm span is a rope-and-plank suspension skybridge between twin stone-and-copper pylons.
+		SKYBRIDGE = {
+			DeckKind = "KAIRN_STONE",
+			LandingProxy = true,
+			BridgeKind = "KAIRN_SKYBRIDGE",
+			CurbColor = kairnSlateDark,
+			CurbMaterial = Enum.Material.Slate,
+			CurbMode = "SKYBRIDGE_ROPE",
 			StairColorA = kairnSlate,
 			StairColorB = kairnSlateDark,
 			StairMatA = Enum.Material.Slate,
@@ -1445,7 +1463,8 @@ function Builder.Build(id: number, generation: number): any
 					-- Thunder Highlands dry-stone platforms: a battered slate plinth down into the moor, laid in rough
 					-- courses (each lower course standing a little prouder), a turf lip round the top, flag paving,
 					-- and hammered-copper bands with verdigris caps at the corners.
-					local deepBottom = origin.Y + layout.Bottom - 7
+					-- (Floor 28's skybridge needles: a 10-stud dry-stone cap set into the rock needle under it.)
+					local deepBottom = if layout.Masonry == "SKYBRIDGE" then origin.Y + terrace.Y - 10 else origin.Y + layout.Bottom - 7
 					local fullH = math.max(4, (origin.Y + terrace.Y) - deepBottom)
 					slab.Size = Vector3.new(terrace.Width, fullH, terrace.Depth)
 					slab.Position = Vector3.new(topCenter.X, topCenter.Y - fullH / 2, topCenter.Z)
@@ -1605,7 +1624,7 @@ function Builder.Build(id: number, generation: number): any
 		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
 		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
 		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
-		local isFoundryBridgehead = (layout.Masonry == "FOUNDRY_IRON" or layout.Masonry == "KAIRN_STONE")
+		local isFoundryBridgehead = (layout.Masonry == "FOUNDRY_IRON" or layout.Masonry == "KAIRN_STONE" or layout.Masonry == "SKYBRIDGE")
 			and (isSuspendedLink(layout, id) or isArchitecturalDeck(layout, terraceName))
 			and (not isArchitecturalDeck(layout, terraceName) or landingOutsideTerrace(pad, terraceName))
 		if direct then
@@ -1634,7 +1653,7 @@ function Builder.Build(id: number, generation: number): any
 			-- terrace edge (or lands onto a terrain terrace where voxel ground stops short of the suspended link).
 			-- Keep it solid, visible diamond-plate with a dark-iron underside flange so every bridge joins flush.
 			-- (Kairn causeways: a slate-flagged apron on a dry-stone footing down into the moor.)
-			local kairn = layout.Masonry == "KAIRN_STONE"
+			local kairn = layout.Masonry == "KAIRN_STONE" or layout.Masonry == "SKYBRIDGE"
 			p.Color = if kairn then kairnSlate else sootIron
 			p.Material = if kairn then Enum.Material.Slate else Enum.Material.DiamondPlate
 			p.CanCollide = true
@@ -2080,6 +2099,87 @@ function Builder.Build(id: number, generation: number): any
 					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.12, 3.4), at, if i % 2 == 0 then kairnGranite else kairnSlateDark, Enum.Material.Slate)
 					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.08 + (i % 3) * 0.02, 0) * CFrame.Angles(0, math.rad(((i * 21) % 16) - 8), 0)
 				end
+			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "KAIRN_SKYBRIDGE" then
+				-- Floor 28 Kairnfolk skybridge: a plank deck on two timber stringers, twin dry-stone pylons banded
+				-- in copper at both bridgeheads, braided copper main cables sagging between their heads, and hemp
+				-- hangers down to the hand ropes. The deck itself stays straight (the walking surface); the sag is
+				-- in the cables. Everything but the deck is dressing (no collision).
+				ramp.Color = skyPlank
+				ramp.Material = Enum.Material.WoodPlanks
+				local length = delta.Magnitude
+				local function strand(name: string, p0: Vector3, p1: Vector3, thick: number, col: Color3, mat: Enum.Material)
+					local sp = decor(model, name, Vector3.new(thick, thick, math.max(0.2, (p1 - p0).Magnitude + thick * 0.4)), (p0 + p1) / 2, col, mat)
+					sp.CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+					return sp
+				end
+				-- Cross slats laid across the deck, a few askew, every other one darker.
+				local slats = math.max(3, math.floor(length / 2.3))
+				for i = 1, slats do
+					local at = a:Lerp(b, (i - 0.5) / slats)
+					local slat = decor(model, "RampStepLip", Vector3.new(link.Width - 1.6 - (i % 3) * 0.3, 0.16, 1.5), at, if i % 2 == 0 then skyPlankDark else skyPlank, Enum.Material.Wood)
+					slat.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.07, 0) * CFrame.Angles(0, math.rad(((i * 17) % 7) - 3), 0)
+				end
+				-- Stringers under the deck edges and a copper tension cable down the middle beneath.
+				for _, side in { -1, 1 } do
+					local s0, s1 = a + right * (side * (link.Width / 2 - 1.4)), b + right * (side * (link.Width / 2 - 1.4))
+					local stringer = strand("SkybridgeStringer", s0, s1, 1.1, skyPlankDark, Enum.Material.Wood)
+					stringer.CFrame = stringer.CFrame * CFrame.new(0, -1.6, 0)
+				end
+				strand("SkybridgeUnderCable", a - Vector3.new(0, 2.4, 0), b - Vector3.new(0, 2.4, 0), 0.45, kairnCopper, Enum.Material.Metal)
+				-- The pylons: twin dry-stone turrets at both bridgeheads, outside the deck, copper bands, a verdigris
+				-- cap and a copper finial. Their heads carry the main cables.
+				local pylonH = 19
+				local heads: { [number]: { Vector3 } } = { [-1] = {}, [1] = {} }
+				for endIdx, endPt in { a, b } do
+					local outward = if endIdx == 1 then -flatUnit else flatUnit
+					for _, side in { -1, 1 } do
+						local base = endPt + right * (side * (link.Width / 2 + 2.6)) + outward * 1.2
+						local footY = base.Y - 12
+						local h = pylonH + 12
+						local tower = decor(model, "SkybridgePylon", Vector3.new(4.4, h, 4.4), Vector3.new(base.X, footY + h / 2, base.Z), if side < 0 then kairnSlate else kairnSlateDark, Enum.Material.Slate)
+						tower.CFrame = CFrame.lookAt(tower.Position, tower.Position + flat)
+						for _, bandY in { 3.5, 11, 16.5 } do
+							local band = decor(model, "SkybridgePylonCopperBand", Vector3.new(4.9, 0.6, 4.9), Vector3.new(base.X, base.Y + bandY, base.Z), kairnCopper, Enum.Material.Metal)
+							band.CFrame = CFrame.lookAt(band.Position, band.Position + flat)
+						end
+						local cap = decor(model, "SkybridgePylonCap", Vector3.new(5.2, 1, 5.2), Vector3.new(base.X, base.Y + pylonH + 0.5, base.Z), kairnVerdigris, Enum.Material.Metal)
+						cap.CFrame = CFrame.lookAt(cap.Position, cap.Position + flat)
+						decor(model, "SkybridgePylonFinial", Vector3.new(0.6, 4.2, 0.6), Vector3.new(base.X, base.Y + pylonH + 3.1, base.Z), kairnCopper, Enum.Material.Metal)
+						local saddle = decor(model, "SkybridgePylonSaddle", Vector3.new(1.4, 1.2, 2.6), Vector3.new(base.X, base.Y + pylonH - 0.8, base.Z), kairnCopper, Enum.Material.Metal)
+						saddle.CFrame = CFrame.lookAt(saddle.Position, saddle.Position + flat)
+						heads[side][endIdx] = Vector3.new(base.X, base.Y + pylonH - 0.6, base.Z) - outward * 1.2 - right * (side * 0.6)
+					end
+				end
+				-- Main cables: braided copper, sagging from head to head to just over the hand ropes at mid-span;
+				-- hemp hangers drop from them every few studs to the top rope.
+				for _, side in { -1, 1 } do
+					local h0, h1 = heads[side][1], heads[side][2]
+					local railOffset = right * (side * (link.Width / 2 - 0.6))
+					local segs = math.clamp(math.floor(length / 7), 6, 16)
+					local function cableAt(t: number): Vector3
+						local onDeck = a:Lerp(b, t) + railOffset
+						local headLine = h0:Lerp(h1, t)
+						-- Sags to 4.4 studs over the deck at mid-span, drawing in over the hand rope as it falls.
+						local bow = 4 * t * (1 - t)
+						local y = headLine.Y - (headLine.Y - onDeck.Y - 4.4) * bow
+						return Vector3.new(headLine.X + (onDeck.X - headLine.X) * bow, y, headLine.Z + (onDeck.Z - headLine.Z) * bow)
+					end
+					local prev = cableAt(0)
+					for i = 1, segs do
+						local pt = cableAt(i / segs)
+						strand("SkybridgeMainCable", prev, pt, 0.55, kairnCopper, Enum.Material.Metal)
+						prev = pt
+					end
+					local hangers = math.max(1, math.floor(length / 4.6) - 1)
+					for k = 1, hangers do
+						local t = k / (hangers + 1)
+						local top = cableAt(t)
+						local foot = a:Lerp(b, t) + railOffset + Vector3.new(0, 3.5, 0)
+						if top.Y - foot.Y > 0.6 then
+							strand("SkybridgeHanger", top, foot, 0.18, skyRope, Enum.Material.Fabric)
+						end
+					end
+				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "FOUNDRY_GIRDER" then
 				-- Floor 21 Sootwright girder spur: a diamond-plate deck on two lattice side girders, rails and
 				-- sleepers down its spine, and iron trestles (solid) braced down to the yard.
@@ -2459,6 +2559,26 @@ function Builder.Build(id: number, generation: number): any
 							local pt = a:Lerp(b, pIdx / (posts + 1)) + curbOffset
 							local post = decor(curbGroup, "BridgeRailPost", Vector3.new(1.1, 3.6, 1.1), pt, bridgeWood, Enum.Material.Wood)
 							post.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.65, 0)
+						end
+					elseif curbMode == "SKYBRIDGE_ROPE" then
+						-- A skybridge's side: an unseen collider for the railing, a timber kickboard along the deck edge,
+						-- hemp hand ropes on timber posts.
+						curb.Size = Vector3.new(1.2, 3.8, curbLen)
+						curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.0, 0)
+						curb.Transparency = 1
+						local ropeOffset = right * (side * (link.Width / 2 - 0.6))
+						local kick = decor(curbGroup, "SkybridgeKickboard", Vector3.new(0.5, 0.8, math.max(1, delta.Magnitude - 1)), mid + ropeOffset, skyPlankDark, Enum.Material.Wood)
+						kick.CFrame = CFrame.lookAt(mid + ropeOffset, b + ropeOffset) * CFrame.new(0, 0.4, 0)
+						for _, h in { 1.9, 3.5 } do
+							local r0, r1 = a + ropeOffset + Vector3.new(0, h, 0), b + ropeOffset + Vector3.new(0, h, 0)
+							local railPart = decor(curbGroup, "BridgeRopeRail", Vector3.new(0.32, 0.32, (r1 - r0).Magnitude), (r0 + r1) / 2, skyRope, Enum.Material.Fabric)
+							railPart.CFrame = CFrame.lookAt((r0 + r1) / 2, r1)
+						end
+						local posts = math.max(2, math.floor(delta.Magnitude / 9.2) + 1)
+						for pIdx = 0, posts - 1 do
+							local at = a:Lerp(b, 0.01 + 0.98 * pIdx / (posts - 1)) + ropeOffset
+							local post = decor(curbGroup, "BridgeRopePost", Vector3.new(0.6, 3.9, 0.6), at + Vector3.new(0, 1.8, 0), skyPlankDark, Enum.Material.Wood)
+							post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
 						end
 					elseif curbMode == "KAIRN_WALL" then
 						-- A coped dry-stone parapet: a low coursed wall, through-stones standing proud every few

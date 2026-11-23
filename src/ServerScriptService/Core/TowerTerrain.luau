@@ -258,8 +258,16 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	-- blasted into it.
 	local headwalls = {}
 	local scars = {}
+	-- Sea-stack aprons (SEA_STACK_APRON, Floor 28): every terrace and walkway's ground falls away Steep times
+	-- faster than a normal apron, so the terraces stand as sheer needles out of the abyss, and the abyss floor
+	-- is bare dark slate (under the cloud sea) instead of turf.
+	local stackSteep = 1
+	local abyssSlate = false
 	for _, feat in features or {} do
-		if feat.Kind == "SLAG_TIP" then
+		if feat.Kind == "SEA_STACK_APRON" then
+			stackSteep = feat.Steep or 3
+			abyssSlate = true
+		elseif feat.Kind == "SLAG_TIP" then
 			local yaw = math.rad(feat.Yaw or 0)
 			table.insert(slagTips, { X = feat.X, Z = feat.Z, Top = feat.Top, Length = feat.Length, DX = math.sin(yaw), DZ = math.cos(yaw),
 				Half = feat.HalfWidth or 18, Spread = feat.Spread or 24 })
@@ -724,9 +732,9 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				local rim = r.Y - rimD
 				surface = math.max(surface, r.Y)
 				cap = math.min(cap, if dist == 0 then r.Y - underD else rim - APRON * warpDist)
-				local steep = if directGrass
+				local steep = stackSteep * (if directGrass
 					then APRON * (0.72 + 0.45 * (0.5 + 0.5 * fbm(x / 16, z / 16, seed + 31, 2)))
-					else APRON + 1.2 * (0.5 + 0.5 * fbm(x / 18, z / 18, seed + 31, 2))
+					else APRON + 1.2 * (0.5 + 0.5 * fbm(x / 18, z / 18, seed + 31, 2)))
 				raise = math.max(raise, rim - steep * warpDist)
 			end
 		end
@@ -755,9 +763,9 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				nearest = math.min(nearest, beyond)
 				surface = math.max(surface, stripY)
 				cap = math.min(cap, deck - APRON * warpBeyond)
-				local sideSlope = if directGrass
+				local sideSlope = stackSteep * (if directGrass
 					then APRON * (0.68 + 0.45 * (0.5 + 0.5 * fbm(x / 15, z / 15, seed + 37, 2)))
-					else APRON + 0.8
+					else APRON + 0.8)
 				raise = math.max(raise, deck - sideSlope * warpBeyond)
 				if beyond == 0 then
 					kind = "BRIDGE"
@@ -952,8 +960,12 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		Palette = palette,
 		Surface = surface,
 		-- Authored feature materials: slag tips, glowing pour-pit rims, and volcanic lava-fall chutes.
-		Accent = if #slagTips > 0 or #pourPits > 0 or #lavaFalls > 0 or #headwalls > 0 or #scars > 0
+		Accent = if #slagTips > 0 or #pourPits > 0 or #lavaFalls > 0 or #headwalls > 0 or #scars > 0 or abyssSlate
 			then function(x: number, z: number): Enum.Material?
+				if abyssSlate and height(x, z) < bottom + 1.5 then
+					-- The abyss floor: bare wet slate and rock rubble under the cloud sea.
+					return if math.noise(x / 13, z / 13, seed + 197) > 0.1 then M.Slate else M.Rock
+				end
 				for _, sc in scars do
 					local dx, dz = x - sc.X, z - sc.Z
 					local r = math.sqrt(dx * dx + dz * dz) / sc.R

@@ -2,6 +2,13 @@
 
 Copy everything below the line into a Claude Code session opened at the repo root.
 
+> **Status (2026-11-23, Floor 28):** Floor 28 (Skybridge Cliffs) is built on `feat/thunder-highlands-floor-28` (on top of Floor 27), from the plan and the guide image `reference/Thunder Highlands 28.jpg`. What changed in the build:
+> - **From the image:** plank-decked suspension skybridges on twin copper-banded dry-stone pylons with sagging copper main cables and hemp hangers (a new `SKYBRIDGE` masonry in `TowerRoomBuilder`), granite needles out of a cloud sea, the twin crown towers with lightning arcing between their heads, the A-frame supply windlass on the ledge, prayer pennants, cairns, bonsai pines, a snapped rope bridge, copper cables trailing down the needles and a violet-struck fulgurite needle.
+> - **Sheer needles:** with plain aprons the terraces stood as broad grassy mesas on a green abyss floor. The new `SEA_STACK_APRON` terrain feature makes their sides fall 3.4 times as steeply and paints the abyss floor bare slate.
+> - **The abyss stays shallow (`Bottom = -6`):** the return ramps can't climb more than 15°, so the cloud sea does the work, in two layers kept 4+ studs under every walkway.
+> - **No generic citadel wings** behind the Crown (their arches and waterfalls clashed with the crown towers); the rock shelf behind it stays.
+> - Lights 19, emitters 11, 553 props, 520 ground cover, 16 landmarks, 214 cloud banks; clearance removed 7 small pieces for lanes and none for camps (Studio Edit-mode build, kit fallbacks); 29/29 spawns, 32/32 link walks (16 links both ways), both portals and both return ramps grounded.
+>
 > **Status (2026-11-22, Floor 27):** Floor 27 (Thunderhead Outpost) is built on `feat/thunder-highlands-floor-27` (on top of Floor 26), from the plan and the guide image `reference/Thunder Highlands 27.jpg`. What changed in the build:
 > - **From the image:** dry-stone rampart rings banded with verdigris copper wall the terraces (gapped at every path), the palisade of copper-tipped stakes with watch-bell gallows at the gates, the stepped broch keep with its turf crown, copper cage lantern and twin forked spires, curved timber-and-copper wind-harps, the Signal Broch's smoking beacons, braided copper cables slung across the fort, the forge with its copper hood and wire reels, and the ram pens with their chute.
 > - **The gate-arch spans the arrival causeway** rather than crowning the inner ramparts: their landings cross the small terraces diagonally, leaving no 50-stud span clear of every lane, and the image's stone gateway is at the entrance anyway.
@@ -322,6 +329,10 @@ Coordinates are **local floor space**, as in `TowerLayout`: +X is east, **+Z is 
 *655 × 700 × 235, `Bottom = -6` (deep cloud-filled alpine gorge). Cloud-sea squall afternoon.*
 
 **Story beat:** the mountain fractures into freestanding slate sea-stacks and crag needles above a churning sea of storm clouds, spanned only by Kairnfolk rope-and-copper suspension skybridges.
+
+**Guide image (`reference/Thunder Highlands 28.jpg`):**
+- *Taken:* grey granite needles rising sheer out of a sea of cloud, with tufted turf, wind-bent pines and cairns on their tops. Plank-decked suspension bridges hang on twin dry-stone pylons at every bridgehead, with copper-orange main cables, hemp hangers and copper cables trailing down the needle faces. Two copper-banded crown towers stand on the far summit with a lightning arc between their heads. Also from the image: a cliff-cut stair climbing the last rock, a timber A-frame windlass with a cable drum on the near ledge, prayer-flag lines, a snapped rope bridge hanging off a needle into the mist, and a needle struck by violet lightning.
+- *Left out:* the image's single tall hanging ladder and its slack, sagging decks. Every walkway stays a straight, firm span within 15°, and the sag lives only in the cables.
 
 **Shape: staggered sky-pinnacle archipelago over a deep cloud abyss.** Every terrace past `Basin` (Cloudbreak Ledge, Y 0) is an isolated rock needle or cliff stack piercing the cloud floor (`Bottom = -6`) at staggered X, Z and Y coordinates — **no two adjacent pinnacles share an axis**. Three distinct skybridge chains cross the abyss: a sweeping western pinnacle chain (`WestGallery` Y 8 → `NeedleWest` Y 16 → `SkyAnchorW` Y 28 → `Apex` Y 40), a high central sky-spire chord (`Basin` → `Crossing` Y 20 → `CloudSpire` Y 36 → `Apex` STAIRS), and a steeper eastern spire chain (`EastGallery` Y 12 → `NeedleEast` Y 24 → `SkyAnchorE` Y 30 → `Apex`), cross-linked at mid-gorge (`WestGallery→Crossing` and `EastGallery→Crossing`) with two precarious dead-end roosts (`GaleRoost` Y 14 and `FulminiteNeedle` Y 34) jutting over the clouds. **New to the tower:** a cloud-abyss pinnacle archipelago of freestanding rock needles joined by swaying-look rope-and-copper suspension skybridges (`SKYBRIDGE` masonry).
 

@@ -1,0 +1,256 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AnemometerMast": {
+      "Min": [
+        -4.463,
+        -0.2,
+        -3.9
+      ],
+      "Roles": {
+        "ACCENT": 344,
+        "METAL": 116,
+        "STONE": 120,
+        "TRIM": 36,
+        "WOOD": 192
+      },
+      "Size": [
+        8.363,
+        22.69,
+        7.8
+      ],
+      "Triangles": 808
+    },
+    "CableWinchCapstan": {
+      "Min": [
+        -5.575,
+        0.0,
+        -5.1
+      ],
+      "Roles": {
+        "ACCENT": 288,
+        "METAL": 1336,
+        "STONE": 80,
+        "TRIM": 76,
+        "WOOD": 208
+      },
+      "Size": [
+        11.15,
+        8.435,
+        15.3
+      ],
+      "Triangles": 1988
+    },
+    "CliffGroundingChain": {
+      "Min": [
+        -1.7,
+        -0.6,
+        -1.0
+      ],
+      "Roles": {
+        "ACCENT": 40,
+        "METAL": 2200,
+        "TRIM": 92
+      },
+      "Size": [
+        3.948,
+        43.7,
+        2.0
+      ],
+      "Triangles": 2332
+    },
+    "CloudBankLayer": {
+      "Min": [
+        -30.488,
+        -2.401,
+        -20.537
+      ],
+      "Roles": {
+        "ALT": 2600
+      },
+      "Size": [
+        63.022,
+        14.118,
+        41.384
+      ],
+      "Triangles": 2600
+    },
+    "CrownAnchorTower": {
+      "Min": [
+        -7.341,
+        -0.459,
+        -6.952
+      ],
+      "Roles": {
+        "ACCENT": 72,
+        "GLOW": 188,
+        "METAL": 348,
+        "MOSS": 112,
+        "STONE": 9000,
+        "TRIM": 72
+      },
+      "Size": [
+        30.892,
+        72.492,
+        13.996
+      ],
+      "Triangles": 9792
+    },
+    "FulguriteSpireTall": {
+      "Min": [
+        -7.464,
+        -0.4,
+        -6.902
+      ],
+      "Roles": {
+        "CRYSTAL": 670,
+        "GLOW": 290,
+        "STONE": 120,
+        "TRIM": 12
+      },
+      "Size": [
+        14.094,
+        41.442,
+        13.022
+      ],
+      "Triangles": 1092
+    },
+    "SeaStackSpire": {
+      "Min": [
+        -9.561,
+        -1.887,
+        -9.45
+      ],
+      "Roles": {
+        "FOLIAGE": 60,
+        "MOSS": 20,
+        "STONE": 564,
+        "WOOD": 34
+      },
+      "Size": [
+        19.504,
+        73.889,
+        18.909
+      ],
+      "Triangles": 678
+    },
+    "ShedRocFeather": {
+      "Min": [
+        -8.047,
+        0.227,
+        -4.041
+      ],
+      "Roles": {
+        "ALT": 336,
+        "GLOW": 12,
+        "TRIM": 106
+      },
+      "Size": [
+        16.094,
+        1.59,
+        8.082
+      ],
+      "Triangles": 454
+    },
+    "SkybridgeWaystone": {
+      "Min": [
+        -1.47,
+        -0.3,
+        -1.247
+      ],
+      "Roles": {
+        "CRYSTAL": 44,
+        "GLOW": 80,
+        "METAL": 112,
+        "MOSS": 20,
+        "STONE": 44
+      },
+      "Size": [
+        3.919,
+        9.3,
+        3.267
+      ],
+      "Triangles": 300
+    },
+    "SnappedBridgeStub": {
+      "Min": [
+        -8.597,
+        -0.02,
+        -7.0
+      ],
+      "Roles": {
+        "ACCENT": 24,
+        "METAL": 164,
+        "STONE": 2400,
+        "TRIM": 120,
+        "WOOD": 156
+      },
+      "Size": [
+        17.085,
+        34.92,
+        20.17
+      ],
+      "Triangles": 2864
+    },
+    "SquallHornPerch": {
+      "Min": [
+        -4.73,
+        -0.2,
+        -2.5
+      ],
+      "Roles": {
+        "ACCENT": 224,
+        "ALT": 12,
+        "METAL": 128,
+        "STONE": 120,
+        "WOOD": 52
+      },
+      "Size": [
+        9.461,
+        20.2,
+        7.441
+      ],
+      "Triangles": 536
+    },
+    "SupplyHoistWindlass": {
+      "Min": [
+        -5.072,
+        -0.274,
+        -9.459
+      ],
+      "Roles": {
+        "ALT": 12,
+        "METAL": 404,
+        "STONE": 80,
+        "TRIM": 60,
+        "WOOD": 136
+      },
+      "Size": [
+        10.672,
+        16.874,
+        19.159
+      ],
+      "Triangles": 692
+    },
+    "TalonNestPlatform": {
+      "Min": [
+        -11.253,
+        -0.4,
+        -12.504
+      ],
+      "Roles": {
+        "ALT": 60,
+        "STONE": 152,
+        "TRIM": 120,
+        "WOOD": 576
+      },
+      "Size": [
+        23.724,
+        5.912,
+        24.693
+      ],
+      "Triangles": 908
+    }
+  },
+  "Unit": "studs"
+}
