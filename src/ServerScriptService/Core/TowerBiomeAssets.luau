@@ -26,13 +26,14 @@ local SunkenSetPieces = require(script.Parent.TowerSetPieces.SunkenSanctuary)
 local SunkenFloor37 = require(script.Parent.TowerSetPieces.SunkenFloor37)
 local SunkenFloor38 = require(script.Parent.TowerSetPieces.SunkenFloor38)
 local SunkenFloor39 = require(script.Parent.TowerSetPieces.SunkenFloor39)
+local SunkenFloor40 = require(script.Parent.TowerSetPieces.SunkenFloor40)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
-local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true }
+local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, LeviathanDaisMosaic = true, MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true }
 
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
@@ -85,6 +86,8 @@ Assets.AirborneKinds = table.freeze({
 	OrchardGateLantern = true, YardLantern = true, VatsLantern = true,
 	-- Floor 33's Hedge Stile arrival lantern & Floor 34's Bog Stair arrival lantern.
 	HedgeStileLantern = true, BogStairLantern = true,
+	-- Floor 40's animated whirlpool layers, overhead Sea-Dome & Eye of Daylight (TowerSetPieces/SunkenFloor40).
+	MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, LeviathanDaisMosaic = true,
 })
 
 -- field: the floor's TowerTerrain field on a natural floor (the kit imported), else nil.
@@ -6503,6 +6506,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "sunken:2" then SunkenFloor37.Build
 		elseif layout.Authored == "sunken:3" then SunkenFloor38.Build
 		elseif layout.Authored == "sunken:4" then SunkenFloor39.Build
+		elseif layout.Authored == "sunken:5" then SunkenFloor40.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({

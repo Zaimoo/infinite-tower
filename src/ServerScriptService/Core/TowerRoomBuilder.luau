@@ -258,7 +258,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, NerethBellArch = true, CloisterFloorMosaic = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, NerethBellArch = true, CloisterFloorMosaic = true, LeviathanDaisMosaic = true, MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -1952,6 +1952,38 @@ function Builder.Build(id: number, generation: number): any
 						end
 					end
 				end
+			elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "CHAIN" then
+				-- Floor 40's Chain Stairs: suspended weathered limestone stair-bridges slung from heavy dark-bronze
+				-- binding chains & underside cross-bearers over the maelstrom (non-collidable dressing under solid treads).
+				local length = delta.Magnitude
+				local deepStone = Color3.fromRGB(76, 86, 88)
+				local chainBronze = Color3.fromRGB(64, 58, 48)
+				local chainGold = Color3.fromRGB(168, 146, 94)
+				local under = decor(model, "ChainBridgeUnderside", Vector3.new(link.Width - 1.4, 2.2, math.max(1, length - 0.5)), mid, deepStone, Enum.Material.Limestone)
+				under.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.7, 0)
+				local ribs = math.max(4, math.floor(length / 10))
+				for i = 0, ribs do
+					local at = a:Lerp(b, i / ribs)
+					local bearer = decor(model, "ChainBridgeBearer", Vector3.new(link.Width + 2.4, 1.4, 1.8), at - Vector3.new(0, 3.3, 0), chainBronze, Enum.Material.Metal)
+					bearer.CFrame = CFrame.lookAt(bearer.Position, bearer.Position + flat)
+				end
+				-- Twin lower stabilizing belly-chains curving gently beneath the stone stringer
+				for _, bSide in { -1, 1 } do
+					local bOff = right * (bSide * (link.Width / 2 - 2.2))
+					local segs = 10
+					local sag = math.min(7.5, length * 0.11)
+					for k = 1, segs do
+						local t0, t1 = (k - 1) / segs, k / segs
+						local p0 = a:Lerp(b, t0) + bOff - Vector3.new(0, 3.6 + math.sin(t0 * math.pi) * sag, 0)
+						local p1 = a:Lerp(b, t1) + bOff - Vector3.new(0, 3.6 + math.sin(t1 * math.pi) * sag, 0)
+						local seg = decor(model, "ChainBellyLink", Vector3.new(0.85, 0.85, (p1 - p0).Magnitude + 0.35), (p0 + p1) / 2, chainBronze, Enum.Material.Metal)
+						seg.CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+						if k % 2 == 0 then
+							local boss = decor(model, "ChainBellyRing", Vector3.new(1.4, 1.4, 1.4), p1, chainGold, Enum.Material.Metal)
+							boss.CFrame = CFrame.lookAt(p1, p1 + flat) * CFrame.Angles(0, 0, math.rad(45))
+						end
+					end
+				end
 			end
 		else
 			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
@@ -2879,6 +2911,54 @@ function Builder.Build(id: number, generation: number): any
 							local ember = decor(curbGroup, "WallWalkAquaFlame", Vector3.new(1.4, 1.4, 1.4), at + Vector3.new(0, 7.6, 0), deepAqua, Enum.Material.Neon)
 							ember.Shape = Enum.PartType.Ball
 						end
+					end
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "CHAIN" then
+					-- Floor 40's Chain Stairs: sweeping heavy bronze suspension chains hung from carved stone anchor piers
+					-- strictly outside UsableWidth (never overhanging the dais arena) with vertical chain hangers and aqua finials.
+					local chainOff = right * (side * (link.Width / 2 + 0.55))
+					local chainBronze = Color3.fromRGB(58, 54, 46)
+					local chainGold = Color3.fromRGB(168, 146, 94)
+					local pierStone = Color3.fromRGB(98, 110, 108)
+					local aquaFlame = Color3.fromRGB(96, 236, 255)
+					-- Anchor gate-piers at the lower (Anchor) and upper (Dais rim) bridge ends
+					for endIdx, endPt in { a, b } do
+						local pierBase = endPt + chainOff
+						local pierH = if endIdx == 1 then 10.5 else 9.0
+						local pier = decor(curbGroup, "ChainStairPier", Vector3.new(2.8, pierH, 2.8), pierBase + Vector3.new(0, pierH / 2 - 1.5, 0), pierStone, Enum.Material.Limestone)
+						pier.CFrame = CFrame.lookAt(pier.Position, pier.Position + flat)
+						local cap = decor(curbGroup, "ChainStairPierCap", Vector3.new(3.4, 1.2, 3.4), pierBase + Vector3.new(0, pierH - 1.2, 0), chainBronze, Enum.Material.Metal)
+						cap.CFrame = CFrame.lookAt(cap.Position, cap.Position + flat)
+						local flame = decor(curbGroup, "ChainStairFinial", Vector3.new(1.6, 2.2, 1.6), pierBase + Vector3.new(0, pierH + 0.4, 0), aquaFlame, Enum.Material.Neon)
+						flame.Shape = Enum.PartType.Ball
+					end
+					-- Main heavy sagging catenary suspension chain + lower handrail chain + vertical hanger rods
+					local segs = 12
+					local sag = math.min(7.5, delta.Magnitude * 0.13)
+					local topA = a + chainOff + Vector3.new(0, 8.6, 0)
+					local topB = b + chainOff + Vector3.new(0, 7.2, 0)
+					for k = 1, segs do
+						local t0, t1 = (k - 1) / segs, k / segs
+						local q0 = topA:Lerp(topB, t0) - Vector3.new(0, math.sin(t0 * math.pi) * sag, 0)
+						local q1 = topA:Lerp(topB, t1) - Vector3.new(0, math.sin(t1 * math.pi) * sag, 0)
+						local segLen = (q1 - q0).Magnitude
+						local mainChain = decor(curbGroup, "ChainStairMainLink", Vector3.new(0.95, 1.25, segLen + 0.3), (q0 + q1) / 2, chainBronze, Enum.Material.Metal)
+						mainChain.CFrame = CFrame.lookAt((q0 + q1) / 2, q1)
+						-- Alternating bronze shackle ring & vertical chain hanger down to the stair edge
+						if k < segs then
+							local ring = decor(curbGroup, "ChainStairRing", Vector3.new(1.5, 1.5, 1.5), q1, chainGold, Enum.Material.Metal)
+							ring.CFrame = CFrame.lookAt(q1, q1 + flat) * CFrame.Angles(0, 0, math.rad(45))
+							local deckPt = a:Lerp(b, t1) + chainOff - Vector3.new(0, 0.8, 0)
+							local hLen = q1.Y - deckPt.Y
+							if hLen > 0.6 then
+								local hanger = decor(curbGroup, "ChainStairHanger", Vector3.new(0.45, hLen, 0.45), Vector3.new(q1.X, deckPt.Y + hLen / 2, q1.Z), chainBronze, Enum.Material.Metal)
+								hanger.CFrame = CFrame.lookAt(hanger.Position, hanger.Position + flat)
+							end
+						end
+						-- Lower safety handrail chain along stair slope
+						local r0 = a:Lerp(b, t0) + chainOff + Vector3.new(0, 3.0 - math.sin(t0 * math.pi) * 0.9, 0)
+						local r1 = a:Lerp(b, t1) + chainOff + Vector3.new(0, 3.0 - math.sin(t1 * math.pi) * 0.9, 0)
+						local hand = decor(curbGroup, "ChainStairHandLink", Vector3.new(0.48, 0.48, (r1 - r0).Magnitude + 0.2), (r0 + r1) / 2, chainBronze, Enum.Material.Metal)
+						hand.CFrame = CFrame.lookAt((r0 + r1) / 2, r1)
 					end
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).

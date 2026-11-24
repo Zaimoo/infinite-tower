@@ -490,7 +490,9 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[38].AtmosphereHaze >= 0.8 and Light.FloorGrades[38].BloomIntensity >= 0.45, "floor 38 keeps storm haze and glowing rune bloom")
 	assert(Light.FloorGrades[39] ~= nil, "floor 39 (Pearlguard Vault) has its deep blue twilight grade")
 	assert(Light.FloorGrades[39].AtmosphereHaze >= 0.9 and Light.FloorGrades[39].BloomIntensity >= 0.48, "floor 39 keeps twilight haze and pearl-vault bloom")
-	assert(Light.TowerPreset(8, 40) == Light.TowerPreset(8), "a floor without its own grade shares its biome's")
+	assert(Light.FloorGrades[40] ~= nil, "floor 40 (Leviathan's Basin) has its storm-eye under-the-sea grade")
+	assert(Light.FloorGrades[40].AtmosphereHaze >= 1.2 and Light.FloorGrades[40].BloomIntensity >= 0.55, "floor 40 keeps sea-dome haze and maelstrom/rune bloom")
+	assert(Light.TowerPreset(9, 41) == Light.TowerPreset(9), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400
@@ -560,6 +562,23 @@ test("Floor 39 has its own Pearlguard Vault kit: at least twelve new templates a
 	end
 	assert(#f39 >= 12)
 	assert(Kit.ExtraTemplates.PearlVaultDome.Size.Y >= 195, "PearlVaultDome must clear the ladder's 195 studs")
+end)
+
+test("Floor 40 has its own Leviathan's Basin kit: at least thirteen new templates and a 265+ stud Great Tidebell Tower", function()
+	local f40 = {
+		"GreatTidebellTower", "SeaDomeArchRib", "MaelstromSwirlRing", "ChainAnchorBollard", "ChainTowerRound",
+		"DrownedAltar", "CantorPulpit", "AbyssReliquaryShrine", "BellBargeWreck", "BrokenTideStatue",
+		"CrackedTidebell", "ReefCoralTable", "KelpForestTall", "BubbleVentCluster", "DaisBrazierPedestal",
+	}
+	for _, name in f40 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 40 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		local sink = if name == "BellBargeWreck" or name == "MaelstromSwirlRing" then -2 else -1
+		assert(t.Min.Y > sink and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f40 >= 13)
+	assert(Kit.ExtraTemplates.GreatTidebellTower.Size.Y >= 265, "GreatTidebellTower must clear the ladder's 265 studs")
 end)
 
 print(string.format("tower-biome-kit: %d passed", passed))
