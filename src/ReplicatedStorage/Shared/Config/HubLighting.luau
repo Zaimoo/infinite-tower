@@ -513,11 +513,11 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.20, AtmosphereColor = c(112, 118, 176), AtmosphereDecay = c(68, 66, 124), AtmosphereHaze = 0.45,
 		TintColor = c(255, 246, 230), Saturation = 0.12, Contrast = 0.08, ExposureCompensation = 0.14, BloomIntensity = 0.48,
 	},
-	-- Floor 43, Fractured Index: split violet-teal aurora, crisp cool key on the plates so camps and architecture read.
+	-- Floor 43, Fractured Index: split violet-teal aurora, crisp moonlit slate key on the plates & warm golden lamps.
 	[43] = {
-		Ambient = c(84, 92, 134), OutdoorAmbient = c(128, 138, 182), ColorShift_Top = c(192, 214, 255), ColorShift_Bottom = c(92, 74, 138),
-		AtmosphereDensity = 0.30, AtmosphereColor = c(92, 106, 168), AtmosphereDecay = c(68, 54, 124), AtmosphereHaze = 0.95,
-		TintColor = c(238, 244, 255), Saturation = 0.04, Contrast = 0.10, ExposureCompensation = 0.14, BloomIntensity = 0.48,
+		Ambient = c(104, 110, 148), OutdoorAmbient = c(156, 162, 198), ColorShift_Top = c(222, 228, 255), ColorShift_Bottom = c(128, 86, 182),
+		AtmosphereDensity = 0.18, AtmosphereColor = c(96, 102, 164), AtmosphereDecay = c(64, 52, 122), AtmosphereHaze = 0.36,
+		TintColor = c(242, 246, 255), Saturation = 0.14, Contrast = 0.08, ExposureCompensation = 0.16, BloomIntensity = 0.50,
 	},
 	-- Floor 44, Runeguard Athenaeum: sealed indigo dusk, legible slate fortress with warm pools under the Waygates.
 	[44] = {

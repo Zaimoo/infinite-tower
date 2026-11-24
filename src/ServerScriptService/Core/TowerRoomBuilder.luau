@@ -1901,10 +1901,12 @@ function Builder.Build(id: number, generation: number): any
 				local baseTreadW = if rootStair then link.Width * (0.84 + 0.14 * math.sin(step * 1.15)) else link.Width
 				local treadW = baseTreadW - (step % 2) * 0.08
 				local halcyrMarbleStair = halcyr and (layout.Authored == "astral:1" or layout.Authored == "astral:2")
-				local halcyrGlassStair = halcyr and not halcyrMarbleStair and hungLinks[link.Id] and bridgeStyles[link.Id] == "STARGLASS"
+				local halcyrRiftStair = halcyr and layout.Authored == "astral:3"
+				local halcyrGlassStair = halcyr and not halcyrMarbleStair and not halcyrRiftStair and hungLinks[link.Id] and bridgeStyles[link.Id] == "STARGLASS"
 				local treadCol = if velmari then (if step % 2 == 0 then slateIndigo else slateDark)
 					elseif hollin then (if step % 2 == 0 then fieldstone else fieldstoneDark)
 					elseif halcyrMarbleStair then (if step % 2 == 0 then Color3.fromRGB(234, 228, 216) else Color3.fromRGB(220, 214, 200))
+					elseif halcyrRiftStair then (if step % 2 == 0 then Color3.fromRGB(122, 128, 144) else Color3.fromRGB(106, 112, 128))
 					elseif halcyrGlassStair then (if step % 2 == 0 then halcyrGlass else halcyrLapis)
 					elseif halcyr then (if step % 2 == 0 then halcyrVellum else halcyrVellumDark)
 					elseif masonryStyle and masonryStyle.StairColorA
@@ -1912,7 +1914,7 @@ function Builder.Build(id: number, generation: number): any
 					elseif pathStyle
 					then (if step % 2 == 0 then pathStyle.StairColorA else pathStyle.StairColorB)
 					else theme.TrimColor
-				local treadMat = if velmari or hollin then Enum.Material.Slate
+				local treadMat = if velmari or hollin or halcyrRiftStair then Enum.Material.Slate
 					elseif halcyrMarbleStair then Enum.Material.Marble
 					elseif halcyrGlassStair then (if step % 2 == 0 then Enum.Material.Glass else Enum.Material.Marble)
 					elseif halcyr then Enum.Material.Limestone
@@ -2071,19 +2073,25 @@ function Builder.Build(id: number, generation: number): any
 						rib.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, -1.25, 0)
 					end
 				elseif bStyle == "SHARD" then
-					-- Cracked floor-slab shard span (Astral 43): dark slate with vellum limestone stepping slabs
-					-- and broken-edge brass ties underneath.
-					ramp.Color = halcyrSlate
+					-- Cracked floor-slab shard span (Astral 43): legible weathered grey-slate stone deck with
+					-- lighter cracked flagstones, dark fractured cliff-beam underside and antique brass ties.
+					local shardDeckCol = Color3.fromRGB(96, 102, 120)
+					local shardFlagA = Color3.fromRGB(126, 132, 148)
+					local shardFlagB = Color3.fromRGB(108, 114, 132)
+					local shardUnderCol = Color3.fromRGB(56, 62, 80)
+					ramp.Color = shardDeckCol
 					ramp.Material = Enum.Material.Slate
-					local slabs = math.max(2, math.floor((length - 2) / 5.5))
+					local slabs = math.max(3, math.floor((length - 2) / 4.8))
 					for i = 1, slabs do
 						local at = a:Lerp(b, (i - 0.5) / slabs)
-						local stagger = if i % 2 == 0 then 0.9 else -0.9
-						local slab = decor(model, "ShardSpanSlab", Vector3.new(link.Width - 2.6, 0.28, 3.6), at + right * stagger, if i % 2 == 0 then halcyrVellumDark else halcyrSlate, if i % 2 == 0 then Enum.Material.Limestone else Enum.Material.Slate)
-						slab.CFrame = CFrame.lookAt(at + right * stagger, at + right * stagger + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(if i % 2 == 0 then 3 else -3), 0)
+						local stagger = if i % 2 == 0 then 0.7 else -0.7
+						local slab = decor(model, "ShardSpanSlab", Vector3.new(link.Width - 2.4, 0.24, 3.8), at + right * stagger, if i % 2 == 0 then shardFlagA else shardFlagB, Enum.Material.Slate)
+						slab.CFrame = CFrame.lookAt(at + right * stagger, at + right * stagger + delta) * CFrame.new(0, 0.08, 0) * CFrame.Angles(0, math.rad(if i % 2 == 0 then 2 else -2), 0)
 					end
-					local underTie = decor(model, "ShardBrassTie", Vector3.new(link.Width * 0.5, 0.7, length), mid, halcyrBrass, Enum.Material.Metal)
-					underTie.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.35, 0)
+					local underBeam = decor(model, "ShardRockUnder", Vector3.new(link.Width - 2.8, 2.2, math.max(1, length - 0.6)), mid, shardUnderCol, Enum.Material.Slate)
+					underBeam.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.9, 0)
+					local underTie = decor(model, "ShardBrassTie", Vector3.new(link.Width * 0.55, 0.65, length), mid, halcyrBrass, Enum.Material.Metal)
+					underTie.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.25, 0)
 				elseif bStyle == "WAYGATE" then
 					-- Waygate bridge (Astral 44): pale vellum limestone deck with inlaid gold rune threshold bands.
 					ramp.Color = halcyrVellum
@@ -2825,16 +2833,50 @@ function Builder.Build(id: number, generation: number): any
 						weight.Shape = Enum.PartType.Ball
 					end
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "SHARD" then
-					-- Astral 43 fractured shard span: jagged dark-slate side ledges & brass chain stays.
-					local railOffset = right * (side * (link.Width / 2 - 0.45))
-					local shards = math.max(2, math.floor(delta.Magnitude / 10))
-					for i = 1, shards do
-						local at = a:Lerp(b, (i - 0.5) / shards) + railOffset
-						local tooth = decor(curbGroup, "BridgeShardEdge", Vector3.new(1.3, 1.2 + (i % 2) * 0.6, 6.2), at + Vector3.new(0, 0.3, 0), if i % 2 == 0 then halcyrSlate else halcyrVellumDark, Enum.Material.Slate)
-						tooth.CFrame = CFrame.lookAt(at, b + railOffset) * CFrame.new(0, 0.3, 0) * CFrame.Angles(0, 0, math.rad(side * (8 + (i % 3) * 4)))
+					-- Astral 43 fractured shard spans & grand Lifted Index staircase.
+					local railOffset = right * (side * (link.Width / 2 - 0.50))
+					local shardStone = Color3.fromRGB(116, 122, 138)
+					local shardStoneDark = Color3.fromRGB(82, 88, 106)
+					if layout.Authored == "astral:3" and link.Kind == "STAIRS" then
+						-- Grand Lifted Index stone staircase: carved stone plinth, turned balusters, brass handrail & warm lantern finials!
+						curbGroup:SetAttribute("OnTerrain", true)
+						local stairPlinth = decor(curbGroup, "BridgeShardStairPlinth", Vector3.new(1.35, 1.15, curbLen + 2), mid + railOffset, shardStone, Enum.Material.Slate)
+						stairPlinth.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 0.45, 0)
+						local stairTrim = decor(curbGroup, "BridgeShardStairTrim", Vector3.new(1.45, 0.35, curbLen + 2), mid + railOffset, halcyrBrass, Enum.Material.Metal)
+						stairTrim.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, -0.25, 0)
+						local stairRail = decor(curbGroup, "BridgeShardStairRail", Vector3.new(0.95, 0.45, curbLen + 2), mid + railOffset, halcyrBrass, Enum.Material.Metal)
+						stairRail.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 3.15, 0)
+						local posts = math.max(5, math.floor(delta.Magnitude / 7.5) + 1)
+						for i = 0, posts - 1 do
+							local at = a:Lerp(b, i / (posts - 1)) + railOffset
+							local isEnd = (i == 0 or i == posts - 1)
+							local postH = if isEnd then 4.2 else 2.5
+							local postW = if isEnd then 1.65 else 0.72
+							local post = decor(curbGroup, "BridgeShardStairPost", Vector3.new(postW, postH, postW), at + Vector3.new(0, postH * 0.5 + 0.4, 0), shardStone, Enum.Material.Slate)
+							post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+							if isEnd then
+								local lantern = decor(curbGroup, "BridgeShardStairLantern", Vector3.new(1.5, 1.9, 1.5), at + Vector3.new(0, postH + 1.15, 0), halcyrGlow, Enum.Material.Neon)
+								lantern:SetAttribute("ConjunctionGlyph", true)
+							end
+						end
+					else
+						-- Fractured grey-slate coping stones & antique brass chain stays along shard bridges
+						local shards = math.max(3, math.floor(delta.Magnitude / 8.5))
+						for i = 1, shards do
+							local at = a:Lerp(b, (i - 0.5) / shards) + railOffset
+							local tooth = decor(curbGroup, "BridgeShardEdge", Vector3.new(1.35, 1.15 + (i % 2) * 0.45, 6.4), at + Vector3.new(0, 0.35, 0), if i % 2 == 0 then shardStone else shardStoneDark, Enum.Material.Slate)
+							tooth.CFrame = CFrame.lookAt(at, b + railOffset) * CFrame.new(0, 0.35, 0) * CFrame.Angles(0, 0, math.rad(side * (4 + (i % 3) * 3)))
+						end
+						local chainStay = decor(curbGroup, "BridgeShardChain", Vector3.new(0.36, 0.36, curbLen), mid + railOffset, halcyrBrass, Enum.Material.Metal)
+						chainStay.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 2.05, 0)
+						for _, endPt in { a, b } do
+							local np = endPt + railOffset
+							local post = decor(curbGroup, "BridgeShardPost", Vector3.new(1.2, 2.8, 1.2), np + Vector3.new(0, 1.2, 0), shardStone, Enum.Material.Slate)
+							post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+							local cap = decor(curbGroup, "BridgeShardPostCap", Vector3.new(1.4, 0.45, 1.4), np + Vector3.new(0, 2.75, 0), halcyrBrass, Enum.Material.Metal)
+							cap.CFrame = CFrame.lookAt(cap.Position, cap.Position + flat)
+						end
 					end
-					local chainStay = decor(curbGroup, "BridgeShardChain", Vector3.new(0.32, 0.32, curbLen), mid + railOffset, halcyrBrass, Enum.Material.Metal)
-					chainStay.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 1.85, 0)
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "WAYGATE" then
 					-- Astral 44 Waygate bridge: lapis-and-brass runic parapets flanking the approach to each ring-portal.
 					local railOffset = right * (side * (link.Width / 2 - 0.55))
@@ -3045,8 +3087,8 @@ function Builder.Build(id: number, generation: number): any
 			local b = origin + Vector3.new(link.BX,link.BY,link.BZ)
 			local ramp = part(model, "BasinReturnRamp", Vector3.new(link.Width, 2, (b - a).Magnitude), (a + b) / 2, if natural then naturalGrassColor else theme.GroundColor, if natural and groundPalette then groundPalette.Ground else theme.GroundMaterial)
 			ramp.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -1, 0)
-			if layout.Authored == "astral:1" or layout.Authored == "astral:2" then
-				-- Floors 41-42: remove unconnected void return bridges visually (keep layout ReturnLinks metadata intact).
+			if layout.Authored == "astral:1" or layout.Authored == "astral:2" or layout.Authored == "astral:3" then
+				-- Floors 41-43: remove unconnected void return bridges visually (keep layout ReturnLinks metadata intact).
 				disableTerrainProxyPart(ramp)
 			elseif grassyPaths or direct then
 				disableTerrainProxyPart(ramp)
@@ -3062,16 +3104,16 @@ function Builder.Build(id: number, generation: number): any
 				end
 			end
 			structure(ramp,link.Id)
-			if layout.Authored ~= "astral:1" and layout.Authored ~= "astral:2" then
+			if layout.Authored ~= "astral:1" and layout.Authored ~= "astral:2" and layout.Authored ~= "astral:3" then
 				landing(link.LandingA,link.Id,link.From)
 				landing(link.LandingB,link.Id,link.To)
 			end
 	end
 
 	local field
-	if natural and layout.Authored == "astral:2" then
-		-- Floor 42 is a 100% architectural floating orrery archipelago over its own opaque Nebula Sea & galaxy disc;
-		-- skip voxel terrain fill so Smooth Terrain LOD triangles never poke through the galaxy rim or slate-blue wings.
+	if natural and (layout.Authored == "astral:2" or layout.Authored == "astral:3") then
+		-- Floors 42-43 are 100% architectural floating island archipelagos over their own opaque Nebula/Rift Sea;
+		-- skip voxel terrain fill so Smooth Terrain LOD triangles never poke through the void chasm or stone decks.
 		TowerTerrain.Clear(origin, layout)
 		field = TowerTerrain.Field(layout, floorSpec.BiomeId, id)
 	elseif natural then
@@ -3144,9 +3186,11 @@ function Builder.Build(id: number, generation: number): any
 			decor(model, "SanctuarySideWall", Vector3.new(2.5, 4.5, safe.Depth - 8), origin + Vector3.new(side * (halfW - 1), 10.2, safe.Z), theme.TrimColor, theme.TrimMaterial, if natural then 1 else nil)
 		end
 	else
-		-- Halcyr carved vellum-stone balustrade walls framing the arrival terrace
+		-- Halcyr carved stone balustrade walls framing the arrival terrace
+		local sanWallCol = if layout.Authored == "astral:3" then Color3.fromRGB(112, 118, 134) else halcyrVellum
+		local sanWallMat = if layout.Authored == "astral:3" then Enum.Material.Slate else Enum.Material.Limestone
 		for _, side in { -1, 1 } do
-			decor(model, "HalcyrSanctuaryBalustrade", Vector3.new(2.0, 3.6, safe.Depth - 4), origin + Vector3.new(side * (halfW - 1.2), safe.Y + 1.8, safe.Z), halcyrVellum, Enum.Material.Limestone)
+			decor(model, "HalcyrSanctuaryBalustrade", Vector3.new(2.0, 3.6, safe.Depth - 4), origin + Vector3.new(side * (halfW - 1.2), safe.Y + 1.8, safe.Z), sanWallCol, sanWallMat)
 			decor(model, "HalcyrSanctuaryCap", Vector3.new(2.6, 0.6, safe.Depth - 3), origin + Vector3.new(side * (halfW - 1.2), safe.Y + 3.8, safe.Z), halcyrBrass, Enum.Material.Metal)
 		end
 	end
