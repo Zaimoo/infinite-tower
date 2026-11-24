@@ -235,6 +235,19 @@ test("Floor 29 has its own redoubt kit: at least eleven new templates and a 160+
 	assert(Kit.ExtraTemplates.StormBellGatehouse.Size.X >= 60 and Kit.ExtraTemplates.BarbicanGatehouse.Size.X >= 60)
 end)
 
+test("Floor 30 has its own Roc's Eyrie kit: at least twelve new templates and a 200+ stud Shattered Sky-Spire", function()
+	local f30 = { "ShatteredSkySpire", "LightningCrownArch", "EyrieNestRimSegment", "EyePulpitBalustrade",
+		"ColossalRocFeather", "GaleLanternTower", "ObservatoryHall", "ThresholdRuinArch", "AerieThresholdTotem",
+		"FeatherHeartShrine", "ShatteredCrownFragment", "CalderaRibBones", "HangingAbyssChain" }
+	for _, name in f30 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 30 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f30 >= 12)
+	-- The Shattered Sky-Spire (placed at scale 1.65) clears the ladder's 200-stud tallest-landmark bar.
+	assert(Kit.ExtraTemplates.ShatteredSkySpire.Size.Y * 1.65 >= 200)
+end)
+
 test("Floor 31 has its own Blighted Verge kit: at least eight new templates and a 105+ stud Heartrot Spring", function()
 	local f31 = { "HollinWaterMill", "MillWheel", "FieldstoneWeir", "PaleBandTree", "GraftKnotPost", "WardensLeanTo",
 		"SawnStumpCluster", "HeartrotSpringTrunk", "HollinStileArch", "WattleFence", "FieldstoneCairn", "FelledBandLog",
@@ -426,6 +439,21 @@ test("Floor 45 has its own Observatory kit: at least fourteen new templates and 
 	assert(Kit.ExtraTemplates.AzimuthRing.Size.X >= 34 and Kit.ExtraTemplates.AzimuthRing.Size.Y >= 38)
 end)
 
+test("Floor 38 has its own Tidal Channels waterworks kit: at least eleven new templates and a 160+ stud Sea-Gate", function()
+	local f38 = {
+		"SeaGateArch", "TidebellTowerSlim", "TideMillHouse", "SluiceHouseKeep", "LockChamberWall",
+		"MitreGatePair", "BellGallowsBracket", "EelTrapRack", "MooredBarge", "TideGaugeColumn",
+		"SluiceGear", "BollardRope", "OverflowRibbon",
+	}
+	for _, name in f38 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 38 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f38 >= 11)
+	assert(Kit.ExtraTemplates.SeaGateArch.Size.Y >= 160, "SeaGateArch must clear the ladder's 160 studs")
+	assert(Kit.ExtraTemplates.TidebellTowerSlim.Size.Y >= 140, "TidebellTowerSlim must rise past 140 studs")
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -543,7 +571,15 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	local g29 = Light.FloorGrades[29]
 	assert(lum(g29.OutdoorAmbient) < lum(g28.OutdoorAmbient) and g29.AtmosphereHaze > g28.AtmosphereHaze and g29.BloomIntensity > g28.BloomIntensity,
 		"floor 29's dusk is darker, hazier and blooms harder than floor 28's afternoon")
-	assert(Light.TowerPreset(6, 30) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
+	assert(Light.FloorGrades[30] ~= nil, "floor 30 (Roc's Eyrie) has its Eye of the Maelstrom grade")
+	local g30 = Light.FloorGrades[30]
+	assert(g30.BloomIntensity >= 0.6 and g30.AtmosphereHaze < g29.AtmosphereHaze and lum(g30.ColorShift_Top) > lum(g29.ColorShift_Top),
+		"floor 30's storm-eye light is clearer inside the eye and brighter overhead than floor 29's dusk")
+	assert(Light.FloorGrades[38] ~= nil, "floor 38 (Tidal Channels) has its grey-teal storm-tide grade")
+	assert(Light.FloorGrades[38].AtmosphereHaze >= 0.8 and Light.FloorGrades[38].BloomIntensity >= 0.45, "floor 38 keeps storm haze and glowing rune bloom")
+	assert(Light.FloorGrades[39] ~= nil, "floor 39 (Pearlguard Vault) has its deep blue twilight grade")
+	assert(Light.FloorGrades[39].AtmosphereHaze >= 0.9 and Light.FloorGrades[39].BloomIntensity >= 0.48, "floor 39 keeps twilight haze and pearl-vault bloom")
+	assert(Light.TowerPreset(8, 40) == Light.TowerPreset(8), "a floor without its own grade shares its biome's")
 	for fId = 41, 45 do
 		assert(Light.FloorGrades[fId] ~= nil, "floor " .. fId .. " (Astral Archives) has its own lighting grade")
 		assert(Light.TowerPreset(9, fId) ~= Light.TowerPreset(9), "floor " .. fId .. " layers its grade over BiomeGrades[9]")
@@ -571,6 +607,69 @@ test("Astral Archives surfaces HALCYR and RIFTWARD avoid blocky materials, Funga
 			assert(forbidden[mat] == nil, string.format("%s.%s uses forbidden %s material", name, slot, tostring(forbidden[mat])))
 		end
 	end
+end)
+
+test("Floor 36 has its own Drowned Steps kit: at least nine new templates, a great Tidebell and a golden shell canopy", function()
+	local f36 = { "GreatTidebell", "GoldenShellCanopy", "LancetArchBay", "BrokenLancetColumn", "BellArch", "FallenStairFlight",
+		"HollinBarge", "VotiveLampBowl", "ShellMidden", "RuneTablet", "CantorLectern", "TidepoolRockRing", "GiantClam",
+		"KelpStand", "SeaFan", "AnemoneCluster", "SeagrassTuft" }
+	for _, name in f36 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 36 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		-- Every template stands on its origin (the fallen flight lies half sunk in the seabed).
+		local sink = if name == "FallenStairFlight" then -2.5 else -1
+		assert(t.Min.Y > sink and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f36 >= 9)
+	-- The shrine canopy (placed at scale 1.9) spans the Bell Stack's crown.
+	assert(Kit.ExtraTemplates.GoldenShellCanopy.Size.X * 1.9 >= 100)
+	-- The Tidebells are bronze and the rune light is aqua glow.
+	for _, name in { "GreatTidebell", "BellArch" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "METAL"), name .. " has no bronze bell")
+	end
+	for _, name in { "RuneTablet", "LancetArchBay", "BellArch" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "GLOW"), name .. " has no tide-spiral glow")
+	end
+	assert(Light.FloorGrades[36] ~= nil, "floor 36 (Drowned Steps) has its turquoise-noon grade")
+	assert(Light.FloorGrades[36].AtmosphereHaze < Light.FloorGrades[35].AtmosphereHaze, "floor 36 is the clearest air after the eclipse")
+end)
+
+test("Floor 37 has its own Coral Cloister kit: at least ten new templates, a 140+ stud Bell Tower and warm afternoon grade", function()
+	local f37 = { "CoralArcadeBay", "CoralArcadeCorner", "CampanileTower", "ChapterHouseRib", "LavaboFountain",
+		"CantorStall", "ConchRack", "RefectoryTable", "ScriptoriumDesk", "SacristyPress", "CantorNicheStatue",
+		"DrownedSundial", "BrainCoralMound", "DorterCot" }
+	for _, name in f37 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 37 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		assert(t.Min.Y > -1 and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f37 >= 10, "Floor 37 needs at least 10 new kit templates")
+	-- The Campanile Bell Tower reaches the ladder's 140+ stud tallest-landmark target at scale 1.0.
+	assert(Kit.ExtraTemplates.CampanileTower.Size.Y >= 140, "CampanileTower must be at least 140 studs tall")
+	-- The Lavabo has its giant shell basin (ALT), crystal water spouts (CRYSTAL) and verdigris dome (ACCENT).
+	for _, role in { "ACCENT", "ALT", "CRYSTAL", "CORAL" } do
+		assert(table.find(Kit.ExtraTemplates.LavaboFountain.Roles, role), "LavaboFountain missing role " .. role)
+	end
+	assert(Light.FloorGrades[37] ~= nil, "floor 37 (Coral Cloister) has its warm gold-green afternoon grade")
+	assert(Light.FloorGrades[37].AtmosphereHaze > Light.FloorGrades[36].AtmosphereHaze, "floor 37 is hazier than floor 36's clear noon")
+end)
+
+test("Floor 39 has its own Pearlguard Vault kit: at least twelve new templates and a 195+ stud Pearl Vault Dome", function()
+	local f39 = {
+		"PearlVaultDome", "ColossalClam", "SeaWallSegment", "DrownedGateWall", "CoralGateTower",
+		"TideArmillaryTower", "PortcullisGatehouse", "MuffledBellStack", "OysterRack", "DivingBell",
+		"PearlguardGalley", "CoralWardenStatue", "ShellAwningStall", "HarbourCrane", "CoralCageReliquary",
+	}
+	for _, name in f39 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 39 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		assert(t.Min.Y > -1 and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f39 >= 12)
+	assert(Kit.ExtraTemplates.PearlVaultDome.Size.Y >= 195, "PearlVaultDome must clear the ladder's 195 studs")
 end)
 
 print(string.format("tower-biome-kit: %d passed", passed))
