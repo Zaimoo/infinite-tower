@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -2684,6 +2684,89 @@ test("Floor 29's terrain is the walking surface: a sheer fault scarp under the c
 	end
 end)
 
+test("Floor 30 is the hand-authored Roc's Eyrie: Twin-Wing Caldera Amphitheatre over an open Cloud Eye, 180x132 Y56 boss dais", function()
+	local room = Layout.ForFloor(30)
+	assert(room.Authored == "thunder:5" and room.Name == "Roc's Eyrie" and room.PathStyle == "KAIRN")
+	assert(room.DirectTerrain == true and room.Surface == "KAIRN" and room.Masonry == "KAIRN_STONE")
+	assert(room.Width == 795 and room.Depth == 795 and room.Height == 290 and room.Bottom == -8, "Floor 30 overrides its room size")
+	assert(#room.ReturnLinks == 2, "two return ramps climb out of the Cloud Eye chasm")
+	assert(room.Liquid and room.Liquid.Dry == true, "the Cloud Eye floor holds no water")
+	assert(same(room, Layout.Get(5, 30)) and not same(room, Layout.Get(5)))
+	assert(#Layout.Validate(room) == 0, "Floor 30's layout has problems: " .. table.concat(Layout.Validate(room), "; "))
+	local cloudEye
+	for _, feat in room.TerrainFeatures do
+		if feat.Kind == "CLOUD_EYE" then cloudEye = feat end
+	end
+	assert(cloudEye and cloudEye.RX >= 150 and cloudEye.RZ >= 120, "Floor 30 carves a wide open Cloud Eye caldera")
+	local paths = {}
+	for _, link in room.Links do paths[link.Id] = link.Kind end
+	-- Signature shape: EyePulpit is a cantilevered dead-end overlook over the open Cloud Eye (no direct Crossing/EyePulpit -> Apex),
+	-- West Wing crosses by SKYBRIDGE, and twin Aerie stairs climb into the 180 x 132 Y 56 boss dais.
+	assert(paths.Crossing_EyePulpit == "RAMP" and paths.Crossing_Apex == nil and paths.EyePulpit_Apex == nil,
+		"no path crosses the open Cloud Eye directly to Apex")
+	assert(paths.WestAerie_Apex == "STAIRS" and paths.EastAerie_Apex == "STAIRS", "twin Aerie stairs ascend to Roc's Eyrie")
+	assert(room.Skybridges and room.Skybridges.WestGallery_WestPinion and room.Skybridges.WestPinion_WestBastion and room.Skybridges.WestBastion_WestAerie,
+		"West Wing spans render as suspension skybridges")
+	assert(room.CopperCoping and room.CopperCoping.Crossing_EyePulpit, "Eye Pulpit causeway uses hammered-copper coping")
+	local pulpitDeg = 0
+	for _, link in room.Links do
+		if link.From == "EyePulpit" or link.To == "EyePulpit" then pulpitDeg += 1 end
+	end
+	assert(pulpitDeg == 1, "Storm Eye Pulpit is a dead-end overlook")
+	local p = room.Platforms
+	assert(p.Apex.Width == 180 and p.Apex.Depth == 132 and p.Apex.Y == 56, "Roc's Eyrie boss dais is 180x132 at Y 56")
+	for id, t in p do
+		if not room.Decks[id] then
+			assert(t.Y % 4 == 0, id .. " is a terrain terrace off the 4-stud grid")
+		end
+	end
+	local extras = { EyePulpit = true, WestPerch = true, EastPerch = true, WestPinion = true, EastPinion = true, WestCrown = true, WestAerie = true, EastAerie = true }
+	local totalMobs, hasBoss = 0, false
+	for _, camp in room.Camps do
+		assert(not extras[camp.Platform], "ExtraPlatform " .. camp.Platform .. " must hold no camp")
+		if camp.Platform == "Apex" then
+			hasBoss = camp.Boss == true
+		else
+			totalMobs += camp.Size
+		end
+	end
+	assert(totalMobs == 35 and room.EliteCount == 4 and hasBoss, "Floor 30 keeps 35 live camp mobs, 4 Elites and the Storm Roc boss")
+	local routes = Layout.PatrolRoutes(5, 30)
+	assert(routes.BASIN_LOOP and routes.WEST_WING and routes.EAST_WING and routes.EYE_CHORD and routes.EYRIE_CROWN)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil and routes.BASTION_RING == nil)
+	-- Escalation ladder: 16 terraces, 19 links, 15 height levels; strictly beats Floor 29 and every earlier 5th floor (5, 10, 15, 20, 25).
+	local terraces, links, levels = ladderCounts(room)
+	assert(terraces == 16 and links == 19 and levels == 15, string.format("Floor 30 has %d/%d/%d", terraces, links, levels))
+	for _, earlier in { 5, 10, 15, 20, 25, 29 } do
+		local t, l, v = ladderCounts(Layout.ForFloor(earlier))
+		assert(terraces > t and links > l and levels > v, "Floor 30 does not beat floor " .. earlier)
+	end
+	for _, earlier in { 25, 29 } do
+		local r = Layout.ForFloor(earlier)
+		assert(room.Width * room.Depth > r.Width * r.Depth and room.Height > r.Height, "Floor 30's room is not grander than floor " .. earlier .. "'s")
+	end
+end)
+
+test("Floor 30's terrain is the walking surface: open bare-slate Cloud Eye caldera, nothing buried", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local room = Layout.ForFloor(30)
+	local field = Terrain.Field(room, "thunder_highlands", 30)
+	assert(field.Surface == Terrain.Surfaces.KAIRN, "floor 30 uses the Kairn surface")
+	for id, t in room.Platforms do
+		assert(field.Height(t.X, t.Z) <= t.Y + 0.01, id .. " is buried")
+	end
+	for _, link in room.Links do
+		for t = 0, 1, 0.05 do
+			local x, z = link.AX + (link.BX - link.AX) * t, link.AZ + (link.BZ - link.AZ) * t
+			assert(field.Height(x, z) <= link.AY + (link.BY - link.AY) * t + 0.01, link.Id .. " is buried")
+		end
+	end
+	-- Open Cloud Eye centre sits flat at the deep bare-slate caldera floor beneath the swirling cloud vortex.
+	for _, pt in { { 0, -110 }, { -52, -115 }, { 52, -115 }, { 0, -165 } } do
+		assert(field.Height(pt[1], pt[2]) <= field.Bottom + 0.5, string.format("Cloud Eye blocked at (%d, %d): %.1f", pt[1], pt[2], field.Height(pt[1], pt[2])))
+	end
+end)
+
 test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock never showing through", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
@@ -2716,16 +2799,18 @@ test("Floor 26's twin falls hang in front of the headwall from pool to lip, rock
 	end
 end)
 
-test("Floors 26-29's landmarks stand clear of every walkway, camp and mob slot", function()
+test("Floors 26-30's landmarks stand clear of every walkway, camp and mob slot", function()
 	local Thunder = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderHighlands"])
 	local Thunder27 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor27"])
 	local Thunder28 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor28"])
 	local Thunder29 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor29"])
+	local Thunder30 = require(nodes["ServerScriptService.Core.TowerSetPieces.ThunderFloor30"])
 	assert(#Thunder.Floor26Landmarks >= 12, "Floor 26 needs at least 12 landmarks")
 	assert(#Thunder27.Landmarks >= 14, "Floor 27 needs at least 14 landmarks")
 	assert(#Thunder28.Landmarks >= 16, "Floor 28 needs at least 16 landmarks")
 	assert(#Thunder29.Landmarks >= 18, "Floor 29 needs at least 18 landmarks")
-	for floorId, list in { [26] = Thunder.Floor26Landmarks, [27] = Thunder27.Landmarks, [28] = Thunder28.Landmarks, [29] = Thunder29.Landmarks } do
+	assert(#Thunder30.Landmarks >= 21, "Floor 30 needs at least 20 landmarks plus the colossal Shattered Sky-Spire")
+	for floorId, list in { [26] = Thunder.Floor26Landmarks, [27] = Thunder27.Landmarks, [28] = Thunder28.Landmarks, [29] = Thunder29.Landmarks, [30] = Thunder30.Landmarks } do
 	local room = Layout.ForFloor(floorId)
 	local lanes = Layout.Lanes((floorId - 1) % 5 + 1, floorId)
 	local function nearestDistSq(px: number, pz: number, lm: any): number
@@ -2781,6 +2866,11 @@ test("Floors 26-29's landmarks stand clear of every walkway, camp and mob slot",
 		local keepTop = 0
 		for _, lm in list do keepTop = math.max(keepTop, lm.Top) end
 		assert(keepTop >= 160, string.format("Floor 29's tallest landmark is %.0f studs", keepTop))
+	elseif floorId == 30 then
+		-- The Shattered Sky-Spire behind Roc's Eyrie: the ladder's 200 studs.
+		local spireTop = 0
+		for _, lm in list do spireTop = math.max(spireTop, lm.Top) end
+		assert(spireTop >= 200, string.format("Floor 30's tallest landmark is %.0f studs", spireTop))
 	else
 		-- The twin crown towers: the ladder's 135 studs. The sea-stacks rise out of open abyss, not off a
 		-- needle's flank, and no landmark stands where a skybridge hangs over the gorge.
@@ -3354,8 +3444,8 @@ test("Every floor but the authored ones reshapes its own layout, the same way ev
 		end
 	end
 	assert(varied >= 40, "only " .. varied .. " of 49 floors are reshaped")
-	-- Hand-authored floors (1-29, 31-39) have no seeded bends, so the count falls as more floors are authored.
-	assert(bends >= 5, "only " .. bends .. " winding paths")
+	-- Hand-authored floors (1-39) have no seeded bends, so the count falls as more floors are authored.
+	assert(bends >= 4, "only " .. bends .. " winding paths")
 end)
 
 test("Every floor's layout is sound: no new problems, terraces in the room, ramps at most 15 degrees", function()

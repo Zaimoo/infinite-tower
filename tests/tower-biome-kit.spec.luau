@@ -235,6 +235,19 @@ test("Floor 29 has its own redoubt kit: at least eleven new templates and a 160+
 	assert(Kit.ExtraTemplates.StormBellGatehouse.Size.X >= 60 and Kit.ExtraTemplates.BarbicanGatehouse.Size.X >= 60)
 end)
 
+test("Floor 30 has its own Roc's Eyrie kit: at least twelve new templates and a 200+ stud Shattered Sky-Spire", function()
+	local f30 = { "ShatteredSkySpire", "LightningCrownArch", "EyrieNestRimSegment", "EyePulpitBalustrade",
+		"ColossalRocFeather", "GaleLanternTower", "ObservatoryHall", "ThresholdRuinArch", "AerieThresholdTotem",
+		"FeatherHeartShrine", "ShatteredCrownFragment", "CalderaRibBones", "HangingAbyssChain" }
+	for _, name in f30 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 30 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f30 >= 12)
+	-- The Shattered Sky-Spire (placed at scale 1.65) clears the ladder's 200-stud tallest-landmark bar.
+	assert(Kit.ExtraTemplates.ShatteredSkySpire.Size.Y * 1.65 >= 200)
+end)
+
 test("Floor 31 has its own Blighted Verge kit: at least eight new templates and a 105+ stud Heartrot Spring", function()
 	local f31 = { "HollinWaterMill", "MillWheel", "FieldstoneWeir", "PaleBandTree", "GraftKnotPost", "WardensLeanTo",
 		"SawnStumpCluster", "HeartrotSpringTrunk", "HollinStileArch", "WattleFence", "FieldstoneCairn", "FelledBandLog",
@@ -469,11 +482,15 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	local g29 = Light.FloorGrades[29]
 	assert(lum(g29.OutdoorAmbient) < lum(g28.OutdoorAmbient) and g29.AtmosphereHaze > g28.AtmosphereHaze and g29.BloomIntensity > g28.BloomIntensity,
 		"floor 29's dusk is darker, hazier and blooms harder than floor 28's afternoon")
+	assert(Light.FloorGrades[30] ~= nil, "floor 30 (Roc's Eyrie) has its Eye of the Maelstrom grade")
+	local g30 = Light.FloorGrades[30]
+	assert(g30.BloomIntensity >= 0.6 and g30.AtmosphereHaze < g29.AtmosphereHaze and lum(g30.ColorShift_Top) > lum(g29.ColorShift_Top),
+		"floor 30's storm-eye light is clearer inside the eye and brighter overhead than floor 29's dusk")
 	assert(Light.FloorGrades[38] ~= nil, "floor 38 (Tidal Channels) has its grey-teal storm-tide grade")
 	assert(Light.FloorGrades[38].AtmosphereHaze >= 0.8 and Light.FloorGrades[38].BloomIntensity >= 0.45, "floor 38 keeps storm haze and glowing rune bloom")
 	assert(Light.FloorGrades[39] ~= nil, "floor 39 (Pearlguard Vault) has its deep blue twilight grade")
 	assert(Light.FloorGrades[39].AtmosphereHaze >= 0.9 and Light.FloorGrades[39].BloomIntensity >= 0.48, "floor 39 keeps twilight haze and pearl-vault bloom")
-	assert(Light.TowerPreset(6, 30) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
+	assert(Light.TowerPreset(8, 40) == Light.TowerPreset(8), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400

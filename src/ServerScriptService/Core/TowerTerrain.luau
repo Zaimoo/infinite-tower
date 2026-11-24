@@ -282,9 +282,15 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 	-- Top studs over the chasm floor, its south face a sheer scarp stepped into rough strata. The plateau is a
 	-- floor: walkway caps never dig under it, so every walkway that crosses it must stand above it.
 	local fault: any = nil
+	-- A hollow storm-caldera Cloud Eye (CLOUD_EYE, Floor 30): keeps the central ellipse flat bare wet slate at
+	-- the chasm floor beneath the swirling cloud vortex, suppressing open-ground hill undulations.
+	local cloudEye: any = nil
 	for _, feat in features or {} do
 		if feat.Kind == "CLIFF_FAULT" then
 			fault = { Z = feat.Z or 0, Top = feat.Top or 24, Amp = feat.Amp or 6, Run = feat.Run or 4 }
+		elseif feat.Kind == "CLOUD_EYE" then
+			cloudEye = { X = feat.X or 0, Z = feat.Z or -100, RX = feat.RX or 180, RZ = feat.RZ or 145 }
+			abyssSlate = true
 		elseif feat.Kind == "SEA_STACK_APRON" then
 			stackSteep = feat.Steep or 3
 			abyssSlate = true
@@ -433,6 +439,15 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		-- there, so lower ground would leave anyone walking on air above it. Only pools go lower (under water).
 		if kind == "CHASM" then
 			base = math.max(base, bottom)
+			if cloudEye then
+				local ex = (x - cloudEye.X) / cloudEye.RX
+				local ez = (z - cloudEye.Z) / cloudEye.RZ
+				local d2 = ex * ex + ez * ez
+				if d2 < 1 then
+					local blend = math.clamp((d2 - 0.55) / 0.45, 0, 1)
+					base = bottom + (base - bottom) * blend
+				end
+			end
 		end
 		-- Slag tips heap up over open ground and the mountain foot alike (kept off walkways by the caps below).
 		if #slagTips > 0 then

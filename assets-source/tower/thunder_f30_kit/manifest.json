@@ -1,0 +1,265 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AerieThresholdTotem": {
+      "Min": [
+        -5.2,
+        0.0,
+        -5.2
+      ],
+      "Roles": {
+        "ACCENT": 800,
+        "GLOW": 80,
+        "METAL": 1036,
+        "STONE": 56,
+        "TRIM": 28
+      },
+      "Size": [
+        10.4,
+        26.3,
+        10.4
+      ],
+      "Triangles": 2000
+    },
+    "CalderaRibBones": {
+      "Min": [
+        -10.387,
+        -0.3,
+        -9.176
+      ],
+      "Roles": {
+        "ALT": 612,
+        "STONE": 80,
+        "TRIM": 540
+      },
+      "Size": [
+        20.775,
+        11.833,
+        18.352
+      ],
+      "Triangles": 1232
+    },
+    "ColossalRocFeather": {
+      "Min": [
+        -3.658,
+        -0.3,
+        -4.052
+      ],
+      "Roles": {
+        "ALT": 218,
+        "GLOW": 60,
+        "METAL": 216,
+        "STONE": 120,
+        "TRIM": 264
+      },
+      "Size": [
+        9.921,
+        34.504,
+        7.897
+      ],
+      "Triangles": 878
+    },
+    "EyePulpitBalustrade": {
+      "Min": [
+        -16.114,
+        -0.5,
+        -16.114
+      ],
+      "Roles": {
+        "ACCENT": 496,
+        "GLOW": 80,
+        "METAL": 1184,
+        "STONE": 336,
+        "TRIM": 488
+      },
+      "Size": [
+        32.228,
+        6.8,
+        30.445
+      ],
+      "Triangles": 2584
+    },
+    "EyrieNestRimSegment": {
+      "Min": [
+        -13.934,
+        -0.113,
+        -4.942
+      ],
+      "Roles": {
+        "ALT": 1440,
+        "METAL": 480,
+        "STONE": 1452,
+        "TRIM": 60,
+        "WOOD": 180
+      },
+      "Size": [
+        27.815,
+        11.953,
+        12.665
+      ],
+      "Triangles": 3612
+    },
+    "FeatherHeartShrine": {
+      "Min": [
+        -6.24,
+        0.0,
+        -6.4
+      ],
+      "Roles": {
+        "ACCENT": 180,
+        "CRYSTAL": 216,
+        "GLOW": 140,
+        "GOLD": 396,
+        "METAL": 180,
+        "STONE": 96
+      },
+      "Size": [
+        12.479,
+        13.312,
+        12.8
+      ],
+      "Triangles": 1208
+    },
+    "GaleLanternTower": {
+      "Min": [
+        -7.586,
+        -0.103,
+        -7.463
+      ],
+      "Roles": {
+        "ACCENT": 96,
+        "GLOW": 140,
+        "METAL": 252,
+        "STONE": 3544,
+        "TRIM": 60,
+        "WOOD": 12
+      },
+      "Size": [
+        14.868,
+        40.103,
+        14.827
+      ],
+      "Triangles": 4104
+    },
+    "HangingAbyssChain": {
+      "Min": [
+        -20.754,
+        0.144,
+        -1.178
+      ],
+      "Roles": {
+        "ACCENT": 144,
+        "ALT": 180,
+        "METAL": 400,
+        "TRIM": 1236
+      },
+      "Size": [
+        41.478,
+        17.833,
+        2.368
+      ],
+      "Triangles": 1960
+    },
+    "LightningCrownArch": {
+      "Min": [
+        -7.203,
+        -0.206,
+        -7.026
+      ],
+      "Roles": {
+        "ACCENT": 72,
+        "GLOW": 48,
+        "METAL": 188,
+        "STONE": 1768,
+        "TRIM": 28
+      },
+      "Size": [
+        43.871,
+        85.036,
+        14.181
+      ],
+      "Triangles": 2104
+    },
+    "ObservatoryHall": {
+      "Min": [
+        -12.4,
+        -0.2,
+        -8.73
+      ],
+      "Roles": {
+        "GLOW": 48,
+        "METAL": 44,
+        "MOSS": 80,
+        "STONE": 2708,
+        "TRIM": 108,
+        "WOOD": 60
+      },
+      "Size": [
+        24.8,
+        21.1,
+        17.459
+      ],
+      "Triangles": 3048
+    },
+    "ShatteredCrownFragment": {
+      "Min": [
+        -9.186,
+        -0.4,
+        -6.367
+      ],
+      "Roles": {
+        "ACCENT": 36,
+        "GLOW": 36,
+        "METAL": 72,
+        "STONE": 112,
+        "TRIM": 40
+      },
+      "Size": [
+        19.883,
+        21.445,
+        14.148
+      ],
+      "Triangles": 296
+    },
+    "ShatteredSkySpire": {
+      "Min": [
+        -50.808,
+        -1.452,
+        -20.54
+      ],
+      "Roles": {
+        "ACCENT": 96,
+        "GLOW": 300,
+        "METAL": 168,
+        "STONE": 800,
+        "TRIM": 360
+      },
+      "Size": [
+        102.381,
+        126.49,
+        40.412
+      ],
+      "Triangles": 1724
+    },
+    "ThresholdRuinArch": {
+      "Min": [
+        -20.882,
+        -0.2,
+        -5.065
+      ],
+      "Roles": {
+        "METAL": 12,
+        "MOSS": 40,
+        "STONE": 4396,
+        "TRIM": 96
+      },
+      "Size": [
+        41.852,
+        26.0,
+        10.082
+      ],
+      "Triangles": 4544
+    }
+  },
+  "Unit": "studs"
+}
