@@ -198,4 +198,34 @@ test("Floor 35 authored patrols replace generic routes with WEST_ROOT, EAST_ROOT
 	end
 end)
 
+test("Floor 38 authored patrols replace generic gallery routes with TAIL_GATE, WEST_FLIGHT, EAST_FLIGHT and HEAD_RUNG", function()
+	local room = Layout.ForFloor(38)
+	local routes = Layout.PatrolRoutes(3, 38)
+	assert(routes.BASIN_LOOP and routes.TAIL_GATE and routes.WEST_FLIGHT and routes.EAST_FLIGHT and routes.HEAD_RUNG)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil)
+	for id, route in routes do
+		assert(#route >= 2, id .. " is too short")
+		for _, wp in route do
+			assert(onWalkable(room, wp), id .. " waypoint off the walkways on Floor 38")
+		end
+		local seconds = PatrolPath.LoopLength(route) / PatrolPath.Speed
+		assert(seconds > 5 and seconds < 240, id .. " loop takes " .. seconds .. " s")
+	end
+end)
+
+test("Floor 39 authored patrols replace generic routes with OUTER_WARD, WALL_WALK, WEST_CLIMB, EAST_CLIMB and VAULT_RING", function()
+	local room = Layout.ForFloor(39)
+	local routes = Layout.PatrolRoutes(4, 39)
+	assert(routes.BASIN_LOOP and routes.OUTER_WARD and routes.WALL_WALK and routes.WEST_CLIMB and routes.EAST_CLIMB and routes.VAULT_RING)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil and routes.BASTION_RING == nil)
+	for id, route in routes do
+		assert(#route >= 2, id .. " is too short")
+		for _, wp in route do
+			assert(onWalkable(room, wp), id .. " waypoint off the walkways on Floor 39")
+		end
+		local seconds = PatrolPath.LoopLength(route) / PatrolPath.Speed
+		assert(seconds > 5 and seconds < 240, id .. " loop takes " .. seconds .. " s")
+	end
+end)
+
 print("Patrol tests: " .. passed .. " passed, 0 failed")

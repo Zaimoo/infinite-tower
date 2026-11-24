@@ -130,3 +130,26 @@ Floor 33 (Briar Labyrinth, `corrupted:3`) adds a corrupted terrain surface/relie
 - **`Terrain.BridgeStyles = "HEDGE"`**: hung labyrinth walkways over the sunken thorn pit keep their solid timber/earth deck and replace rope railings with 5.4-stud-tall clipped hawthorn hedge walls, glowing violet-magenta briar vines and timber posts placed strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).
 - **`Terrain.BridgeStyles = "BRANCH"`** (Floor 34, Heartrot Stronghold): hung tree-to-tree branch bridges over the rot bog carry gnarled dark-wood handrails, rope lanyards and glowing violet-magenta sap tendrils strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).
 - **`Terrain.BridgeStyles = "ROOT"`** (Floor 35, Sovereign's Grove): hung root-burl walkways over the sap mire carry blackened root-bark curbs laced with glowing violet-magenta heartrot veins strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).
+
+Floor 36 (Drowned Steps, `sunken:1`) adds four options to the same system:
+
+- **`Terrain.BridgeStyles = "CAUSEWAY"`**: a hung walkway drawn as a flagged limestone causeway on round-arched piers standing in the surf, with a low parapet and marble posts outside `UsableWidth`. The ramp part stays the solid walking surface; piers, arches and parapets are non-colliding dressing. Navigation is unchanged.
+- **`Terrain.Shapes[id].Sheer`**: a rounded terrain terrace whose apron drops as a near-vertical cliff (about 3.4–4.2 studs of drop per stud, against 1–1.6 for a bank). It only makes the ground steeper, so it never offers a new way onto a walkway.
+- **`Terrain.WallBand.NorthScale`**: scales the wall band's height along the north wall (blending back to full height toward the corners), so a far backdrop (the Tidewall) shows over a low shore.
+- **`BrokenFlight`** (`TowerLayout`): the pair of terraces the fallen middle flight once joined. It is spec data (no link joins them, and the Apex stays reachable), not a connector.
+
+Floor 36's shrine canopy and its great bell hang over the Apex camp above the camp band (`TowerBiomeAssets.AirborneKinds`), and its bell arches span the Pilgrim Stair on purpose (`NerethBellArch` is exempt from the walkway and camp clearance, like `RampArch`): their openings are wider than the flight and their piers stand outside the lane.
+
+Floor 37 (Coral Cloister, `sunken:2`) adds two options to the same system:
+
+- **`Terrain.Pools[i].Round`**: optional superellipse exponent for an authored pool (`(|dx|/RX)^p + (|dz|/RZ)^p <= 1`), so cloister garths carve as rounded squares instead of ovals. Pools without `Round` keep the exact ellipse formula.
+- **`Terrain.BridgeStyles = "ARCADE"`**: a hung `STAIRS` bridge over water carried on arched limestone piers underneath, with a low limestone balustrade, tall coral-grown columns strictly outside `UsableWidth`, and overhead transverse arches ≥ 20 studs clear above the treads (non-colliding dressing inside `BridgeCurb`; navigation is unchanged).
+
+Floor 37's flush tide-spiral floor mosaics (`CloisterFloorMosaic`, non-colliding and `CanQuery = false`) are exempt from walkway and camp clearance so they lie cleanly across Lay Court and Chapter Isle without affecting grounding or combat.
+
+Floor 38 (Tidal Channels, `sunken:3`) adds stepped canal waterworks to `Terrain.Direct`:
+
+- **`Surfaces.DEEPWARD`**: wet storm-tide masonry surface using zero-noise flat shared terrain materials (`Ground` and `LeafyGrass` on walk/trail planes so every terrace and ramp renders flush with zero voxel-bump drift, `Slate` banks, and `Basalt` cliffs/peaks/lock beds — no blocky materials, no Fungal-owned materials, and no edits to shared `MaterialColors`).
+- **`Terrain.Locks`**: an array of `{ X, Z, Width, Depth, Level, Bed, Wall }` lock chambers whose beds carve as `POOL`, whose cheeks raise retaining lips around each chamber, and whose stepped water heights are exported via `field.WaterLevel(x, z)` and written column-by-column in `TowerTerrain.Build` so canal water steps up lock by lock (`-2 → 4 → 10 → 16 → 22`).
+- **`Terrain.BridgeStyles = "LOCKGATE"`**: hung canal and side-channel bridges over the locks keep their solid wet timber-and-bronze walking deck and add hanging V-mitre lock gates with aqua tide-wave runes and foaming overflow curtains underneath, timber handrails/balance beams strictly outside `UsableWidth`, and an overhead mid-span bell gallows with at least 19 studs of vertical headroom (all non-colliding dressing; navigation is unchanged).
+- **`Terrain.BridgeStyles = "WALLWALK"`** (Floor 39, Pearlguard Vault): an elevated flagged-limestone parapet walkway spanning between the inner bastion towers (`WestBastion → EastBastion`) atop a battered curtain wall dropping beneath the deck to screen the lower inner ward from arrival, with crenellated merlons and hooded aqua braziers strictly outside `UsableWidth` (non-colliding dressing; navigation is unchanged).

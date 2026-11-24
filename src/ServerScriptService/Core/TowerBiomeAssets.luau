@@ -22,13 +22,17 @@ local CorruptedFloor32 = require(script.Parent.TowerSetPieces.CorruptedFloor32)
 local CorruptedFloor33 = require(script.Parent.TowerSetPieces.CorruptedFloor33)
 local CorruptedFloor34 = require(script.Parent.TowerSetPieces.CorruptedFloor34)
 local CorruptedFloor35 = require(script.Parent.TowerSetPieces.CorruptedFloor35)
+local SunkenSetPieces = require(script.Parent.TowerSetPieces.SunkenSanctuary)
+local SunkenFloor37 = require(script.Parent.TowerSetPieces.SunkenFloor37)
+local SunkenFloor38 = require(script.Parent.TowerSetPieces.SunkenFloor38)
+local SunkenFloor39 = require(script.Parent.TowerSetPieces.SunkenFloor39)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
-local CampExemptKinds = { RampArch = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true }
+local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true }
 
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
@@ -71,6 +75,8 @@ end
 
 -- Prop kinds that hang in the air by design (rings, chains, gears, sky pieces); the settle pass skips them.
 Assets.AirborneKinds = table.freeze({
+	-- Floor 36's golden shrine canopy and the great Tidebell hung under it (TowerSetPieces/SunkenSanctuary).
+	BellStackCanopy = true, BellStackTidebell = true,
 	Ring = true, Chain = true, Cogwheel = true, Orrery = true, Eclipse = true, CavernSkylight = true, CeilingRoots = true,
 	GalaxyPortal = true, LotusPortal = true, CorruptionCrescent = true, AirborneVineCable = true,
 	-- Floor 31's wicker lanterns hang from trees, the stile and the lean-to (TowerSetPieces/CorruptedGrove).
@@ -97,6 +103,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- Authored Corrupted Grove floors (31-35) build their own set pieces (TowerSetPieces/CorruptedGrove) and
 	-- skip the biome's generic thorn arches, corruption dais and citadel wings.
 	local corruptedFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 10) == "corrupted:"
+	-- Authored Sunken Sanctuary floors (36-40) build their own set pieces (TowerSetPieces/Sunken*) and
+	-- skip the biome's generic marble arches, flanking statues, sanctuary spire and lotus portal.
+	local sunkenFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 7) == "sunken:"
 	local accent = theme.LightColor
 	local cliffColor = theme.CliffColor or theme.WallColor
 	local cliffMat = theme.CliffMaterial or Enum.Material.Rock
@@ -698,7 +707,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif biome == "corrupted_grove" then
 			tree(at, 1.12 * lScale, true, false)
 			mushroom(at + V(-signX * 11, 0, 9), 0.55 * lScale, true)
-		elseif biome == "sunken_sanctuary" then
+		elseif biome == "sunken_sanctuary" and not sunkenFloor then
 			arch(at, 26 * lScale, 24 * lScale, 7.5, theme.TrimColor, Enum.Material.Marble, math.pi / 3 * signX)
 			spire(at + V(signX * 8, 0, -8), 34 * lScale, 9 * lScale, theme.TrimColor, accent, false)
 		elseif biome == "astral_archives" then
@@ -1021,7 +1030,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			end
 		end
 
-	elseif biome == "sunken_sanctuary" then
+	elseif biome == "sunken_sanctuary" and not sunkenFloor then
 		-- Twin Colossal Flanking Statues: Robed Goddess with Staff (West) & Poseidon King with Trident (East)
 		local eastGal = layout.Platforms.EastGallery
 		statue(V(westGal.X + 12, westGal.Y, westGal.Z - 18), 1.45 * scale, "StaffGoddess", -1)
@@ -6489,6 +6498,11 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "corrupted:3" then CorruptedFloor33.Build
 		elseif layout.Authored == "corrupted:4" then CorruptedFloor34.Build
 		elseif layout.Authored == "corrupted:5" then CorruptedFloor35.Build
+		-- Sunken Sanctuary authored floors (Floor 36 onward): TowerSetPieces/SunkenSanctuary & SunkenFloor37+.
+		elseif layout.Authored == "sunken:1" then SunkenSetPieces.Floor36
+		elseif layout.Authored == "sunken:2" then SunkenFloor37.Build
+		elseif layout.Authored == "sunken:3" then SunkenFloor38.Build
+		elseif layout.Authored == "sunken:4" then SunkenFloor39.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({
@@ -6539,8 +6553,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
-	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or layout.Authored == "thunder:3" or layout.Authored == "thunder:4" or layout.Authored == "thunder:5" or corruptedFloor then
-		-- Floors 16-25, 28-30 and 31-35 own their north horizon backdrops directly (Floors 21-25, 28-35: TowerSetPieces).
+	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or layout.Authored == "thunder:3" or layout.Authored == "thunder:4" or layout.Authored == "thunder:5" or corruptedFloor or sunkenFloor then
+		-- Floors 16-25, 28-30 and 31-40 own their north horizon backdrops directly (Floors 21-25, 28-30, 31-40: TowerSetPieces).
 	else
 		-- Authored Fungal floors have their own backdrop: the cavern wall itself (Floor 6's Crown Cluster grows on it).
 		for _, s in if fungalFloor then {} else { -1, 1 } do
@@ -7325,6 +7339,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 	elseif corruptedFloor then
 		-- Floors 31-35 build their own Apex landmarks and horizon (TowerSetPieces/CorruptedGrove).
+	elseif sunkenFloor then
+		-- Floors 36-40 build their own Apex landmarks and the Tidewall (TowerSetPieces/Sunken*).
 	elseif biome == "corrupted_grove" then
 		group("CorruptionDais", function()
 			for step = 1, 3 do
