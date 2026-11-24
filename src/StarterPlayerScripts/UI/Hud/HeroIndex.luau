@@ -25,6 +25,7 @@ local Skills = require(Shared:WaitForChild("Config"):WaitForChild("ArchetypeComb
 local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
+local RollLuck = require(Shared:WaitForChild("Util"):WaitForChild("RollLuck"))
 local HeroBannerOdds = require(Shared:WaitForChild("Util"):WaitForChild("HeroBannerOdds"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local Portrait = require(script.Parent:WaitForChild("Portrait"))
@@ -108,10 +109,10 @@ local ARTIFACT_CATEGORIES = {
 	},
 	{
 		Key = "BANNER",
-		Title = "BLACKSMITH FORGE BANNER",
-		Tag = "BLACKSMITH FORGE · 84 ARTIFACTS",
+		Title = "OPEN FORGE",
+		Tag = "OPEN FORGE · 84 ARTIFACTS",
 		Tone = "Violet",
-		Icon = "Summon",
+		Icon = "Forge",
 		FilterFn = function(_seed: any) return true end,
 	},
 }
@@ -183,17 +184,17 @@ local function artifactsOfCategory(cat: any): { string }
 	return list
 end
 
--- Where a artifact comes from, read from the banner config: the price, this artifact's exact chance per
--- pull (tier chance / 6 weapon types x 60% Standard or 40% Enhanced, God's Blessing included) and
--- what it sells back for at 1 star.
-local function acquisitionText(seed: any, luck: number): string
-	local banner = ArtifactCatalog.Banner
-	local rates = SummonLuck.ApplyLuck(banner.BaseRarityRates, luck)
+-- Where an artifact comes from in the Open Forge: its Relic-floor scaled pedestal Gold price,
+-- exact per-pedestal roll chance (with uncapped Forge Roll Luck), and 1-star sell value.
+local function acquisitionText(seed: any, rollLuck: number): string
+	local rates = RollLuck.ApplyLuck(ArtifactCatalog.RollRates, rollLuck)
 	local chance = (rates[seed.RarityTier] or 0) / #ArtifactCatalog.ArchetypeOrder * (if seed.IsHighStat then 0.4 else 0.6) * 100
 	local pct = if chance >= 0.1 then string.format("%.2f", chance) else string.format("%.3f", chance)
-	return string.format("Blacksmith Forge banner · %s Gold per pull, %s per 10\n%s%% chance per pull%s · sells for %s Gold at 1★",
-		StatBalance.Format(banner.Cost1X), StatBalance.Format(banner.Cost10X), pct,
-		if luck > 0 then " (with God's Blessing)" else "",
+	local cost = ArtifactCatalog.GetPedestalCost(seed)
+	local floorAnchor = ArtifactCatalog.RarityTargetFloor[seed.RarityTier] or 1
+	return string.format("Open Forge pedestal · %s Gold (Floor %d relic scale · free rerolls)\n%s%% chance per pedestal%s · sells for %s Gold at 1★",
+		StatBalance.Format(cost), floorAnchor, pct,
+		if rollLuck > 0 then string.format(" (+%d%% Roll Luck)", math.round(rollLuck * 100)) else "",
 		StatBalance.Format(ArtifactCatalog.CalculateSellPrice(seed.RarityTier, 1)))
 end
 
@@ -375,6 +376,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 	local ownedHeroes = heroOwnership(props.Profile)
 	local ownedArtifacts = artifactOwnership(props.Profile)
 	local luck = SummonLuck.ForProfile(props.Profile)
+	local rollLuck = RollLuck.ForProfile(props.Profile)
 
 	-- =========================================================================
 	-- TOTALS
@@ -675,7 +677,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 
 		artifactDetail.Description = section(3, "LORE & CONCEPT ART", artifactSeed.Description or "—", 52)
 		artifactDetail.Wielders = section(4, "COMPATIBLE HEROES", WIELDERS_BY_TYPE[artifactSeed.Type] or "All heroes of this archetype", 40)
-		artifactDetail.Acquisition = section(5, "ACQUISITION", acquisitionText(artifactSeed, luck), 66)
+		artifactDetail.Acquisition = section(5, "ACQUISITION", acquisitionText(artifactSeed, rollLuck), 66)
 
 		artifactDetail.Action = button({ LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 46), ZIndex = 3,
 			[React.Event.Activated] = function()
@@ -685,7 +687,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 				elseif _G.OpenFacilityHUD then
 					_G.OpenFacilityHUD("Blacksmith")
 				end
-			end }, "Action", "VISIT BLACKSMITH FORGE", 15)
+			end }, "Action", "OPEN FORGE SMELTER", 15)
 	end
 
 	-- =========================================================================

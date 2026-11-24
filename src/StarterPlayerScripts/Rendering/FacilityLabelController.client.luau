@@ -17,6 +17,7 @@ local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("Inve
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
+local RollLuck = require(Shared:WaitForChild("Util"):WaitForChild("RollLuck"))
 local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
 local BillboardThemes = require(Shared:WaitForChild("Config"):WaitForChild("BillboardThemes"))
 local Kit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Kit"))
@@ -135,7 +136,13 @@ local function statusText(facility: string): (string, string)
 		return bonus, detail
 	elseif facility == "Blacksmith" then
 		local count, cap = InventoryCapacity.ArtifactCount(profile), InventoryCapacity.ArtifactCap(profile.FortressTree)
-		return string.format("%d/%d weapons", count, cap), if count >= cap then "Full · sell or promote to make room" else "Forge · Promote · Sell"
+		local pedestals = FortressTree.ForgePedestals(profile.FortressTree)
+		local rollLuck = RollLuck.ForProfile(profile)
+		local luckSuffix = if rollLuck > 0 then " · " .. percent(rollLuck) .. " roll luck" else ""
+		local detail = if count >= cap
+			then "Full · sell or promote to make room"
+			else string.format("%d/6 pedestals · Smelt & Roll", pedestals)
+		return string.format("%d/%d weapons%s", count, cap, luckSuffix), detail
 	elseif facility == "ThePit" then
 		local count, cap = InventoryCapacity.HeroCount(profile), InventoryCapacity.HeroCap(profile.FortressTree)
 		return "Synthesis · Promotion", string.format("%d/%d heroes", count, cap)

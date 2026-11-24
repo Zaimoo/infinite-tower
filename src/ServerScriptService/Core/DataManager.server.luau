@@ -32,6 +32,8 @@ local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeServ
 local RewardsService = require(script.Parent:WaitForChild("RewardsService"))
 local PotionService = require(script.Parent:WaitForChild("PotionService"))
 local ReforgeService = require(script.Parent:WaitForChild("ReforgeService"))
+local ForgeRollService = require(script.Parent:WaitForChild("ForgeRollService"))
+local ForgeRollRules = require(Shared:WaitForChild("Util"):WaitForChild("ForgeRollRules"))
 local BattlePassService = require(script.Parent:WaitForChild("BattlePassService"))
 local PotionRules = require(Shared:WaitForChild("Util"):WaitForChild("PotionRules"))
 local BattlePassRules = require(Shared:WaitForChild("Util"):WaitForChild("BattlePassRules"))
@@ -297,6 +299,7 @@ export type PlayerProfile = {
 	BattlePass: BattlePassRules.State?, -- season, XP, premium and claimed rewards (BattlePassService)
 	Potions: { [string]: number }?, -- potions owned, by PotionConfig id (PotionService)
 	Boosts: { [string]: number }?, -- seconds left on each running potion boost, by effect
+	ForgeRoll: ForgeRollRules.State?, -- Open Forge rolled pedestal slots & Auto-Roll filter (schema v12)
 }
 
 --============================================================================
@@ -560,6 +563,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		BattlePass = BattlePassRules.NewState(os.time()), -- schema v11
 		Potions = {},
 		Boosts = {},
+		ForgeRoll = ForgeRollRules.NewState(), -- schema v12
 		Notoriety = NotorietyRules.NewState(), -- thefts, bounties claimed, escapes (B6, schema v10)
 	}
 end
@@ -707,9 +711,8 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 			art.Locked = false
 		end
 	end
-	local maxPity = ArtifactCatalog.Banner.MaxPity
 	if type(profile.ArtifactBannerPity) ~= "number" then profile.ArtifactBannerPity = 0 end
-	profile.ArtifactBannerPity = math.clamp(math.floor(profile.ArtifactBannerPity), 0, maxPity - 1)
+	profile.ArtifactBannerPity = math.max(0, math.floor(profile.ArtifactBannerPity))
 	if type(profile.ArtifactBanner10Pity) ~= "number" then profile.ArtifactBanner10Pity = 0 end
 	profile.ArtifactBanner10Pity = math.clamp(math.floor(profile.ArtifactBanner10Pity), 0, 9)
 	-- 50/50 rule (added with Exalted+ hero pity): older profiles have no flag yet.
@@ -1543,111 +1546,23 @@ end
 
 -- The banner rolls a tier and a weapon type, then a variant. Fail at server start, not after taking
 -- a player's Gold, if any tier/type pair is missing a weapon.
-for tier = 1, #ArtifactCatalog.Banner.BaseRarityRates do
+for tier = 1, #ArtifactCatalog.RollRates do
 	for _, weaponType in ipairs(ArtifactCatalog.ArchetypeTypes) do
 		local std, enh = ArtifactCatalog.GetTierPair(tier, weaponType)
 		assert(std and enh, string.format("ArtifactCatalog is missing a tier %d %s weapon", tier, weaponType))
 	end
 end
 
-function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, string?, { any }?, number?)
-	local profile = ActiveProfiles[player]
-	if not profile then return false, "Profile not loaded", nil, nil end
-
-	local count = (pullCount == 10) and 10 or 1
-	local cfg = ArtifactCatalog.Banner
-	local cost = (count == 10) and cfg.Cost10X or cfg.Cost1X
-
-	if not profile.Currencies or (profile.Currencies.Gold or 0) < cost then
-		DataManager.SendToast(player, string.format("Not enough Gold|Need %d", cost), "WARN")
-		return false, string.format("Need %d Gold to Summon!", cost), nil, nil
-	end
-
-	if not profile.Artifacts then profile.Artifacts = {} end
-	local artifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
-	if InventoryCapacity.ArtifactCount(profile) + count > artifactCap then
-		DataManager.SendToast(player, string.format("Artifacts full|%d max · Sell some", artifactCap), "WARN")
-		return false, "Artifact inventory full", nil, nil
-	end
-
-	profile.Currencies.Gold -= cost
-	if profile.ArtifactBannerPity == nil then profile.ArtifactBannerPity = 0 end
-	if profile.ArtifactBanner10Pity == nil then profile.ArtifactBanner10Pity = 0 end
-
-	local summonedList = {}
-	local luck = DataManager.GetSummonLuck(player)
-	local tierRates = SummonLuck.ApplyLuck(cfg.BaseRarityRates, luck)
-	local archetypeTypes = ArtifactCatalog.ArchetypeTypes
-	local bestTier = 1
-	-- Onboarding: the very first roll yields a weapon a squad hero can hold, so the "equip it"
-	-- lesson that follows always works. Later rolls are uniform across the six types.
-	local guidedType = OnboardingService.StarterWeaponType(player)
-
-	for pull = 1, count do
-		profile.ArtifactBannerPity += 1
-		profile.ArtifactBanner10Pity += 1
-
-		local isGuaranteedExalted = (profile.ArtifactBannerPity >= cfg.MaxPity)
-		local isGuaranteedRare = (profile.ArtifactBanner10Pity >= 10)
-
-		local tier: number
-		if isGuaranteedExalted then
-			-- 120-pull hard pity: Exalted or higher, split by the luck-boosted rates of those tiers.
-			tier = SummonLuck.RollAtLeast(tierRates, cfg.PityRarity, math.random())
-		elseif isGuaranteedRare then
-			tier = SummonLuck.RollAtLeast(tierRates, 3, math.random())
-		else
-			tier = SummonLuck.Roll(tierRates, math.random())
-		end
-
-		if tier > bestTier then
-			bestTier = tier
-		end
-
-		if tier >= 5 then
-			profile.ArtifactBannerPity = 0
-		end
-		if tier >= 3 then
-			profile.ArtifactBanner10Pity = 0
-		end
-
-		-- Uniform archetype selection across 6 archetypes
-		local chosenType = if pull == 1 and guidedType then guidedType else archetypeTypes[math.random(1, #archetypeTypes)]
-		local stdSeed, enhSeed = ArtifactCatalog.GetTierPair(tier, chosenType)
-
-		-- Variant roll: 60% Standard, 40% Enhanced
-		local chosenSeed = if math.random() <= 0.60 then (stdSeed or enhSeed) else (enhSeed or stdSeed)
-		assert(chosenSeed, string.format("No artifact for tier %d %s", tier, chosenType)) -- the load-time check makes this unreachable
-
-		-- All summoned artifacts start at 1★ baseline
-		local uuid, artifact = DataManager.CreateArtifact(chosenSeed.TemplateId, 1, tier)
-		profile.Artifacts[uuid] = artifact
-		table.insert(summonedList, artifact)
-	end
-
-	BattlePassService.Progress(player, "Artifacts", #summonedList) -- quests (GDD §4.9)
-	DataManager.SyncProfile(player)
-	OnboardingService.Report(player, "ArtifactSummoned")
-	-- An Exalted or rarer weapon is server news (B3).
-	for _, artifact in summonedList do
-		if (artifact.Rarity or 1) >= (cfg.PityRarity or 5) then
-			NewsService.Post({ Kind = "BIG_FORGE", ActorUserId = player.UserId, ActorName = player.DisplayName,
-				ItemName = artifact.DisplayName, Tier = artifact.Rarity })
-		end
-	end
-	if luck > 0 and bestTier >= 3 and _G.PlotManager and _G.PlotManager.PulseBlessing then
-		_G.PlotManager.PulseBlessing(player)
-	end
-
-	local pityRemaining = math.max(1, cfg.MaxPity - profile.ArtifactBannerPity)
-	return true, "Summon successful", summonedList, pityRemaining
+-- Legacy Gold banner summon is retired in favor of the Open Forge Anvil & 3D Pedestals (ForgeRollService).
+function DataManager.SummonArtifact(player: Player, _pullCount: any): (boolean, string?, { any }?, number?)
+	DataManager.SendToast(player, "Visit the Open Forge|Roll at the Anvil & buy from Pedestals", "INFO")
+	return false, "Visit the Open Forge Anvil & Pedestals on your plot.", nil, 0
 end
 
-RequestSummonArtifactFunc.OnServerInvoke = function(player: Player, pullCount: any, targetPlot: any?)
-	if not validateCallerPlotOwnership(player, targetPlot) then
-		return false, "Plot ownership validation failed", nil, 0
+if RequestSummonArtifactFunc then
+	RequestSummonArtifactFunc.OnServerInvoke = function(player: Player)
+		return DataManager.SummonArtifact(player, 1)
 	end
-	return DataManager.SummonArtifact(player, pullCount)
 end
 
 --============================================================================
@@ -2355,6 +2270,19 @@ ReforgeService.Init({
 	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
 })
 
+ForgeRollService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	SyncProfile = function(player: Player, progressionOnly: boolean?) DataManager.SyncProfile(player, progressionOnly) end,
+	SendToast = DataManager.SendToast,
+	CreateArtifact = DataManager.CreateArtifact,
+	IsUnlocked = OnboardingService.IsUnlocked,
+	StarterWeaponType = OnboardingService.StarterWeaponType,
+	ReportOnboarding = OnboardingService.Report,
+	ProgressBattlePass = function(player: Player, key: string, count: number) BattlePassService.Progress(player, key, count) end,
+	PostNews = NewsService.Post,
+	ArtifactRemotes = ArtifactRemotes :: Folder,
+})
+
 BattlePassService.Init({
 	GetProfile = function(player: Player) return ActiveProfiles[player] end,
 	SendToast = DataManager.SendToast,
@@ -2444,6 +2372,7 @@ local function onPlayerAdded(player: Player)
 	PotionService.EnsureState(profile)
 	BattlePassService.EnsureState(profile)
 	ReforgeService.EnsureState(profile)
+	ForgeRollRules.EnsureState(profile)
 	ActiveProfiles[player] = profile
 	persistentPlayers[player] = loaded.Persistent or nil
 	releasedPlayers[player] = nil
@@ -2486,6 +2415,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	if profile then forgeTransactions.Forget(profile) end
 	pit:Forget(player)
 	FortressTreeService.Forget(player)
+	ForgeRollService.Forget(player)
 	lastLeaderstatsWrite[player] = nil
 	pendingCombatSync[player] = nil
 	lastSettingsSave[player] = nil

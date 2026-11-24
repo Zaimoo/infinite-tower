@@ -1653,6 +1653,13 @@ for id, controller in { Squad = squadController, Promotion = promotionController
 	WindowManager.Route(id, controller)
 end
 _G.ForgeController = forgeController
+_G.OpenFortressBranch = function(branchId: string?)
+	setModalFocusMode(true)
+	_G.OpenMasterModal("FORTRESS")
+	fortressTreeController:OpenBranch(branchId)
+	WindowManager.Opened("Fortress")
+	updateBottomTabHighlights()
+end
 _G.OpenFacilityHUD = function(facility: string)
 	setModalFocusMode(true)
 	-- Phase 5: The Pit has one prompt and opens on its Synthesis tab (the React tab bar switches).

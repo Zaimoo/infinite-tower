@@ -12,7 +12,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArtifactCatalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
-local SummonLuck = require(ReplicatedStorage.Shared.Util.SummonLuck)
+local RollLuck = require(ReplicatedStorage.Shared.Util.RollLuck)
 local Promotion = require(ReplicatedStorage.Shared.Util.WeaponPromotion)
 local Stats = require(ReplicatedStorage.Shared.Util.StatFormulas)
 local Heroes = require(ReplicatedStorage.Shared.Config.HeroCatalog)
@@ -108,62 +108,54 @@ test("All 84 weapons appear in CatalogOrder", function()
 	end
 end)
 
--- 3. Gold Gacha Summon Banner & 120-pull Hard Pity (Exalted+)
-test("Artifact banner operates with Gold currency and 120-pull Exalted+ hard pity", function()
+-- 3. Open Forge Free Rerolls, Relic-Floor Scaled Gold Pricing & Uncapped Roll Luck
+test("Open Forge uses free rerolls, Relic-floor Gold pricing, and no pity counters", function()
 	local banner = ArtifactCatalog.Banner
 	assert(banner ~= nil, "ArtifactCatalog.Banner missing")
-	assertEqual(banner.Currency, "Gold", "Banner currency is Gold")
-	assertEqual(banner.Cost1X, 5000, "1X summon costs 5,000 Gold")
-	assertEqual(banner.Cost10X, 45000, "10X summon costs 45,000 Gold (10% discount)")
-	assertEqual(banner.MaxPity, 120, "Hard pity is 120 summons")
-	assertEqual(banner.PityRarityTier, 5, "Hard pity guarantees Exalted (Tier 5) or higher")
+	assertEqual(banner.Currency, "Gold", "Pedestal purchase currency is Gold")
+	assert(banner.Cost1X == nil and banner.Cost10X == nil, "Legacy 1X/10X Gold banner prices removed")
+	assert(banner.MaxPity == nil and ArtifactCatalog.GetPityRemaining == nil, "Legacy Forge pity counters removed")
 
-	-- Pity math calculations
-	assertEqual(ArtifactCatalog.GetPityRemaining(0), 120, "0 pity means 120 remaining")
-	assertEqual(ArtifactCatalog.GetPityRemaining(50), 70, "50 pulls gives 70 remaining")
-	assertEqual(ArtifactCatalog.GetPityRemaining(119), 1, "119 pulls gives 1 remaining to guaranteed Exalted+")
-	assertEqual(ArtifactCatalog.GetPityRemaining(120), 120, "120 pulls resets to 120 remaining")
+	-- Relic-floor milestone progression: each tier is strictly pricier, and Enhanced is ~1.30x Standard
+	local prevStd = 0
+	for tier = 1, 7 do
+		local stdCost = ArtifactCatalog.RarityStandardPedestalCost[tier]
+		local enhCost = ArtifactCatalog.RarityEnhancedPedestalCost[tier]
+		assert(stdCost > prevStd, string.format("Tier %d Standard cost %d must exceed previous %d", tier, stdCost, prevStd))
+		assert(enhCost > stdCost, string.format("Tier %d Enhanced cost %d must exceed Standard %d", tier, enhCost, stdCost))
+		prevStd = stdCost
+	end
+
+	-- Spot-check GetPedestalCost against Standard / Enhanced table values
+	local std1, enh1 = ArtifactCatalog.GetTierPair(1, "SWORD_SHIELD")
+	assert(std1 and enh1)
+	assertEqual(ArtifactCatalog.GetPedestalCost(std1), ArtifactCatalog.RarityStandardPedestalCost[1], "Common Standard pedestal cost")
+	assertEqual(ArtifactCatalog.GetPedestalCost(enh1), ArtifactCatalog.RarityEnhancedPedestalCost[1], "Common Enhanced pedestal cost")
+	assertEqual(ArtifactCatalog.GetPedestalCost(std1.TemplateId), ArtifactCatalog.GetPedestalCost(std1), "GetPedestalCost accepts templateId string")
 end)
 
-test("Banner base rarity rates sum to 1.0 and God's Blessing luck scales upper tiers", function()
-	local rates = ArtifactCatalog.Banner.BaseRarityRates
-	assertEqual(#rates, 7, "Base rates define 7 rarity tiers")
+test("Open Forge base rarity rates sum to 1.0 and uncapped RollLuck lifts upper tiers", function()
+	local rates = ArtifactCatalog.RollRates
+	assertEqual(#rates, 7, "RollRates define 7 rarity tiers")
 	local sum = 0
 	for _, r in ipairs(rates) do sum += r end
-	assert(math.abs(sum - 1.0) < 1e-6, "Base rarity rates must sum to 1.0")
+	assert(math.abs(sum - 1.0) < 1e-6, "Base roll rates must sum to 1.0")
 
-	-- God's Blessing Luck check
-	local boosted = SummonLuck.ApplyLuck(rates, 0.25)
+	local boosted = RollLuck.ApplyLuck(rates, 2.5)
 	local boostedSum = 0
-	for _, r in ipairs(boosted) do boostedSum += r end
-	assert(math.abs(boostedSum - 1.0) < 1e-6, "Boosted rarity rates must sum to 1.0")
-	assert(boosted[1] < rates[1], "Common tier absorbs the luck bonus")
-	for tier = 2, 7 do
-		assertEqual(boosted[tier], rates[tier] * 1.25, "Tiers 2-7 receive exact (1 + luck) scaling")
+	for _, r in ipairs(boosted) do
+		assert(r > 0 and r < 1, "Every tier probability remains in (0, 1)")
+		boostedSum += r
 	end
+	assert(math.abs(boostedSum - 1.0) < 1e-6, "Boosted roll rates must sum to 1.0")
+	assert(boosted[1] < rates[1], "Common tier shrinks as Roll Luck grows")
+	assert(boosted[7] > rates[7], "Mythical tier rises with Roll Luck")
 end)
 
 -- 4. Baseline 50 Inventory Capacity Limits
 test("Baseline inventory capacity for Heroes and Artifacts is 50", function()
 	assertEqual(Balance.MaxHeroInventory, 50, "MaxHeroInventory must be 50")
 	assertEqual(Balance.MaxArtifactInventory, 50, "MaxArtifactInventory must be 50")
-end)
-
-test("The 120-pull pity roll only lands Exalted or higher and follows the luck-boosted rates", function()
-	local banner = ArtifactCatalog.Banner
-	local plain = SummonLuck.ApplyLuck(banner.BaseRarityRates, 0)
-	local lucky = SummonLuck.ApplyLuck(banner.BaseRarityRates, 0.5)
-	for i = 0, 999 do
-		local tier = SummonLuck.RollAtLeast(lucky, banner.PityRarity, i / 1000)
-		assert(tier >= banner.PityRarity and tier <= #lucky, "pity roll out of range: " .. tier)
-	end
-	-- Luck scales every upper tier equally, so the Exalted/Legendary/Mythical split is unchanged by luck.
-	local function mythicShare(rates: { number }): number
-		return rates[7] / (rates[5] + rates[6] + rates[7])
-	end
-	assert(math.abs(mythicShare(plain) - mythicShare(lucky)) < 1e-9, "luck should not skew the pity split")
-	assertEqual(SummonLuck.RollAtLeast(plain, banner.PityRarity, 0), 7, "lowest roll is the rarest tier")
-	assertEqual(SummonLuck.RollAtLeast(plain, banner.PityRarity, 0.999), 5, "highest roll is Exalted")
 end)
 
 test("Promotion donors are any weapon of the same rarity tier and star rank", function()
@@ -195,16 +187,14 @@ test("Artifact sell price calculates accurately across all 7 tiers and star leve
 	assertEqual(ArtifactCatalog.CalculateSellPrice(7, 7), 160000) -- 40,000 * (1 + 0.5 * 6)
 end)
 
-test("Selling a pull is worth under 15% of its cost even at maximum summon luck", function()
-	local FacilityConfig = require(ReplicatedStorage.Shared.Config.FacilityConfig)
-	local banner = ArtifactCatalog.Banner
-	local perPullCost = math.min(banner.Cost1X, banner.Cost10X / 10)
-	local rates = SummonLuck.ApplyLuck(banner.BaseRarityRates, FacilityConfig.Constants.MaxSummonLuck)
-	local ev = 0
-	for tier, rate in ipairs(rates) do
-		ev += rate * ArtifactCatalog.CalculateSellPrice(tier, 1)
+test("Selling a pedestal weapon is strictly under 20% of its Gold purchase cost across every tier", function()
+	for tier = 1, 7 do
+		local sell1 = ArtifactCatalog.CalculateSellPrice(tier, 1)
+		local buyStd = ArtifactCatalog.RarityStandardPedestalCost[tier]
+		local buyEnh = ArtifactCatalog.RarityEnhancedPedestalCost[tier]
+		assert(sell1 < 0.20 * buyStd, string.format("tier %d sell %d must stay under 20%% of Standard buy %d", tier, sell1, buyStd))
+		assert(sell1 < 0.20 * buyEnh, string.format("tier %d sell %d must stay under 20%% of Enhanced buy %d", tier, sell1, buyEnh))
 	end
-	assert(ev < 0.15 * perPullCost, string.format("sell EV %.0f is not under 15%% of %d", ev, perPullCost))
 end)
 
 test("Every rarity tier and weapon type has both a Standard and an Enhanced weapon", function()

@@ -461,8 +461,8 @@ function OnboardingService.Report(player: Player, eventName: string, detail: (st
 			completed, completedTitle = lesson, lesson.Title
 			reward = table.clone(lessonReward)
 			if id == "Clear" then
-				-- The next lesson is a Forge roll: make sure the Gold for one is there.
-				local short = ArtifactCatalog.Banner.Cost1X - (profile.Currencies.Gold or 0)
+				-- The next lesson is buying a forged weapon: make sure the Gold for a starter pedestal is there.
+				local short = ArtifactCatalog.RarityStandardPedestalCost[1] - (profile.Currencies.Gold or 0)
 				reward.Gold = math.max(reward.Gold or 0, short)
 			end
 		end

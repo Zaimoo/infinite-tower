@@ -16,7 +16,7 @@ local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 58 -- 58: Add solid awning roof, post, and prop colliders to Building_Market (57: Tuck SynthesisChamber deeper into NW corner)
+local VERSION = 61 -- 61: Even 3x2 pedestal spacing (7.75 x 10.0 studs) + 5.8-stud BuyArtifactPrompt radius
 
 local function attachPrompt(
 	parent: Instance,
@@ -204,9 +204,9 @@ function Buildings.Build(plot: Instance)
 	-- Strip the old Promotion Altar anchor's bare prompt as well.
 	syncPlotFacilityAnchor(plot, "Promotion", pitInteract.CFrame)
 
-	-- 6. Blacksmith Forge (Open-Air Stone Hearth & Anvil against Dividing Wall)
+	-- 6. Open Forge (Smelter for Artifacts & Upgrade, Anvil for Free Rerolls, 6 3D Artifact Pedestals)
 	local forgeCfg = layout.BlacksmithForge
-	local forgeCF = origin * CFrame.new(forgeCfg.Offset) * CFrame.Angles(0, forgeCfg.RotationY or math.rad(180), 0)
+	local forgeCF = origin * CFrame.new(forgeCfg.Offset) * CFrame.Angles(0, forgeCfg.RotationY or math.rad(-90), 0)
 	local forgeInteract = Architecture.BuildBlacksmith(folder, forgeCF)
 	local forgeModel = folder:FindFirstChild("Building_Blacksmith")
 	if forgeModel then
@@ -216,11 +216,46 @@ function Buildings.Build(plot: Instance)
 		forgeInteract,
 		"BlacksmithPrompt",
 		"Forge",
-		"Blacksmith Forge",
-		forgeCfg.PromptText or "Blacksmith Forge",
+		"Forge Smelter",
+		forgeCfg.PromptText or "Artifacts & Upgrade",
 		forgeCfg.Keybind or Enum.KeyCode.F,
-		15
+		9.5
 	)
+	if forgeModel then
+		local anvilInteract = forgeModel:FindFirstChild("AnvilInteraction")
+		if anvilInteract then
+			attachPrompt(
+				anvilInteract,
+				"AnvilRollPrompt",
+				"",
+				"Forge Anvil",
+				"Reroll (Free)",
+				Enum.KeyCode.F,
+				9.5
+			)
+		end
+		local pedestalsFolder = forgeModel:FindFirstChild("Pedestals")
+		if pedestalsFolder then
+			for idx = 1, 6 do
+				local ped = pedestalsFolder:FindFirstChild("Pedestal_" .. idx)
+				local root = ped and ped:FindFirstChild("PedestalRoot")
+				local att = root and root:FindFirstChild("PromptAnchor")
+				if att then
+					local buyPrompt = attachPrompt(
+						att,
+						"BuyArtifactPrompt",
+						"",
+						"Artifact Pedestal",
+						"Buy Artifact",
+						Enum.KeyCode.F,
+						5.8
+					)
+					buyPrompt:SetAttribute("SlotIndex", idx)
+					buyPrompt.Enabled = false
+				end
+			end
+		end
+	end
 	syncPlotFacilityAnchor(plot, "Blacksmith", forgeInteract.CFrame)
 
 	-- 7. Training Area (28-Stud Circular Cobblestone Ring in SE Corner)

@@ -12,10 +12,11 @@ local SettingsConfig = require(ReplicatedStorage.Shared.Config.SettingsConfig)
 local NotorietyRules = require(ReplicatedStorage.Shared.Util.NotorietyRules)
 local PotionRules = require(ReplicatedStorage.Shared.Util.PotionRules)
 local BattlePassRules = require(ReplicatedStorage.Shared.Util.BattlePassRules)
+local ForgeRollRules = require(ReplicatedStorage.Shared.Util.ForgeRollRules)
 
 local ProfileMigrations = {}
 
-ProfileMigrations.CurrentSchema = 11
+ProfileMigrations.CurrentSchema = 12
 
 -- Rarity a template had when these old saves were written, where it differs from today's catalog.
 -- Han was the Common starter before he became Mythical; Valeria was Superior before moving to Exalted.
@@ -167,6 +168,17 @@ function ProfileMigrations.ToV11(profile: any)
 	profile.SchemaVersion = 11
 end
 
+-- v12: Open Forge pedestal rolling state (Slots + Auto-Roll filter) and uncapped RollLuckRank.
+function ProfileMigrations.ToV12(profile: any)
+	if (profile.SchemaVersion or 1) >= 12 then return end
+	ForgeRollRules.EnsureState(profile)
+	if type(profile.FortressTree) ~= "table" or type(profile.FortressTree.Nodes) ~= "table" then
+		profile.FortressTree = FortressTree.DefaultTree()
+	end
+	profile.FortressTree.RollLuckRank = FortressTree.RollLuckRank(profile.FortressTree)
+	profile.SchemaVersion = 12
+end
+
 -- Hero template ids that were renamed: old id -> new id. Saved heroes keep their template id, so
 -- every load moves them to the new one (cheap and idempotent, so it isn't tied to a schema
 -- version). Rourke became Rook.
@@ -198,6 +210,8 @@ function ProfileMigrations.Run(profile: any)
 	ProfileMigrations.ToV9(profile)
 	ProfileMigrations.ToV10(profile)
 	ProfileMigrations.ToV11(profile)
+	ProfileMigrations.ToV12(profile)
+	ForgeRollRules.EnsureState(profile)
 	profile.Settings = SettingsConfig.Sanitize(profile.Settings)
 	-- Robux receipts already granted (ShopService) and cumulative Robux donated/spent. Idempotent.
 	if type(profile.PurchaseIds) ~= "table" then profile.PurchaseIds = {} end

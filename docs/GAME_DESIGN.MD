@@ -21,7 +21,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - **Up to 5 Deployed Heroes** (one slot at the start; the Fortress Tree's Command branch opens slots 2–5, see §4.3) follow the Master onto floors 1–50 of the **Infinite Tower** or are assigned to a floor on their own. Heroes charge an in-combat **Skill Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk being **Downed** (until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
    - **Benched Heroes** rest on the player's **Fortress Plot** or work in its support facilities (§4.3).
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to the star cap (Lv. 10 at every star); capped heroes then rank up at the **Promotion Altar** (`PromotionController.luau`) with Gold and the Promotion Stones that tower kills and relics drop (**Star Promotion**, $1★ \to 7★$, §4.2a). Both heroes and artifacts feature a baseline inventory space limit of **50 items**, raised by the Fortress Tree's Storage branch (§4.3). Heroes working in a support facility are out of the backpack and don't count toward the hero cap.
-   - **Dual Hero Banners & Artifact Gacha:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 7 stars: $1★ \to 7★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters visit the **Blacksmith Forge** (`ForgeController.luau`) to summon equippable archetype weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) across an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 launch tiers, featuring Standard $1.00\times$ and Enhanced $1.20\times$ variants). All summoned weapons drop at **1★** baseline with inherent rarity tiers. At the Forge, donor weapons of the same rarity and star rank (regardless of weapon type), plus Gold, are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold** to manage inventory limits.
+   - **Dual Hero Banners & Open Forge 3D Rolling:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 7 stars: $1★ \to 7★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). For weapons, Masters visit the open-air **Open Forge** (`Building_Blacksmith`): strike or press `[F]` on the **Master Anvil** to reroll unlocked artifact pedestals **for free**, inspect the spinning 3D artifacts with overhead rarity + name labels, and walk up to a pedestal to purchase that **1★** weapon for **Relic-floor scaled Gold** (`625 Gold` Common up to `2.28M Gold` Mythical Enhanced across the **84-Weapon Roster**). At the **Forge Smelter** (`ForgeWorkbenchController.luau`), donor weapons of the same rarity and star rank (regardless of weapon type), plus Gold, are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold**.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** back to a Sanctuary or their plot.
@@ -58,9 +58,9 @@ flowchart TD
     subgraph Meso["15-Minute Loop: Summoning, Synthesis, Promotion & Forge"]
         T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Call of the Rift (1-7★ Perm) & A Star's Arrival (1-7★ Limited)"]
         T2 --> T3["Synthesis Chamber: Feed Duplicates for XP & Max Level Cap"]
-        T1 --> T4["Blacksmith Forge Banner: 84 Weapons (5,000 Gold)"]
+        T1 --> T4["Open Forge: Free Anvil Rerolls & 3D Artifact Pedestals (Up to 6)"]
         T3 --> T5["Promotion Altar: Sacrifice Same-Rank Heroes for Star Promotion (1★ -> 7★)"]
-        T4 --> T6["Blacksmith Forge: Star Ascension (1★ -> 7★ Multipliers) & Gold Liquidation"]
+        T4 --> T6["Forge Smelter: Star Ascension (1★ -> 7★ Multipliers) & Gold Liquidation"]
     end
 
     subgraph Macro["Macro Loop: Tower Progression & Biome Boss Conquests"]
@@ -98,14 +98,14 @@ flowchart TD
 ### 2.2 The 15-Minute Meso Loop (Fortress, Synthesis, Promotion & Forge Progression)
 1. **Roster Upkeep (Every 3–5 Minutes):**
    - Swap heroes between the squad, the bench and the support facilities at the War Banner and the facility panels. The squad is **locked** while the Master or the squad is in the tower (including a stationed squad and floor transitions) or in the raid arena: deploying, benching or reassigning a squad hero, Deploy Best and the exhausted-hero auto swap are all refused by the server until both are home. Bench and facility moves for heroes outside the squad still work. A refused squad change shows as a modal (`SquadLockModal`, keyed by the `SQUAD_LOCKED_TOWER` / `SQUAD_LOCKED_RAID` code `AssignHeroRole` returns); in the tower it offers **Return to Hub**.
-2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
-   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Mythical Permanent Banner) or **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★). In addition, visit the **Blacksmith Forge** (`ForgeController.luau`) to summon weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) from an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 tiers) with 120-pull Exalted+ hard pity, or liquidate unneeded gear for Gold.
+2. **Summoning & Open Forge Rolling (Every 5–10 Minutes):**
+   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Mythical Permanent Banner) or **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★). In addition, visit the **Open Forge** (`ForgeRollService.luau` / `ForgePedestalController.client.luau`) to reroll unlocked pedestals (1–6) **for free** at the Master Anvil (via click or `[F]`, or automatically with the **Forge Auto-Roll** GamePass) and walk to any pedestal to buy its rolled 3D weapon for **Relic-floor scaled Gold** across the **84-Weapon Roster**.
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and fodder heroes to level it up to the current star's cap (Lv. 10).
    - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, spend Gold and Promotion Stones to permanently ascend its star rating ($1★ \to 7★$, §4.2a). The hero's inherent rarity never changes.
-3. **Artifact Star Ascension & Liquidation at the Blacksmith Forge (`ForgeController.luau`):**
-   - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing donor weapons of the same rarity tier and star rank (any weapon type) and Gold, scaling inherent base stats by progressive multipliers up to **`16.00x`**.
-   - **Artifact Liquidation (Selling):** Sell unequipped, unlocked weapons for Gold directly from the Assign tab to maintain the 50-item inventory limit.
-   - **Locking & odds disclosure:** Any weapon can be locked from its Assign card; locked weapons can't be sold or picked by the sell quick-selects ("Common", "≤ Uncommon"), and every sale asks for confirmation (in red when it includes Exalted or better). The Summon tab's banner is a carousel of all 12 Mythical weapons: the centre one is shown large and slowly spinning, the rest as fading shadow silhouettes, advancing every few seconds. The odds live in the "View all weapons & odds" window, which shows the live, God's-Blessing-adjusted chance of each tier and lists every weapon's exact per-pull chance (tier chance ÷ 6 archetypes × 60% Standard or 40% Enhanced). The banner has no rate-up and no end date.
+3. **Artifact Star Ascension & Liquidation at the Forge Smelter (`ForgeWorkbenchController.luau`):**
+   - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge Smelter by sacrificing donor weapons of the same rarity tier and star rank (any weapon type) and Gold, scaling inherent base stats by progressive multipliers up to **`16.00x`**.
+   - **Artifact Liquidation (Selling):** Sell unequipped, unlocked weapons for Gold directly from the Smelter Workbench to maintain inventory space.
+   - **Locking & odds disclosure:** Any weapon can be locked from its detail card; locked weapons can't be sold or picked by the sell quick-selects, and high-tier sales ask for confirmation. Inside the Smelter's **Odds & Prices** modal, Masters inspect live **Roll Luck**-boosted per-pedestal odds (uncapped via the `ForgeLuck` Fortress Tree branch) alongside Standard and Enhanced Relic-floor Gold prices for all 84 weapons.
 
 ### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
 1. **Biome Traversal & Preparation:**
@@ -362,13 +362,13 @@ The island is divided into two distinct, interconnected sectors:
 
 2. **Sector B: Grand Inner Fortress Courtyard (Core Buildings & Interior Facilities):**
    - **Courtyard Grid:** Buildings stand in a 3 x 2 grid either side of a clear walkway from the plot spawn, past the fountain, to the rear gate. Every entrance faces the fountain. North row (by the spawn): Summoning Altar and Blacksmith Forge. Middle row: the Command Post (War Banner and Architect's Table) and The Pit. South row: Training Grounds and Market, which only appear once built in the Fortress Tree.
-   - **Summoning Altar (North-West Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banners** (Call of the Rift `100 Gems` single / `900 Gems` 10x; A Star's Arrival `200 Gems` / `1,800 Gems`) The **Artifact Banner** is not here: it is the Gold banner at the Blacksmith Forge (`5,000 Gold` single / `45,000 Gold` 10x, §7).
+   - **Summoning Altar (North-West Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banners** (Call of the Rift `100 Gems` single / `900 Gems` 10x; A Star's Arrival `200 Gems` / `1,800 Gems`). Weapon acquisition lives across the plaza at the Open Forge (§7.4).
    - **Plaza Fountain, God's Blessing & War Banner (Center Courtyard):** Central triple-tiered Gothic stone fountain in the courtyard center with water basins and blue glow, crowned, once unlocked, by a **marble angel statue** with raised hands holding a lantern of light. The fountain is the **God's Blessing** facility (Section 4.3, Facility D): an `[F]` prompt opens its panel, and the angel brightens with each level. 
    - **Command Post (West Courtyard):** The heraldic War Banner standard on a carved stone pedestal, with an `[F]` prompt opening the **Squad Deploy UI** (`SquadController.luau`), and beside it the **Architect's Table**, whose prompt opens the **Fortress Tree**.
    - **The Pit Sanctuary (East Courtyard):**
      - **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
      - **Promotion Altar:** Consecrated marble star dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`) for star ascensions ($1★ \to 7★$).
-   - **The Blacksmith Forge (North-East Courtyard):** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`) for Artifact Star Ascension ($1★ \to 7★$).
+   - **The Open Forge (North-East Courtyard):** Open-air stone terrace featuring the **Smelter** (`[F]` prompt opening `ForgeWorkbenchController.luau` for Inventory, Equipping, Selling, and Star Ascension $1★ \to 7★$), the **Master Anvil** (click or `[F]` prompt to reroll unlocked pedestals for free), and up to **6 Artifact Pedestals** displaying rolled 3D weapons with overhead Rarity + Name labels and `[F]` buy prompts.
    - **The Market (South-East Inner Wing):** Covered bazaar stalls, coin scales, and ledger counters located inside the fortress commercial quarter. Stationed workers (`Berserker` preferred) boost Infinite Tower kill Gold and banked relic Gold ($+5\%$ to $+40\%+$).
    - **The Training Grounds (South-West Inner Wing):** Cobblestone sparring arena with weapon racks, archery targets, and training dummies located inside the fortress military quarter. Stationed trainers (`Striker` & `Scholar` preferred) boost the Master's overall squad combat power ($+4\%$ to $+32\%+$ Final ATK/HP).
 
@@ -647,7 +647,7 @@ When unlocked, a marble angel statue holding a lantern of light rises onto the P
 - **Summon Luck Formula:**
   $$\text{Luck} = \min\Big(0.50,\; \text{BaseLuck}_{\text{Level}} + 0.004 \times \sum \text{EffectiveLabor}_{\text{Acolytes}} + \text{Perk}_{\text{Saint's Favor}}\Big)$$
   $$p'_i = p_i \times (1 + \text{Luck}) \;\; (i \ge 2), \qquad p'_1 = 1 - \sum_{i \ge 2} p'_i$$
-  *(Applies to both hero banners and the Blacksmith Forge Gold artifact banner. Every tier above the lowest is multiplied by $(1 + \text{Luck})$, and Common absorbs the difference. Luck never changes pity counters, pity thresholds, the 120-pull Exalted+ hard pity, or 10-pull guarantees. The Saint's Favor perk adds +3%, and the total is capped at +50%.)*
+  *(Applies exclusively to the hero banners **Call of the Rift** and **A Star's Arrival**. Every tier above the lowest is multiplied by $(1 + \text{Luck})$, and Common absorbs the difference. Luck never changes pity counters, pity thresholds, or 10-pull guarantees. The Saint's Favor perk adds +3%, and God's Blessing summon luck is capped at +50%. Open Forge weapon rolling uses its own separate, uncapped **Roll Luck** branch in the Fortress Tree, §7.4.)*
 
 ### 4.4 Hero 3-Tier Attack Cadence & Dynamic Skill Gauge System
 
@@ -984,7 +984,7 @@ Potions are consumables kept in the Backpack's **Potions** tab. Drinking one sta
 | --- | --- | --- |
 | **Gold Potion** | +50% tower Gold (kills, floor bosses, banked relics). Multiplies with the Market, the friend boost, affixes, events and climb streaks. | 30 min |
 | **Gem Potion** | +50% Gems from kills and banked relics. First-clear bonuses and raid payouts are not affected. | 30 min |
-| **Luck Potion** | +25% summon luck on Call of the Rift, A Star's Arrival and the Blacksmith Forge. It adds to God's Blessing and goes on top of its +50% cap. Pity is unchanged, and the Robux banners (Gilded Mirror, Gilded Anvil) still have no luck. | 15 min |
+| **Luck Potion** | +25% summon luck on Call of the Rift and A Star's Arrival. It adds to God's Blessing and goes on top of its +50% cap. Pity is unchanged, Open Forge Roll Luck uses its own uncapped Fortress Tree branch, and the Robux banners (Gilded Mirror, Gilded Anvil) have no luck. | 15 min |
 | **Hero XP Potion** | +100% combat XP for squad heroes (the Pit's per-grant cap still applies). | 30 min |
 | **Pass XP Potion** | +50% Battle Pass XP from every source. | 30 min |
 
@@ -1068,7 +1068,7 @@ Supports have 70% of a Regular's HP and 50% of its ATK, move at 10 and aggro at 
 - **First clear of a floor** (the big payout): Gold ×3, `10 + 2 × floor` bonus Gems on top of the kill Gems, and a guaranteed Relic tagged to the killer.
 - **Repeat kills:** Gold at the normal rate, a chance of a relic based on floor and enemy role (§5.5), and only the kill Gems (no first-clear bonus).
 - **Boss relics:** Alphas and Biome Bosses are the only source of the **Calamity Heart** (Alpha 2% → 5% of their relics, Biome Boss 4% → 10%); the rest are Cursed Urns and Mana Geodes. A first Biome Boss clear always drops at least a Cursed Urn.
-- **First clear of a Biome Boss** (floors 5, 10, …, 50), on top of the above: `300 × biome number` Gems. Bosses, Alphas and other mobs never drop artifacts: every artifact comes from the Blacksmith Forge Gold banner (§7).
+- **First clear of a Biome Boss** (floors 5, 10, …, 50), on top of the above: `300 × biome number` Gems. Bosses, Alphas and other mobs never drop artifacts: every non-Robux artifact is rolled and purchased on the Open Forge pedestals (§7.4).
 - **Floor advancement:** defeating a floor's boss opens the next floor on the Floor Selector and raises the Master's Rift Attunement cap (Section 2.5).
 
 ### 5.5 Relic Drops
@@ -1198,30 +1198,36 @@ Promotion consumes other weapons of the **same rarity tier and star rank** (any 
 
 The full 1★ to 7★ path consumes 21 donor weapons plus the retained original. There is no additional enhancement-fodder sink. The multipliers now supply the full weapon progression that the removed enhancement track previously shared. Prices and acquisition pacing remain proposed tuning.
 
-### 7.4 Blacksmith Forge Artifact Summon Banner (Gold Gacha)
-- **Summon Currency & Cost:**
-  - **Single Pull (1X):** `5,000 Gold`
-  - **Ten Pulls (10X):** `45,000 Gold` (10% bulk discount).
-- **Banner Rarity Probability Table:**
-  - **Common (Tier 1):** `54.9%` (absorbs luck reduction)
-  - **Uncommon (Tier 2):** `25.0%`
-  - **Rare (Tier 3):** `12.0%`
-  - **Superior (Tier 4):** `5.5%`
-  - **Exalted (Tier 5):** `2.0%`
-  - **Legendary (Tier 6):** `0.5%`
-  - **Mythical (Tier 7):** `0.1%`
-  - *(God's Blessing summon luck dynamically increases Tiers 2–7 via `SummonLuck.ApplyLuck`)*.
-- **Pity Safeguards:**
-  - **10-Pull Guarantee:** Every 10-pull guarantees at least one **Rare (Tier 3) or higher** artifact.
-  - **120-Pull Hard Pity (Exalted+):** If no Exalted (Tier 5), Legendary (Tier 6), or Mythical (Tier 7) artifact is pulled in 119 summons, the 120th pull guarantees an **Exalted or higher** weapon (the same `MaxPity = 120` as Call of the Rift; A Star's Arrival uses 100).
-  - **Pity Reset:** Any pull of an Exalted, Legendary, or Mythical artifact resets the counter to 0.
+### 7.4 Open Forge 3D Rolling System & Relic-Scaled Pedestal Pricing
+- **Open-Air 3D Forge (`Building_Blacksmith`):**
+  - **Forge Smelter:** `[F]` `ProximityPrompt` opens the Smelter Workbench (`ForgeWorkbenchController.luau`) for Artifact Inventory, Equipping, Locking, Selling, Star Ascension ($1★ \to 7★$), live **Odds & Prices**, and a shortcut to the Forge Fortress Tree branches.
+  - **Master Anvil (Free Rerolls):** Interactive via **both** clicking (`ClickDetector`, 30-stud server distance check) and `[F]` `ProximityPrompt` (`0.22s` server rate limit). Rerolling costs **0 Gold** and refreshes **all** unlocked pedestals simultaneously (no individual pedestal lock, no 10-pull or 120-pull pity counters).
+  - **3D Artifact Pedestals (1 Starter, up to 6 Max):** Unlocked pedestals (`Pedestal_1..6`, spaced $\ge 7.16\text{ studs}$ apart) display a spinning 3D weapon model (`ForgePedestalController.client.luau`) with rarity VFX, a world-space top label showing **Rarity** and **Artifact Name** (plus Gold cost & Power on the owner's plot), and an `[F]` `ProximityPrompt` (`BuyArtifactPrompt`) when walking near that pedestal to purchase it. Buying clears only that pedestal slot while keeping other slots intact.
+  - **Forge Auto-Roll GamePass (`ShopConfig.Passes.ForgeAutoRoll`, `199 Robux`):** Permanent account GamePass verified server-side (`ShopService` + `ForgeRollService`). When toggled ON in the proximity `ForgeRollHud` bar, the server automatically rerolls unlocked pedestals every `0.85s` while the Master is on the Hub/Island until any pedestal matches the chosen target `MinRarity` (`Rare+` through `Mythical`) and optional `WeaponType`, then pauses with a pedestal highlight & toast so the Master walks over to buy it.
+- **Fortress Tree Forge Branches (`FortressTreeConfig.luau`):**
+  - **`ForgePedestals` Branch (Max 6):** Five sequential `LEVEL` nodes (`fp_1..fp_5`, `2,500` to `450,000 Gold`, Floor `0..30` gates) raising active pedestals from `1` starter to `6` max.
+  - **`ForgeLuck` Branch (Uncapped Roll Luck):** Separate from `GodsBlessing` hero Summon Luck. Four foundation `PERK` nodes (`rl_1..rl_4`, totaling `+50%` Roll Luck) lead into **`rl_endless` ("Eternal Stoking")**, an infinitely `REPEATABLE` node (`50,000 × 1.22^Rank` Gold, `+5%` Roll Luck per rank with **no maximum cap**).
+- **Base Per-Pedestal Rarity Rates & Uncapped Odds-Ratio Luck (`RollLuck.luau`):**
+  - Base rates (`ArtifactCatalog.RollRates`): **Common** `54.9%`, **Uncommon** `25.0%`, **Rare** `12.0%`, **Superior** `5.5%`, **Exalted** `2.0%`, **Legendary** `0.5%`, **Mythical** `0.1%`.
+  - Uncapped Roll Luck $L \in [0, \infty)$ scales cumulative upper-tail odds $C_t(0) = \sum_{k=t}^{7} p_k$:
+    $$C_t(L) = \frac{C_t(0)(1 + L)}{1 + C_t(0)L}, \qquad p'_t(L) = C_t(L) - C_{t+1}(L)$$
+    Every tier probability stays strictly in $(0, 1)$ and sums to `1.0` at any finite luck rank.
+- **Relic-Floor Scaled Gold Pedestal Prices (`ArtifactCatalog.GetPedestalCost`):**
+  - Pedestal purchase costs use **Gold only**, anchored to 1 banked **biome Cursed Urn Relic** payout (`RelicConfig.Items[biome.DropTable[2]].Payout.Gold × TowerFloorConfig.RelicFloorMultipliers(TargetFloor)`) across milestone floors `{ 1, 8, 15, 20, 28, 40, 50 }`, with a `1.30×` multiplier for Enhanced (`1.20×` stat) variants:
+    - **Common (F1):** `625` Standard / `813` Enhanced Gold
+    - **Uncommon (F8):** `2,630` / `3,420` Gold
+    - **Rare (F15):** `7,650` / `9,950` Gold
+    - **Superior (F20):** `22,400` / `29,100` Gold
+    - **Exalted (F28):** `91,700` / `119,000` Gold
+    - **Legendary (F40):** `451,000` / `586,000` Gold
+    - **Mythical (F50):** `1,750,000` / `2,280,000` Gold
+  - 1★ sell prices (`100` to `40,000 Gold`) remain strictly `<= 16%` of pedestal purchase cost across all tiers, preventing free-reroll buy-and-sell Gold farming.
 - **Two-Stage Roll Hierarchy:**
-  1. Roll Rarity Tier (1–7) based on rates and luck.
-  2. Roll Archetype uniformly (1 of 6: Vanguard, Striker, Marksman, Berserker, Scholar, Healer).
+  1. Roll Rarity Tier (1–7) using `RollLuck.Roll(ArtifactCatalog.RollRates, rollLuck)`.
+  2. Roll Archetype uniformly (1 of 6: Vanguard, Striker, Marksman, Berserker, Scholar, Healer; starter guarantee on a player's first unrolled weapon matches a deployed squad hero).
   3. Roll Variant (60% Standard, 40% High-Stat Enhanced).
-  4. Instantiate weapon at 1★.
-- **Legacy Purge:** Crafting materials (`IronGear`, etc.) and milestone boss equipment drops are completely removed; all weapon acquisition occurs through the Forge banner and star ascension.
-- **Artifact Index Compendium:** All 84 weapons are cataloged in `HeroIndex.luau` under the Index's **ARTIFACTS** tab, with live collection tracking (`Collected X / 84 artifacts`), category filtering, 3D previews, and each weapon's acquisition line (price, exact per-pull chance, 1★ sell price).
+  4. Persist rolled template ID on the pedestal; instantiate weapon at **1★** upon purchase.
+- **Artifact Index Compendium:** All 84 weapons are cataloged in `HeroIndex.luau` under the Index's **ARTIFACTS** tab, with live collection tracking (`Collected X / 84 artifacts`), category filtering, 3D previews, and each weapon's Open Forge acquisition line (pedestal Gold price, Relic floor anchor, exact per-pedestal chance with Roll Luck, and 1★ sell price).
 - **The Backpack is the inventory:** Roblox's own backpack (tool hotbar and the `` ` `` inventory) is disabled (`CoreGuiType.Backpack`; the game has no Tools), and `` ` `` or **I** opens and closes the Backpack instead, as does the Left Rail button. It is a slot grid with four tabs (Artifacts, Heroes, Materials, Potions): each slot shows the item's art on a rarity-coloured tile, its name and a badge (stars, level or stack count), with a cyan mark on items in use (an equipped artifact, a squad hero, a running boost). Empty slots pad the grid to whole rows. **Sort** cycles Rarity, Stars and Name. Selecting a slot shows its details beside the grid (on narrow screens, in place of it), with **DRINK** for potions.
 - **Inventory caps in the Backpack:** the Backpack tabs read `Artifacts X/cap` and `Heroes X/cap` (50 plus the Storage branch, facility workers not counted), turning amber 5 below the cap and red at it, with a note on where to make room.
 

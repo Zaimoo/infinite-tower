@@ -37,6 +37,7 @@ local BoostStrip = require(script.Parent:WaitForChild("BoostStrip"))
 local BattlePassRules = require(Shared:WaitForChild("Util"):WaitForChild("BattlePassRules"))
 local TowerEventHud = require(script.Parent:WaitForChild("TowerEventHud"))
 local RaidHud = require(script.Parent:WaitForChild("RaidHud"))
+local ForgeRollHud = require(script.Parent:WaitForChild("ForgeRollHud"))
 
 -- Support facilities shown in the Phase 5 gothic panel.
 local PANEL_FACILITIES = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
@@ -188,10 +189,11 @@ local function buildableNodes(profile: any): number
 	local floor = profile.HighestClearedFloor or 0
 	local count = 0
 	for _, node in TreeConfig.Nodes do
-		if node.Kind ~= "LEVEL" or node.Default then
+		if (node.Kind ~= "LEVEL" and node.Kind ~= "REPEATABLE") or node.Default then
 			continue
 		end
-		if node.Gold <= 0 or gold < node.Gold then
+		local cost = FortressTree.NodeCost(tree, node.Id)
+		if cost <= 0 or gold < cost then
 			continue
 		end
 		if FortressTree.CanUnlock(tree, node.Id, gold, floor, profile.Unlocks) then
@@ -846,12 +848,21 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	end
 
 	local modalFocus = Store.ModalFocus
+	local viewSquadShown = not modalFocus and hasSquadHeroes and (Store.SquadAssignment ~= nil or Store.ViewingSquad) and not (_G.IsDuelActive and _G.IsDuelActive())
+	local forgeHudTop = viewSquadTop + (if viewSquadShown then 44 else 0)
+	local anyHudModal = modalFocus or facilityOpen ~= nil or shopOpen or rewardsOpen or passOpen or indexOpen or backpackOpen
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		Goal = if not modalFocus then e(Components.NextGoalCard, {
 			Goal = goal, Top = goalTop, GuideAction = if Store.GuideV2 then Store.GuideAction else nil, GuideVisible = Store.GuideVisible,
 		}) else nil,
 		Travel = if not modalFocus and travelShown then travelRow(travelButtons, compact, screen.X, travelBelow) else nil,
+		ForgeRoll = e(ForgeRollHud, {
+			Profile = profile,
+			Compact = compact,
+			Top = forgeHudTop,
+			Hidden = anyHudModal,
+		}),
 		LeftRail = if not modalFocus then rail("LeftRail", "Left", leftTop, leftBottom, leftSize, leftBottom - leftTop, leftButtons, screen.Y) else nil,
 		RightRail = if modalFocus then nil
 			elseif raid.InRaid then e(RaidHud.Leaderboard, { Top = rightTop, Bottom = rightBottom, Compact = compact })

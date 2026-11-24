@@ -60,9 +60,9 @@ function C.Stack(props: { Size: UDim2?, Position: UDim2?, Order: number?, Childr
 	}, children)
 end
 
-function C.Scroll(props: { Size: UDim2, Position: UDim2?, Children: { [string]: any }, Ref: any? })
+function C.Scroll(props: { Size: UDim2, Position: UDim2?, Children: { [string]: any }, Ref: any?, ZIndex: number? })
 	local children = table.clone(props.Children)
-	children.Layout = e("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder })
+	children.Layout = e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
 	children.Padding = e("UIPadding", {
 		PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 16),
 		PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 16),
@@ -70,6 +70,7 @@ function C.Scroll(props: { Size: UDim2, Position: UDim2?, Children: { [string]: 
 	return e("ScrollingFrame", {
 		ref = props.Ref,
 		Size = props.Size, Position = props.Position,
+		ZIndex = props.ZIndex or 3,
 		BackgroundTransparency = 1, BorderSizePixel = 0,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6,
@@ -835,7 +836,7 @@ function C.InventoryGrid(props: GridProps)
 			[React.Change.AbsoluteWindowSize] = observe,
 		}, children),
 		Empty = if #props.Items == 0 then e(C.Text, {
-			Text = if next(props.Snapshot.Artifacts) == nil then "No artifacts yet. Open Summon to get your first weapon." else "No matching artifacts. Clear your filters to see all owned weapons.",
+			Text = if next(props.Snapshot.Artifacts) == nil then "No artifacts yet. Strike the Anvil and buy from a pedestal in the Open Forge!" else "No matching artifacts. Clear your filters to see all owned weapons.",
 			Size = UDim2.new(1, -20, 0, 100),
 			Position = UDim2.fromOffset(8, 12),
 		}) else nil,

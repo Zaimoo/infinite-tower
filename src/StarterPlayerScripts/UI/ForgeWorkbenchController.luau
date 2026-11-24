@@ -1,13 +1,14 @@
 --!strict
--- Actual Forge host. Real profile/receipts in the React workbench, original summon and sell flows.
+-- Smelter Workbench host: server-owned artifact inventory, equipping, star promotion, selling,
+-- Open Forge odds/pricing reference, and quick navigation to the Forge Fortress Tree branches.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local App = require(script.Parent.ForgeWorkbench.App)
-local Navigation = require(script.Parent.ForgeWorkbench.Navigation)
-local LegacyForge = require(script.Parent.ForgeController)
 local InventoryCapacity = require(ReplicatedStorage.Shared.Util.InventoryCapacity)
+local FortressTree = require(ReplicatedStorage.Shared.Util.FortressTree)
+local RollLuck = require(ReplicatedStorage.Shared.Util.RollLuck)
 
 local Controller = {}
 Controller.__index = Controller
@@ -31,8 +32,7 @@ function Controller.new(gui: ScreenGui, remotes: Folder, getProfile: () -> any, 
 	self.Destination = "NONE"
 	self.Mode = "EQUIP"
 	self.OpenGeneration = 0
-	-- HUDController's existing modal arbitration observes Root.Visible. This transparent marker
-	-- represents BOTH destinations without placing the new UI inside the old scaled window.
+	-- HUDController's modal arbitration observes Root.Visible.
 	local marker = Instance.new("Frame")
 	marker.Name = "ForgeWorkbenchOpenState"
 	marker.BackgroundTransparency = 1
@@ -44,45 +44,26 @@ function Controller.new(gui: ScreenGui, remotes: Folder, getProfile: () -> any, 
 	host.Name = "ForgeWorkbenchHost"
 	host.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	self.ReactRoot = ReactRoblox.createRoot(host)
-	local navigationHost = Instance.new("Folder")
-	navigationHost.Name = "ForgeNavigationHost"
-	navigationHost.Parent = host.Parent
-	self.NavigationRoot = ReactRoblox.createRoot(navigationHost)
 	self.Request = remotes:WaitForChild("ForgeWorkbenchRequest") :: RemoteFunction
+	self.RequestSell = remotes:WaitForChild("RequestSellArtifacts") :: RemoteFunction
 	self.Transport = {
 		Execute = function(command) return self.Request:InvokeServer("EXECUTE", command) end,
 		Reconcile = function(id) return self.Request:InvokeServer("RECONCILE", id) end,
 	}
-	self.Legacy = LegacyForge.new(gui, remotes, getProfile, function()
-		if not self.Switching then self:Close() end
-	end, true)
-	local legacySetTab = self.Legacy.SetTab
-	self.Legacy.AssignTabBtn.Text = "ARTIFACTS"
-	self.Legacy.UpgradeTabBtn.Text = "SELL ARTIFACTS"
-	-- The original upgrade button also calls SetTab("UPGRADE"). Route that intent to SELL here;
-	-- the only upgrade destination is now the shared React detail panel.
-	self.Legacy.SetTab = function(legacy, tab)
-		if tab == "SUMMON" or self.OpeningSell then legacySetTab(legacy, tab)
-		elseif tab == "UPGRADE" then self:OpenSell()
-		else self:Open("ASSIGN") end
-	end
-	local legacyToggleSell = self.Legacy.ToggleSellMode
-	self.Legacy.ToggleSellMode = function(legacy, enabled)
-		if enabled == false and self.Destination == "SELL" then self:Open("ASSIGN")
-		else legacyToggleSell(legacy, enabled) end
-	end
-	local legacyRefresh = self.Legacy.Refresh
-	self.Legacy.Refresh = function(legacy)
-		if self.Destination == "SELL" and not self.OpeningSell and not legacy.Busy and not legacy.SellMode then
-			self:Open("ASSIGN")
-		else legacyRefresh(legacy) end
-	end
 	self.AppCallbacks = {
 		OnClose = function() self:Close() end,
-		OnSummon = function() self:Open("SUMMON") end,
+		OnOpenUpgrades = function()
+			self:Close()
+			local openBranch = (_G :: any).OpenFortressBranch
+			if type(openBranch) == "function" then
+				openBranch("ForgePedestals")
+			elseif type((_G :: any).OpenFacilityHUD) == "function" then
+				(_G :: any).OpenFacilityHUD("FortressTree")
+			end
+		end,
 		OnSell = function() self:OpenSell() end,
 		OnSellArtifacts = function(ids)
-			local ok, message = self.Legacy.RequestSell:InvokeServer(ids)
+			local ok, message = self.RequestSell:InvokeServer(ids)
 			local fresh = self.Request:InvokeServer("STATE")
 			self.Snapshot = fresh
 			self:_render()
@@ -94,36 +75,31 @@ function Controller.new(gui: ScreenGui, remotes: Folder, getProfile: () -> any, 
 		OnContextChanged = function(heroId, artifactId, mode)
 			self.HeroId, self.ArtifactId, self.Mode = heroId, artifactId, mode
 		end,
-		OnBusyChanged = function(busy) self.Busy = busy; self:_renderNavigation() end,
+		OnBusyChanged = function(busy) self.Busy = busy end,
 	}
 	return self
 end
 
--- The Artifacts / Summon tabs now live in the Workbench window's header (UI overhaul plan §5.2), so
--- the old floating tab bar is never shown. Kept as a no-op for the callers that still poke it.
-function Controller:_renderNavigation()
-	self.NavigationRoot:render(nil)
-end
-
-function Controller:_hideLegacy()
-	self.Switching = true
-	self.Legacy:Close()
-	self.Switching = false
-end
-
 function Controller:_render()
-	if (self.Destination ~= "ARTIFACTS" and self.Destination ~= "SELL" and self.Destination ~= "SUMMON") or not self.Snapshot then return end
+	if (self.Destination ~= "ARTIFACTS" and self.Destination ~= "SELL") or not self.Snapshot then return end
+	local profile = self.GetProfile()
+	local rollLuck = if profile then RollLuck.ForProfile(profile) else 0
+	local pedestals = if profile then FortressTree.ForgePedestals(profile.FortressTree) else 1
 	self.ReactRoot:render(React.createElement(App, {
 		key = self.OpenGeneration,
-		ActiveTab = if self.Destination == "SUMMON" then "Summon" else "Artifacts",
-		OnSelectTab = function(tab: string) self:Open(if tab == "Summon" then "SUMMON" else "ASSIGN") end,
-		OnSummonHost = function(host: Frame?) self.Legacy:HostSummon(host) end,
-		Snapshot = self.Snapshot, Transport = self.Transport,
-		InitialHeroId = self.HeroId, InitialArtifactId = self.ArtifactId, InitialMode = self.Mode,
-		OnClose = self.AppCallbacks.OnClose, OnSummon = self.AppCallbacks.OnSummon,
+		Snapshot = self.Snapshot,
+		Transport = self.Transport,
+		RollLuck = rollLuck,
+		Pedestals = pedestals,
+		InitialHeroId = self.HeroId,
+		InitialArtifactId = self.ArtifactId,
+		InitialMode = self.Mode,
+		OnClose = self.AppCallbacks.OnClose,
+		OnOpenUpgrades = self.AppCallbacks.OnOpenUpgrades,
 		InitialPane = if self.Destination == "SELL" then "SELL" else "INVENTORY",
 		OnSellArtifacts = self.AppCallbacks.OnSellArtifacts,
-		OnSell = self.AppCallbacks.OnSell, OnSnapshot = self.AppCallbacks.OnSnapshot,
+		OnSell = self.AppCallbacks.OnSell,
+		OnSnapshot = self.AppCallbacks.OnSnapshot,
 		OnContextChanged = self.AppCallbacks.OnContextChanged,
 		OnBusyChanged = self.AppCallbacks.OnBusyChanged,
 	}))
@@ -133,24 +109,9 @@ function Controller:Open(initialTab: string?)
 	if _G.SetModalFocusMode then
 		_G.SetModalFocusMode(true)
 	end
-	if initialTab == "SUMMON" then
-		-- Same window, Summon tab: the legacy summon view is hosted in the Workbench body (its own
-		-- window stays hidden).
-		self:_hideLegacy()
-		self.Destination = "SUMMON"
-		self.OpenGeneration += 1
-		self.Root.Visible = true
-		local profile = self.GetProfile()
-		if profile then self.Snapshot = snapshotFromProfile(profile) end
-		self:_renderNavigation()
-		self:_render()
-		return
-	end
-	self:_hideLegacy()
 	self.Destination = "ARTIFACTS"
 	self.Root.Visible = true
 	self.Mode = if initialTab == "UPGRADE" then "UPGRADE" else "EQUIP"
-	self:_renderNavigation()
 	self.OpenGeneration += 1
 	local generation = self.OpenGeneration
 	local profile = self.GetProfile()
@@ -169,13 +130,11 @@ function Controller:OpenSell()
 	if _G.SetModalFocusMode then
 		_G.SetModalFocusMode(true)
 	end
-	self:_hideLegacy()
 	self.Destination = "SELL"
 	self.OpenGeneration += 1
 	self.Root.Visible = true
 	local profile = self.GetProfile()
 	if profile then self.Snapshot = snapshotFromProfile(profile) end
-	self:_renderNavigation()
 	self:_render()
 end
 
@@ -186,10 +145,8 @@ end
 function Controller:Close()
 	self.OpenGeneration += 1
 	self.Destination = "NONE"
-	self:_renderNavigation()
 	self.Root.Visible = false
 	self.ReactRoot:render(nil)
-	self:_hideLegacy()
 	if _G.SetModalFocusMode then
 		_G.SetModalFocusMode(false)
 	end
@@ -198,13 +155,6 @@ end
 
 function Controller:Refresh()
 	if not self.Root.Visible then return end
-	if self.Destination == "SUMMON" then
-		self.Legacy:Refresh()
-		-- Keep the window's Gold / Gems / capacity chips current after pulls.
-		local fresh = self.GetProfile()
-		if fresh then self.Snapshot = snapshotFromProfile(fresh); self:_render() end
-		return
-	end
 	local profile = self.GetProfile()
 	if not profile then return end
 	local nextSnapshot = snapshotFromProfile(profile)

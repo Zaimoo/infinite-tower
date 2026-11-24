@@ -15,10 +15,72 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local PolicyService = game:GetService("PolicyService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local ShopConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("ShopConfig"))
 local AnvilBanner = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("AnvilBanner"))
 local InventoryCapacity = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("InventoryCapacity"))
+
+--============================================================================
+-- PERMANENT GAMEPASSES (e.g. Forge Auto-Roll)
+--============================================================================
+local function verifyPlayerPasses(player: Player)
+	for _, pass in pairs(ShopConfig.Passes) do
+		local owns = false
+		if pass.GamePassId ~= 0 then
+			local ok, res = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.GamePassId)
+			end)
+			owns = ok and res == true
+		elseif RunService:IsStudio() then
+			owns = workspace:GetAttribute("StudioGrantAutoRoll") == true
+				or player:GetAttribute("StudioGrantAutoRoll") == true
+				or player:GetAttribute(pass.Attribute) == true
+		end
+		if owns and player.Parent == Players then
+			player:SetAttribute(pass.Attribute, true)
+		end
+	end
+end
+
+Players.PlayerAdded:Connect(function(player)
+	task.spawn(verifyPlayerPasses, player)
+	if RunService:IsStudio() then
+		player:GetAttributeChangedSignal("StudioGrantAutoRoll"):Connect(function()
+			verifyPlayerPasses(player)
+		end)
+	end
+end)
+for _, p in ipairs(Players:GetPlayers()) do
+	task.spawn(verifyPlayerPasses, p)
+end
+if RunService:IsStudio() then
+	workspace:GetAttributeChangedSignal("StudioGrantAutoRoll"):Connect(function()
+		for _, p in ipairs(Players:GetPlayers()) do
+			verifyPlayerPasses(p)
+		end
+	end)
+end
+
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player: Player, gamePassId: number, wasPurchased: boolean)
+	if not wasPurchased or not player or player.Parent ~= Players then
+		return
+	end
+	for _, pass in pairs(ShopConfig.Passes) do
+		if pass.GamePassId ~= 0 and pass.GamePassId == gamePassId then
+			local ok, owns = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.GamePassId)
+			end)
+			if (ok and owns) or RunService:IsStudio() then
+				player:SetAttribute(pass.Attribute, true)
+				local dm = _G.DataManager
+				if dm and dm.SendToast then
+					dm.SendToast(player, pass.Label .. " unlocked!", "SUCCESS")
+				end
+			end
+		end
+	end
+end)
 
 -- Roblox only retries a receipt that is still pending, so the last few PurchaseIds are enough.
 local MAX_PURCHASE_IDS = 100

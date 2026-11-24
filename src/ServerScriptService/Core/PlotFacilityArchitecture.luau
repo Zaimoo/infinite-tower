@@ -1168,25 +1168,41 @@ end
 --============================================================================
 -- 2.5 BLACKSMITH FORGE (`BlacksmithForge` — Enterable Medieval-Gothic Blacksmith House)
 --============================================================================
+-- 2.5 OPEN FORGE (`BlacksmithForge` — Open-Air Smelter, Master Anvil & 6 Artifact Pedestals)
+--============================================================================
+-- Uniform 3 x 2 pedestal gallery (7.75 studs horizontal spacing, 10.0 studs row-to-row depth)
+-- so 6.2-stud world-space billboards and 5.8-stud buy prompts stay cleanly separated and readable.
+local PEDESTAL_OFFSETS: { Vector3 } = {
+	V(-0.5, 0, 6.6),   -- Pedestal 1 (Starter, front-left)
+	V(7.25, 0, 6.6),   -- Pedestal 2 (fp_1, front-center)
+	V(15.0, 0, 6.6),   -- Pedestal 3 (fp_2, front-right)
+	V(-0.5, 0, -3.4),  -- Pedestal 4 (fp_3, back-left)
+	V(7.25, 0, -3.4),  -- Pedestal 5 (fp_4, back-center)
+	V(15.0, 0, -3.4),  -- Pedestal 6 (fp_5, back-right)
+}
+
 function Arch.BuildBlacksmith(folder: Instance, centerCF: CFrame): Part
 	local model = Instance.new("Model")
 	model.Name = "Building_Blacksmith"
+	model:SetAttribute("OpenForge", true)
 	model.Parent = folder
 
-	local stoneDark   = Color3.fromRGB(78, 82, 92)    -- #4E525C Slate Stone
-	local stoneAshlar = Color3.fromRGB(104, 109, 122) -- #686D7A Ashlar Trim & Quoins
-	local roofSlate   = Color3.fromRGB(43, 48, 58)    -- #2B303A Dark Roof Shingle
+	local stoneDark   = Color3.fromRGB(72, 76, 88)    -- #484C58 Slate Stone
+	local stoneAshlar = Color3.fromRGB(104, 109, 122) -- #686D7A Ashlar Trim & Plinths
+	local obsidianPad = Color3.fromRGB(26, 22, 34)    -- #1A1622 Pedestal Cushion
+	local roofSlate   = Color3.fromRGB(43, 48, 58)    -- #2B303A Smelter Canopy Shingle
 	local woodTimber  = Color3.fromRGB(74, 50, 33)    -- #4A3221 Heavy Timber Framing
-	local woodFloor   = Color3.fromRGB(98, 66, 40)    -- Warm Interior Workshop Planks
-	local brickHearth = Color3.fromRGB(92, 53, 44)    -- #5C352C Hearth Brick
-	local ironDark    = Color3.fromRGB(38, 41, 48)    -- #262930 Dark Wrought Iron
-	local steelSilver = Color3.fromRGB(156, 163, 176) -- #9CA3B0 Steel Blades & Anvil Top
-	local emberOrange = Color3.fromRGB(255, 122, 26)  -- #FF7A1A Glowing Forge Embers
+	local woodFloor   = Color3.fromRGB(98, 66, 40)    -- Workbench Planks
+	local brickHearth = Color3.fromRGB(92, 53, 44)    -- #5C352C Smelter Brick
+	local ironDark    = Color3.fromRGB(38, 41, 48)    -- #262930 Wrought Iron
+	local steelSilver = Color3.fromRGB(162, 170, 184) -- #A2AAB8 Polished Anvil Steel
+	local bronzeTrim  = Color3.fromRGB(186, 138, 68)  -- #BA8A44 Gilded Forge Trim
+	local emberOrange = Color3.fromRGB(255, 122, 26)  -- #FF7A1A Molten Forge Embers
+	local moltenGold  = Color3.fromRGB(255, 196, 68)  -- #FFC444 Smelter Pour Glow
 	local quenchWater = Color3.fromRGB(44, 120, 184)  -- #2C78B8 Quench Water
 
-	-- Helper to attach a roaring fire emitter + PointLight
 	local function addForgeFire(parentPart: BasePart, lightRange: number, lightBright: number, flameSize: number, rate: number)
-		pointLight(parentPart, emberOrange, lightBright, lightRange, true)
+		pointLight(parentPart, emberOrange, lightBright, lightRange, false)
 		local fireEmit = Instance.new("ParticleEmitter")
 		fireEmit.Name = "ForgeFlames"
 		fireEmit.Texture = "rbxassetid://243660364"
@@ -1208,370 +1224,210 @@ function Arch.BuildBlacksmith(folder: Instance, centerCF: CFrame): Part
 		fireEmit.Parent = parentPart
 	end
 
-	-- 1. Check if imported Blender FBX Model exists in ReplicatedStorage.Assets.CustomFacilityMeshes.BlacksmithForge
-	--    or ReplicatedStorage.Assets.PlotFacilities.BlacksmithForge (with MeshParts)
+	-- Optional imported Blender OpenForge shell (never loads legacy enclosed BlacksmithForge house)
 	local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
 	local customMeshes = assetsFolder and assetsFolder:FindFirstChild("CustomFacilityMeshes")
-	local importedTemplate = customMeshes and customMeshes:FindFirstChild("BlacksmithForge")
-	if not importedTemplate then
-		local plotFacs = assetsFolder and assetsFolder:FindFirstChild("PlotFacilities")
-		local candidate = plotFacs and plotFacs:FindFirstChild("BlacksmithForge")
-		if candidate and candidate:FindFirstChildWhichIsA("MeshPart", true) then
-			importedTemplate = candidate
-		end
-	end
+	local importedOpenForge = customMeshes and customMeshes:FindFirstChild("OpenForge")
 
-	if importedTemplate and importedTemplate:IsA("Model") then
-		local cloned = importedTemplate:Clone()
+	if importedOpenForge and importedOpenForge:IsA("Model") and importedOpenForge:FindFirstChildWhichIsA("MeshPart", true) then
+		local cloned = importedOpenForge:Clone()
 		cloned:PivotTo(centerCF)
 		for _, desc in ipairs(cloned:GetDescendants()) do
 			if desc:IsA("BasePart") then
 				desc.Anchored = true
 				desc.CanCollide = false
-				if desc.Name == "Forge_StoneShell" and desc:IsA("MeshPart") then
-					desc.Material = Enum.Material.Slate
-					desc.Color = stoneDark
-				elseif desc.Name == "Forge_RoofAndTimber" then
-					desc.Material = Enum.Material.Slate
-					desc.Color = roofSlate
-				elseif desc.Name == "Forge_InteriorAnvilHearth" then
-					desc.Material = Enum.Material.Metal
-					desc.Color = ironDark
-				elseif desc.Name == "Forge_ExteriorBraziersSign" then
-					desc.Material = Enum.Material.Wood
-					desc.Color = woodTimber
-				end
+				desc.CanTouch = false
+				desc.CanQuery = false
 			end
 		end
 		for _, ch in ipairs(cloned:GetChildren()) do
-			ch.Parent = model
+			if not ch:IsA("PackageLink") then
+				ch.Parent = model
+			end
 		end
 		cloned:Destroy()
-
-		-- Invisible solid collision shell for imported FBX so walls, roof, chimney, hearth & anvil are solid while doorway stays open
-		local function colPart(cName: string, sz: Vector3, relCF: CFrame)
-			local cp = part(model, cName, sz, centerCF * relCF, stoneDark, Enum.Material.Slate, true)
-			cp.Transparency = 1
-			return cp
-		end
-		colPart("Col_Foundation", V(27.0, 1.2, 28.5), CFrame.new(0, 0.6, -0.75))
-		colPart("Col_BackWall", V(26.0, 22.0, 1.8), CFrame.new(0, 11.5, -14.2))
-		for _, s in ipairs({ -1, 1 }) do
-			colPart("Col_SideWall_" .. s, V(1.8, 12.0, 26.8), CFrame.new(s * 12.2, 7.1, -0.8))
-			colPart("Col_LeanToWall_" .. s, V(1.4, 6.0, 21.6), CFrame.new(s * 15.2, 3.5, -0.5))
-			colPart("Col_FrontFlank_" .. s, V(6.8, 12.5, 2.5), CFrame.new(s * 9.2, 7.2, 12.4))
-			colPart("Col_ArchPillar_" .. s, V(3.2, 12.8, 3.2), CFrame.new(s * 6.8, 6.6, 13.4))
-			local rPitch = math.atan2(10.9, 13.4)
-			local sLen = math.sqrt(13.4 * 13.4 + 10.9 * 10.9)
-			colPart("Col_RoofSlope_" .. s, V(sLen, 0.9, 30.2), CFrame.new(s * 6.7, 18.05, -0.5) * CFrame.Angles(0, 0, -s * rPitch))
-			local lPitch = math.atan2(4.4, 5.0)
-			colPart("Col_LeanRoof_" .. s, V(6.8, 0.7, 23.0), CFrame.new(s * 14.3, 8.4, -0.3) * CFrame.Angles(0, 0, -s * lPitch))
-		end
-		colPart("Col_FrontGable", V(13.6, 9.5, 2.0), CFrame.new(0, 18.2, 12.4))
-		colPart("Col_Chimney", V(9.2, 16.0, 9.2), CFrame.new(0, 26.0, -5.5))
-		colPart("Col_Hearth", V(11.6, 12.0, 6.2), CFrame.new(-0.8, 6.5, -10.2))
-		colPart("Col_Anvil", V(4.4, 4.2, 3.6), CFrame.new(-0.5, 3.0, 1.8))
+		part(model, "Col_TerraceSlab", V(37.0, 0.45, 27.0), centerCF * CFrame.new(0, 0.225, 0), stoneDark, Enum.Material.Slate, true).Transparency = 1
+		part(model, "Col_SmelterHull", V(10.8, 10.0, 5.8), centerCF * CFrame.new(-10.5, 5.2, -9.2), stoneDark, Enum.Material.Slate, true).Transparency = 1
+		part(model, "Col_AnvilHull", V(4.2, 4.2, 3.2), centerCF * CFrame.new(-10.5, 2.5, 4.8), ironDark, Enum.Material.Metal, true).Transparency = 1
 	else
 		--====================================================================
-		-- 2. PROCEDURAL ENTERABLE BLACKSMITH HOUSE (Exact match to Blender FBX)
-		--    Footprint: 32 x 36 studs; Hollow Interior: 24 x 26 studs;
-		--    Oversized Entry Arch: 11.2W x 13.0H studs (Walkable by R15 Avatars)
+		-- 1. OPEN-AIR STONE TERRACE & REAR SMELTER SHELTER CANOPY (38 x 28)
+		--    Zero front/side walls so players walk freely between Smelter,
+		--    Anvil and all 6 3D Artifact Pedestals with clear sightlines!
 		--====================================================================
-		-- 2A. Stepped Stone Foundation, Flagstone Entry & Wood-Plank Workshop Floor
-		part(model, "FoundationMainSlab", V(27.0, 1.2, 28.5), centerCF * CFrame.new(0, 0.6, -0.75), stoneDark, Enum.Material.Slate, true)
-		for ix = -3, 3 do
-			for iz = 1, 4 do
+		part(model, "TerraceMainSlab", V(36.0, 0.44, 26.0), centerCF * CFrame.new(0, 0.22, 0), stoneDark, Enum.Material.Slate, true)
+		part(model, "TerraceFrontStep", V(36.0, 0.24, 1.6), centerCF * CFrame.new(0, 0.12, 13.8), stoneAshlar, Enum.Material.Cobblestone, true)
+		for _, sx in ipairs({ -1, 1 }) do
+			part(model, "TerraceSideCurb_" .. sx, V(1.0, 0.62, 26.0), centerCF * CFrame.new(sx * 18.5, 0.31, 0), stoneAshlar, Enum.Material.Cobblestone, true)
+		end
+		part(model, "TerraceBackRetainingWall", V(38.0, 3.6, 1.6), centerCF * CFrame.new(0, 1.8, -13.8), stoneDark, Enum.Material.Cobblestone, true)
+		part(model, "TerraceBackCoping", V(38.4, 0.44, 2.0), centerCF * CFrame.new(0, 3.82, -13.8), stoneAshlar, Enum.Material.Slate, true)
+
+		-- Checkerboard Courtyard Flagstones cleanly elevated above TerraceMainSlab (top 0.44 -> tiles 0.45..0.53)
+		for ix = -5, 5 do
+			for iz = -3, 3 do
 				local col = ((ix + iz) % 2 == 0) and stoneAshlar or stoneDark
-				part(model, "PorchFlagstone", V(2.6, 0.10, 2.6), centerCF * CFrame.new(ix * 2.75, 1.25, iz * 2.75), col, Enum.Material.Cobblestone, true)
-			end
-		end
-		for pIdx = -5, 5 do
-			part(model, "InteriorWoodPlank_" .. pIdx, V(1.9, 0.12, 16.0), centerCF * CFrame.new(pIdx * 2.0, 1.26, -4.5), woodFloor, Enum.Material.WoodPlanks, true)
-		end
-
-		-- Side Lean-To Stone Foundations & Curbs
-		for _, s in ipairs({ -1, 1 }) do
-			part(model, "LeanToFoundation", V(3.4, 1.4, 25.0), centerCF * CFrame.new(s * 14.5, 0.7, -0.5), stoneDark, Enum.Material.Slate, true)
-			part(model, "LeanToBaseCurb", V(1.4, 0.7, 26.2), centerCF * CFrame.new(s * 15.8, 0.35, -0.5), stoneAshlar, Enum.Material.Cobblestone, true)
-		end
-
-		-- 3 Wide Front Stone Porch Steps & Sloped Cheek Buttresses (+Z = +13.0 to +17.8)
-		for st = 0, 2 do
-			local stepY = 0.22 + st * 0.36
-			local stepZ = 16.8 - st * 1.35
-			local stepW = 11.2 - st * 0.4
-			part(model, "PorchStep_" .. (st + 1), V(stepW, 0.42, 1.55), centerCF * CFrame.new(0, stepY, stepZ), stoneAshlar, Enum.Material.Cobblestone, true)
-		end
-		for _, s in ipairs({ -1, 1 }) do
-			part(model, "PorchCheekBlock", V(1.1, 1.1, 4.6), centerCF * CFrame.new(s * 6.0, 0.65, 15.4) * CFrame.Angles(math.rad(12), 0, 0), stoneAshlar, Enum.Material.Slate, true)
-		end
-
-		-- 2B. Hollowed Perimeter Stone Walls & Coursed Interior Masonry
-		-- Back Wall (Z = -14.2) & Gable Wall
-		part(model, "BackWallMain", V(26.0, 12.3, 1.8), centerCF * CFrame.new(0, 7.35, -14.2), stoneDark, Enum.Material.Cobblestone, true)
-		wedge(model, "BackGableWallL", V(1.8, 9.8, 12.5), centerCF * CFrame.new(-6.25, 18.3, -14.2) * CFrame.Angles(0, math.pi * 0.5, 0), stoneDark, Enum.Material.Cobblestone, true)
-		wedge(model, "BackGableWallR", V(1.8, 9.8, 12.5), centerCF * CFrame.new(6.25, 18.3, -14.2) * CFrame.Angles(0, -math.pi * 0.5, 0), stoneDark, Enum.Material.Cobblestone, true)
-
-		-- Coursed Ashlar Stone Blocks on Interior Back Wall
-		for rRow = 0, 5 do
-			local ry = 2.0 + rRow * 1.45
-			for cCol = -4, 4 do
-				local stag = (rRow % 2 == 1) and 0.7 or 0.0
-				local rxB = cCol * 2.2 + stag
-				if math.abs(rxB) <= 10.8 then
-					local bCol = ((rRow + cCol) % 2 == 0) and stoneAshlar or stoneDark
-					part(model, "InteriorStoneCourse", V(2.05, 1.32, 0.35), centerCF * CFrame.new(rxB, ry, -13.15), bCol, Enum.Material.Slate, false)
-				end
+				part(model, "TerraceFlagstone", V(3.0, 0.08, 3.4), centerCF * CFrame.new(ix * 3.2, 0.49, iz * 3.6), col, Enum.Material.Cobblestone, false)
 			end
 		end
 
-		-- Left & Right Main Hall Walls (X = +-12.2) & Side Lean-To Brick/Stone Walls (X = +-15.2)
-		for _, s in ipairs({ -1, 1 }) do
-			part(model, "SideHallWall", V(1.8, 11.8, 26.8), centerCF * CFrame.new(s * 12.2, 7.1, -0.8), stoneDark, Enum.Material.Cobblestone, true)
-			part(model, "LeanToLowerStone", V(1.2, 2.2, 21.6), centerCF * CFrame.new(s * 15.2, 2.3, -0.5), stoneAshlar, Enum.Material.Slate, true)
-			part(model, "LeanToUpperBrick", V(1.0, 3.0, 20.8), centerCF * CFrame.new(s * 15.1, 4.8, -0.5), brickHearth, Enum.Material.Brick, true)
-			for _, cz in ipairs({ -11.2, 10.2 }) do
-				for q = 0, 3 do
-					part(model, "CornerQuoin", V(1.4, 0.95, 1.4), centerCF * CFrame.new(s * 15.3, 2.0 + q * 1.25, cz), stoneAshlar, Enum.Material.Slate, true)
-				end
+		-- Open-Sided Timber & Slate Shelter Canopy ONLY over Rear Smelter Bay (X = -17.2..-4.6, Z = -12.6..-5.4)
+		for _, px in ipairs({ -17.2, -4.6 }) do
+			for _, pz in ipairs({ -12.6, -5.4 }) do
+				part(model, "CanopyPlinth", V(1.7, 1.32, 1.7), centerCF * CFrame.new(px, 1.19, pz), stoneAshlar, Enum.Material.Slate, true)
+				part(model, "CanopyPost", V(1.05, 9.05, 1.05), centerCF * CFrame.new(px, 6.38, pz), woodTimber, Enum.Material.Wood, true)
 			end
-			for _, pz in ipairs({ -10.2, 0.0, 9.8 }) do
-				part(model, "LeanToTimberPost", V(0.95, 5.2, 0.95), centerCF * CFrame.new(s * 15.2, 3.8, pz), woodTimber, Enum.Material.Wood, true)
-			end
+			part(model, "CanopyTieBeam", V(1.1, 0.95, 8.6), centerCF * CFrame.new(px, 11.4, -9.0), woodTimber, Enum.Material.Wood, false)
+		end
+		part(model, "CanopyFrontLintel", V(11.4, 0.95, 1.05), centerCF * CFrame.new(-10.9, 11.4, -5.4), woodTimber, Enum.Material.Wood, false)
+		local canopyCF = centerCF * CFrame.new(-10.9, 12.65, -9.2) * CFrame.Angles(math.rad(14), 0, 0)
+		part(model, "CanopyRoofDeck", V(15.2, 0.55, 10.2), canopyCF, roofSlate, Enum.Material.Slate, true)
+		for r = -2, 2 do
+			part(model, "CanopyShingle_" .. r, V(15.0, 0.20, 1.75), canopyCF * CFrame.new(0, 0.38, r * 1.9), (r % 2 == 0) and roofSlate or stoneDark, Enum.Material.Slate, false)
 		end
 
-		-- 2C. Front Wall & Oversized Arched Entryway (Z = +12.2, Arch Opening 11.2W x 13.0H studs!)
-		for _, s in ipairs({ -1, 1 }) do
-			part(model, "FrontFlankWall", V(6.8, 12.0, 2.0), centerCF * CFrame.new(s * 9.2, 7.2, 12.2), stoneDark, Enum.Material.Cobblestone, true)
-			part(model, "FrontBrickPanel", V(3.8, 4.4, 0.3), centerCF * CFrame.new(s * 9.8, 5.2, 13.25), brickHearth, Enum.Material.Brick, true)
-
-			-- Tiered Ashlar Stone Buttress Pillars framing the Entry Arch (X = +-6.8, Z = +13.4)
-			local px, pz = s * 6.8, 13.4
-			part(model, "ArchPillarPlinth", V(3.2, 2.2, 3.2), centerCF * CFrame.new(px, 2.2, pz), stoneAshlar, Enum.Material.Slate, true)
-			for tier = 0, 5 do
-				local ty = 3.8 + tier * 1.45
-				local tw = (tier % 2 == 0) and 2.6 or 2.4
-				part(model, "ArchPillarCourse_" .. tier, V(tw, 1.32, tw), centerCF * CFrame.new(px, ty, pz), stoneAshlar, Enum.Material.Slate, true)
-			end
-			part(model, "ArchPillarMidBand", V(3.0, 0.75, 3.0), centerCF * CFrame.new(px, 7.4, pz), stoneAshlar, Enum.Material.Slate, true)
-			part(model, "ArchPillarCapital", V(3.1, 0.95, 3.1), centerCF * CFrame.new(px, 12.6, pz), stoneAshlar, Enum.Material.Slate, true)
+		--====================================================================
+		-- 2. ZONE A: BLAST SMELTER (`SmelterStation` at X = -10.5, Z = -9.2)
+		--====================================================================
+		local sx, sz = -10.5, -9.2
+		part(model, "SmelterPlinth", V(10.8, 1.72, 5.8), centerCF * CFrame.new(sx, 1.39, sz), stoneAshlar, Enum.Material.Slate, true)
+		for _, side in ipairs({ -1, 1 }) do
+			part(model, "SmelterPier", V(2.5, 5.2, 5.2), centerCF * CFrame.new(sx + side * 3.8, 4.85, sz), brickHearth, Enum.Material.Brick, true)
+			part(model, "SmelterIronBand", V(2.65, 0.35, 5.35), centerCF * CFrame.new(sx + side * 3.8, 6.2, sz), ironDark, Enum.Material.Metal, false)
 		end
+		part(model, "SmelterBackWall", V(5.0, 5.2, 1.8), centerCF * CFrame.new(sx, 4.85, sz - 1.9), brickHearth, Enum.Material.Brick, true)
+		part(model, "SmelterLintel", V(10.6, 1.3, 5.5), centerCF * CFrame.new(sx, 8.10, sz), stoneAshlar, Enum.Material.Slate, true)
+		part(model, "SmelterBronzeCrest", V(4.6, 0.55, 0.35), centerCF * CFrame.new(sx, 8.05, sz + 2.85), bronzeTrim, Enum.Material.Metal, false)
+		part(model, "SmelterHood", V(8.4, 4.6, 4.4), centerCF * CFrame.new(sx, 11.0, sz - 0.2), stoneDark, Enum.Material.Slate, true)
 
-		-- Pointed Stone Voussoir Archway (18 segments, non-collidable overhead so tall avatars never snag)
-		local archSegs = 18
-		local rIn, rOut, springY = 5.6, 7.1, 8.0
-		for i = 0, archSegs - 1 do
-			local a = math.pi * ((i + 0.5) / archSegs)
-			local lift = 0.75 * math.sin(a)
-			local rMid = (rIn + rOut) * 0.5
-			local vx = math.cos(a) * rMid
-			local vy = springY + math.sin(a) * rMid + lift
-			local vCol = (i % 2 == 0) and stoneAshlar or stoneDark
-			part(
-				model,
-				"ArchVoussoir_" .. (i + 1),
-				V(1.5, 1.35, 3.1),
-				centerCF * CFrame.new(vx, vy, 12.7) * CFrame.Angles(0, 0, a),
-				vCol,
-				Enum.Material.Slate,
-				false
-			)
+		-- Tapered Stone Smokestack Flue rising through Canopy
+		for cIdx = 0, 5 do
+			local rCourse = 2.8 * (1.0 - 0.14 * (cIdx / 6))
+			local yCourse = 13.8 + cIdx * 1.35
+			cylinder(model, "SmelterChimney_" .. cIdx, rCourse, 1.3, centerCF * CFrame.new(sx, yCourse, sz - 0.4), (cIdx % 2 == 0) and stoneAshlar or stoneDark, Enum.Material.Cobblestone, true)
 		end
-		part(model, "ArchKeystone", V(1.6, 2.1, 3.5), centerCF * CFrame.new(0, 14.3, 13.0), stoneAshlar, Enum.Material.Slate, false)
+		cylinder(model, "SmelterChimneyCrown", 2.65, 0.85, centerCF * CFrame.new(sx, 21.8, sz - 0.4), stoneAshlar, Enum.Material.Slate, true)
 
-		-- Front Gable Brick Infill & Half-Timbered Truss (Y = 13.2 to 23.5, Z = +12.2..14.2)
-		wedge(model, "FrontGableWallL", V(1.3, 9.8, 11.8), centerCF * CFrame.new(-5.9, 18.3, 12.1) * CFrame.Angles(0, math.pi * 0.5, 0), brickHearth, Enum.Material.Brick, true)
-		wedge(model, "FrontGableWallR", V(1.3, 9.8, 11.8), centerCF * CFrame.new(5.9, 18.3, 12.1) * CFrame.Angles(0, -math.pi * 0.5, 0), brickHearth, Enum.Material.Brick, true)
-		part(model, "GableTieBeam", V(15.6, 1.05, 1.15), centerCF * CFrame.new(0, 13.8, 13.6), woodTimber, Enum.Material.Wood, true)
-		part(model, "GableKingPost", V(1.05, 8.6, 0.95), centerCF * CFrame.new(0, 18.5, 13.5), woodTimber, Enum.Material.Wood, true)
-		local roofPitch = math.atan2(10.9, 13.4)
-		for _, s in ipairs({ -1, 1 }) do
-			part(model, "GableStrutInner", V(0.85, 5.6, 0.80), centerCF * CFrame.new(s * 2.4, 16.5, 13.45) * CFrame.Angles(0, 0, s * 0.62), woodTimber, Enum.Material.Wood, false)
-			part(model, "GableStrutOuter", V(0.75, 3.8, 0.75), centerCF * CFrame.new(s * 4.8, 15.4, 13.45) * CFrame.Angles(0, 0, -s * 0.55), woodTimber, Enum.Material.Wood, false)
-			part(model, "GableBargeboard", V(17.4, 1.15, 1.10), centerCF * CFrame.new(s * 6.8, 18.1, 14.2) * CFrame.Angles(0, 0, -s * roofPitch), woodTimber, Enum.Material.Wood, true)
-			part(model, "BargeboardIronStrap", V(2.2, 1.35, 1.25), centerCF * CFrame.new(s * 10.6, 15.0, 14.25) * CFrame.Angles(0, 0, -s * roofPitch), ironDark, Enum.Material.Metal, false)
-			part(model, "BargeboardRivet", V(0.35, 0.35, 0.25), centerCF * CFrame.new(s * 10.6, 15.0, 14.92), steelSilver, Enum.Material.Metal, false)
-			part(model, "GableCorbelBlock", V(2.1, 1.8, 2.2), centerCF * CFrame.new(s * 13.2, 12.6, 14.2), stoneAshlar, Enum.Material.Slate, true)
+		-- Molten Pour Spout & Ingot Mold Trough in front of Smelter
+		part(model, "SmelterSpoutBasin", V(3.2, 1.2, 1.8), centerCF * CFrame.new(sx, 2.35, sz + 3.1), ironDark, Enum.Material.Metal, true)
+		part(model, "SmelterMoltenStream", V(1.1, 0.25, 2.4), centerCF * CFrame.new(sx, 2.98, sz + 2.5), moltenGold, Enum.Material.Neon, false)
+		part(model, "SmelterIngotMold", V(2.2, 0.55, 1.1), centerCF * CFrame.new(sx, 2.0, sz + 4.1), ironDark, Enum.Material.Metal, false)
+		part(model, "SmelterGlowIngot", V(1.6, 0.18, 0.65), centerCF * CFrame.new(sx, 2.32, sz + 4.1), emberOrange, Enum.Material.Neon, false)
+
+		-- Articulated Bellows & Tuyere Pipe beside Smelter
+		part(model, "SmelterBellowsFrame", V(2.6, 2.2, 3.4), centerCF * CFrame.new(sx - 6.1, 2.4, sz + 0.4) * CFrame.Angles(0, math.rad(16), 0), woodTimber, Enum.Material.Wood, true)
+		cylinder(model, "SmelterTuyerePipe", 0.28, 2.4, centerCF * CFrame.new(sx - 4.8, 2.6, sz + 0.2) * CFrame.Angles(0, 0, math.rad(90)), ironDark, Enum.Material.Metal, false)
+
+		--====================================================================
+		-- 3. ZONE B: MASTER ANVIL (`AnvilStation` at X = -11.5, Z = +5.2)
+		--====================================================================
+		local ax, az = -11.5, 5.2
+		cylinder(model, "AnvilStonePlinth", 2.6, 0.65, centerCF * CFrame.new(ax, 0.78, az), stoneAshlar, Enum.Material.Slate, true)
+		cylinder(model, "AnvilOakBlock", 1.75, 1.65, centerCF * CFrame.new(ax, 1.92, az), woodTimber, Enum.Material.Wood, true)
+		cylinder(model, "AnvilIronHoopTop", 1.82, 0.22, centerCF * CFrame.new(ax, 2.45, az), ironDark, Enum.Material.Metal, false)
+		cylinder(model, "AnvilIronHoopLow", 1.82, 0.22, centerCF * CFrame.new(ax, 1.38, az), ironDark, Enum.Material.Metal, false)
+		part(model, "AnvilBase", V(2.8, 0.52, 1.7), centerCF * CFrame.new(ax, 3.00, az), ironDark, Enum.Material.Metal, true)
+		part(model, "AnvilWaist", V(1.9, 0.68, 1.2), centerCF * CFrame.new(ax, 3.58, az), ironDark, Enum.Material.Metal, true)
+		part(model, "AnvilWorkingBody", V(3.6, 0.62, 1.52), centerCF * CFrame.new(ax, 4.20, az), ironDark, Enum.Material.Metal, true)
+		part(model, "AnvilSteelFace", V(3.4, 0.10, 1.42), centerCF * CFrame.new(ax, 4.55, az), steelSilver, Enum.Material.Metal, true)
+		part(model, "AnvilGoldFiligree", V(2.04, 0.22, 1.32), centerCF * CFrame.new(ax, 3.58, az), bronzeTrim, Enum.Material.Metal, false)
+		wedge(model, "AnvilHorn", V(1.0, 0.56, 1.65), centerCF * CFrame.new(ax + 2.63, 4.22, az) * CFrame.Angles(0, math.pi * 0.5, math.pi), steelSilver, Enum.Material.Metal, true)
+
+		-- Resting Forge Hammer atop Anvil Face
+		local hamCF = centerCF * CFrame.new(ax - 0.5, 4.76, az + 0.12) * CFrame.Angles(0, math.rad(28), 0)
+		part(model, "AnvilHammerShaft", V(1.8, 0.18, 0.18), hamCF, woodTimber, Enum.Material.Wood, false)
+		part(model, "AnvilHammerHead", V(0.48, 0.42, 0.92), hamCF * CFrame.new(0.72, 0.08, 0), steelSilver, Enum.Material.Metal, false)
+
+		-- Rear-Right Workshop Props (clear of Pedestal Gallery)
+		cylinder(model, "QuenchBarrel", 1.45, 2.4, centerCF * CFrame.new(-5.8, 1.65, -10.4), woodTimber, Enum.Material.WoodPlanks, true)
+		cylinder(model, "QuenchWaterDisc", 1.25, 0.22, centerCF * CFrame.new(-5.8, 2.78, -10.4), quenchWater, Enum.Material.Glass, false)
+		addWeaponRack(model, centerCF * CFrame.new(6.8, 0.53, -11.4))
+		part(model, "ForgeToolBench", V(6.4, 0.42, 2.6), centerCF * CFrame.new(13.6, 2.45, -11.2), woodFloor, Enum.Material.WoodPlanks, true)
+		for _, lx in ipairs({ 11.0, 16.2 }) do
+			part(model, "BenchLeg", V(0.45, 2.0, 2.2), centerCF * CFrame.new(lx, 1.45, -11.2), woodTimber, Enum.Material.Wood, true)
 		end
-		part(model, "GableApexFinial", V(1.8, 1.6, 2.4), centerCF * CFrame.new(0, 24.4, 14.5), stoneAshlar, Enum.Material.Slate, true)
+		addBarrel(model, centerCF * CFrame.new(16.8, 0.53, -9.2), 0.92)
 
-		-- Open Arched Wooden Door swung inward at 78 deg on Left Jamb (X = -5.4, Z = +11.8)
-		local doorCF = centerCF * CFrame.new(-4.9, 5.8, 9.7) * CFrame.Angles(0, math.rad(-78), 0)
-		part(model, "OpenWoodenDoor", V(4.4, 9.2, 0.48), doorCF, woodTimber, Enum.Material.WoodPlanks, true)
-		for _, hy in ipairs({ -3.0, 0.0, 2.8 }) do
-			part(model, "DoorIronStrap", V(4.0, 0.32, 0.58), doorCF * CFrame.new(0, hy, 0), ironDark, Enum.Material.Metal, false)
+		-- Front Terrace Flanking Braziers (resting cleanly above terrace flagstones)
+		for _, side in ipairs({ -1, 1 }) do
+			local bx, bz = side * 16.5, 11.4
+			part(model, "BrazierPlinth", V(2.8, 0.92, 2.8), centerCF * CFrame.new(bx, 0.99, bz), stoneAshlar, Enum.Material.Slate, true)
+			cylinder(model, "BrazierBowl", 1.30, 0.88, centerCF * CFrame.new(bx, 1.89, bz), ironDark, Enum.Material.Metal, true)
 		end
-
-		-- 2D. Steep Gabled Slate Roof, Shingle Courses, Cross-Gable Dormers & Side Lean-To Roofs
-		local slopeLen = math.sqrt(13.4 * 13.4 + 10.9 * 10.9)
-		for _, s in ipairs({ -1, 1 }) do
-			local slopeCF = centerCF * CFrame.new(s * 6.7, 18.05, -0.5) * CFrame.Angles(0, 0, -s * roofPitch)
-			part(model, "MainRoofSlope", V(slopeLen, 0.75, 30.2), slopeCF, roofSlate, Enum.Material.Slate, true)
-			for r = 1, 7 do
-				local u = (r - 4) / 3.5
-				part(
-					model,
-					"RoofShingleCourse_" .. r,
-					V(2.1, 0.25, 29.8),
-					slopeCF * CFrame.new(u * (slopeLen * 0.44), 0.45, 0),
-					(r % 2 == 0) and roofSlate or stoneDark,
-					Enum.Material.Slate,
-					false
-				)
-			end
-			-- Lower Side Lean-To Shed Roofs
-			local leanPitch = math.atan2(4.4, 5.0)
-			local leanCF = centerCF * CFrame.new(s * 14.3, 8.4, -0.3) * CFrame.Angles(0, 0, -s * leanPitch)
-			part(model, "LeanToRoofSlope", V(6.8, 0.55, 23.0), leanCF, roofSlate, Enum.Material.Slate, true)
-		end
-		for rSeg = 0, 7 do
-			part(model, "RoofRidgeCoping_" .. rSeg, V(1.35, 0.95, 3.75), centerCF * CFrame.new(0, 24.35, -14.0 + rSeg * 3.9), stoneAshlar, Enum.Material.Slate, true)
-		end
-
-		-- Right Cross-Gable Wing & Dormer Windows
-		part(model, "CrossGableWing", V(11.6, 5.8, 8.8), centerCF * CFrame.new(9.8, 17.5, -3.0), roofSlate, Enum.Material.Slate, true)
-		part(model, "CrossGableRidgeCap", V(11.8, 0.85, 1.15), centerCF * CFrame.new(9.8, 21.8, -3.0), stoneAshlar, Enum.Material.Slate, true)
-		part(model, "DormerWindowRight", V(3.6, 3.8, 2.8), centerCF * CFrame.new(10.2, 16.5, 1.8), woodTimber, Enum.Material.Wood, true)
-		part(model, "DormerMullionRight", V(2.2, 2.6, 0.25), centerCF * CFrame.new(10.2, 16.5, 3.25), ironDark, Enum.Material.Metal, false)
-		part(model, "DormerWindowUpper", V(2.8, 3.2, 3.2), centerCF * CFrame.new(3.2, 18.6, 5.8), woodTimber, Enum.Material.Wood, true)
-
-		-- 2E. Central Tapered Cylindrical Stone Smokestack Tower with Crenellations (X = 0, Z = -5.5, Y = 18.5..33.8)
-		part(model, "ChimneyBaseSaddle", V(9.6, 5.5, 9.6), centerCF * CFrame.new(0, 18.5, -5.5), stoneDark, Enum.Material.Slate, true)
-		for cIdx = 0, 8 do
-			local rCourse = 4.65 * (1.0 - 0.16 * (cIdx / 9))
-			local yCourse = 21.0 + cIdx * 1.15
-			local cCol = (cIdx % 2 == 0) and stoneAshlar or stoneDark
-			cylinder(model, "ChimneyShaftCourse_" .. cIdx, rCourse, 1.08, centerCF * CFrame.new(0, yCourse, -5.5), cCol, Enum.Material.Cobblestone, true)
-		end
-		local crownY = 30.85
-		cylinder(model, "ChimneyCorbelCollar", 4.35, 1.1, centerCF * CFrame.new(0, crownY + 0.3, -5.5), stoneAshlar, Enum.Material.Slate, true)
-		cylinder(model, "ChimneyBrickBand", 4.48, 0.9, centerCF * CFrame.new(0, crownY + 1.35, -5.5), brickHearth, Enum.Material.Brick, true)
-		for mIdx = 0, 7 do
-			local ang = (mIdx / 8) * math.pi * 2
-			local mx, mz = math.cos(ang) * 4.15, -5.5 + math.sin(ang) * 4.15
-			part(
-				model,
-				"ChimneyMerlon_" .. mIdx,
-				V(1.55, 1.45, 0.95),
-				centerCF * CFrame.new(mx, crownY + 2.45, mz) * CFrame.Angles(0, -ang, 0),
-				stoneAshlar,
-				Enum.Material.Slate,
-				true
-			)
-		end
-
-		-- 2F. Interior Brick Hearth Firebox, Central Anvil on Timber Block, Sword Barrel & Quench Trough
-		local hx = -0.8
-		part(model, "HearthPlinth", V(11.6, 1.8, 6.2), centerCF * CFrame.new(hx, 2.1, -10.2), stoneAshlar, Enum.Material.Slate, true)
-		for _, s in ipairs({ -1, 1 }) do
-			part(model, "HearthPier", V(2.8, 4.8, 5.4), centerCF * CFrame.new(hx + s * 4.2, 5.4, -10.2), brickHearth, Enum.Material.Brick, true)
-		end
-		part(model, "HearthBackWall", V(6.0, 4.8, 1.8), centerCF * CFrame.new(hx, 5.4, -12.0), brickHearth, Enum.Material.Brick, true)
-		part(model, "HearthLintel", V(11.2, 1.4, 5.8), centerCF * CFrame.new(hx, 8.2, -10.0), stoneAshlar, Enum.Material.Slate, true)
-		part(model, "HearthHood", V(9.2, 5.2, 4.8), centerCF * CFrame.new(hx, 11.5, -10.0), stoneDark, Enum.Material.Slate, true)
-
-		-- Central Iron Anvil on Heavy Banded Timber Block (X = -0.5, Z = +1.8 — clearly visible & walkable!)
-		local ax, az = -0.5, 1.8
-		part(model, "AnvilStonePedestal", V(4.4, 0.70, 3.6), centerCF * CFrame.new(ax, 1.55, az), stoneAshlar, Enum.Material.Slate, true)
-		part(model, "AnvilTimberBlock", V(3.2, 1.55, 2.5), centerCF * CFrame.new(ax, 2.65, az), woodTimber, Enum.Material.Wood, true)
-		part(model, "AnvilTimberBand", V(3.32, 0.24, 2.62), centerCF * CFrame.new(ax, 2.95, az), ironDark, Enum.Material.Metal, false)
-		part(model, "AnvilBase", V(2.6, 0.50, 1.6), centerCF * CFrame.new(ax, 3.65, az), ironDark, Enum.Material.Metal, true)
-		part(model, "AnvilWaist", V(1.8, 0.65, 1.15), centerCF * CFrame.new(ax, 4.15, az), ironDark, Enum.Material.Metal, true)
-		part(model, "AnvilWorkingBody", V(3.4, 0.58, 1.45), centerCF * CFrame.new(ax, 4.72, az), ironDark, Enum.Material.Metal, true)
-		part(model, "AnvilSteelFace", V(3.2, 0.08, 1.35), centerCF * CFrame.new(ax, 5.02, az), steelSilver, Enum.Material.Metal, true)
-		wedge(model, "AnvilHorn", V(0.95, 0.52, 1.55), centerCF * CFrame.new(ax + 2.35, 4.75, az) * CFrame.Angles(0, math.pi * 0.5, math.pi), ironDark, Enum.Material.Metal, true)
-
-		-- Interior Sword Barrel with 5 Fanned Swords next to Hearth (X = +2.6, Z = -6.8)
-		local sbx, sbz = 2.6, -6.8
-		cylinder(model, "InteriorSwordBarrel", 1.32, 3.0, centerCF * CFrame.new(sbx, 2.7, sbz), woodTimber, Enum.Material.WoodPlanks, true)
-		for bIdx = 0, 4 do
-			local ang = 0.36 - bIdx * 0.18
-			local bxs = sbx + (bIdx - 2) * 0.38
-			part(model, "BarrelSwordBlade_" .. bIdx, V(0.16, 3.8, 0.28), centerCF * CFrame.new(bxs, 5.4, sbz) * CFrame.Angles(0, 0, ang), steelSilver, Enum.Material.Metal, false)
-			part(model, "BarrelSwordGuard_" .. bIdx, V(0.72, 0.16, 0.32), centerCF * CFrame.new(bxs - math.sin(ang) * 1.1, 6.4, sbz) * CFrame.Angles(0, 0, ang), ironDark, Enum.Material.Metal, false)
-		end
-
-		-- Interior Quenching Barrel, Secondary Ember Counter & Left Timber Workbench
-		cylinder(model, "QuenchBarrel", 1.6, 2.4, centerCF * CFrame.new(4.8, 2.4, 1.2), woodTimber, Enum.Material.WoodPlanks, true)
-		cylinder(model, "QuenchWaterDisc", 1.38, 0.25, centerCF * CFrame.new(4.8, 3.55, 1.2), quenchWater, Enum.Material.Glass, false)
-		part(model, "SideForgeCounter", V(4.2, 2.8, 3.8), centerCF * CFrame.new(6.4, 2.6, -7.2), stoneAshlar, Enum.Material.Slate, true)
-		part(model, "SideForgeEmbers", V(2.6, 0.65, 2.2), centerCF * CFrame.new(6.4, 4.2, -7.2), emberOrange, Enum.Material.Neon, false)
-		part(model, "InteriorWorkbench", V(2.8, 0.45, 7.6), centerCF * CFrame.new(-8.6, 3.0, -3.0), woodFloor, Enum.Material.WoodPlanks, true)
-
-		-- 2G. Exterior Hanging Shield & Anvil Sign on Right Timber Crane Beam, Flanking Braziers & Sword Rack
-		part(model, "SignCraneBeam", V(11.6, 0.95, 0.95), centerCF * CFrame.new(17.2, 14.8, 1.5), woodTimber, Enum.Material.Wood, true)
-		part(model, "SignCraneBrace", V(5.8, 0.75, 0.75), centerCF * CFrame.new(14.2, 12.6, 1.5) * CFrame.Angles(0, 0, 0.68), woodTimber, Enum.Material.Wood, true)
-		for _, cxChain in ipairs({ 18.2, 21.4 }) do
-			part(model, "SignChainLinks", V(0.22, 3.8, 0.22), centerCF * CFrame.new(cxChain, 12.4, 1.5), ironDark, Enum.Material.Metal, false)
-		end
-		part(model, "HangingShieldSign", V(4.6, 4.6, 0.45), centerCF * CFrame.new(19.8, 8.2, 1.5), woodTimber, Enum.Material.Wood, true)
-		part(model, "ShieldSignTopBar", V(4.8, 0.38, 0.62), centerCF * CFrame.new(19.8, 10.4, 1.5), ironDark, Enum.Material.Metal, false)
-		part(model, "ShieldAnvilEmblem", V(2.4, 0.85, 0.65), centerCF * CFrame.new(19.8, 7.8, 1.5), steelSilver, Enum.Material.Metal, false)
-
-		for _, s in ipairs({ -1, 1 }) do
-			local bx, bz = s * 7.4, 15.8
-			part(model, "BrazierPedestalTier1", V(3.6, 0.90, 3.6), centerCF * CFrame.new(bx, 0.45, bz), stoneDark, Enum.Material.Slate, true)
-			part(model, "BrazierPedestalTier2", V(2.8, 0.80, 2.8), centerCF * CFrame.new(bx, 1.25, bz), stoneAshlar, Enum.Material.Slate, true)
-			cylinder(model, "BrazierIronBowl", 1.48, 1.0, centerCF * CFrame.new(bx, 2.15, bz), ironDark, Enum.Material.Metal, true)
-		end
-		addWeaponRack(model, centerCF * CFrame.new(10.6, 0.0, 13.8))
-		addBarrel(model, centerCF * CFrame.new(14.8, 0.0, 11.8), 1.0)
-		addBarrel(model, centerCF * CFrame.new(16.4, 0.0, 9.8), 0.9)
-		addBarrel(model, centerCF * CFrame.new(-14.8, 0.0, 12.2), 0.95)
 	end
 
 	--========================================================================
-	-- 3. DYNAMIC VFX EMITTERS, POINTLIGHTS & INTERACTION PROMPT ANCHOR
-	--    Attached whether using imported Blender FBX or procedural parts!
+	-- 4. ZONE C: 6 ARTIFACT DISPLAY PEDESTALS (`Pedestals/Pedestal_1..6`)
 	--========================================================================
-	-- Hearth Fire & Warm Interior Glow
-	local emberBed = part(
-		model,
-		"GlowingEmbers",
-		V(5.0, 0.9, 3.4),
-		centerCF * CFrame.new(-0.8, 3.35, -10.0),
-		emberOrange,
-		Enum.Material.Neon,
-		false
-	)
-	addForgeFire(emberBed, 34, 3.2, 2.2, 24)
+	local pedestalsFolder = Instance.new("Folder")
+	pedestalsFolder.Name = "Pedestals"
+	pedestalsFolder.Parent = model
 
-	-- Entrance Flanking Braziers Fire & Glow
-	for _, s in ipairs({ -1, 1 }) do
+	for idx, relOffset in ipairs(PEDESTAL_OFFSETS) do
+		local pedCF = centerCF * CFrame.new(relOffset)
+		local pedModel = Instance.new("Model")
+		pedModel.Name = "Pedestal_" .. idx
+		pedModel:SetAttribute("SlotIndex", idx)
+		pedModel:SetAttribute("Unlocked", idx == 1)
+		pedModel:SetAttribute("TemplateId", "")
+		pedModel:SetAttribute("Cost", 0)
+		pedModel:SetAttribute("RollSeq", 0)
+
+		local pedRoot = part(pedModel, "PedestalRoot", V(3.0, 3.1, 3.0), pedCF * CFrame.new(0, 2.08, 0), stoneDark, Enum.Material.Slate, idx == 1)
+		pedRoot.Transparency = 1
+		pedModel.PrimaryPart = pedRoot
+
+		-- Strictly stacked Y layers with zero coplanar overlap (base starts cleanly at flagstone top 0.53):
+		--   PedestalBase: 0.53..1.08, Column: 1.08..2.98, Collar: 2.74..2.96 (wider radius),
+		--   PedestalCap: 2.98..3.40, RuneRing: 3.40..3.48 (glowing outer rim), PedestalPad: 3.48..3.60 (raised dark cushion)
+		local base = part(pedModel, "PedestalBase", V(3.2, 0.55, 3.2), pedCF * CFrame.new(0, 0.805, 0), stoneDark, Enum.Material.Slate, false)
+		local col = cylinder(pedModel, "PedestalColumn", 1.05, 1.90, pedCF * CFrame.new(0, 2.03, 0), stoneAshlar, Enum.Material.Slate, false)
+		local trim = cylinder(pedModel, "PedestalBronzeCollar", 1.15, 0.22, pedCF * CFrame.new(0, 2.85, 0), bronzeTrim, Enum.Material.Metal, false)
+		local cap = part(pedModel, "PedestalCap", V(2.85, 0.42, 2.85), pedCF * CFrame.new(0, 3.19, 0), stoneAshlar, Enum.Material.Slate, false)
+		local ring = cylinder(pedModel, "RuneRing", 1.28, 0.08, pedCF * CFrame.new(0, 3.44, 0), bronzeTrim, Enum.Material.Neon, false)
+		local pad = cylinder(pedModel, "PedestalPad", 1.04, 0.12, pedCF * CFrame.new(0, 3.54, 0), obsidianPad, Enum.Material.SmoothPlastic, false)
+
+		if idx > 1 then
+			for _, p in ipairs({ base, col, trim, cap, pad, ring }) do
+				p.Transparency = 1
+			end
+		end
+
+		local displayAtt = Instance.new("Attachment")
+		displayAtt.Name = "DisplayAnchor"
+		displayAtt.Position = V(0, 3.7, 0) -- 5.78 studs above terrace ground
+		displayAtt.Parent = pedRoot
+
+		local promptAtt = Instance.new("Attachment")
+		promptAtt.Name = "PromptAnchor"
+		promptAtt.Position = V(0, 1.6, 0)
+		promptAtt.Parent = pedRoot
+
+		pedModel.Parent = pedestalsFolder
+	end
+
+	--========================================================================
+	-- 5. DYNAMIC VFX, CLICKABLE ANVIL & SMELTER INTERACTION ANCHORS
+	--========================================================================
+	local emberBed = part(model, "GlowingEmbers", V(4.6, 0.8, 3.0), centerCF * CFrame.new(-10.5, 2.75, -9.0), emberOrange, Enum.Material.Neon, false)
+	addForgeFire(emberBed, 30, 2.8, 2.0, 22)
+
+	for _, side in ipairs({ -1, 1 }) do
 		local brazierCore = sphere(
 			model,
-			if s < 0 then "BrazierFireLeft" else "BrazierFireRight",
-			1.5,
-			centerCF * CFrame.new(s * 7.4, 2.95, 15.8),
+			if side < 0 then "BrazierFireLeft" else "BrazierFireRight",
+			1.20,
+			centerCF * CFrame.new(side * 16.5, 2.48, 11.4),
 			emberOrange,
 			Enum.Material.Neon
 		)
-		addForgeFire(brazierCore, 22, 2.2, 1.4, 16)
+		addForgeFire(brazierCore, 20, 2.0, 1.25, 14)
 	end
 
-	-- Chimney Top Fire Glow (no smoke plume: the dark smoke over the forge was removed)
-	local chimneyFlue = cylinder(
-		model,
-		"ChimneySmokeAnchor",
-		3.1,
-		0.8,
-		centerCF * CFrame.new(0, 32.3, -5.5),
-		emberOrange,
-		Enum.Material.Neon,
-		false
-	)
-	pointLight(chimneyFlue, emberOrange, 2.4, 28, false)
+	local chimneyFlue = cylinder(model, "ChimneySmokeAnchor", 1.9, 0.6, centerCF * CFrame.new(-10.5, 22.1, -9.6), emberOrange, Enum.Material.Neon, false)
+	pointLight(chimneyFlue, emberOrange, 2.0, 24, false)
 
-	-- Anvil Spark Emitter on top of the central Anvil inside the Forge
-	local anvilSparkAnchor = part(
-		model,
-		"AnvilFace",
-		V(3.0, 0.2, 1.2),
-		centerCF * CFrame.new(-0.5, 5.05, 1.8),
-		steelSilver,
-		Enum.Material.Metal,
-		false
-	)
+	local anvilSparkAnchor = part(model, "AnvilFace", V(3.2, 0.2, 1.3), centerCF * CFrame.new(-11.5, 4.62, 5.2), steelSilver, Enum.Material.Metal, false)
 	anvilSparkAnchor.Transparency = 1
 	local sparkEmit = Instance.new("ParticleEmitter")
 	sparkEmit.Name = "AnvilSparks"
@@ -1579,23 +1435,44 @@ function Arch.BuildBlacksmith(folder: Instance, centerCF: CFrame): Part
 	sparkEmit.Color = ColorSequence.new(Color3.fromRGB(255, 240, 130), emberOrange)
 	sparkEmit.LightEmission = 1
 	sparkEmit.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.35),
+		NumberSequenceKeypoint.new(0, 0.32),
 		NumberSequenceKeypoint.new(1, 0.05),
 	})
 	sparkEmit.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0),
 		NumberSequenceKeypoint.new(1, 1),
 	})
-	sparkEmit.Lifetime = NumberRange.new(0.35, 0.65)
-	sparkEmit.Rate = 8
-	sparkEmit.Speed = NumberRange.new(7, 13)
+	sparkEmit.Lifetime = NumberRange.new(0.32, 0.60)
+	sparkEmit.Rate = 6
+	sparkEmit.Speed = NumberRange.new(6, 12)
 	sparkEmit.SpreadAngle = Vector2.new(75, 75)
 	sparkEmit.Acceleration = V(0, -28, 0)
 	sparkEmit.Parent = anvilSparkAnchor
 
-	-- Ground-level PrimaryRoot (hullSize.Y = 1.0 so CanCollide is false and avatars walk freely inside!)
-	-- PromptAnchor positioned directly at the interior Anvil (-0.5, 4.5, 1.8)
-	local interactionPart = finalizeFacilityModel(model, centerCF, V(28, 1.0, 30), V(-0.5, 4.5, 1.8))
+	local strikeBurst = sparkEmit:Clone()
+	strikeBurst.Name = "AnvilStrikeBurst"
+	strikeBurst.Rate = 0
+	strikeBurst.Speed = NumberRange.new(14, 26)
+	strikeBurst.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.52),
+		NumberSequenceKeypoint.new(1, 0.06),
+	})
+	strikeBurst.Parent = anvilSparkAnchor
+
+	-- Anvil Prompt Anchor + Direct Click Hitbox (both trigger free Forge rerolls!)
+	local anvilInteract = part(model, "AnvilInteraction", V(2, 2, 2), centerCF * CFrame.new(-11.5, 4.6, 5.2), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, false)
+	anvilInteract.Transparency = 1
+
+	local anvilClickBox = part(model, "AnvilClickBox", V(4.8, 4.6, 3.6), centerCF * CFrame.new(-11.5, 2.8, 5.2), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, false)
+	anvilClickBox.Transparency = 1
+	anvilClickBox.CanQuery = true
+	local clickDetector = Instance.new("ClickDetector")
+	clickDetector.Name = "AnvilClickDetector"
+	clickDetector.MaxActivationDistance = 24
+	clickDetector.Parent = anvilClickBox
+
+	-- PrimaryRoot + Smelter FacilityInteraction (`BlacksmithPrompt` opens Smelter Artifacts & Upgrade UI)
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(38, 1.0, 28), V(-10.5, 4.2, -5.0))
 	return interactionPart
 end
 
@@ -1942,7 +1819,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 29 then
+	if existing and existing:GetAttribute("PrefabVersion") == 32 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1951,7 +1828,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 29)
+	prefabs:SetAttribute("PrefabVersion", 32)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")
