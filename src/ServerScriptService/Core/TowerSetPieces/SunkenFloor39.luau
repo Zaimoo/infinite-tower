@@ -79,24 +79,24 @@ SunkenFloor39.Floor39Landmarks = table.freeze({
 	{ Id = "ColossalClam", X = 230, Z = -369, Y = 56, HalfX = 22.4, HalfZ = 14.0, Top = 33.3 },
 	{ Id = "CoralGateTower", X = -336, Z = -124, Y = 16, HalfX = 21.2, HalfZ = 16.0, Top = 84.0 },
 	{ Id = "TideArmillaryTower", X = 342, Z = -148, Y = 20, HalfX = 12.1, HalfZ = 12.1, Top = 91.0 },
-	{ Id = "DrownedGateWall", X = -28, Z = -94, Y = 8, HalfX = 32.0, HalfZ = 7.8, Top = 48.2 },
-	{ Id = "InnerWallWestA", X = -108, Z = -104, Y = 8, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
-	{ Id = "InnerWallEastA", X = 68, Z = -110, Y = 10, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
-	{ Id = "InnerWallEastB", X = 156, Z = -118, Y = 12, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
+	{ Id = "DrownedGateWall", X = -28, Z = -94, Y = -19, HalfX = 32.0, HalfZ = 7.8, Top = 48.2 },
+	{ Id = "InnerWallWestA", X = -108, Z = -104, Y = -10, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
+	{ Id = "InnerWallEastA", X = 68, Z = -110, Y = -10, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
+	{ Id = "InnerWallEastB", X = 156, Z = -118, Y = -10, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
 	{ Id = "OuterWallWestA", X = -128, Z = 134, Y = -4, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
 	{ Id = "OuterWallWestB", X = -48, Z = 134, Y = -4, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
 	{ Id = "OuterWallCenter", X = 28, Z = 134, Y = -4, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
 	{ Id = "OuterWallEast", X = 232, Z = 112, Y = -4, HalfX = 22.5, HalfZ = 6.1, Top = 38.8 },
 	{ Id = "DiversWharfBell", X = -344, Z = 60, Y = 4, HalfX = 5.9, HalfZ = 4.8, Top = 14.5 },
-	{ Id = "PearlMarketStallW", X = -234, Z = 34, Y = 12, HalfX = 7.8, HalfZ = 5.3, Top = 12.0 },
+	{ Id = "PearlMarketStallW", X = -234, Z = -8, Y = 12, HalfX = 7.8, HalfZ = 5.3, Top = 12.0 },
 	{ Id = "PearlMarketStallS", X = -168, Z = 92, Y = 12, HalfX = 7.8, HalfZ = 5.3, Top = 12.0 },
-	{ Id = "MusterBellBarricade", X = -80, Z = -52, Y = 14, HalfX = 10.7, HalfZ = 4.4, Top = 9.7 },
+	{ Id = "MusterBellBarricade", X = -30, Z = -84, Y = 20, HalfX = 10.7, HalfZ = 4.4, Top = 9.7 },
 	{ Id = "PearlBedsRackA", X = 108, Z = -72, Y = -6, HalfX = 8.6, HalfZ = 4.3, Top = 7.0 },
 	{ Id = "PearlBedsRackB", X = 152, Z = -34, Y = -6, HalfX = 8.6, HalfZ = 4.3, Top = 7.0 },
 	{ Id = "HarbourCraneEast", X = 340, Z = -10, Y = 14, HalfX = 5.9, HalfZ = 10.4, Top = 26.3 },
 	{ Id = "PearlguardGalleyWest", X = -235, Z = 138, Y = -6, HalfX = 25.8, HalfZ = 8.2, Top = 33.5 },
-	{ Id = "PearlguardGalleyEast", X = 295, Z = 118, Y = -6, HalfX = 25.8, HalfZ = 8.2, Top = 33.5 },
-	{ Id = "WardensHallGuardian", X = -222, Z = -228, Y = 24, HalfX = 11.2, HalfZ = 6.2, Top = 31.2 },
+	{ Id = "PearlguardGalleyEast", X = 345, Z = 146, Y = -6, HalfX = 25.8, HalfZ = 8.2, Top = 33.5 },
+	{ Id = "WardensHallGuardian", X = -120, Z = -242, Y = 24, HalfX = 11.2, HalfZ = 6.2, Top = 31.2 },
 	{ Id = "ShellChapelShrine", X = -336, Z = -306, Y = 28, HalfX = 7.6, HalfZ = 8.0, Top = 18.0 },
 	{ Id = "ReliquaryAbyssCore", X = 60, Z = -386, Y = 52, HalfX = 7.6, HalfZ = 8.0, Top = 18.0 },
 	{ Id = "VaultStairGuardianN", X = 114, Z = -334, Y = 46, HalfX = 11.2, HalfZ = 6.2, Top = 31.2 },
@@ -109,12 +109,30 @@ function SunkenFloor39.Build(ctx: any)
 	local w: number = ctx.w
 	local layout = ctx.layout
 	local P = layout.Platforms
-	local boxAt, lump, light, piece, noCollide = H.boxAt, H.lump, H.light, H.piece, H.noCollide
+	local noCollide = H.noCollide
 	local origin: Vector3 = ctx.origin
 	local waterY: number = if field then field.LiquidLevel else bottom
 	local landmarks, props, cover = 0, 0, 0
 	local kindsUsed: { [string]: number } = {}
 	local rng = Random.new(39 * 8191)
+
+	local function boxAt(name: string, size: Vector3, pos: Vector3, yaw: number, color: Color3, mat: Enum.Material, trans: number?): Part
+		return H.boxAt(name, size, CFrame.new(pos) * CFrame.Angles(0, yaw, 0), color, mat, trans)
+	end
+	local function lump(name: string, size: Vector3, pos: Vector3, color: Color3, mat: Enum.Material): Part
+		return H.lump(name, pos, size, color, mat)
+	end
+	local function light(pos: Vector3, color: Color3, brightness: number, range: number)
+		local anchor = ctx.block("LightAnchor", V(0.5, 0.5, 0.5), pos, color, Mat.SmoothPlastic, nil, 1)
+		noCollide(anchor)
+		H.light(anchor, color, brightness, range)
+	end
+	local function isClear(x: number, z: number, r: number): boolean
+		for _, camp in layout.Camps do
+			if (camp.X - x) ^ 2 + (camp.Z - z) ^ 2 < (38 + r) ^ 2 then return false end
+		end
+		return ctx.footprintClear(x, z, r + 1, r + 1)
+	end
 
 	local function track(kind: string)
 		kindsUsed[kind] = (kindsUsed[kind] or 0) + 1
@@ -129,7 +147,7 @@ function SunkenFloor39.Build(ctx: any)
 		local s = if typeof(scale) == "number" then V(scale, scale, scale) else scale
 		track(name)
 		if ctx.has(name) then
-			ctx.kitAt(name, V(x, y, z), s, yaw, pal or VAULT_PAL, true)
+			ctx.kitAt(name, CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0), s, pal or VAULT_PAL, true)
 			if onGround then markOnTerrain() end
 			return true
 		elseif fallback then
@@ -292,8 +310,8 @@ function SunkenFloor39.Build(ctx: any)
 	ctx.reserve(342, -148, 22)
 
 	ctx.group("DrownedGateWall", function()
-		put("DrownedGateWall", -28, 8, -94, 1.0, 0, VAULT_PAL, function()
-			fbDrownedGate(-28, 8, -94)
+		put("DrownedGateWall", -28, -19, -94, 1.0, 0, VAULT_PAL, function()
+			fbDrownedGate(-28, -19, -94)
 		end, true)
 		light(V(-28, 24, -84), AQUA_LIGHT, 1.5, 44)
 		landmarks += 1
@@ -301,9 +319,9 @@ function SunkenFloor39.Build(ctx: any)
 	ctx.reserve(-28, -94, 34)
 
 	for _, seg in {
-		{ id = "InnerWallWestA", x = -108, y = 8, z = -104, yaw = 0.08 },
-		{ id = "InnerWallEastA", x = 68, y = 10, z = -110, yaw = -0.06 },
-		{ id = "InnerWallEastB", x = 156, y = 12, z = -118, yaw = -0.08 },
+		{ id = "InnerWallWestA", x = -108, y = -10, z = -104, yaw = 0.08 },
+		{ id = "InnerWallEastA", x = 68, y = -10, z = -110, yaw = -0.06 },
+		{ id = "InnerWallEastB", x = 156, y = -10, z = -118, yaw = -0.08 },
 		{ id = "OuterWallWestA", x = -128, y = -4, z = 134, yaw = 0 },
 		{ id = "OuterWallWestB", x = -48, y = -4, z = 134, yaw = 0 },
 		{ id = "OuterWallCenter", x = 28, y = -4, z = 134, yaw = 0 },
@@ -325,7 +343,7 @@ function SunkenFloor39.Build(ctx: any)
 		local gx, gy, gz, gyaw = 64, 2, 166, math.rad(-45)
 		track("PortcullisGatehouse")
 		if ctx.has("PortcullisGatehouse") then
-			ctx.kitAt("PortcullisGatehouse", V(gx, gy, gz), V(1, 1, 1), gyaw, VAULT_PAL, false)
+			ctx.kitAt("PortcullisGatehouse", CFrame.new(gx, gy, gz) * CFrame.Angles(0, gyaw, 0), V(1, 1, 1), VAULT_PAL, false)
 			markOnTerrain()
 		else
 			fbGatehouse(gx, gy, gz, gyaw)
@@ -350,7 +368,7 @@ function SunkenFloor39.Build(ctx: any)
 
 	-- Pearl Market: striped shell-awning stalls & warm lantern glow
 	for _, st in {
-		{ id = "PearlMarketStallW", x = -234, y = 12, z = 34, yaw = math.rad(78) },
+		{ id = "PearlMarketStallW", x = -234, y = 12, z = -8, yaw = math.rad(78) },
 		{ id = "PearlMarketStallS", x = -168, y = 12, z = 92, yaw = math.rad(180) },
 	} do
 		ctx.group(st.id, function()
@@ -361,16 +379,15 @@ function SunkenFloor39.Build(ctx: any)
 		end)
 		ctx.reserve(st.x, st.z, 12)
 	end
-	light(V(-224, 22, 34), WHARF_LIGHT, 1.3, 38)
 
 	-- Muster Yard: muffled-bell barricade & weapon racks facing the sealed Drowned Gate
 	ctx.group("MusterBellBarricade", function()
-		put("MuffledBellStack", -80, 14, -52, 1.0, math.rad(22), VAULT_PAL, function()
-			fbBellStack(-80, 14, -52, math.rad(22))
+		put("MuffledBellStack", -30, 20, -84, 1.0, math.rad(22), VAULT_PAL, function()
+			fbBellStack(-30, 20, -84, math.rad(22))
 		end, true)
 		landmarks += 1
 	end)
-	ctx.reserve(-80, -52, 14)
+	ctx.reserve(-30, -84, 14)
 
 	-- Additional muffled bell stacks beside the Sea Gate & Arrival Breakwater Steps (story beat!)
 	for idx, mb in {
@@ -379,7 +396,7 @@ function SunkenFloor39.Build(ctx: any)
 		{ x = -112, y = 0, z = 188, yaw = 0.2 },
 		{ x = 178, y = 0, z = 192, yaw = -0.25 },
 	} do
-		if ctx.footprintClear(mb.x, mb.z, 10) then
+		if isClear(mb.x, mb.z, 10) then
 			ctx.group("MuffledBellBarricade_" .. idx, function()
 				put("MuffledBellStack", mb.x, groundY(mb.x, mb.z), mb.z, 0.85, mb.yaw, VAULT_PAL, function()
 					fbBellStack(mb.x, groundY(mb.x, mb.z), mb.z, mb.yaw)
@@ -402,7 +419,6 @@ function SunkenFloor39.Build(ctx: any)
 		end)
 		ctx.reserve(rk.x, rk.z, 12)
 	end
-	light(V(108, 8, -70), AQUA_LIGHT, 1.3, 36)
 
 	-- Harbour Ward: timber jib crane + twin moored Pearlguard galleys + harbour chain-boom
 	ctx.group("HarbourCraneEast", function()
@@ -415,7 +431,7 @@ function SunkenFloor39.Build(ctx: any)
 
 	for _, gl in {
 		{ id = "PearlguardGalleyWest", x = -235, y = -6, z = 138, yaw = math.rad(16) },
-		{ id = "PearlguardGalleyEast", x = 295, y = -6, z = 118, yaw = math.rad(-164) },
+		{ id = "PearlguardGalleyEast", x = 345, y = -6, z = 146, yaw = math.rad(-164) },
 	} do
 		ctx.group(gl.id, function()
 			put("PearlguardGalley", gl.x, gl.y, gl.z, 1.0, gl.yaw, VAULT_PAL, function()
@@ -448,13 +464,12 @@ function SunkenFloor39.Build(ctx: any)
 	-- 4. INNER WARD VIGNETTES: WARDENS' HALL, SHELL CHAPEL, PEARL CISTERN, VAULT STAIR, RELIQUARY
 	-- =========================================================================
 	ctx.group("WardensHallGuardian", function()
-		put("CoralWardenStatue", -222, 24, -228, 1.0, math.rad(55), VAULT_PAL, function()
-			fbStatue(-222, 24, -228, math.rad(55))
+		put("CoralWardenStatue", -120, 24, -242, 1.0, math.rad(55), VAULT_PAL, function()
+			fbStatue(-120, 24, -242, math.rad(55))
 		end, true)
-		light(V(-214, 38, -222), AQUA_LIGHT, 1.4, 42)
 		landmarks += 1
 	end)
-	ctx.reserve(-222, -228, 14)
+	ctx.reserve(-120, -242, 14)
 
 	ctx.group("ShellChapelShrine", function()
 		put("CoralCageReliquary", -336, 28, -306, 1.0, math.rad(45), CORAL_CREAM, function()
@@ -478,39 +493,32 @@ function SunkenFloor39.Build(ctx: any)
 		put("CoralWardenStatue", 114, 46, -334, 1.05, math.rad(-25), CORAL_AQUA, function()
 			fbStatue(114, 46, -334, math.rad(-25))
 		end, true)
-		light(V(114, 64, -330), PEARL_LIGHT, 1.4, 42)
 		landmarks += 1
 	end)
 	ctx.reserve(114, -334, 14)
 
-	-- Pearl Cistern off-lane coral-crusted urns & rim lantern (echoing Tidebound Urn relic)
+	-- Pearl Cistern off-lane coral-crusted urns (echoing Tidebound Urn relic)
 	ctx.group("PearlCisternRim", function()
 		ctx.tag("OnTerrain", true)
 		for i = 0, 5 do
 			local ang = math.rad(-145 + i * 24)
 			local ux, uz = -40 + math.cos(ang) * 44, -190 + math.sin(ang) * 38
-			if ctx.footprintClear(ux, uz, 5) then
+			if isClear(ux, uz, 5) then
 				put("StoneUrn", ux, groundY(ux, uz), uz, 1.4, ang, VAULT_PAL, nil, true)
 				props += 1
 			end
 		end
-		light(V(-40, 50, -190), AQUA_LIGHT, 1.2, 38)
 	end)
 
 	-- Arrival Breakwater Steps framing: twin hooded wharf beacons & trident obelisks (off-lane)
 	for _, sx in { -54, 54 } do
-		if ctx.footprintClear(sx, 326, 8) then
+		if isClear(sx, 326, 8) then
 			ctx.group("ArrivalBeacon_" .. (if sx < 0 then "W" else "E"), function()
 				put("Obelisk", sx, groundY(sx, 326), 326, V(0.7, 1.15, 0.7), 0, VAULT_PAL, nil, true)
 				props += 1
 			end)
 		end
 	end
-	light(V(0, 24, 336), WHARF_LIGHT, 1.3, 44)
-	-- Outer & inner ward ambient pool fill lights (total lights stay cleanly <= 20/24!)
-	light(V(0, 18, 224), AQUA_LIGHT, 1.2, 54)
-	light(V(-170, 26, 40), WHARF_LIGHT, 1.1, 46)
-	light(V(270, 30, -10), AQUA_LIGHT, 1.1, 46)
 
 	-- =========================================================================
 	-- 5. FORTIFIED TIDEWALL BACKDROP, MISTY CASCADES & LEVIATHAN SHADOW (NORTH)
@@ -561,7 +569,7 @@ function SunkenFloor39.Build(ctx: any)
 	local function tryProp(name: string, x: number, z: number, minScale: number, maxScale: number, clearR: number, pal: any?): boolean
 		if (placedByKind[name] or 0) >= propCap then return false end
 		if math.abs(x) > w / 2 - 22 or math.abs(z) > d / 2 - 22 then return false end
-		if not ctx.footprintClear(x, z, clearR) then return false end
+		if not isClear(x, z, clearR) then return false end
 		local y = groundY(x, z)
 		local sc = minScale + rng:NextNumber() * (maxScale - minScale)
 		local yaw = rng:NextNumber() * math.pi * 2
@@ -633,7 +641,7 @@ function SunkenFloor39.Build(ctx: any)
 		if math.abs(x - apex.X) < apex.Width / 2 + 8 and math.abs(z - apex.Z) < apex.Depth / 2 + 8 then
 			continue
 		end
-		if not ctx.footprintClear(x, z, 4.5) then continue end
+		if not isClear(x, z, 4.5) then continue end
 		local cname = coverNames[(coverAttempts % #coverNames) + 1]
 		local pal = if coverAttempts % 3 == 0 then CORAL_AQUA elseif coverAttempts % 3 == 1 then CORAL_CREAM else VAULT_PAL
 		local sc = 0.34 + rng:NextNumber() * 0.34
