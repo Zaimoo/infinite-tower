@@ -1740,6 +1740,44 @@ function Builder.Build(id: number, generation: number): any
 								end
 							end
 						end
+					elseif layout.Authored == "astral:3" and terraceName then
+						-- Floor 43 (Fractured Index): build a solid weathered grey-slate stone bridgehead pier
+						-- matching the bridge's exact width & angle so EVERY straight or angled bridge connects
+						-- flush into its cliff island with zero floating ends or invisible gaps!
+						local plat = layout.Platforms[terraceName]
+						if plat then
+							local pc = origin + Vector3.new(plat.X, plat.Y, plat.Z)
+							local rimPt = if (a - pc).Magnitude > (b - pc).Magnitude then a else b
+							local inDir = (if rimPt == a then b else a) - rimPt
+							local inFlat = Vector3.new(inDir.X, 0, inDir.Z)
+							if inFlat.Magnitude > 0.1 then
+								local maxReach = math.min(plat.Width, plat.Depth) * 0.44
+								local padLen = math.clamp(inFlat.Magnitude, 8, math.min(20, maxReach))
+								inFlat = inFlat.Unit
+								local pierRight = Vector3.new(-inFlat.Z, 0, inFlat.X)
+								local pierW = pad.Width - 8 -- matches 28-stud bridge width exactly
+								local tMid = rimPt + inFlat * (padLen * 0.5)
+								local topOff = -0.02
+								local shardStoneTop = Color3.fromRGB(114, 120, 136)
+								local shardCliffUnder = Color3.fromRGB(54, 60, 78)
+								-- Solid flush weathered-slate bridgehead deck (never pokes out far side of small Shards)
+								local th = part(model, "AstralShardPier", Vector3.new(pierW, 1.5, padLen + 1.2), tMid + Vector3.new(0, topOff - 0.75, 0), shardStoneTop, Enum.Material.Slate, true)
+								th.CFrame = CFrame.lookAt(tMid + Vector3.new(0, topOff - 0.75, 0), tMid + inFlat + Vector3.new(0, topOff - 0.75, 0))
+								th.CanQuery = true
+								th.CastShadow = false
+								-- Heavy dark-slate cliff abutment underside tapering under the pier
+								local thUnder = decor(model, "AstralShardPierUnder", Vector3.new(pierW - 1.4, 3.6, padLen), tMid + Vector3.new(0, topOff - 3.25, 0), shardCliffUnder, Enum.Material.Slate)
+								thUnder.CFrame = CFrame.lookAt(thUnder.Position, thUnder.Position + inFlat)
+								-- Antique brass cornice lip tying cleanly into the bridge's underside frieze
+								local thTrim = decor(model, "AstralShardPierTrim", Vector3.new(pierW + 0.4, 0.45, 0.85), rimPt + Vector3.new(0, topOff - 1.35, 0), halcyrBrass, Enum.Material.Metal)
+								thTrim.CFrame = CFrame.lookAt(thTrim.Position, thTrim.Position + inFlat)
+								for _, side in { -1, 1 } do
+									local sOff = pierRight * (side * (pierW * 0.5 - 0.45))
+									local sideTrim = decor(model, "AstralShardPierSideTrim", Vector3.new(0.45, 0.45, padLen), tMid + sOff + Vector3.new(0, topOff - 1.35, 0), halcyrBrass, Enum.Material.Metal)
+									sideTrim.CFrame = CFrame.lookAt(sideTrim.Position, sideTrim.Position + inFlat)
+								end
+							end
+						end
 					end
 				elseif bStyle == "CAUSEWAY" then
 					p.Color, p.Material = nerethStone, Enum.Material.Limestone
@@ -2244,24 +2282,28 @@ function Builder.Build(id: number, generation: number): any
 					end
 				elseif bStyle == "SHARD" then
 					-- Cracked floor-slab shard span (Astral 43): legible weathered grey-slate stone deck with
-					-- lighter cracked flagstones, dark fractured cliff-beam underside and antique brass ties.
-					local shardDeckCol = Color3.fromRGB(96, 102, 120)
-					local shardFlagA = Color3.fromRGB(126, 132, 148)
-					local shardFlagB = Color3.fromRGB(108, 114, 132)
-					local shardUnderCol = Color3.fromRGB(56, 62, 80)
+					-- subtle cracked flagstones, heavy dark fractured cliff-beam underside and antique brass ties,
+					-- extended cleanly into both bridgehead piers so zero gaps ever show at any joint.
+					local shardDeckCol = Color3.fromRGB(108, 114, 130)
+					local shardFlagA = Color3.fromRGB(122, 128, 144)
+					local shardFlagB = Color3.fromRGB(102, 108, 124)
+					local shardUnderCol = Color3.fromRGB(52, 58, 76)
 					ramp.Color = shardDeckCol
 					ramp.Material = Enum.Material.Slate
-					local slabs = math.max(3, math.floor((length - 2) / 4.8))
+					ramp.Size = Vector3.new(link.Width, 2.0, length + 2.4)
+					local slabs = math.max(3, math.floor(length / 5.4))
 					for i = 1, slabs do
 						local at = a:Lerp(b, (i - 0.5) / slabs)
-						local stagger = if i % 2 == 0 then 0.7 else -0.7
-						local slab = decor(model, "ShardSpanSlab", Vector3.new(link.Width - 2.4, 0.24, 3.8), at + right * stagger, if i % 2 == 0 then shardFlagA else shardFlagB, Enum.Material.Slate)
-						slab.CFrame = CFrame.lookAt(at + right * stagger, at + right * stagger + delta) * CFrame.new(0, 0.08, 0) * CFrame.Angles(0, math.rad(if i % 2 == 0 then 2 else -2), 0)
+						local stagger = if i % 2 == 0 then 0.55 else -0.55
+						local slab = decor(model, "ShardSpanSlab", Vector3.new(link.Width - 2.6, 0.16, 4.4), at + right * stagger, if i % 2 == 0 then shardFlagA else shardFlagB, Enum.Material.Slate)
+						slab.CFrame = CFrame.lookAt(at + right * stagger, at + right * stagger + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(if i % 2 == 0 then 1.5 else -1.5), 0)
 					end
-					local underBeam = decor(model, "ShardRockUnder", Vector3.new(link.Width - 2.8, 2.2, math.max(1, length - 0.6)), mid, shardUnderCol, Enum.Material.Slate)
-					underBeam.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.9, 0)
-					local underTie = decor(model, "ShardBrassTie", Vector3.new(link.Width * 0.55, 0.65, length), mid, halcyrBrass, Enum.Material.Metal)
-					underTie.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.25, 0)
+					local underBeam = decor(model, "ShardRockUnder", Vector3.new(link.Width - 2.2, 3.2, length + 1.8), mid, shardUnderCol, Enum.Material.Slate)
+					underBeam.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.5, 0)
+					local underKeel = decor(model, "ShardRockKeel", Vector3.new(link.Width * 0.58, 2.6, math.max(2, length - 2)), mid, Color3.fromRGB(38, 42, 60), Enum.Material.Slate)
+					underKeel.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -4.6, 0)
+					local underTie = decor(model, "ShardBrassTie", Vector3.new(link.Width + 0.2, 0.55, length + 1.4), mid, halcyrBrass, Enum.Material.Metal)
+					underTie.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.35, 0)
 				elseif bStyle == "WAYGATE" then
 					-- Waygate bridge (Astral 44): pale vellum limestone deck with inlaid gold rune threshold bands.
 					ramp.Color = halcyrVellum

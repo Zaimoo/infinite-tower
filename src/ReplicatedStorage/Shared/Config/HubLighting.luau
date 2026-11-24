@@ -558,9 +558,9 @@ local FloorGrades: { [number]: { [string]: any } } = {
 	},
 	-- Floor 43, Fractured Index: split violet-teal aurora, crisp moonlit slate key on the plates & warm golden lamps.
 	[43] = {
-		Ambient = c(104, 110, 148), OutdoorAmbient = c(156, 162, 198), ColorShift_Top = c(222, 228, 255), ColorShift_Bottom = c(128, 86, 182),
-		AtmosphereDensity = 0.18, AtmosphereColor = c(96, 102, 164), AtmosphereDecay = c(64, 52, 122), AtmosphereHaze = 0.36,
-		TintColor = c(242, 246, 255), Saturation = 0.14, Contrast = 0.08, ExposureCompensation = 0.16, BloomIntensity = 0.50,
+		Ambient = c(96, 102, 140), OutdoorAmbient = c(150, 156, 192), ColorShift_Top = c(222, 228, 255), ColorShift_Bottom = c(98, 66, 152),
+		AtmosphereDensity = 0.18, AtmosphereColor = c(84, 88, 148), AtmosphereDecay = c(56, 44, 108), AtmosphereHaze = 0.34,
+		TintColor = c(242, 246, 255), Saturation = 0.14, Contrast = 0.10, ExposureCompensation = 0.16, BloomIntensity = 0.48,
 	},
 	-- Floor 44, Runeguard Athenaeum: sealed indigo dusk, legible slate fortress with warm pools under the Waygates.
 	[44] = {

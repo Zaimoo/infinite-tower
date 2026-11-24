@@ -3199,24 +3199,24 @@ local AUTHORED: {[number]: any} = {
 	[43] = {
 		Key = "astral:3", Name = "Fractured Index", PathStyle = "HALCYR",
 		Size = { Width = 720, Depth = 750, Height = 280, Bottom = -6 },
-		Basin = { X = 0, Y = 0, Z = 230, Width = 688, Depth = 96 },
-		WestGallery = { X = -220, Y = 16, Z = 70, Width = 88, Depth = 76 },
-		EastGallery = { X = 200, Y = 8, Z = 75, Width = 88, Depth = 76 },
-		Crossing = { X = -20, Y = 12, Z = 85, Width = 84, Depth = 64 },
+		Basin = { X = 0, Y = 0, Z = 225, Width = 416, Depth = 96 },
+		WestGallery = { X = -168, Y = 16, Z = 76, Width = 92, Depth = 72 },
+		EastGallery = { X = 166, Y = 8, Z = 78, Width = 92, Depth = 72 },
+		Crossing = { X = -8, Y = 12, Z = 86, Width = 86, Depth = 64 },
 		ExtraPlatforms = {
-			ShardA = { X = -100, Y = 18, Z = 5, Width = 56, Depth = 48 },
-			ShardE = { X = 190, Y = 10, Z = -10, Width = 56, Depth = 48 },
-			P2W = { X = -210, Y = 28, Z = -80, Width = 72, Depth = 60 },
-			P2C = { X = -40, Y = 24, Z = -75, Width = 72, Depth = 60 },
-			P2E = { X = 180, Y = 20, Z = -95, Width = 72, Depth = 60 },
-			ShardB = { X = -110, Y = 30, Z = -165, Width = 56, Depth = 48 },
-			P3C = { X = 20, Y = 36, Z = -175, Width = 72, Depth = 60 },
-			P3E = { X = 240, Y = 32, Z = -185, Width = 72, Depth = 60 },
-			ShardC = { X = 140, Y = 40, Z = -245, Width = 56, Depth = 48 },
-			Engine = { X = 250, Y = 44, Z = -300, Width = 64, Depth = 52 },
-			P4C = { X = 60, Y = 48, Z = -305, Width = 72, Depth = 56 },
+			ShardA = { X = -82, Y = 18, Z = 8, Width = 54, Depth = 46 },
+			ShardE = { X = 164, Y = 10, Z = -4, Width = 54, Depth = 46 },
+			P2W = { X = -172, Y = 28, Z = -64, Width = 78, Depth = 60 },
+			P2C = { X = -22, Y = 24, Z = -68, Width = 78, Depth = 60 },
+			P2E = { X = 152, Y = 20, Z = -100, Width = 78, Depth = 60 },
+			ShardB = { X = -104, Y = 34, Z = -148, Width = 58, Depth = 48 },
+			P3C = { X = 22, Y = 36, Z = -168, Width = 78, Depth = 60 },
+			P3E = { X = 192, Y = 32, Z = -182, Width = 78, Depth = 60 },
+			ShardC = { X = 116, Y = 40, Z = -246, Width = 54, Depth = 46 },
+			Engine = { X = 202, Y = 44, Z = -282, Width = 68, Depth = 54 },
+			P4C = { X = 38, Y = 48, Z = -286, Width = 76, Depth = 56 },
 		},
-		Apex = { X = -210, Y = 52, Z = -285, Width = 132, Depth = 96 },
+		Apex = { X = -172, Y = 52, Z = -264, Width = 132, Depth = 96 },
 		Paths = {
 			{ "Sanctuary", "Basin" }, { "Basin", "WestGallery" }, { "Basin", "Crossing" }, { "Basin", "EastGallery" },
 			{ "WestGallery", "Crossing" }, { "Crossing", "ShardA" }, { "ShardA", "P2C" }, { "ShardA", "P2W" },
@@ -4141,6 +4141,22 @@ local function build(index: number, v: any?): any
 		local isAstral41 = v and v.Key == "astral:1"
 		local isAstralArchipelago = v and (v.Key == "astral:1" or v.Key == "astral:2")
 		local roundIsles = isAstralArchipelago and v.Terrain and v.Terrain.RoundDecks or nil
+		-- Floor 43 (Fractured Index): bridges leaving the Ruled Court (Basin) run 100% straight north-south (0 deg slant)
+		-- directly from Basin's north stone edge into the south cliff face of WestGallery, Crossing and EastGallery!
+		if v and v.Key == "astral:3" and a == "Basin" and q.Z < p.Z then
+			local sx = math.clamp(q.X, p.X - p.Width / 2 + 20, p.X + p.Width / 2 - 20)
+			local az = p.Z - p.Depth / 2
+			local bz = q.Z + q.Depth / 2 + (if q.Y > p.Y then 1.0 else -1.0)
+			local run = az - bz
+			assert(math.abs(q.Y - p.Y) / run <= math.tan(math.rad(15)), a .. "->" .. b .. " straight ramp too steep")
+			local connector = { From = a, To = b, AX = sx, AZ = az, AY = p.Y, BX = sx, BZ = bz, BY = q.Y, Width = 28 }
+			landings(connector, 0, -1, 20, 20)
+			if v and v.Stairs and v.Stairs[connector.Id] then
+				connector.Kind = "STAIRS"
+			end
+			table.insert(links, connector)
+			return
+		end
 		-- Floors 41-42: bridges leaving the wide straight Concourse/Plinth (Basin) run 100% straight north-south (0 deg slant)
 		-- directly from Basin's north marble edge to the target island's south rim, with zero blue-glass overlap.
 		if isAstralArchipelago and a == "Basin" and q.Z < p.Z and roundIsles and roundIsles[b] then
