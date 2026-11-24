@@ -463,4 +463,51 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.TowerFloorAt(0, 0) == nil)
 end)
 
+test("Floor 36 has its own Drowned Steps kit: at least nine new templates, a great Tidebell and a golden shell canopy", function()
+	local f36 = { "GreatTidebell", "GoldenShellCanopy", "LancetArchBay", "BrokenLancetColumn", "BellArch", "FallenStairFlight",
+		"HollinBarge", "VotiveLampBowl", "ShellMidden", "RuneTablet", "CantorLectern", "TidepoolRockRing", "GiantClam",
+		"KelpStand", "SeaFan", "AnemoneCluster", "SeagrassTuft" }
+	for _, name in f36 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 36 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		-- Every template stands on its origin (the fallen flight lies half sunk in the seabed).
+		local sink = if name == "FallenStairFlight" then -2.5 else -1
+		assert(t.Min.Y > sink and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f36 >= 9)
+	-- The shrine canopy (placed at scale 1.9) spans the Bell Stack's crown.
+	assert(Kit.ExtraTemplates.GoldenShellCanopy.Size.X * 1.9 >= 100)
+	-- The Tidebells are bronze and the rune light is aqua glow.
+	for _, name in { "GreatTidebell", "BellArch" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "METAL"), name .. " has no bronze bell")
+	end
+	for _, name in { "RuneTablet", "LancetArchBay", "BellArch" } do
+		assert(table.find(Kit.ExtraTemplates[name].Roles, "GLOW"), name .. " has no tide-spiral glow")
+	end
+	assert(Light.FloorGrades[36] ~= nil, "floor 36 (Drowned Steps) has its turquoise-noon grade")
+	assert(Light.FloorGrades[36].AtmosphereHaze < Light.FloorGrades[35].AtmosphereHaze, "floor 36 is the clearest air after the eclipse")
+end)
+
+test("Floor 37 has its own Coral Cloister kit: at least ten new templates, a 140+ stud Bell Tower and warm afternoon grade", function()
+	local f37 = { "CoralArcadeBay", "CoralArcadeCorner", "CampanileTower", "ChapterHouseRib", "LavaboFountain",
+		"CantorStall", "ConchRack", "RefectoryTable", "ScriptoriumDesk", "SacristyPress", "CantorNicheStatue",
+		"DrownedSundial", "BrainCoralMound", "DorterCot" }
+	for _, name in f37 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 37 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		assert(t.Min.Y > -1 and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f37 >= 10, "Floor 37 needs at least 10 new kit templates")
+	-- The Campanile Bell Tower reaches the ladder's 140+ stud tallest-landmark target at scale 1.0.
+	assert(Kit.ExtraTemplates.CampanileTower.Size.Y >= 140, "CampanileTower must be at least 140 studs tall")
+	-- The Lavabo has its giant shell basin (ALT), crystal water spouts (CRYSTAL) and verdigris dome (ACCENT).
+	for _, role in { "ACCENT", "ALT", "CRYSTAL", "CORAL" } do
+		assert(table.find(Kit.ExtraTemplates.LavaboFountain.Roles, role), "LavaboFountain missing role " .. role)
+	end
+	assert(Light.FloorGrades[37] ~= nil, "floor 37 (Coral Cloister) has its warm gold-green afternoon grade")
+	assert(Light.FloorGrades[37].AtmosphereHaze > Light.FloorGrades[36].AtmosphereHaze, "floor 37 is hazier than floor 36's clear noon")
+end)
+
 print(string.format("tower-biome-kit: %d passed", passed))

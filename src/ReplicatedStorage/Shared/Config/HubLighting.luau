@@ -500,6 +500,22 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(234, 210, 255), Saturation = 0.16, Contrast = 0.14, ExposureCompensation = 0.05, BloomIntensity = 0.60,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.62,
 	},
+	-- Floor 36, Drowned Steps: bright turquoise noon on the sea-front. A white-gold key, an aqua bounce off the
+	-- shallows, strong sun rays and the clearest air of any Sunken floor (the ward is still open overhead).
+	[36] = {
+		Ambient = c(78, 112, 118), OutdoorAmbient = c(140, 186, 190), ColorShift_Top = c(210, 250, 255), ColorShift_Bottom = c(58, 150, 156),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(170, 226, 232), AtmosphereDecay = c(92, 178, 190), AtmosphereHaze = 0.6,
+		TintColor = c(248, 252, 246), Saturation = 0.18, Contrast = 0.08, ExposureCompensation = 0.1, BloomIntensity = 0.45,
+		SunRaysIntensity = 0.16, SunRaysSpread = 0.5,
+	},
+	-- Floor 37, Coral Cloister: warm gold-green afternoon slanting through coral-grown arcades, with luminous
+	-- turquoise-green fill bouncing off the two flooded garths and soft, dappled arcade shadows.
+	[37] = {
+		Ambient = c(86, 108, 98), OutdoorAmbient = c(148, 176, 152), ColorShift_Top = c(255, 226, 165), ColorShift_Bottom = c(62, 146, 134),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(184, 220, 204), AtmosphereDecay = c(108, 168, 154), AtmosphereHaze = 0.9,
+		TintColor = c(254, 248, 234), Saturation = 0.12, Contrast = 0.06, ExposureCompensation = 0.08, BloomIntensity = 0.42,
+		SunRaysIntensity = 0.18, SunRaysSpread = 0.56,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 
