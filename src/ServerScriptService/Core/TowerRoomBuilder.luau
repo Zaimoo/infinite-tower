@@ -906,9 +906,9 @@ function Builder.Build(id: number, generation: number): any
 			-- Built masonry: a solid, visible deck (thin over water when the floor says so, e.g. a bridge).
 			local t = deckThickness[name]
 			if roundDecks[name] then
-				-- A cap top (or round Halcyr moon/brass disc). Floor 41 matches island width closely so starlight
+				-- A cap top (or round Halcyr moon/brass disc). Floors 41-42 match island width closely so starlight
 				-- bridges connect cleanly rim-to-rim without intruding into island interiors.
-				local diameter = if layout.Authored == "astral:1"
+				local diameter = if layout.Authored == "astral:1" or layout.Authored == "astral:2"
 					then math.max(terrace.Width, terrace.Depth) + 4
 					else math.sqrt(terrace.Width ^ 2 + terrace.Depth ^ 2) + 2
 				local thick = t or 3
@@ -1673,7 +1673,7 @@ function Builder.Build(id: number, generation: number): any
 					proxy(p)
 					p.CanCollide = true
 					p.CanQuery = true
-					if layout.Authored == "astral:1" and terraceName and (roundDecks[terraceName] or terraceName == "Blotter") then
+					if (layout.Authored == "astral:1" or layout.Authored == "astral:2") and terraceName and (roundDecks[terraceName] or terraceName == "Blotter") then
 						-- Terraform the curved island rim or angled Blotter edge into a solid, flush white-marble
 						-- bridgehead pier matching the bridge width & angle (zero blue-glass overlap, zero hanging corners!).
 						local plat = layout.Platforms[terraceName]
@@ -1686,18 +1686,23 @@ function Builder.Build(id: number, generation: number): any
 								inFlat = inFlat.Unit
 								local pierRight = Vector3.new(-inFlat.Z, 0, inFlat.X)
 								local isBlotter = terraceName == "Blotter"
+								local isFrostIsle = layout.Authored == "astral:2" and terraceName == "Aphelion"
 								local pierLen = if isBlotter then (if math.abs(inFlat.X) < 0.05 then 4.5 else 20.0) else 9.0
 								local topOff = if isBlotter then -0.02 else 0.04
 								local tMid = rimPt + inFlat * (pierLen * 0.5)
-								-- Solid collidable marble pier deck (100% seamless with island MarbleCap / Blotter)
-								local th = part(model, "AstralBridgeThreshold", Vector3.new(pad.Width - 8, 1.2, pierLen), tMid + Vector3.new(0, topOff - 0.60, 0), Color3.fromRGB(234, 228, 214), Enum.Material.Marble, true)
+								local pierCapCol = if isFrostIsle then Color3.fromRGB(204, 232, 248) elseif layout.Authored == "astral:2" then Color3.fromRGB(228, 220, 204) else Color3.fromRGB(234, 228, 214)
+								local pierCapMat = if isFrostIsle then Enum.Material.Ice else Enum.Material.Marble
+								local pierSkirtCol = if isFrostIsle then Color3.fromRGB(118, 174, 218) elseif isBlotter then Color3.fromRGB(172, 166, 154) else halcyrLapis
+								local pierSkirtMat = if isFrostIsle then Enum.Material.Glacier elseif isBlotter then Enum.Material.Limestone else Enum.Material.Marble
+								-- Solid collidable marble/frost pier deck (100% seamless with island MarbleCap / Blotter)
+								local th = part(model, "AstralBridgeThreshold", Vector3.new(pad.Width - 8, 1.2, pierLen), tMid + Vector3.new(0, topOff - 0.60, 0), pierCapCol, pierCapMat, true)
 								th.CFrame = CFrame.lookAt(tMid + Vector3.new(0, topOff - 0.60, 0), tMid + inFlat + Vector3.new(0, topOff - 0.60, 0))
 								th.CanQuery = true
 								th.CastShadow = false
-								-- Matching lapis/limestone underside frieze & gold cornice lip
-								local thSkirt = decor(model, "AstralBridgeThresholdSkirt", Vector3.new(pad.Width - 8.6, 2.5, pierLen - 0.4), tMid + Vector3.new(0, topOff - 2.40, 0), if isBlotter then Color3.fromRGB(172, 166, 154) else halcyrLapis, if isBlotter then Enum.Material.Limestone else Enum.Material.Marble)
+								-- Matching lapis/limestone/glacier underside frieze & gold cornice lip
+								local thSkirt = decor(model, "AstralBridgeThresholdSkirt", Vector3.new(pad.Width - 8.6, 2.5, pierLen - 0.4), tMid + Vector3.new(0, topOff - 2.40, 0), pierSkirtCol, pierSkirtMat)
 								thSkirt.CFrame = CFrame.lookAt(tMid + Vector3.new(0, topOff - 2.40, 0), tMid + inFlat + Vector3.new(0, topOff - 2.40, 0))
-								local thGold = decor(model, "AstralBridgeThresholdGold", Vector3.new(pad.Width - 7.6, 0.72, 0.75), rimPt + Vector3.new(0, topOff - 0.50, 0), halcyrGold, Enum.Material.Metal)
+								local thGold = decor(model, "AstralBridgeThresholdGold", Vector3.new(pad.Width - 7.6, 0.72, 0.75), rimPt + Vector3.new(0, topOff - 0.50, 0), if isFrostIsle then Color3.fromRGB(178, 222, 248) else halcyrGold, if isFrostIsle then Enum.Material.Ice else Enum.Material.Metal)
 								thGold.CFrame = CFrame.lookAt(rimPt + Vector3.new(0, topOff - 0.50, 0), rimPt + inFlat + Vector3.new(0, topOff - 0.50, 0))
 								-- Short marble-and-gold pier wing curbs connecting the bridge handrails cleanly into the island rim
 								local wingLen = if isBlotter then (if math.abs(inFlat.X) < 0.05 then 0 elseif math.abs(inFlat.X) < 0.25 then 2.5 else 11.0) else 4.6
@@ -1705,7 +1710,7 @@ function Builder.Build(id: number, generation: number): any
 									local wingMid = rimPt + inFlat * (wingLen * 0.5)
 									for _, side in { -1, 1 } do
 										local wOff = pierRight * (side * ((pad.Width - 8) * 0.5 - 0.55))
-										local wCurb = decor(model, "AstralBridgePierCurb", Vector3.new(1.1, 0.95, wingLen), wingMid + wOff + Vector3.new(0, topOff + 0.45, 0), Color3.fromRGB(234, 228, 214), Enum.Material.Marble)
+										local wCurb = decor(model, "AstralBridgePierCurb", Vector3.new(1.1, 0.95, wingLen), wingMid + wOff + Vector3.new(0, topOff + 0.45, 0), pierCapCol, pierCapMat)
 										wCurb.CFrame = CFrame.lookAt(wingMid + wOff + Vector3.new(0, topOff + 0.45, 0), wingMid + wOff + inFlat + Vector3.new(0, topOff + 0.45, 0))
 										local wRail = decor(model, "AstralBridgePierRail", Vector3.new(0.75, 0.42, wingLen), wingMid + wOff + Vector3.new(0, topOff + 2.80, 0), halcyrGold, Enum.Material.Metal)
 										wRail.CFrame = CFrame.lookAt(wingMid + wOff + Vector3.new(0, topOff + 2.80, 0), wingMid + wOff + inFlat + Vector3.new(0, topOff + 2.80, 0))
@@ -1895,7 +1900,7 @@ function Builder.Build(id: number, generation: number): any
 				local center = a + flat * t
 				local baseTreadW = if rootStair then link.Width * (0.84 + 0.14 * math.sin(step * 1.15)) else link.Width
 				local treadW = baseTreadW - (step % 2) * 0.08
-				local halcyrMarbleStair = halcyr and layout.Authored == "astral:1"
+				local halcyrMarbleStair = halcyr and (layout.Authored == "astral:1" or layout.Authored == "astral:2")
 				local halcyrGlassStair = halcyr and not halcyrMarbleStair and hungLinks[link.Id] and bridgeStyles[link.Id] == "STARGLASS"
 				local treadCol = if velmari then (if step % 2 == 0 then slateIndigo else slateDark)
 					elseif hollin then (if step % 2 == 0 then fieldstone else fieldstoneDark)
@@ -2047,19 +2052,23 @@ function Builder.Build(id: number, generation: number): any
 						prevPt = pt
 					end
 				elseif bStyle == "ORBIT" then
-					-- Orrery-arm conjunction bridge (Astral 42): brass arm with lapis-and-glass walk and a
-					-- counterweight extending past the far edge of the arm.
-					ramp.Color = halcyrLapis
-					ramp.Material = Enum.Material.Marble
-					local deckGlass = decor(model, "OrbitArmGlass", Vector3.new(link.Width - 3.2, 0.14, math.max(1, length - 1)), mid, halcyrGlass, Enum.Material.Glass, 0.38)
-					deckGlass.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.08, 0)
-					local keel = decor(model, "OrbitArmKeel", Vector3.new(3.6, 2.2, length + 8), mid, halcyrBrass, Enum.Material.Metal)
-					keel.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.0, 0)
+					-- Orrery-arm conjunction bridge (Astral 42): luminous celestial-blue glass walk cradled in
+					-- a brass orrery girder with warm gold cross-ribs and hanging brass counterweight medallions.
+					ramp.Color = Color3.fromRGB(64, 114, 178)
+					ramp.Material = Enum.Material.Glass
+					ramp.Transparency = 0.24
+					ramp.Reflectance = 0.14
+					local glowCore = decor(model, "OrbitArmGlass", Vector3.new(link.Width - 3.0, 0.22, math.max(1, length - 0.8)), mid, Color3.fromRGB(152, 214, 255), Enum.Material.Neon, 0.70)
+					glowCore.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -0.18, 0)
+					local underBacking = decor(model, "OrbitArmBacking", Vector3.new(link.Width - 1.6, 0.45, math.max(1, length - 0.4)), mid, halcyrLapis, Enum.Material.Marble, 0.30)
+					underBacking.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.05, 0)
+					local keel = decor(model, "OrbitArmKeel", Vector3.new(3.2, 1.8, math.max(1, length - 1.2)), mid, halcyrBrass, Enum.Material.Metal)
+					keel.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.9, 0)
 					local ribs = math.max(2, math.floor(length / 9))
 					for i = 1, ribs do
 						local at = a:Lerp(b, (i - 0.5) / ribs)
-						local rib = decor(model, "OrbitArmRib", Vector3.new(link.Width + 0.8, 0.6, 0.9), at, halcyrGold, Enum.Material.Metal)
-						rib.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, -1.15, 0)
+						local rib = decor(model, "OrbitArmRib", Vector3.new(link.Width + 0.6, 0.55, 0.85), at, halcyrGold, Enum.Material.Metal)
+						rib.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, -1.25, 0)
 					end
 				elseif bStyle == "SHARD" then
 					-- Cracked floor-slab shard span (Astral 43): dark slate with vellum limestone stepping slabs
@@ -2769,7 +2778,7 @@ function Builder.Build(id: number, generation: number): any
 					local railOffset = right * (side * (link.Width / 2 - 0.55))
 					local isQuillShaft = layout.Authored == "astral:1"
 						and (link.Id == "WestGallery_Shaft" or link.Id == "Shaft_Crossing" or link.Id == "Crossing_NibLanding" or link.Id == "NibLanding_Apex")
-					local isGrandMarbleStair = layout.Authored == "astral:1" and link.Kind == "STAIRS"
+					local isGrandMarbleStair = (layout.Authored == "astral:1" or layout.Authored == "astral:2") and link.Kind == "STAIRS"
 					local marbleBase = decor(curbGroup, "BridgeStarglassCurb", Vector3.new(1.15, 0.95, curbLen), mid + railOffset, halcyrVellum, Enum.Material.Marble)
 					marbleBase.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 0.35, 0)
 					local goldTrim = decor(curbGroup, "BridgeStarglassGoldTrim", Vector3.new(1.25, 0.35, curbLen), mid + railOffset, halcyrGold, Enum.Material.Metal)
@@ -3036,8 +3045,8 @@ function Builder.Build(id: number, generation: number): any
 			local b = origin + Vector3.new(link.BX,link.BY,link.BZ)
 			local ramp = part(model, "BasinReturnRamp", Vector3.new(link.Width, 2, (b - a).Magnitude), (a + b) / 2, if natural then naturalGrassColor else theme.GroundColor, if natural and groundPalette then groundPalette.Ground else theme.GroundMaterial)
 			ramp.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -1, 0)
-			if layout.Authored == "astral:1" then
-				-- Floor 41: remove unconnected void return bridges visually (keep layout ReturnLinks metadata intact).
+			if layout.Authored == "astral:1" or layout.Authored == "astral:2" then
+				-- Floors 41-42: remove unconnected void return bridges visually (keep layout ReturnLinks metadata intact).
 				disableTerrainProxyPart(ramp)
 			elseif grassyPaths or direct then
 				disableTerrainProxyPart(ramp)
@@ -3053,12 +3062,21 @@ function Builder.Build(id: number, generation: number): any
 				end
 			end
 			structure(ramp,link.Id)
-			landing(link.LandingA,link.Id,link.From)
-			landing(link.LandingB,link.Id,link.To)
+			if layout.Authored ~= "astral:1" and layout.Authored ~= "astral:2" then
+				landing(link.LandingA,link.Id,link.From)
+				landing(link.LandingB,link.Id,link.To)
+			end
 	end
 
-	local field = if natural then TowerTerrain.Build(origin, layout, floorSpec.BiomeId, id) else nil
-	if not natural then
+	local field
+	if natural and layout.Authored == "astral:2" then
+		-- Floor 42 is a 100% architectural floating orrery archipelago over its own opaque Nebula Sea & galaxy disc;
+		-- skip voxel terrain fill so Smooth Terrain LOD triangles never poke through the galaxy rim or slate-blue wings.
+		TowerTerrain.Clear(origin, layout)
+		field = TowerTerrain.Field(layout, floorSpec.BiomeId, id)
+	elseif natural then
+		field = TowerTerrain.Build(origin, layout, floorSpec.BiomeId, id)
+	else
 		-- A floor built before the kit was imported may have left terrain behind.
 		TowerTerrain.Clear(origin, layout)
 	end

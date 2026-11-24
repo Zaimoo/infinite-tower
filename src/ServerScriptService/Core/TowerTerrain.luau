@@ -221,7 +221,7 @@ local function walkways(layout: any): ({ any }, { any })
 	for _, link in layout.Links do
 		addLink(link, suspLinkMap ~= nil and suspLinkMap[link.Id] == true)
 	end
-	local astralFloatingReturns = layout.Authored == "astral:1"
+	local astralFloatingReturns = layout.Authored == "astral:1" or layout.Authored == "astral:2"
 	for _, link in layout.ReturnLinks or {} do
 		addLink(link, false, astralFloatingReturns)
 	end

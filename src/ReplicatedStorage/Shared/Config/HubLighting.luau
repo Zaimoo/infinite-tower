@@ -509,9 +509,9 @@ local FloorGrades: { [number]: { [string]: any } } = {
 	},
 	-- Floor 42, Orbiting Stacks: warm brass noon from the Sun-Lectern, cool indigo ambient, brass glints on rails.
 	[42] = {
-		Ambient = c(66, 66, 102), OutdoorAmbient = c(108, 104, 138), ColorShift_Top = c(255, 224, 166), ColorShift_Bottom = c(72, 76, 124),
-		AtmosphereDensity = 0.28, AtmosphereColor = c(102, 104, 158), AtmosphereDecay = c(64, 62, 116), AtmosphereHaze = 0.80,
-		TintColor = c(252, 244, 228), Saturation = 0.10, Contrast = 0.09, ExposureCompensation = 0.06, BloomIntensity = 0.50,
+		Ambient = c(92, 90, 126), OutdoorAmbient = c(144, 138, 172), ColorShift_Top = c(255, 228, 172), ColorShift_Bottom = c(86, 92, 146),
+		AtmosphereDensity = 0.20, AtmosphereColor = c(112, 118, 176), AtmosphereDecay = c(68, 66, 124), AtmosphereHaze = 0.45,
+		TintColor = c(255, 246, 230), Saturation = 0.12, Contrast = 0.08, ExposureCompensation = 0.14, BloomIntensity = 0.48,
 	},
 	-- Floor 43, Fractured Index: split violet-teal aurora, crisp cool key on the plates so camps and architecture read.
 	[43] = {

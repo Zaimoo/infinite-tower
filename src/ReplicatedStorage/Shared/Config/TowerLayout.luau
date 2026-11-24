@@ -2939,20 +2939,20 @@ local AUTHORED: {[number]: any} = {
 	[42] = {
 		Key = "astral:2", Name = "Orbiting Stacks", PathStyle = "HALCYR",
 		Size = { Width = 660, Depth = 680, Height = 250, Bottom = -4 },
-		Basin = { X = 0, Y = 0, Z = 195, Width = 628, Depth = 100 },
-		WestGallery = { X = -200, Y = 8, Z = 20, Width = 88, Depth = 76 },
-		EastGallery = { X = 200, Y = 12, Z = 20, Width = 88, Depth = 76 },
-		Crossing = { X = 0, Y = 16, Z = 80, Width = 76, Depth = 60 },
+		Basin = { X = 0, Y = 0, Z = 198, Width = 628, Depth = 92 },
+		WestGallery = { X = -222, Y = 10, Z = 26, Width = 84, Depth = 72 },
+		EastGallery = { X = 222, Y = 12, Z = 26, Width = 84, Depth = 72 },
+		Crossing = { X = 0, Y = 8, Z = 70, Width = 72, Depth = 58 },
 		ExtraPlatforms = {
-			MoonSW = { X = -100, Y = 18, Z = 20, Width = 60, Depth = 52 },
-			MoonSE = { X = 100, Y = 20, Z = 20, Width = 60, Depth = 52 },
-			MoonW = { X = -260, Y = 22, Z = -80, Width = 56, Depth = 48 },
-			MoonE = { X = 260, Y = 24, Z = -80, Width = 56, Depth = 48 },
-			OuterNW = { X = -200, Y = 26, Z = -230, Width = 64, Depth = 52 },
-			OuterNE = { X = 200, Y = 28, Z = -230, Width = 64, Depth = 52 },
-			MiddleW = { X = -170, Y = 32, Z = -110, Width = 64, Depth = 56 },
-			MiddleE = { X = 170, Y = 36, Z = -110, Width = 64, Depth = 56 },
-			Aphelion = { X = 0, Y = 40, Z = -270, Width = 64, Depth = 52 },
+			MoonSW = { X = -104, Y = 15, Z = 22, Width = 58, Depth = 50 },
+			MoonSE = { X = 104, Y = 17, Z = 22, Width = 58, Depth = 50 },
+			MoonW = { X = -264, Y = 20, Z = -90, Width = 56, Depth = 48 },
+			MoonE = { X = 264, Y = 22, Z = -90, Width = 56, Depth = 48 },
+			OuterNW = { X = -198, Y = 25, Z = -230, Width = 62, Depth = 52 },
+			OuterNE = { X = 198, Y = 27, Z = -230, Width = 62, Depth = 52 },
+			MiddleW = { X = -166, Y = 30, Z = -110, Width = 62, Depth = 54 },
+			MiddleE = { X = 166, Y = 34, Z = -110, Width = 62, Depth = 54 },
+			Aphelion = { X = 0, Y = 39, Z = -270, Width = 62, Depth = 52 },
 		},
 		Apex = { X = 0, Y = 44, Z = -70, Width = 124, Depth = 92 },
 		Paths = {
@@ -2984,27 +2984,46 @@ local AUTHORED: {[number]: any} = {
 		Terrain = {
 			Direct = true,
 			Surface = "HALCYR",
-			Decks = { Sanctuary = true, MoonSW = true, MoonW = true, OuterNW = true },
-			RoundDecks = { MoonSW = true },
-			DeckThickness = { MoonSW = 3.0, MoonW = 2.8, OuterNW = 3.0 },
+			Decks = {
+				Sanctuary = true, Basin = true,
+				WestGallery = true, EastGallery = true, Crossing = true,
+				MoonSW = true, MoonSE = true, MoonW = true, MoonE = true,
+				OuterNW = true, OuterNE = true, MiddleW = true, MiddleE = true,
+				Aphelion = true, Apex = true,
+			},
+			RoundDecks = {
+				WestGallery = true, EastGallery = true, Crossing = true,
+				MoonSW = true, MoonSE = true, MoonW = true, MoonE = true,
+				OuterNW = true, OuterNE = true, MiddleW = true, MiddleE = true,
+				Aphelion = true, Apex = true,
+			},
+			DeckThickness = {
+				Basin = 4.0, WestGallery = 3.2, EastGallery = 3.2, Crossing = 3.2,
+				MoonSW = 3.2, MoonSE = 3.2, MoonW = 3.2, MoonE = 3.2,
+				OuterNW = 3.2, OuterNE = 3.2, MiddleW = 3.2, MiddleE = 3.2,
+				Aphelion = 3.2, Apex = 3.6,
+			},
 			DeckLooks = {
-				MoonSW = { Color = Color3.fromRGB(186, 152, 86), Material = Enum.Material.Metal },
-				MoonW = { Color = Color3.fromRGB(46, 52, 88), Material = Enum.Material.Marble },
-				OuterNW = { Color = Color3.fromRGB(218, 212, 198), Material = Enum.Material.Limestone },
+				Basin = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				WestGallery = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				EastGallery = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				Crossing = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MoonSW = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MoonSE = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MoonW = { Color = Color3.fromRGB(224, 216, 200), Material = Enum.Material.Marble },
+				MoonE = { Color = Color3.fromRGB(224, 216, 200), Material = Enum.Material.Marble },
+				OuterNW = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				OuterNE = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MiddleW = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MiddleE = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				Aphelion = { Color = Color3.fromRGB(198, 226, 246), Material = Enum.Material.Ice },
+				Apex = { Color = Color3.fromRGB(234, 226, 208), Material = Enum.Material.Marble },
 			},
 			Shapes = {
-				WestGallery = { Round = 2.0, Grow = 5, Float = { Under = 26 } },
-				EastGallery = { Round = 2.0, Grow = 5, Float = { Under = 28 } },
-				Crossing = { Round = 2.0, Grow = 5, Float = { Under = 28 } },
-				MoonSE = { Round = 2.0, Grow = 4, Float = { Under = 28 } },
-				MoonE = { Round = 2.0, Grow = 4, Float = { Under = 30 } },
-				OuterNE = { Round = 2.0, Grow = 4, Float = { Under = 32 } },
-				MiddleW = { Round = 2.0, Grow = 5, Float = { Under = 34 } },
-				MiddleE = { Round = 2.0, Grow = 5, Float = { Under = 36 } },
-				Aphelion = { Round = 2.0, Grow = 5, Float = { Under = 38 } },
-				Apex = { Round = 2.0, Grow = 6, Float = { Under = 42 } },
+				Apex = { Round = 2.0, Grow = -4, Float = { Under = 30 } },
 			},
 			Bridges = {
+				Sanctuary_Basin = true,
 				Basin_WestGallery = true, Basin_EastGallery = true, Basin_Crossing = true,
 				WestGallery_MoonW = true, MoonW_OuterNW = true, OuterNW_Aphelion = true, Aphelion_OuterNE = true,
 				OuterNE_MoonE = true, MoonE_EastGallery = true,
@@ -3013,6 +3032,7 @@ local AUTHORED: {[number]: any} = {
 				WestGallery_MoonSW = true, MoonSW_Crossing = true, EastGallery_MoonSE = true, MoonSE_Crossing = true,
 			},
 			BridgeStyles = {
+				Sanctuary_Basin = "WAYGATE",
 				Basin_WestGallery = "STARGLASS", Basin_EastGallery = "STARGLASS", Basin_Crossing = "STARGLASS",
 				WestGallery_MoonW = "STARGLASS", MoonW_OuterNW = "STARGLASS", OuterNW_Aphelion = "STARGLASS", Aphelion_OuterNE = "STARGLASS",
 				OuterNE_MoonE = "STARGLASS", MoonE_EastGallery = "STARGLASS",
@@ -3406,12 +3426,13 @@ local function build(index: number, v: any?): any
 	local function link(a, b)
 		local p, q = platforms[a], platforms[b]
 		local isAstral41 = v and v.Key == "astral:1"
-		local roundIsles = isAstral41 and v.Terrain and v.Terrain.RoundDecks or nil
-		-- Floor 41: bridges leaving the wide straight Concourse (Basin) run 100% straight north-south (0 deg slant)
+		local isAstralArchipelago = v and (v.Key == "astral:1" or v.Key == "astral:2")
+		local roundIsles = isAstralArchipelago and v.Terrain and v.Terrain.RoundDecks or nil
+		-- Floors 41-42: bridges leaving the wide straight Concourse/Plinth (Basin) run 100% straight north-south (0 deg slant)
 		-- directly from Basin's north marble edge to the target island's south rim, with zero blue-glass overlap.
-		if isAstral41 and a == "Basin" and q.Z < p.Z and roundIsles and roundIsles[b] then
+		if isAstralArchipelago and a == "Basin" and q.Z < p.Z and roundIsles and roundIsles[b] then
 			local sx = math.clamp(q.X, p.X - p.Width / 2 + 20, p.X + p.Width / 2 - 20)
-			local az = p.Z - p.Depth / 2 -- flush with Basin & ConcourseMarbleFloor north edge (Z = 117.0)
+			local az = p.Z - p.Depth / 2 -- flush with Basin & ConcourseMarbleFloor north edge
 			local rB = math.max(q.Width, q.Depth) / 2 + 2.2
 			local bz = q.Z + rB -- flush outside circular island rim; marble pier bridges the curve
 			local run = az - bz
@@ -3428,8 +3449,8 @@ local function build(index: number, v: any?): any
 		local length = math.sqrt(dx*dx+dz*dz)
 		local ux, uz = dx/length, dz/length
 		local function edge(terrace, halfWidth)
-			if isAstral41 and roundIsles and roundIsles[terrace.Id] then
-				-- Circular Floor 41 floating islands: keep BOTH ends flush outside the circular marble rim (R + 0.2)
+			if isAstralArchipelago and roundIsles and roundIsles[terrace.Id] then
+				-- Circular Floor 41-42 floating islands: keep BOTH ends flush outside the circular marble rim (R + 0.2)
 				-- so zero blue star-glass overlaps the white marble; solid marble piers terraform the curve flush.
 				local r = math.max(terrace.Width, terrace.Depth) / 2 + 2
 				return if halfWidth > 0 then (r - 0.8) else (r + 4.2)
