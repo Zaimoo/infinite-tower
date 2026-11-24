@@ -1,0 +1,348 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AzimuthRing": {
+      "Min": [
+        -18.2,
+        0.0,
+        -4.082
+      ],
+      "Roles": {
+        "ALT": 24,
+        "CRYSTAL": 20,
+        "GLOW": 20,
+        "METAL": 730,
+        "STONE": 322,
+        "TRIM": 1206
+      },
+      "Size": [
+        36.4,
+        40.85,
+        8.082
+      ],
+      "Triangles": 2322
+    },
+    "FallenOrrery": {
+      "Min": [
+        -11.38,
+        0.0,
+        -10.757
+      ],
+      "Roles": {
+        "ALT": 780,
+        "GLOW": 80,
+        "METAL": 1632,
+        "STONE": 76,
+        "TRIM": 2599
+      },
+      "Size": [
+        25.375,
+        20.79,
+        21.257
+      ],
+      "Triangles": 5167
+    },
+    "GreatTelescopeMount": {
+      "Min": [
+        -30.0,
+        0.0,
+        -30.0
+      ],
+      "Roles": {
+        "ALT": 92,
+        "GLOW": 160,
+        "METAL": 1452,
+        "STONE": 168,
+        "TRIM": 1724
+      },
+      "Size": [
+        60.0,
+        106.35,
+        60.0
+      ],
+      "Triangles": 3596
+    },
+    "GreatTelescopeTube": {
+      "Min": [
+        -23.0,
+        0.0,
+        -78.85
+      ],
+      "Roles": {
+        "ALT": 1292,
+        "CRYSTAL": 92,
+        "GLOW": 412,
+        "METAL": 316,
+        "TRIM": 2632
+      },
+      "Size": [
+        46.0,
+        191.404,
+        150.789
+      ],
+      "Triangles": 4744
+    },
+    "InkPoolDecal": {
+      "Min": [
+        -6.9,
+        -1.373,
+        -6.9
+      ],
+      "Roles": {
+        "ALT": 76,
+        "CRYSTAL": 76,
+        "GLOW": 288,
+        "STONE": 1386,
+        "TRIM": 240
+      },
+      "Size": [
+        13.89,
+        3.808,
+        13.8
+      ],
+      "Triangles": 2066
+    },
+    "LensBench": {
+      "Min": [
+        -5.7,
+        0.0,
+        -2.0
+      ],
+      "Roles": {
+        "CRYSTAL": 756,
+        "GLOW": 80,
+        "METAL": 816,
+        "STONE": 88,
+        "TRIM": 528,
+        "WOOD": 128
+      },
+      "Size": [
+        11.4,
+        9.348,
+        4.2
+      ],
+      "Triangles": 2396
+    },
+    "MeridianFooting": {
+      "Min": [
+        -19.502,
+        0.0,
+        -1.622
+      ],
+      "Roles": {
+        "ALT": 120,
+        "GLOW": 320,
+        "METAL": 24,
+        "STONE": 1458,
+        "TRIM": 840
+      },
+      "Size": [
+        39.005,
+        6.75,
+        7.742
+      ],
+      "Triangles": 2762
+    },
+    "ObservatoryDomeRibs": {
+      "Min": [
+        -79.334,
+        0.0,
+        -79.399
+      ],
+      "Roles": {
+        "ALT": 216,
+        "METAL": 1684,
+        "STONE": 1137,
+        "TRIM": 1706
+      },
+      "Size": [
+        162.933,
+        141.843,
+        93.43
+      ],
+      "Triangles": 4743
+    },
+    "ProofPress": {
+      "Min": [
+        -6.8,
+        0.0,
+        -2.3
+      ],
+      "Roles": {
+        "ALT": 72,
+        "GLOW": 80,
+        "METAL": 428,
+        "SILK": 84,
+        "TRIM": 300,
+        "WOOD": 136
+      },
+      "Size": [
+        13.7,
+        6.778,
+        5.114
+      ],
+      "Triangles": 1100
+    },
+    "RiftEyeMesh": {
+      "Min": [
+        -31.059,
+        -0.435,
+        -31.647
+      ],
+      "Roles": {
+        "ALT": 452,
+        "CRYSTAL": 854,
+        "GLOW": 814,
+        "SILK": 216
+      },
+      "Size": [
+        62.118,
+        5.244,
+        63.293
+      ],
+      "Triangles": 2336
+    },
+    "RiftLipCrystal": {
+      "Min": [
+        -12.552,
+        0.0,
+        -5.553
+      ],
+      "Roles": {
+        "ALT": 100,
+        "CRYSTAL": 396,
+        "GLOW": 176,
+        "STONE": 406
+      },
+      "Size": [
+        25.502,
+        13.62,
+        14.514
+      ],
+      "Triangles": 1078
+    },
+    "RiftOverlookDeck": {
+      "Min": [
+        -7.03,
+        0.0,
+        -6.5
+      ],
+      "Roles": {
+        "METAL": 132,
+        "SILK": 60,
+        "STONE": 44,
+        "TRIM": 430,
+        "WOOD": 192
+      },
+      "Size": [
+        14.058,
+        12.629,
+        15.53
+      ],
+      "Triangles": 858
+    },
+    "StarLecternGrand": {
+      "Min": [
+        -8.4,
+        0.0,
+        -8.4
+      ],
+      "Roles": {
+        "ALT": 116,
+        "GLOW": 140,
+        "METAL": 136,
+        "SILK": 48,
+        "STONE": 136,
+        "TRIM": 592
+      },
+      "Size": [
+        16.8,
+        9.957,
+        16.8
+      ],
+      "Triangles": 1168
+    },
+    "SutureShelfSpan": {
+      "Min": [
+        -7.425,
+        0.115,
+        -14.0
+      ],
+      "Roles": {
+        "GLOW": 240,
+        "METAL": 1624,
+        "SILK": 144,
+        "TRIM": 1032,
+        "WOOD": 998
+      },
+      "Size": [
+        14.85,
+        10.16,
+        28.0
+      ],
+      "Triangles": 4038
+    },
+    "ToppledCabinetRange": {
+      "Min": [
+        -9.397,
+        -1.394,
+        -9.576
+      ],
+      "Roles": {
+        "METAL": 72,
+        "SILK": 432,
+        "STONE": 20,
+        "TRIM": 468,
+        "WOOD": 564
+      },
+      "Size": [
+        25.3,
+        10.525,
+        18.895
+      ],
+      "Triangles": 1556
+    },
+    "TransitInstrument": {
+      "Min": [
+        -5.4,
+        0.0,
+        -4.992
+      ],
+      "Roles": {
+        "CRYSTAL": 52,
+        "GLOW": 80,
+        "METAL": 704,
+        "STONE": 234,
+        "TRIM": 976
+      },
+      "Size": [
+        10.8,
+        14.849,
+        12.748
+      ],
+      "Triangles": 2046
+    },
+    "TransitTower": {
+      "Min": [
+        -12.78,
+        0.0,
+        -12.8
+      ],
+      "Roles": {
+        "ALT": 92,
+        "GLOW": 24,
+        "METAL": 720,
+        "STONE": 444,
+        "TRIM": 616,
+        "WOOD": 12
+      },
+      "Size": [
+        25.557,
+        34.14,
+        25.647
+      ],
+      "Triangles": 1908
+    }
+  },
+  "Unit": "studs"
+}

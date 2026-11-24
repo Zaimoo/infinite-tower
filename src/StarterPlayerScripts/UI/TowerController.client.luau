@@ -749,6 +749,11 @@ local function request(action: string, id: number?)
 end
 
 local function getMaxAllowedFloor(): number
+	if floors.UnlockAllFloorsForTesting == true
+		or (RunService:IsStudio() and Workspace:GetAttribute("UnlockAllFloors") == true)
+	then
+		return floors.FloorCount
+	end
 	local profile = _G.CurrentProfile
 	local maxAllowed = 1
 	if profile then

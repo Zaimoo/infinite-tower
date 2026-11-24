@@ -90,6 +90,16 @@ local Surfaces: { [string]: Surface } = {
 	-- material colours so no other biome changes.
 	BLIGHT = { Trail = M.Cobblestone, Walk = M.Concrete, WalkAccent = M.Basalt, Bank = M.Pavement,
 		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Asphalt, Lush = M.Pavement },
+	-- Astral Archives whole-archive floors (41–42, the Halcyr): pale limestone vellum flagstones over
+	-- star-dust highlights, dark slate Nebula Floor below (`Lush = Slate`), slate cliffs, dark basalt peaks
+	-- and solid Glacier star-glass pool beds. Uses only uncoloured or shared materials (no BlockyMaterials,
+	-- no Fungal-owned materials, no Mud).
+	HALCYR = { Trail = M.Limestone, Walk = M.Limestone, WalkAccent = M.Salt, Bank = M.Slate,
+		Cliff = M.Slate, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.Basalt },
+	-- Astral Archives fractured & riftward floors (43–45): cohesive weathered slate courtyards with dark
+	-- basalt rift chasms and cliffs so glowing violet rift eyes, ward walls and pale gold lamps pop cleanly.
+	RIFTWARD = { Trail = M.Slate, Walk = M.Slate, WalkAccent = M.Basalt, Bank = M.Basalt,
+		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.Basalt },
 }
 TowerTerrain.Surfaces = Surfaces
 
@@ -143,6 +153,10 @@ export type Field = {
 	Surface: Surface?, -- direct floors only
 	-- An authored feature's own material at a spot (a slag tip's clinker and glowing seams), or nil.
 	Accent: ((x: number, z: number) -> Enum.Material?)?,
+	-- Floating terrace bodies (`Shapes[id].Float`, Astral Archives): returns (topY, botY, sqNorm) for columns
+	-- inside a floating isle, leaving open air down to the Nebula Floor (`BaseSample`).
+	FloatBody: ((x: number, z: number) -> (number?, number?, number?))?,
+	BaseSample: ((x: number, z: number) -> (number, string))?,
 }
 
 -- Direct floors (TowerLayout `Terrain.Direct`): smooth voxel terrain renders its surface about RES / 2 above
@@ -182,14 +196,15 @@ local function walkways(layout: any): ({ any }, { any })
 			continue
 		end
 		local isDeck = decks[id] == true or (deckMap ~= nil and deckMap[id] == true)
+		local shape = shapes[id]
 		table.insert(rects, { X = p.X, Z = p.Z, HX = p.Width / 2, HZ = p.Depth / 2, Y = p.Y, IsDeck = isDeck,
-			IsBridge = bridges[id] ~= nil, Round = shapes[id] })
+			IsBridge = bridges[id] ~= nil, Round = shape, IsFloat = shape ~= nil and shape.Float ~= nil })
 	end
-	local function addLink(link: any, bridgeSuspended: boolean)
+	local function addLink(link: any, bridgeSuspended: boolean, forceHung: boolean?)
 		local isStair = link.Kind == "STAIRS"
 		if not bridgeSuspended then
 			table.insert(strips, { AX = link.AX, AY = link.AY, AZ = link.AZ, BX = link.BX, BY = link.BY, BZ = link.BZ, Half = link.Width / 2, IsStair = isStair, IsRamp = true,
-				IsHung = bridgeLinks[link.Id] == true })
+				IsHung = forceHung == true or bridgeLinks[link.Id] == true })
 		end
 		for _, name in { "LandingA", "LandingB" } do
 			local pad = link[name]
@@ -198,15 +213,17 @@ local function walkways(layout: any): ({ any }, { any })
 				continue
 			end
 			local padDeck = decks[padPlat] == true or (deckMap ~= nil and deckMap[padPlat] == true)
+			local padFloat = shapes[padPlat] ~= nil and shapes[padPlat].Float ~= nil
 			table.insert(strips, { AX = pad.AX, AY = pad.AY, AZ = pad.AZ, BX = pad.BX, BY = pad.BY, BZ = pad.BZ, Half = pad.Width / 2, IsDeck = padDeck,
-				IsBridge = bridges[padPlat] ~= nil })
+				IsBridge = bridges[padPlat] ~= nil or padFloat or forceHung == true, IsFloat = padFloat })
 		end
 	end
 	for _, link in layout.Links do
 		addLink(link, suspLinkMap ~= nil and suspLinkMap[link.Id] == true)
 	end
+	local astralFloatingReturns = layout.Authored == "astral:1"
 	for _, link in layout.ReturnLinks or {} do
-		addLink(link, false)
+		addLink(link, false, astralFloatingReturns)
 	end
 	return rects, strips
 end
@@ -384,7 +401,8 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		local kind = "CHASM"
 		-- Mountains: a noisy band along every wall, terraced into ledges, rising past the ceiling.
 		local edge = math.min(w / 2 - math.abs(x), d / 2 - math.abs(z))
-		local band = if td and td.WallBand then td.WallBand.Base + td.WallBand.Noise * fbm(x / 95, z / 95, seed + 7, 2)
+		local band = if td and td.WallBand then
+				(if td.WallBand.Base <= 0 and (td.WallBand.Noise or 0) <= 0 then 0 else td.WallBand.Base + td.WallBand.Noise * fbm(x / 95, z / 95, seed + 7, 2))
 			else 58 + 26 * fbm(x / 95, z / 95, seed + 7, 2)
 		if directTerrain then
 			band = 34 + 14 * fbm(x / 95, z / 95, seed + 7, 2)
@@ -397,7 +415,7 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				end
 			end
 		end
-		if edge < band then
+		if band > 0 and edge < band then
 			local t = 1 - math.max(edge, 0) / band
 			-- Ridged noise breaks the slopes into spurs and gullies instead of smooth pyramids.
 			local ridge = 1 - math.abs(fbm(x / 34, z / 34, seed + 17, 3)) * 2
@@ -768,6 +786,10 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			end
 		end
 		for _, s in strips do
+			if s.IsFloat then
+				-- Floating-isle bridge landings rest on the floating isle itself; never raise a terrain pillar from the Nebula Floor.
+				continue
+			end
 			local dx, dz = s.BX - s.AX, s.BZ - s.AZ
 			local len = math.max(math.sqrt(dx * dx + dz * dz), 1e-3)
 			local ux, uz = dx / len, dz / len
@@ -842,13 +864,93 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		return y, kind
 	end
 
+	local hasFloat = false
+	for _, r in rects do
+		if r.IsFloat then
+			hasFloat = true
+			break
+		end
+	end
+	local rifts = td and td.Rifts or nil
+	local function riftCarve(x: number, z: number): number
+		if not rifts then return 0 end
+		local best = 0
+		for rIdx, rift in rifts do
+			local pts = rift.Points
+			local defaultHW = rift.HalfWidth or 18
+			local pinch = rift.Pinch
+			local nPts = #pts
+			if nPts >= 2 then
+				local minX, maxX = math.huge, -math.huge
+				for _, pt in pts do
+					if pt[1] < minX then minX = pt[1] end
+					if pt[1] > maxX then maxX = pt[1] end
+				end
+				for i = 1, nPts - 1 do
+					local a, b = pts[i], pts[i + 1]
+					local dx, dz = b[1] - a[1], b[2] - a[2]
+					local len2 = math.max(dx * dx + dz * dz, 1e-3)
+					local t = math.clamp(((x - a[1]) * dx + (z - a[2]) * dz) / len2, 0, 1)
+					local cx, cz = a[1] + dx * t, a[2] + dz * t
+					local hwA = a[3] or defaultHW
+					local hwB = b[3] or defaultHW
+					local hw = hwA + (hwB - hwA) * t
+					if pinch == "W" then
+						hw *= math.clamp((cx - minX) / 45, 0, 1)
+					elseif pinch == "E" then
+						hw *= math.clamp((maxX - cx) / 45, 0, 1)
+					end
+					if hw > 0.5 then
+						local warp = 2.6 * fbm(x / 18, z / 18, seed + 241 + rIdx * 11, 2)
+						local dist = math.sqrt((x - cx) ^ 2 + (z - cz) ^ 2) + warp
+						if dist <= hw then
+							return 1
+						elseif dist < hw + 8 then
+							best = math.max(best, 1 - (dist - hw) / 8)
+						end
+					end
+				end
+			end
+		end
+		return best
+	end
+
+	local function floatBodyAt(x: number, z: number): (number?, number?, number?)
+		local bestTop: number? = nil
+		local bestBot: number? = nil
+		local bestSq: number? = nil
+		for _, r in rects do
+			if not r.IsFloat or not r.Round then
+				continue
+			end
+			local round = r.Round
+			local ax, az = r.HX + round.Grow, r.HZ + round.Grow
+			if math.abs(x - r.X) > ax + 1 or math.abs(z - r.Z) > az + 1 then
+				continue
+			end
+			local n = round.Round
+			local sq = ((math.abs(x - r.X) / ax) ^ n + (math.abs(z - r.Z) / az) ^ n) ^ (1 / n)
+			if sq <= 1.0 then
+				local topY = r.Y - (if r.IsDeck then UNDER else SOFT)
+				if bestTop == nil or topY > bestTop then
+					local under = (round.Float and round.Float.Under) or 28
+					local cone = 4.5 + math.max(0, under - 4.5) * math.max(0, 1 - sq * sq) ^ 0.85 * (0.86 + 0.24 * fbm(x / 18, z / 18, seed + 223, 2))
+					bestTop = topY
+					bestBot = math.max(bottom + 4.0, topY - cone)
+					bestSq = sq
+				end
+			end
+		end
+		return bestTop, bestBot, bestSq
+	end
+
 	-- Direct floors: natural terraces and ramps ARE the terrain (their parts are invisible proxies), so the
 	-- ground under each walkway lands exactly on its walking plane (SOFT below the field's surface, see
 	-- above), aprons fall away along noise-warped edges instead of straight rectangles, and every path gets
 	-- a trodden TRAIL spine. Built decks keep a voxel under them (UNDER); bridge decks raise no ground at all,
 	-- so their pool runs on underneath; stair treads keep STAIR_UNDER. Where walkways overlap, the highest
 	-- surface wins, and a ramp wins a tie with a deck so it meets the deck's landing flush.
-	local function shapedDirect(x: number, z: number): (number, string)
+	local function shapedDirectImpl(x: number, z: number, skipFloat: boolean?): (number, string)
 		local y, kind = natural(x, z)
 		local wild, wildKind = y, kind
 		local raise, cap = -math.huge, math.huge
@@ -858,6 +960,9 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		local onTrail = false
 		local hungNear = math.huge -- distance to the nearest hung walkway (it shapes no ground, but keeps cliffs off)
 		for _, r in rects do
+			if skipFloat and r.IsFloat then
+				continue
+			end
 			local dx = math.max(0, math.abs(x - r.X) - r.HX)
 			local dz = math.max(0, math.abs(z - r.Z) - r.HZ)
 			if dx < reach and dz < reach then
@@ -872,23 +977,59 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 					local sq = ((math.abs(x - r.X) / ax) ^ n + (math.abs(z - r.Z) / az) ^ n) ^ (1 / n)
 					dist = math.max(0, (sq - 1) * math.min(ax, az))
 				end
+				if r.IsFloat then
+					-- Floating isle (`Shapes[id].Float`): only claims its own top; leaves the Nebula Floor below untouched.
+					if dist == 0 then
+						nearest = 0
+						local soft = not r.IsDeck
+						if r.Y > own or (r.Y == own and ownDeck and soft) then
+							own, ownDeck, ownStair, ownBridge = r.Y, r.IsDeck, false, r.IsBridge
+						end
+						surfaceY = math.max(surfaceY, r.Y)
+					end
+					continue
+				end
 				nearest = math.min(nearest, dist)
 				local soft = not r.IsDeck
 				if dist == 0 and (r.Y > own or (r.Y == own and ownDeck and soft)) then
 					own, ownDeck, ownStair, ownBridge = r.Y, r.IsDeck, false, r.IsBridge
 				end
 				local rim = r.Y - (if soft then SOFT else RIM)
-				local warp = if soft and dist > 0 then math.max(0, dist - (1.5 + 2 * fbm(x / 18, z / 18, seed + 47, 2))) else dist
+				local sheer = false
+				local scarpH = r.Y - bottom
+				if round and dist > 0 then
+					if round.Sheer == true then
+						sheer = true
+					elseif round.Scarp then
+						scarpH = round.Scarp.Height or scarpH
+						for _, side in round.Scarp.Sides or {} do
+							if (side == "N" and z < r.Z - r.HZ * 0.35)
+								or (side == "S" and z > r.Z + r.HZ * 0.35)
+								or (side == "W" and x < r.X - r.HX * 0.35)
+								or (side == "E" and x > r.X + r.HX * 0.35)
+							then
+								sheer = true
+								break
+							end
+						end
+					end
+				end
+				local warp = if sheer then dist elseif soft and dist > 0 then math.max(0, dist - (1.5 + 2 * fbm(x / 18, z / 18, seed + 47, 2))) else dist
 				surfaceY = math.max(surfaceY, r.Y)
 				cap = math.min(cap, if dist == 0 then r.Y - (if soft then SOFT else UNDER) else rim - APRON * warp)
 				if not r.IsBridge then
-					local steep = if soft then APRON * (0.72 + 0.45 * (0.5 + 0.5 * fbm(x / 16, z / 16, seed + 31, 2)))
+					local steep = if sheer then math.max(APRON * 3.2, scarpH / 7.5)
+						elseif soft then APRON * (0.72 + 0.45 * (0.5 + 0.5 * fbm(x / 16, z / 16, seed + 31, 2)))
 						else APRON + 1.2 * (0.5 + 0.5 * fbm(x / 18, z / 18, seed + 31, 2))
 					raise = math.max(raise, rim - steep * warp)
 				end
 			end
 		end
 		for _, s in strips do
+			if s.IsFloat then
+				-- Floating-isle bridge landings rest on the floating isle itself; never raise a terrain pillar from the Nebula Floor.
+				continue
+			end
 			local dx, dz = s.BX - s.AX, s.BZ - s.AZ
 			local len = math.max(math.sqrt(dx * dx + dz * dz), 1e-3)
 			local ux, uz = dx / len, dz / len
@@ -948,6 +1089,17 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		if not noShelf and z < apex.Z - apex.Depth / 2 - 6 and math.abs(x - apex.X) < w / 2 - 30 then
 			y = math.max(y, math.min(apex.Y - SOFT, cap))
 		end
+		-- Authored rifts (`Terrain.Rifts`, Astral Archives 43-45): carve cracks/moats down to Bottom - 4
+		-- with rough walls, never cutting under a solid non-deck, non-bridge terrain terrace or earthen ramp.
+		if rifts and not (own > -math.huge and not ownDeck and not ownBridge) then
+			local rf = riftCarve(x, z)
+			if rf > 0 then
+				y = math.min(y, bottom + (y - bottom) * (1 - rf))
+				if rf >= 0.65 then
+					kind = "POOL"
+				end
+			end
+		end
 		if ownBridge and (wildKind == "POOL" or wildKind == "CHASM") and y <= wild + 0.01 then
 			-- Under a bridge deck the pool (or open ground) runs on.
 			return y, wildKind
@@ -963,6 +1115,9 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			kind = "TRAIL"
 		end
 		return y, kind
+	end
+	local function shapedDirect(x: number, z: number): (number, string)
+		return shapedDirectImpl(x, z, false)
 	end
 	if direct then
 		shaped = shapedDirect
@@ -988,6 +1143,10 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		LiquidLevel = liquidLevel,
 		Palette = palette,
 		Surface = surface,
+		FloatBody = if direct and hasFloat then floatBodyAt else nil,
+		BaseSample = if direct and hasFloat then function(x: number, z: number): (number, string)
+			return shapedDirectImpl(x, z, true)
+		end else nil,
 		-- Authored feature materials: slag tips, glowing pour-pit rims, and volcanic lava-fall chutes.
 		Accent = if #slagTips > 0 or #pourPits > 0 or #lavaFalls > 0 or #headwalls > 0 or #scars > 0 or abyssSlate or fault
 			then function(x: number, z: number): Enum.Material?
@@ -1126,6 +1285,9 @@ local function materialFor(field: Field, palette: Palette, kind: string, y: numb
 		elseif kind == "MOUNTAIN" and y - field.Bottom > 34 then
 			return s.Peak
 		end
+		if s == Surfaces.HALCYR or s == Surfaces.RIFTWARD then
+			return s.Lush
+		end
 		return if patch > 0.22 then s.WalkAccent else s.Lush
 	end
 	if directTerrain then
@@ -1197,14 +1359,38 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 
 	-- Heights, kinds and materials per column.
 	local heights, kinds, mats = table.create(nx), table.create(nx), table.create(nx)
+	local hasFloatBody = field.FloatBody ~= nil and field.BaseSample ~= nil
+	local baseHeights: any = if hasFloatBody then table.create(nx) else nil
+	local baseMats: any = if hasFloatBody then table.create(nx) else nil
+	local floatTops: any = if hasFloatBody then table.create(nx) else nil
+	local floatBots: any = if hasFloatBody then table.create(nx) else nil
+	local floatSqs: any = if hasFloatBody then table.create(nx) else nil
 	for i = 1, nx do
 		local hRow, kRow, mRow = table.create(nz), table.create(nz), table.create(nz)
+		local bhRow = if hasFloatBody then table.create(nz) else nil
+		local bmRow = if hasFloatBody then table.create(nz) else nil
+		local ftRow = if hasFloatBody then table.create(nz) else nil
+		local fbRow = if hasFloatBody then table.create(nz) else nil
+		local fsRow = if hasFloatBody then table.create(nz) else nil
 		local x = x0 + (i - 0.5) * RES
 		for k = 1, nz do
 			local z = z0 + (k - 0.5) * RES
 			hRow[k], kRow[k] = field.Sample(x, z)
+			if hasFloatBody then
+				local ft, fb, fsq = (field.FloatBody :: any)(x, z)
+				if ft ~= nil then
+					ftRow[k], fbRow[k], fsRow[k] = ft, fb, fsq
+					local by, bk = (field.BaseSample :: any)(x, z)
+					bhRow[k] = by
+					bmRow[k] = materialFor(field, palette, bk, by, 0, x, z, seed, layout.DirectTerrain == true)
+				end
+			end
 		end
 		heights[i], kinds[i], mats[i] = hRow, kRow, mRow
+		if hasFloatBody then
+			baseHeights[i], baseMats[i] = bhRow, bmRow
+			floatTops[i], floatBots[i], floatSqs[i] = ftRow, fbRow, fsRow
+		end
 	end
 	for i = 1, nx do
 		for k = 1, nz do
@@ -1244,17 +1430,39 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 				local cellBottom = yMin + (j - 1) * RES
 				local mRow, oRow = table.create(nz), table.create(nz)
 				for k = 1, nz do
-					local y = heights[i][k]
-					local fill = math.clamp((y - cellBottom) / RES, 0, 1)
-					if fill > 0 then
-						mRow[k] = if y - cellBottom < RES * 2 then mats[i][k] else deepCliff
-						oRow[k] = fill
-					elseif not palette.LiquidSolid and kinds[i][k] == "POOL" and cellBottom < field.LiquidLevel then
-						mRow[k] = palette.Liquid
-						oRow[k] = math.clamp((field.LiquidLevel - cellBottom) / RES, 0, 1)
+					local ft = if hasFloatBody then floatTops[i][k] else nil
+					if ft ~= nil then
+						local fb = floatBots[i][k]
+						local by = baseHeights[i][k]
+						local baseFill = math.clamp((by - cellBottom) / RES, 0, 1)
+						local fOcc = if cellBottom < ft and cellBottom + RES > fb
+							then math.clamp(math.clamp((ft - cellBottom) / RES, 0, 1) - math.clamp((fb - cellBottom) / RES, 0, 1), 0, 1)
+							else 0
+						if fOcc > 0 and fOcc >= baseFill then
+							mRow[k] = if ft - cellBottom < RES * 2 then mats[i][k]
+								elseif cellBottom - fb < RES * 2.5 and (floatSqs[i][k] or 1) < 0.6 then M.Glacier
+								else deepCliff
+							oRow[k] = fOcc
+						elseif baseFill > 0 then
+							mRow[k] = if by - cellBottom < RES * 2 then baseMats[i][k] else deepCliff
+							oRow[k] = baseFill
+						else
+							mRow[k] = Enum.Material.Air
+							oRow[k] = 0
+						end
 					else
-						mRow[k] = Enum.Material.Air
-						oRow[k] = 0
+						local y = heights[i][k]
+						local fill = math.clamp((y - cellBottom) / RES, 0, 1)
+						if fill > 0 then
+							mRow[k] = if y - cellBottom < RES * 2 then mats[i][k] else deepCliff
+							oRow[k] = fill
+						elseif not palette.LiquidSolid and kinds[i][k] == "POOL" and cellBottom < field.LiquidLevel then
+							mRow[k] = palette.Liquid
+							oRow[k] = math.clamp((field.LiquidLevel - cellBottom) / RES, 0, 1)
+						else
+							mRow[k] = Enum.Material.Air
+							oRow[k] = 0
+						end
 					end
 				end
 				mCol[j], oCol[j] = mRow, oRow

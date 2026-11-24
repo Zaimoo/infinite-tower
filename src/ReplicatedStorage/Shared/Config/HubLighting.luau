@@ -500,6 +500,38 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(234, 210, 255), Saturation = 0.16, Contrast = 0.14, ExposureCompensation = 0.05, BloomIntensity = 0.60,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.62,
 	},
+	-- Floor 41, Starlit Vestibule: pale gold first light — breaks cleanly from Floor 40's dark storm-eye
+	-- into soft starlight gold over indigo sky and silver fill off the star-glass Nebula Floor.
+	[41] = {
+		Ambient = c(74, 72, 92), OutdoorAmbient = c(116, 112, 134), ColorShift_Top = c(255, 236, 196), ColorShift_Bottom = c(86, 98, 136),
+		AtmosphereDensity = 0.22, AtmosphereColor = c(120, 128, 178), AtmosphereDecay = c(72, 74, 128), AtmosphereHaze = 0.50,
+		TintColor = c(255, 248, 236), Saturation = 0.12, Contrast = 0.06, ExposureCompensation = 0.08, BloomIntensity = 0.42,
+	},
+	-- Floor 42, Orbiting Stacks: warm brass noon from the Sun-Lectern, cool indigo ambient, brass glints on rails.
+	[42] = {
+		Ambient = c(66, 66, 102), OutdoorAmbient = c(108, 104, 138), ColorShift_Top = c(255, 224, 166), ColorShift_Bottom = c(72, 76, 124),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(102, 104, 158), AtmosphereDecay = c(64, 62, 116), AtmosphereHaze = 0.80,
+		TintColor = c(252, 244, 228), Saturation = 0.10, Contrast = 0.09, ExposureCompensation = 0.06, BloomIntensity = 0.50,
+	},
+	-- Floor 43, Fractured Index: split violet-teal aurora, crisp cool key on the plates so camps and architecture read.
+	[43] = {
+		Ambient = c(84, 92, 134), OutdoorAmbient = c(128, 138, 182), ColorShift_Top = c(192, 214, 255), ColorShift_Bottom = c(92, 74, 138),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(92, 106, 168), AtmosphereDecay = c(68, 54, 124), AtmosphereHaze = 0.95,
+		TintColor = c(238, 244, 255), Saturation = 0.04, Contrast = 0.10, ExposureCompensation = 0.14, BloomIntensity = 0.48,
+	},
+	-- Floor 44, Runeguard Athenaeum: sealed indigo dusk, legible slate fortress with warm pools under the Waygates.
+	[44] = {
+		Ambient = c(78, 84, 130), OutdoorAmbient = c(122, 128, 178), ColorShift_Top = c(212, 204, 255), ColorShift_Bottom = c(68, 66, 118),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(74, 78, 142), AtmosphereDecay = c(50, 48, 102), AtmosphereHaze = 0.85,
+		TintColor = c(236, 238, 255), Saturation = 0.06, Contrast = 0.10, ExposureCompensation = 0.12, BloomIntensity = 0.55,
+	},
+	-- Floor 45, Rift Warden's Observatory (Biome Boss: Rift Warden): rift-eye under a torn sky — dramatic indigo
+	-- night with crisp silver-white lens key on the telescope, dome and observing floor so everything reads cleanly.
+	[45] = {
+		Ambient = c(76, 82, 128), OutdoorAmbient = c(122, 132, 178), ColorShift_Top = c(224, 232, 255), ColorShift_Bottom = c(86, 56, 132),
+		AtmosphereDensity = 0.32, AtmosphereColor = c(64, 60, 116), AtmosphereDecay = c(46, 36, 92), AtmosphereHaze = 0.95,
+		TintColor = c(240, 242, 255), Saturation = 0.06, Contrast = 0.10, ExposureCompensation = 0.16, BloomIntensity = 0.60,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

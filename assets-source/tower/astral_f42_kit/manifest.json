@@ -1,0 +1,339 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AphelionTelescope": {
+      "Min": [
+        -5.136,
+        0.0,
+        -5.4
+      ],
+      "Roles": {
+        "CRYSTAL": 176,
+        "GLOW": 80,
+        "METAL": 212,
+        "SILK": 48,
+        "STONE": 36,
+        "TRIM": 760,
+        "WOOD": 60
+      },
+      "Size": [
+        10.271,
+        12.169,
+        12.516
+      ],
+      "Triangles": 1372
+    },
+    "ArmillarySphereTall": {
+      "Min": [
+        -56.65,
+        0.0,
+        -56.65
+      ],
+      "Roles": {
+        "ALT": 256,
+        "CRYSTAL": 640,
+        "GLOW": 804,
+        "METAL": 2820,
+        "STONE": 224,
+        "TRIM": 2640
+      },
+      "Size": [
+        113.298,
+        156.5,
+        113.3
+      ],
+      "Triangles": 7384
+    },
+    "GlobeStand": {
+      "Min": [
+        -9.508,
+        -0.106,
+        -5.22
+      ],
+      "Roles": {
+        "ALT": 396,
+        "METAL": 352,
+        "MOSS": 400,
+        "SILK": 84,
+        "STONE": 44,
+        "TRIM": 1008,
+        "WOOD": 648
+      },
+      "Size": [
+        19.054,
+        15.096,
+        10.44
+      ],
+      "Triangles": 2932
+    },
+    "LecternRow": {
+      "Min": [
+        -7.096,
+        0.0,
+        -1.227
+      ],
+      "Roles": {
+        "ALT": 24,
+        "GLOW": 144,
+        "METAL": 514,
+        "SILK": 144,
+        "STONE": 240,
+        "TRIM": 216,
+        "WOOD": 84
+      },
+      "Size": [
+        14.192,
+        6.49,
+        3.725
+      ],
+      "Triangles": 1366
+    },
+    "MarginaliaStack": {
+      "Min": [
+        -5.1,
+        0.0,
+        -3.8
+      ],
+      "Roles": {
+        "ALT": 120,
+        "METAL": 24,
+        "SILK": 456,
+        "STONE": 44,
+        "TRIM": 432,
+        "WOOD": 222
+      },
+      "Size": [
+        10.2,
+        7.569,
+        7.6
+      ],
+      "Triangles": 1298
+    },
+    "MoonPhaseDisc": {
+      "Min": [
+        -6.22,
+        0.0,
+        -1.7
+      ],
+      "Roles": {
+        "ALT": 108,
+        "GLOW": 836,
+        "METAL": 876,
+        "STONE": 44,
+        "TRIM": 652
+      },
+      "Size": [
+        12.439,
+        15.0,
+        3.4
+      ],
+      "Triangles": 2516
+    },
+    "OrbitRailSegment": {
+      "Min": [
+        -24.418,
+        0.0,
+        -11.268
+      ],
+      "Roles": {
+        "ALT": 144,
+        "GLOW": 80,
+        "METAL": 1884,
+        "TRIM": 1276
+      },
+      "Size": [
+        49.078,
+        4.15,
+        16.119
+      ],
+      "Triangles": 3384
+    },
+    "OrreryArmBridge": {
+      "Min": [
+        -6.771,
+        -0.445,
+        -13.19
+      ],
+      "Roles": {
+        "ALT": 24,
+        "CRYSTAL": 12,
+        "GLOW": 332,
+        "METAL": 2048,
+        "STONE": 24,
+        "TRIM": 1304
+      },
+      "Size": [
+        13.543,
+        9.315,
+        26.38
+      ],
+      "Triangles": 3744
+    },
+    "OrreryGateArch": {
+      "Min": [
+        -21.681,
+        0.0,
+        -3.366
+      ],
+      "Roles": {
+        "ALT": 192,
+        "CRYSTAL": 168,
+        "GLOW": 248,
+        "METAL": 1798,
+        "STONE": 322,
+        "TRIM": 1526
+      },
+      "Size": [
+        43.363,
+        31.8,
+        6.666
+      ],
+      "Triangles": 4254
+    },
+    "OrreryGearUnderside": {
+      "Min": [
+        -24.24,
+        0.0,
+        -24.24
+      ],
+      "Roles": {
+        "ALT": 204,
+        "GLOW": 140,
+        "METAL": 2448,
+        "STONE": 92,
+        "TRIM": 1536
+      },
+      "Size": [
+        48.477,
+        34.1,
+        48.48
+      ],
+      "Triangles": 4420
+    },
+    "PlanetGlobe": {
+      "Min": [
+        -6.446,
+        0.0,
+        -5.542
+      ],
+      "Roles": {
+        "ALT": 396,
+        "CRYSTAL": 192,
+        "GLOW": 80,
+        "METAL": 644,
+        "STONE": 44,
+        "TRIM": 1064
+      },
+      "Size": [
+        12.893,
+        25.05,
+        11.085
+      ],
+      "Triangles": 2420
+    },
+    "RingBookcase": {
+      "Min": [
+        -14.188,
+        0.0,
+        -2.001
+      ],
+      "Roles": {
+        "ALT": 264,
+        "METAL": 202,
+        "SILK": 336,
+        "STONE": 462,
+        "TRIM": 544,
+        "WOOD": 812
+      },
+      "Size": [
+        28.377,
+        13.57,
+        8.762
+      ],
+      "Triangles": 2620
+    },
+    "RingGearHalf": {
+      "Min": [
+        -10.2,
+        0.0,
+        -3.4
+      ],
+      "Roles": {
+        "ALT": 12,
+        "METAL": 490,
+        "STONE": 44,
+        "TRIM": 524
+      },
+      "Size": [
+        20.4,
+        10.625,
+        6.8
+      ],
+      "Triangles": 1070
+    },
+    "StarTableSlate": {
+      "Min": [
+        -10.27,
+        0.0,
+        -2.067
+      ],
+      "Roles": {
+        "ALT": 36,
+        "CRYSTAL": 80,
+        "GLOW": 456,
+        "METAL": 256,
+        "STONE": 262,
+        "TRIM": 1160
+      },
+      "Size": [
+        17.884,
+        13.1,
+        4.867
+      ],
+      "Triangles": 2250
+    },
+    "SunLecternGlobe": {
+      "Min": [
+        -12.2,
+        0.0,
+        -12.2
+      ],
+      "Roles": {
+        "ALT": 116,
+        "CRYSTAL": 280,
+        "GLOW": 520,
+        "METAL": 1068,
+        "SILK": 48,
+        "STONE": 168,
+        "TRIM": 1520
+      },
+      "Size": [
+        24.4,
+        36.699,
+        24.4
+      ],
+      "Triangles": 3720
+    },
+    "SundialBrass": {
+      "Min": [
+        -9.0,
+        0.0,
+        -9.0
+      ],
+      "Roles": {
+        "ALT": 92,
+        "GLOW": 128,
+        "METAL": 412,
+        "STONE": 108,
+        "TRIM": 876
+      },
+      "Size": [
+        18.0,
+        6.93,
+        18.0
+      ],
+      "Triangles": 1616
+    }
+  },
+  "Unit": "studs"
+}
