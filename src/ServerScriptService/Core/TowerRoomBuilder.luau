@@ -1637,18 +1637,24 @@ function Builder.Build(id: number, generation: number): any
 		end
 		return false
 	end
+	local landingSeq = 0
 	local function landing(pad: any, id: string, terraceName: string?)
+		landingSeq += 1
 		local a=origin+Vector3.new(pad.AX,pad.AY,pad.AZ)
 		local b=origin+Vector3.new(pad.BX,pad.BY,pad.BZ)
-		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
-		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
-		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
+		-- Slight per-landing width and height micro-stagger (<= 0.09 studs) eliminates coplanar Z-fighting
+		-- where multiple links meet on the same deck/junction and along ramp-to-landing side faces.
+		local padW = pad.Width - 0.06 - ((landingSeq % 4) * 0.02)
+		local yLift = (landingSeq % 16) * 0.006
+		local p=part(model,"TraversalLanding",Vector3.new(padW,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
+		-- Landing tops sit ~0.08..0.17 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
+		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92 + yLift,0)
 		local isFoundryBridgehead = (layout.Masonry == "FOUNDRY_IRON" or layout.Masonry == "KAIRN_STONE" or layout.Masonry == "SKYBRIDGE")
 			and (isSuspendedLink(layout, id) or isArchitecturalDeck(layout, terraceName))
 			and (not isArchitecturalDeck(layout, terraceName) or landingOutsideTerrace(pad, terraceName))
 		if direct then
 			-- On a deck the landing is part of the masonry (solid, the deck's colour); elsewhere it is terrain.
-			-- A hung walkway's landings are its own planks, run out onto the terrace it reaches.
+			-- A hung walkway's landings match its bridge style so stone stairs never show wood planks.
 			if hungLinks[id] then
 				if matriarchHollow then
 					p.Color, p.Material = slateIndigo, Enum.Material.Slate
@@ -1658,8 +1664,14 @@ function Builder.Build(id: number, generation: number): any
 					proxy(p)
 					p.CanCollide = true
 					p.CanQuery = true
-				elseif bridgeStyles[id] == "CAUSEWAY" then
+				elseif bridgeStyles[id] == "CAUSEWAY" or bridgeStyles[id] == "ARCADE" then
 					p.Color, p.Material = nerethStone, Enum.Material.Limestone
+				elseif bridgeStyles[id] == "WALLWALK" then
+					p.Color, p.Material = Color3.fromRGB(118, 126, 128), Enum.Material.Limestone
+				elseif bridgeStyles[id] == "CHAIN" then
+					p.Color, p.Material = deepStone, Enum.Material.Limestone
+				elseif bridgeStyles[id] == "LOCKGATE" then
+					p.Color, p.Material = deepTimber, Enum.Material.WoodPlanks
 				else
 					p.Color, p.Material = plank, Enum.Material.WoodPlanks
 				end
@@ -2017,12 +2029,13 @@ function Builder.Build(id: number, generation: number): any
 				ramp.Color = nerethStone
 				ramp.Material = Enum.Material.Limestone
 				local length = delta.Magnitude
-				local flags = math.max(2, math.floor((length - 2) / 4.4))
+				local flagA, flagB = a:Lerp(b, 0.06), a:Lerp(b, 0.94)
+				local flags = math.max(2, math.floor((length * 0.88 - 2) / 4.6))
 				for i = 1, flags do
-					local at = a:Lerp(b, (i - 0.5) / flags) + right * (math.sin(i * 1.9) * 1.2)
-					local flag = decor(model, "RampStepLip", Vector3.new(link.Width * (0.42 + ((i * 5) % 4) * 0.06), 0.14, 3.2), at,
+					local at = flagA:Lerp(flagB, (i - 0.5) / flags) + right * (math.sin(i * 1.9) * 1.2)
+					local flag = decor(model, "RampStepLip", Vector3.new(link.Width * (0.42 + ((i * 5) % 4) * 0.06), 0.14, 3.0), at,
 						if i % 2 == 0 then nerethStone else nerethStoneDark, Enum.Material.Limestone)
-					flag.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.07, 0) * CFrame.Angles(0, math.rad(((i * 17) % 10) - 5), 0)
+					flag.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.12 + (i % 2) * 0.015, 0) * CFrame.Angles(0, math.rad(((i * 17) % 10) - 5), 0)
 				end
 				local under = decor(model, "CausewayUnderside", Vector3.new(link.Width - 1, 2.6, math.max(1, length - 1)), mid, nerethStoneDark, Enum.Material.Limestone)
 				under.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -2.9, 0)
@@ -2064,13 +2077,14 @@ function Builder.Build(id: number, generation: number): any
 				ramp.Color = deepTimber
 				ramp.Material = Enum.Material.WoodPlanks
 				local length = delta.Magnitude
-				local planks = math.max(2, math.floor((length - 2) / 3.4))
+				local plankA, plankB = a:Lerp(b, 0.06), a:Lerp(b, 0.94)
+				local planks = math.max(2, math.floor((length * 0.88 - 2) / 3.6))
 				for i = 1, planks do
-					local at = a:Lerp(b, (i - 0.5) / planks)
-					local plankPart = decor(model, "RampStepLip", Vector3.new(link.Width - 2.2, 0.18, 1.0), at,
+					local at = plankA:Lerp(plankB, (i - 0.5) / planks)
+					local plankPart = decor(model, "RampStepLip", Vector3.new(link.Width - 2.4, 0.16, 1.0), at,
 						if i % 3 == 0 then deepBronze elseif i % 2 == 0 then deepTimber else deepIron,
 						if i % 3 == 0 then Enum.Material.Metal else Enum.Material.Wood)
-					plankPart.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.08, 0)
+					plankPart.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.13 + (i % 2) * 0.015, 0)
 				end
 				-- Dark timber-and-iron mitre lock gates hanging beneath the deck down into the canal water.
 				local gateH = math.clamp((mid.Y - origin.Y) - (layout.Bottom - 4), 8, 22)
@@ -2099,12 +2113,13 @@ function Builder.Build(id: number, generation: number): any
 				ramp.Color = wallStone
 				ramp.Material = Enum.Material.Limestone
 				local length = delta.Magnitude
-				local flags = math.max(2, math.floor((length - 2) / 4.2))
+				local wFlagA, wFlagB = a:Lerp(b, 0.06), a:Lerp(b, 0.94)
+				local flags = math.max(2, math.floor((length * 0.88 - 2) / 4.4))
 				for i = 1, flags do
-					local at = a:Lerp(b, (i - 0.5) / flags)
-					local flag = decor(model, "RampStepLip", Vector3.new(link.Width - 2.2, 0.16, 2.8), at,
+					local at = wFlagA:Lerp(wFlagB, (i - 0.5) / flags)
+					local flag = decor(model, "RampStepLip", Vector3.new(link.Width - 2.4, 0.16, 2.6), at,
 						if i % 2 == 0 then wallTrim else wallStone, Enum.Material.Limestone)
-					flag.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.08, 0)
+					flag.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.13 + (i % 2) * 0.015, 0)
 				end
 				-- Curtain wall body beneath the ramp deck (non-colliding visual wall so it never blocks Camp/Walkway checks)
 				local wallH = 26
@@ -2133,13 +2148,14 @@ function Builder.Build(id: number, generation: number): any
 				end
 			elseif direct then
 				-- An earthen ramp: the terrain is the path (TowerTerrain paints its trodden trail). Flush slate
-				-- pavers laid down its spine, staggered, read as the masons' old stepping stones.
+				-- pavers laid down its spine, staggered and trimmed cleanly off both landing joins.
 				proxy(ramp)
 				local length = delta.Magnitude
-				local stones = math.max(1, math.floor((length - 4) / 5.2))
+				local stoneA, stoneB = a:Lerp(b, 0.08), a:Lerp(b, 0.92)
+				local stones = math.max(1, math.floor((length * 0.84 - 2) / 5.2))
 				for i = 1, stones do
 					local stagger = if i % 2 == 0 then 1.4 else -1.4
-					local at = a:Lerp(b, (i - 0.5) / stones) + right * stagger
+					local at = stoneA:Lerp(stoneB, (i - 0.5) / stones) + right * stagger
 					local stoneW = link.Width * (0.26 + ((i * 7) % 3) * 0.04)
 					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.45, 2.2), at,
 						if velmari then (if i % 2 == 0 then slateIndigo else slateDark)
@@ -2148,7 +2164,7 @@ function Builder.Build(id: number, generation: number): any
 							elseif deepward then (if i % 2 == 0 then deepStone else deepSlate)
 							else flagstoneDark,
 						if velmari or hollin or deepward then Enum.Material.Slate else Enum.Material.Limestone)
-					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
+					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.09 + (i % 2) * 0.015, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "SOLMERE_ARCH" then
 				-- Floors 4-5 Solmere mossy limestone bridges across the moat/cenote:
@@ -3162,6 +3178,8 @@ function Builder.Build(id: number, generation: number): any
 					local stone = decor(model, "RampStepLip", Vector3.new(link.Width * 0.34, 0.28, 2.4), at, if pathStyle and pathStyle.ShowVaultLanterns == false then Color3.fromRGB(134, 118, 96) else flagstoneDark, if pathStyle and pathStyle.ShowVaultLanterns == false then Enum.Material.Slate else Enum.Material.Limestone)
 					stone.CFrame = CFrame.lookAt(at, at + rDelta) * CFrame.new(0, 0.06, 0)
 				end
+			elseif direct then
+				proxy(ramp)
 			end
 			structure(ramp,link.Id)
 			landing(link.LandingA,link.Id,link.From)
