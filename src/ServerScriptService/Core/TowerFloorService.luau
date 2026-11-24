@@ -575,8 +575,27 @@ function Service.Init()
 	end
 	Players.PlayerAdded:Connect(playerAdded);for _,p in Players:GetPlayers() do playerAdded(p) end
 	Players.PlayerRemoving:Connect(function(player) Service.CancelPending(player,"DISCONNECTED");disconnectCargo(player);states[player]=nil;publish() end)
+	local voidElapsed=0
 	local elapsed=0
 	RunService.Heartbeat:Connect(function(dt)
+		-- Fast space-void recovery for Astral Archives floors 41-45 (VoidCatchY): players who fall off
+		-- into the void below are immediately teleported back to the floor's Sanctuary entrance.
+		voidElapsed+=dt
+		if voidElapsed>=0.12 then
+			voidElapsed=0
+			for player,s in pairs(states) do
+				local r=if s.FloorId~=0 then rooms[s.FloorId] else nil
+				local voidY=r and r.VoidCatchY
+				if r and voidY~=nil then
+					local char,root=alive(player)
+					if char and root and (root.Position.Y-r.Origin.Y)<=voidY then
+						char:PivotTo(r.Arrival)
+						root.AssemblyLinearVelocity=Vector3.zero
+						root.AssemblyAngularVelocity=Vector3.zero
+					end
+				end
+			end
+		end
 		elapsed+=dt;if elapsed<1 then return end;elapsed=0
 		for player,s in pairs(states) do
 			local char,root=alive(player);local r=rooms[s.FloorId]

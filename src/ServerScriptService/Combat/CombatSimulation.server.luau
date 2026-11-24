@@ -2987,7 +2987,7 @@ local function broadcastReplicationSnapshot(now: number)
   if e.IsAlive==false then continue end
   local room=Tower.GetRoom(e.FloorId)
   if not room or room.RoomGeneration~=e.RoomGeneration then continue end
-  if not Protocol.InBounds(e.Position,room.Origin,room.Bounds) then
+  if not Protocol.InBounds(e.Position,room.Origin,room.Bounds) or (room.VoidCatchY~=nil and (e.Position.Y-room.Origin.Y)<=room.VoidCatchY) then
    warn("Tower entity recovered outside bounds",e.NetId);e.Position=room.Arrival.Position-Vector3.new(0,3.5,0);HeroNavigation.Clear(e)
   end
   local hero=e.Owner~=nil
