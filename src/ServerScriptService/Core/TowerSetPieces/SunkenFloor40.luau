@@ -164,11 +164,18 @@ function SunkenFloor40.Build(ctx: any)
 		end
 		return ctx.footprintClear(x, z, r + 1, r + 1)
 	end
-	-- Keep all scatter strictly off Leviathan's Dais interior (196 x 144) and PortalSpots.
+	-- Keep all scatter strictly off Leviathan's Dais interior (196 x 144), Sanctuary, and PortalSpots.
 	local function offDais(x: number, z: number, pad: number?): boolean
 		local p = pad or 10
 		local apex = P.Apex
-		return math.abs(x - apex.X) > (apex.Width * 0.5 + p) or math.abs(z - apex.Z) > (apex.Depth * 0.5 + p)
+		if math.abs(x - apex.X) <= (apex.Width * 0.5 + p) and math.abs(z - apex.Z) <= (apex.Depth * 0.5 + p) then
+			return false
+		end
+		local safe = layout.Sanctuary
+		if safe and math.abs(x - safe.X) <= (safe.Width * 0.5 + p + 8) and math.abs(z - safe.Z) <= (safe.Depth * 0.5 + p + 8) then
+			return false
+		end
+		return true
 	end
 	local function groundY(x: number, z: number): number
 		if field then
@@ -465,9 +472,9 @@ function SunkenFloor40.Build(ctx: any)
 	--    Driven purely client-side by MaelstromVortexController.client.luau!
 	-- =========================================================================
 	local vortexLayers = {
-		{ Name = "MaelstromOuterSwirl", X = 0, Y = waterY - 1.6, Z = -125, Scale = 2.65, Yaw = 0.0, Speed = 0.22, BobAmp = 0.48, BobFreq = 0.9, Phase = 0.0, Pal = MAELSTROM_OUTER_PAL },
-		{ Name = "MaelstromMidSwirl", X = 0, Y = waterY - 3.0, Z = -135, Scale = 1.98, Yaw = 0.55, Speed = 0.38, BobAmp = 0.38, BobFreq = 1.25, Phase = 2.1, Pal = MAELSTROM_OUTER_PAL },
-		{ Name = "MaelstromInnerEye", X = 0, Y = waterY - 4.4, Z = -152, Scale = 1.42, Yaw = 1.15, Speed = 0.62, BobAmp = 0.30, BobFreq = 1.65, Phase = 4.2, Pal = MAELSTROM_INNER_PAL },
+		{ Name = "MaelstromOuterSwirl", X = 0, Y = waterY - 0.6, Z = -125, Scale = 2.65, Yaw = 0.0, Speed = 0.36, BobAmp = 0.65, BobFreq = 1.05, Phase = 0.0, Pal = MAELSTROM_OUTER_PAL },
+		{ Name = "MaelstromMidSwirl", X = 0, Y = waterY - 1.8, Z = -135, Scale = 1.98, Yaw = 0.55, Speed = 0.62, BobAmp = 0.55, BobFreq = 1.45, Phase = 2.1, Pal = MAELSTROM_OUTER_PAL },
+		{ Name = "MaelstromInnerEye", X = 0, Y = waterY - 2.8, Z = -152, Scale = 1.42, Yaw = 1.15, Speed = 1.05, BobAmp = 0.45, BobFreq = 1.90, Phase = 4.2, Pal = MAELSTROM_INNER_PAL },
 	}
 	for idx, vl in vortexLayers do
 		ctx.group(vl.Name, function()
@@ -478,10 +485,11 @@ function SunkenFloor40.Build(ctx: any)
 				landmarks += 1
 			end
 			local m = ctx.current()
+			local pivotCF = CFrame.new(origin + V(vl.X, vl.Y, vl.Z)) * CFrame.Angles(0, vl.Yaw, 0)
 			local pivot = Instance.new("Part")
 			pivot.Name = "VortexPivot"
 			pivot.Size = V(2, 2, 2)
-			pivot.CFrame = CFrame.new(origin + V(vl.X, vl.Y, vl.Z)) * CFrame.Angles(0, vl.Yaw, 0)
+			pivot.CFrame = pivotCF
 			pivot.Transparency = 1
 			pivot.Anchored = true
 			pivot.CastShadow = false
@@ -524,6 +532,9 @@ function SunkenFloor40.Build(ctx: any)
 
 			if m:IsA("Model") then
 				m.PrimaryPart = pivot
+				m.WorldPivot = pivotCF
+				m:SetAttribute("MaelstromBasePos", pivotCF.Position)
+				m:SetAttribute("MaelstromBaseYaw", vl.Yaw)
 				m:SetAttribute("MaelstromSpinSpeed", vl.Speed)
 				m:SetAttribute("MaelstromBobAmp", vl.BobAmp)
 				m:SetAttribute("MaelstromBobFreq", vl.BobFreq)
@@ -539,10 +550,11 @@ function SunkenFloor40.Build(ctx: any)
 		ctx.tag("PropKind", "MaelstromVortex")
 		ctx.tag("OnTerrain", true)
 		local m = ctx.current()
+		local debrisCF = CFrame.new(origin + V(0, waterY + 0.5, -125))
 		local pivot = Instance.new("Part")
 		pivot.Name = "DebrisPivot"
 		pivot.Size = V(2, 2, 2)
-		pivot.CFrame = CFrame.new(origin + V(0, waterY + 0.4, -125))
+		pivot.CFrame = debrisCF
 		pivot.Transparency = 1
 		pivot.Anchored = true
 		pivot.CastShadow = false
@@ -553,18 +565,21 @@ function SunkenFloor40.Build(ctx: any)
 			local rad = 165 + (i % 3) * 18
 			local dx = math.cos(a) * rad
 			local dz = -125 + math.sin(a) * rad
-			local plank = boxAt("DriftTimber" .. i, V(11 + (i % 3) * 3, 1.2, 2.4), V(dx, waterY + 0.4, dz), -a + 0.3, rgb(66, 54, 46), Mat.Wood)
+			local plank = boxAt("DriftTimber" .. i, V(11 + (i % 3) * 3, 1.2, 2.4), V(dx, waterY + 0.5, dz), -a + 0.3, rgb(66, 54, 46), Mat.Wood)
 			noCollide(plank)
 			plank.CastShadow = false
-			local wake = boxAt("DriftWake" .. i, V(14, 0.35, 3.6), V(dx, waterY + 0.1, dz), -a + 0.3, rgb(198, 244, 255), Mat.Neon, 0.54)
+			local wake = boxAt("DriftWake" .. i, V(14, 0.35, 3.6), V(dx, waterY + 0.2, dz), -a + 0.3, rgb(198, 244, 255), Mat.Neon, 0.54)
 			noCollide(wake)
 			wake.CastShadow = false
 		end
 		if m:IsA("Model") then
 			m.PrimaryPart = pivot
-			m:SetAttribute("MaelstromSpinSpeed", 0.16)
-			m:SetAttribute("MaelstromBobAmp", 0.55)
-			m:SetAttribute("MaelstromBobFreq", 1.1)
+			m.WorldPivot = debrisCF
+			m:SetAttribute("MaelstromBasePos", debrisCF.Position)
+			m:SetAttribute("MaelstromBaseYaw", 0)
+			m:SetAttribute("MaelstromSpinSpeed", 0.28)
+			m:SetAttribute("MaelstromBobAmp", 0.65)
+			m:SetAttribute("MaelstromBobFreq", 1.2)
 			m:SetAttribute("MaelstromBobPhase", 1.2)
 			CollectionService:AddTag(m, "SunkenMaelstromRing")
 		end
