@@ -34,7 +34,7 @@ test("Phase 4: a new tree owns only the root and the Guard Post's first level", 
 	for _, facility in { "Market", "TrainingGrounds", "GodsBlessing" } do
 		assert(FortressTree.FacilityLevel(tree, facility) == 0, facility .. " starts unbuilt")
 	end
-	assert(#TreeConfig.Nodes == 39, "root + 4 facility branches x (5 levels + 2 perks) + 4 squad slots + 6 storage")
+	assert(#TreeConfig.Nodes == 49, "root + 4 facility branches x (5 levels + 2 perks) + 4 squad slots + 6 storage + 5 forge pedestals + 5 forge roll luck")
 	assert(FortressTree.SquadSlots(tree) == 1, "a new Master starts with one squad slot")
 end)
 
@@ -368,7 +368,7 @@ test("Guide: the core chain plays in order, skips what is not possible yet and e
 	context.Floor = 0
 	-- No Gold for a roll yet: the step is passed over rather than shown as a dead end.
 	assert(nextId() == nil and not profile.Unlocks.Facilities)
-	profile.Currencies.Gold = ArtifactCatalog.Banner.Cost1X
+	profile.Currencies.Gold = ArtifactCatalog.RarityStandardPedestalCost[1]
 	assert(nextId() == "Roll")
 	assert(GuideLessons.StarterWeaponType(profile) == weapon, "the first roll suits a squad hero")
 	profile.Artifacts.blade = { UUID = "blade", Type = weapon, Rarity = 1, Star = 1, DisplayName = "Blade" }
@@ -612,7 +612,7 @@ test("Guide: Ready your squad does not repeat after Squad or Clear, and respects
 	assert(GuideLessons.Select(profile, context).Id == "Climb", "Climb returns once a hero is ready")
 	context.Ready = false
 	context.Floor = 0
-	profile.Currencies.Gold = ArtifactCatalog.Banner.Cost1X
+	profile.Currencies.Gold = ArtifactCatalog.RarityStandardPedestalCost[1]
 	assert(GuideLessons.Select(profile, context).Id == "Roll", "non-combat Hub lessons still run")
 end)
 

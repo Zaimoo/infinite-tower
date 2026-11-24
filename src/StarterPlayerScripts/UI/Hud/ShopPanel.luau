@@ -526,6 +526,52 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 	rows.GoldHeader = sectionHeader(6, "Gold", "GOLD", "Unlock upgrades and promote heroes")
 	rows.Gold = cardRow(7, ShopConfig.Gold, "Gold", "Bronze")
 
+	-- Permanent GamePasses (Forge Auto-Roll)
+	do
+		local pass = ShopConfig.Passes and ShopConfig.Passes.ForgeAutoRoll
+		if pass then
+			local ownsPass = LocalPlayer:GetAttribute(pass.Attribute) == true
+			local livePass = pass.GamePassId ~= 0
+			local t = Tones[if ownsPass then "Jade" elseif livePass then "Gold" else "Slate"]
+			rows.PassesHeader = sectionHeader(8, "Forge", "GAMEPASSES", "Permanent account conveniences")
+			rows.Passes = Panel({
+				LayoutOrder = 9, Size = UDim2.new(1, 0, 0, 96), Radius = 14,
+				Top = Tones.Deep.Top:Lerp(Color3.fromRGB(249, 115, 22), 0.28), Bottom = Tones.Deep.Bottom, Rail = Color3.fromRGB(251, 191, 36),
+			}, {
+				Icon = IconAt("Forge", 52, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 18, 0.5, 0), ZIndex = 6 }),
+				Label = Heavy({ Position = UDim2.fromOffset(82, 18), Size = UDim2.new(1, -280, 0, 28), MaxSize = 24,
+					TextXAlignment = Enum.TextXAlignment.Left, Text = pass.Label, ZIndex = 6 }),
+				Desc = Body({ Position = UDim2.fromOffset(82, 48), Size = UDim2.new(1, -280, 0, 32), TextSize = 14, TextWrapped = true,
+					TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Parchment, Text = pass.Subtitle, ZIndex = 6 }),
+				BuyBtn = Panel({
+					Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = not ownsPass,
+					AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -18, 0.5, 0), Size = UDim2.fromOffset(172, 52),
+					Radius = 12, Top = t.Top, Bottom = t.Bottom, Rail = t.Rail, ZIndex = 6,
+					[React.Event.Activated] = function()
+						if ownsPass then return end
+						if not livePass then
+							setStatus(pass.Label .. " is coming soon.")
+							return
+						end
+						setStatus("Confirm your GamePass purchase in the Roblox prompt…")
+						pcall(function()
+							MarketplaceService:PromptGamePassPurchase(LocalPlayer, pass.GamePassId)
+						end)
+					end,
+				}, {
+					Row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 7 }, {
+						Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+							VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+						Mark = if ownsPass then nil elseif livePass then IconAt("Robux", 24, { LayoutOrder = 1, ZIndex = 8 }) else IconAt("Lock", 20, { LayoutOrder = 1, ZIndex = 8 }),
+						Text = Heavy({ LayoutOrder = 2, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), MaxSize = if ownsPass or livePass then 19 else 14,
+							Outline = 2, Gold = false, TextColor3 = if ownsPass then Color3.new(1, 1, 1) elseif livePass then Color3.new(1, 1, 1) else Color3.fromRGB(196, 186, 214),
+							Text = if ownsPass then "OWNED" elseif livePass then tostring(pass.RobuxPrice) else "COMING SOON", ZIndex = 8 }),
+					}),
+				}),
+			})
+		end
+	end
+
 	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
 	local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
 

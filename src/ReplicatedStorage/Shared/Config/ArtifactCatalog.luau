@@ -43,43 +43,72 @@ export type ArtifactSeed = {
 }
 
 local B = require(script.Parent.StatBalance)
+local RelicConfig = require(script.Parent.RelicConfig)
+local TowerFloorConfig = require(script.Parent.TowerFloorConfig)
 local ArtifactCatalog = {}
 
 
 --============================================================================
--- 1. ARTIFACT BANNER CONFIGURATION (GOLD GACHA)
+-- 1. OPEN FORGE ROLLING & RELIC-FLOOR PRICING CONFIGURATION
 --============================================================================
 
 export type ArtifactBannerConfig = {
 	BannerId: string,
 	Title: string,
-	FeaturedHeroWatermark: string,
 	Currency: string,
-	Cost1X: number,
-	Cost10X: number,
-	MaxPity: number,
-	PityRarity: number,
-	PityRarityTier: number?,
 	BaseRarityRates: { number },
 }
 
-local Banner: ArtifactBannerConfig = {
-	BannerId = "banner_echoes_of_the_rift",
-	Title = "ECHOES OF THE RIFT",
-	FeaturedHeroWatermark = "★ 120-PULL EXALTED+ HARD PITY",
+local RollRates: { number } = table.freeze({ 0.549, 0.250, 0.120, 0.055, 0.020, 0.005, 0.001 })
+ArtifactCatalog.RollRates = RollRates
+
+local Banner: ArtifactBannerConfig = table.freeze({
+	BannerId = "forge_pedestal_roll",
+	Title = "OPEN FORGE",
 	Currency = "Gold",
-	Cost1X = 5000,
-	Cost10X = 45000,
-	MaxPity = 120,
-	PityRarity = 5, -- Exalted (Tier 5) or higher
-	PityRarityTier = 5,
-	BaseRarityRates = { 0.549, 0.250, 0.120, 0.055, 0.020, 0.005, 0.001 },
-}
+	BaseRarityRates = RollRates,
+})
 ArtifactCatalog.Banner = Banner
 
-function ArtifactCatalog.GetPityRemaining(bannerPity: number?): number
-	local p = bannerPity or 0
-	return math.max(1, Banner.MaxPity - (p % Banner.MaxPity))
+-- Milestone floor per launch rarity tier (1..7), aligned with STAT_SCALING_TABLES.md / StatBalance.ExpectedSquads.
+local RarityTargetFloor: { number } = table.freeze({ 1, 8, 15, 20, 28, 40, 50 })
+ArtifactCatalog.RarityTargetFloor = RarityTargetFloor
+ArtifactCatalog.EnhancedCostMultiplier = 1.30
+
+local function roundSignificant(value: number): number
+	if value < 1000 then
+		return math.round(value)
+	end
+	local step = 10 ^ (math.floor(math.log10(value)) - 2)
+	return math.round(value / step) * step
+end
+
+local RarityStandardPedestalCost: { [number]: number } = {}
+local RarityEnhancedPedestalCost: { [number]: number } = {}
+for tier = 1, #RarityTargetFloor do
+	local floorId = RarityTargetFloor[tier]
+	local biome = assert(RelicConfig.GetBiomeForFloor(floorId), `Missing relic biome for floor {floorId}`)
+	local urnSpec = assert(RelicConfig.Items[biome.DropTable[2]], `Missing Urn relic for floor {floorId}`)
+	local goldMult = TowerFloorConfig.RelicFloorMultipliers(floorId)
+	local stdCost = roundSignificant(urnSpec.Payout.Gold * goldMult)
+	RarityStandardPedestalCost[tier] = stdCost
+	RarityEnhancedPedestalCost[tier] = roundSignificant(stdCost * ArtifactCatalog.EnhancedCostMultiplier)
+end
+ArtifactCatalog.RarityStandardPedestalCost = table.freeze(RarityStandardPedestalCost)
+ArtifactCatalog.RarityEnhancedPedestalCost = table.freeze(RarityEnhancedPedestalCost)
+
+-- Gold cost to purchase a rolled artifact off an Open Forge pedestal.
+function ArtifactCatalog.GetPedestalCost(seedOrId: any): number
+	local seeds = ArtifactCatalog.Seeds
+	local seed: ArtifactSeed? = if type(seedOrId) == "string"
+		then (seeds and seeds[seedOrId])
+		elseif type(seedOrId) == "table" then (seedOrId :: ArtifactSeed)
+		else nil
+	if not seed then
+		return RarityStandardPedestalCost[1]
+	end
+	local tier = math.clamp(math.floor(seed.RarityTier or 1), 1, #RarityTargetFloor)
+	return if seed.IsHighStat then RarityEnhancedPedestalCost[tier] else RarityStandardPedestalCost[tier]
 end
 
 --============================================================================

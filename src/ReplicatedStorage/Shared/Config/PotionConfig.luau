@@ -44,7 +44,7 @@ PotionConfig.Potions = table.freeze({
 	LuckPotion = table.freeze({
 		Id = "LuckPotion", Name = "Luck Potion", Effect = "Luck", Amount = 0.25, Minutes = 15,
 		Icon = "PotionLuck", Tint = Color3.fromRGB(150, 255, 150), Summary = "+25% summon luck",
-		Description = "Raises the odds of every tier above the lowest on Call of the Rift, A Star's Arrival and the Blacksmith Forge. Adds to God's Blessing. Pity is unchanged.",
+		Description = "Raises the odds of every tier above the lowest on Call of the Rift and A Star's Arrival. Adds to God's Blessing. Forge Roll Luck is upgraded separately.",
 	}),
 	XpPotion = table.freeze({
 		Id = "XpPotion", Name = "Hero XP Potion", Effect = "HeroXP", Amount = 1, Minutes = 30,

@@ -1512,7 +1512,7 @@ function Forge:BuildSummonView(root: Frame)
 	local btn1X = GrimoireSummonButton.new(btnRow, {
 		Name = "Summon1XBtn",
 		Title = "SUMMON 1X",
-		Cost = StatBalance.Format(cfg.Cost1X),
+		Cost = StatBalance.Format(cfg.Cost1X or 0),
 		Icon = "Gold",
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
@@ -1527,7 +1527,7 @@ function Forge:BuildSummonView(root: Frame)
 	local btn10X = GrimoireSummonButton.new(btnRow, {
 		Name = "Summon10XBtn",
 		Title = "SUMMON 10X",
-		Cost = StatBalance.Format(cfg.Cost10X),
+		Cost = StatBalance.Format(cfg.Cost10X or 0),
 		Icon = "Gold",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
@@ -1633,7 +1633,7 @@ function Forge:SummonBlockReason(count: number): string?
 	local profile = self:ResolveProfile()
 	if not profile then return "Profile not loaded" end
 	local cfg = ArtifactCatalog.Banner
-	local cost = if count == 10 then cfg.Cost10X else cfg.Cost1X
+	local cost = (if count == 10 then cfg.Cost10X else cfg.Cost1X) or 0
 	-- Same rule as the server's summon check: Storage nodes in the Fortress Tree raise the cap.
 	local owned = InventoryCapacity.ArtifactCount(profile)
 	local cap = InventoryCapacity.ArtifactCap(profile.FortressTree)
@@ -1686,7 +1686,7 @@ function Forge:PerformSummon(count: number, confirmed: boolean?): boolean?
 	if self.Busy then return false end
 	local profile = self:ResolveProfile()
 	local cfg = ArtifactCatalog.Banner
-	local cost = (count == 10) and cfg.Cost10X or cfg.Cost1X
+	local cost = ((count == 10) and cfg.Cost10X or cfg.Cost1X) or 0
 
 	local deny = function()
 		local row = self.Summon1XBtn and self.Summon1XBtn.Parent
@@ -1817,8 +1817,8 @@ function Forge:ShowSummonResults(summonedList: { any }, ownedBefore: { [string]:
 			seen[id] = true
 			return true
 		end,
-		Cost1 = ArtifactCatalog.Banner.Cost1X,
-		Cost10 = ArtifactCatalog.Banner.Cost10X,
+		Cost1 = ArtifactCatalog.Banner.Cost1X or 0,
+		Cost10 = ArtifactCatalog.Banner.Cost10X or 0,
 		Currency = ArtifactCatalog.Banner.Currency,
 		OnAgain = function(count: number)
 			return self:PerformSummon(count)

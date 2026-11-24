@@ -254,6 +254,9 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 	if plotModel:GetAttribute("PlotWorkersSynced") ~= true then
 		plotModel:SetAttribute("PlotWorkersSynced", true)
 	end
+	if (_G :: any).ForgeRollService and (_G :: any).ForgeRollService.SyncPlotPedestals then
+		(_G :: any).ForgeRollService.SyncPlotPedestals(player, plotModel)
+	end
 end
 
 -- Lantern burst on the God's Blessing angel after a lucky summon.
@@ -851,6 +854,9 @@ Players.PlayerRemoving:Connect(function(player: Player)
 			local workers = plotModel:FindFirstChild("ActivePlotWorkers")
 			if workers then
 				workers:ClearAllChildren()
+			end
+			if (_G :: any).ForgeRollService and (_G :: any).ForgeRollService.ClearPlotPedestals then
+				(_G :: any).ForgeRollService.ClearPlotPedestals(plotModel)
 			end
 			FacilityPresence.Reset(plotModel)
 		end

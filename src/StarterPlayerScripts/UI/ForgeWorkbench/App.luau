@@ -19,6 +19,7 @@ local UpgradeResult = require(script.Parent.UpgradeResult)
 local HeroPicker = require(script.Parent.HeroPicker)
 local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
 local ReforgeRules = require(ReplicatedStorage.Shared.Util.ReforgeRules)
+local ForgeOddsModal = require(script.Parent.ForgeOddsModal)
 local Icons = require(script.Parent.Parent.Hud.Icons)
 local UIFeel = require(script.Parent.Parent.UIFeel)
 local WindowScale = require(script.Parent.Parent.WindowScale)
@@ -124,6 +125,7 @@ local function Dialog(props: { Title: string, Children: { [string]: any }, OnCan
 			Content = e(if props.Cards then C.CardGrid else C.Scroll, {
 				Size = UDim2.new(1, -24, 1, if props.HeaderExtras then -152 elseif props.Subtitle then -118 else -84),
 				Position = UDim2.fromOffset(12, if props.HeaderExtras then 138 elseif props.Subtitle then 104 else 72),
+				ZIndex = 3,
 				Children = props.Children, CellHeight = props.CardHeight, Square = props.Square,
 			}),
 		}),
@@ -134,16 +136,7 @@ local function App(props: Types.Props)
 	local forge = useForge(props)
 	local snapshot = forge.Snapshot
 	local rootRef, bodyRef = React.useRef(nil), React.useRef(nil)
-	local headerBarRef, summonHostRef = React.useRef(nil), React.useRef(nil)
-	local summonTab = props.ActiveTab == "Summon"
-	-- Hand the body frame to the legacy summon view while the Summon tab shows, and take it back.
-	-- A layout effect: its cleanup runs before React destroys the host frame, so the summon view is
-	-- moved out first instead of being destroyed with it.
-	React.useLayoutEffect(function()
-		if not summonTab or not props.OnSummonHost then return nil end
-		props.OnSummonHost(summonHostRef.current)
-		return function() props.OnSummonHost(nil) end
-	end, { summonTab })
+	local headerBarRef = React.useRef(nil)
 	-- The header's domain colour bar (Brighter Grimoire: Forge = ember).
 	React.useEffect(function()
 		if headerBarRef.current then Kit.Tokens.Paint(headerBarRef.current, Kit.Tokens.Domain.Forge, 12, 0, 0.35) end
@@ -717,12 +710,11 @@ local function App(props: Types.Props)
 					TextSize = 16, TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Center,
 					Position = UDim2.fromOffset(0, 84), Size = UDim2.new(1, 0, 0, 52),
 				}),
-				Summon = if props.OnSelectTab then e(C.Button, {
-					Name = "EmptyGoSummon", Text = "Summon weapons", Icon = "Summon", Intent = "Primary",
-					-- C.Button has no AnchorPoint: centre it with the offset.
+				GoRoll = e(C.Button, {
+					Name = "EmptyGoRoll", Text = "Roll at Open Forge", Icon = "Forge", Intent = "Primary",
 					Position = UDim2.new(0.5, -130, 0, 148), Size = UDim2.fromOffset(260, 48),
-					OnActivate = function() setDialog(nil); props.OnSelectTab("Summon") end,
-				}) else nil,
+					OnActivate = function() setDialog(nil); props.OnClose() end,
+				}),
 			})
 		end
 		dialogView = e(Dialog, {
@@ -754,6 +746,13 @@ local function App(props: Types.Props)
 		choices.AllRarities = e(C.Button, { Text = "All rarities", Selected = filter.Rarity == 0, OnActivate = function() updateFilter("Rarity", 0) end, Order = 9 })
 		for index, r in Catalog.Rarities do choices["Rarity" .. index] = e(C.Button, { Text = r.Name, Selected = filter.Rarity == index, OnActivate = function() updateFilter("Rarity", index) end, Order = 10 + index }) end
 		dialogView = e(Dialog, { Title = "Inventory filters", Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "FILTER" })
+	elseif dialog == "ODDS" then
+		dialogView = e(ForgeOddsModal, {
+			Snapshot = snapshot,
+			RollLuck = props.RollLuck or 0,
+			Pedestals = props.Pedestals or 1,
+			OnClose = function() setDialog(nil) end,
+		})
 	end
 
 	-- Before any server result, the footer is a hint that follows what the player is doing (it used to
@@ -800,17 +799,17 @@ local function App(props: Types.Props)
 				Size = UDim2.fromOffset(120, 34),
 			}),
 			Tabs = e("Frame", {
-				Name = "ForgeTabs", Position = UDim2.fromOffset(196, 12), Size = UDim2.fromOffset(276, 42), BackgroundTransparency = 1,
+				Name = "ForgeTabs", Position = UDim2.fromOffset(196, 12), Size = UDim2.fromOffset(278, 42), BackgroundTransparency = 1,
 			}, {
 				Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-				Artifacts = e(C.Button, {
-					Name = "ArtifactsTab", Text = "Artifacts", Order = 1, Size = UDim2.fromOffset(134, 42), Selected = not summonTab,
-					Disabled = busy and summonTab, OnActivate = function() if summonTab and props.OnSelectTab then props.OnSelectTab("Artifacts") end end,
+				Odds = e(C.Button, {
+					Name = "OddsPricesButton", Text = "Odds & Prices", Order = 1, Size = UDim2.fromOffset(146, 42), Selected = dialog == "ODDS",
+					Disabled = busy, OnActivate = function() setDialog(if dialog == "ODDS" then nil else "ODDS") end,
 				}),
-				Summon = e(C.Button, {
-					Name = "SummonTab", Text = "Summon", Order = 2, Size = UDim2.fromOffset(134, 42), Selected = summonTab,
-					Disabled = busy and not summonTab, OnActivate = function() if not summonTab and props.OnSelectTab then props.OnSelectTab("Summon") end end,
-				}),
+				Upgrades = if props.OnOpenUpgrades then e(C.Button, {
+					Name = "ForgeUpgradesButton", Text = "Upgrades", Order = 2, Size = UDim2.fromOffset(124, 42),
+					Disabled = busy, OnActivate = function() props.OnOpenUpgrades() end,
+				}) else nil,
 			}),
 			-- Currencies + Capacity Counter
 			Gold = e(C.Currency, { Icon = "Gold", Text = Balance.Format(snapshot.Gold), Position = UDim2.new(1, -520, 0, 16) }),
@@ -861,24 +860,16 @@ local function App(props: Types.Props)
 				-- Brighter Grimoire: a lifted plum panel instead of near-black.
 				Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Kit.Tokens.Surface.Panel.Top, Kit.Tokens.Surface.Panel.Bottom) }),
 				Rail = e("UIStroke", { Color = Kit.Tokens.Surface.Panel.Rail, Thickness = 1.4, Transparency = 0.35 }),
-				Content = if summonTab then nil else e("Frame", {
+				Content = e("Frame", {
 					ref = bodyRef,
 					Name = "Content",
 					Position = UDim2.fromOffset(8, 8),
 					Size = UDim2.new(1, -16, 1, -16),
 					BackgroundTransparency = 1,
 				}, view),
-				-- Summon tab: the legacy summon view (banner, pity, Summon 1x/10x) is parented here.
-				SummonHost = if summonTab then e("Frame", {
-					ref = summonHostRef,
-					Name = "SummonHost",
-					Position = UDim2.fromOffset(12, 10),
-					Size = UDim2.new(1, -24, 1, -20),
-					BackgroundTransparency = 1,
-				}) else nil,
 			}),
-			-- Status Bar (hidden on RESULT screen so message doesn't duplicate, and on the Summon tab)
-			Status = if route ~= "RESULT" and not summonTab then e("Frame", {
+			-- Status Bar (hidden on RESULT screen so message doesn't duplicate)
+			Status = if route ~= "RESULT" then e("Frame", {
 				Name = "Status",
 				Position = UDim2.new(0, 16, 1, -statusHeight),
 				Size = UDim2.new(1, -32, 0, statusHeight - 4),

@@ -6,7 +6,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config.FortressTreeConfig)
 
-export type Tree = { Nodes: { [string]: boolean } }
+export type Tree = {
+	Nodes: { [string]: boolean },
+	RollLuckRank: number?,
+}
 export type Perks = {
 	OfflineMinutes: number,
 	GuardPostRate: number,
@@ -16,9 +19,18 @@ export type Perks = {
 	TrainingBonus: number,
 	BlessingWorkers: number,
 	BlessingLuck: number,
+	RollLuck: number,
 }
 
 local FortressTree = {}
+
+local function roundSignificant(value: number): number
+	if value < 1000 then
+		return math.round(value)
+	end
+	local step = 10 ^ (math.floor(math.log10(value)) - 2)
+	return math.round(value / step) * step
+end
 
 function FortressTree.DefaultTree(): Tree
 	local owned = {}
@@ -27,11 +39,33 @@ function FortressTree.DefaultTree(): Tree
 			owned[node.Id] = true
 		end
 	end
-	return { Nodes = owned }
+	return { Nodes = owned, RollLuckRank = 0 }
 end
 
 function FortressTree.Owns(tree: Tree?, nodeId: string): boolean
 	return tree ~= nil and type(tree.Nodes) == "table" and tree.Nodes[nodeId] == true
+end
+
+function FortressTree.RollLuckRank(tree: Tree?): number
+	local rank = tree and tree.RollLuckRank
+	if type(rank) == "number" and rank == rank and rank > 0 and rank < math.huge then
+		return math.floor(rank)
+	end
+	return 0
+end
+
+-- Dynamic Gold cost of `nodeId` (scales exponentially for REPEATABLE nodes like Eternal Stoking).
+function FortressTree.NodeCost(tree: Tree?, nodeId: string): number
+	local node = Config.ById[nodeId]
+	if not node then
+		return 0
+	end
+	if node.Kind == "REPEATABLE" then
+		local rank = FortressTree.RollLuckRank(tree)
+		local growth = node.Growth or 1.22
+		return roundSignificant(node.Gold * (growth ^ rank))
+	end
+	return node.Gold
 end
 
 -- Level = consecutive LEVEL nodes owned from level 1, so a hole in a bad save can't skip levels.
@@ -54,6 +88,14 @@ function FortressTree.SquadSlots(tree: Tree?): number
 	return math.min(Config.MaxSquadSlots, Config.BaseSquadSlots + FortressTree.FacilityLevel(tree, "Squad"))
 end
 
+-- Active Open Forge pedestals: 1 starter pedestal plus one per ForgePedestals level owned (up to 6 max).
+function FortressTree.ForgePedestals(tree: Tree?): number
+	return math.min(
+		Config.MaxForgePedestals,
+		Config.BaseForgePedestals + FortressTree.FacilityLevel(tree, "ForgePedestals")
+	)
+end
+
 function FortressTree.PerkBonuses(tree: Tree?): Perks
 	local perks: Perks = {
 		OfflineMinutes = 0,
@@ -64,6 +106,7 @@ function FortressTree.PerkBonuses(tree: Tree?): Perks
 		TrainingBonus = 0,
 		BlessingWorkers = 0,
 		BlessingLuck = 0,
+		RollLuck = 0,
 	}
 	for _, node in Config.Nodes do
 		local perk = node.Perk
@@ -74,14 +117,23 @@ function FortressTree.PerkBonuses(tree: Tree?): Perks
 	return perks
 end
 
+-- Total uncapped Forge Roll Luck (0.05 = +5%), summing rl_1..rl_4 and endless Eternal Stoking ranks.
+function FortressTree.RollLuck(tree: Tree?): number
+	local perks = FortressTree.PerkBonuses(tree)
+	local endless = Config.ById[Config.EndlessLuckNodeId]
+	local step = if endless and endless.LuckStep then endless.LuckStep else 0.05
+	return perks.RollLuck + FortressTree.RollLuckRank(tree) * step
+end
+
 -- Why a node's onboarding system is still closed, keyed by the node's System.
 local SYSTEM_HINTS: { [string]: string } = {
 	FortressTree = "Upgrades unlock after you upgrade a weapon at the Forge.",
 	Squad = "Summon your first hero to unlock squad slots.",
+	Forge = "Clear Floor 1 of the Tower to unlock the Forge.",
 }
 
 -- `gold`, `highestClearedFloor` and `unlocks` (profile.Unlocks) come from the profile. Each node
--- needs its own onboarding system: "FortressTree" unless the node names another (squad slots).
+-- needs its own onboarding system: "FortressTree" unless the node names another (squad slots / forge).
 function FortressTree.CanUnlock(tree: Tree?, nodeId: any, gold: number, highestClearedFloor: number, unlocks: { [string]: boolean }?): (boolean, string?)
 	if type(nodeId) ~= "string" then
 		return false, "Unknown node."
@@ -94,7 +146,7 @@ function FortressTree.CanUnlock(tree: Tree?, nodeId: any, gold: number, highestC
 	if not (unlocks and unlocks[system]) then
 		return false, SYSTEM_HINTS[system] or "This part of the tree is still locked."
 	end
-	if FortressTree.Owns(tree, nodeId) then
+	if node.Kind ~= "REPEATABLE" and FortressTree.Owns(tree, nodeId) then
 		return false, node.Name .. " is already built."
 	end
 	for _, required in node.Requires do
@@ -106,8 +158,9 @@ function FortressTree.CanUnlock(tree: Tree?, nodeId: any, gold: number, highestC
 	if highestClearedFloor < node.FloorGate then
 		return false, string.format("Clear Floor %d of the Tower first.", node.FloorGate)
 	end
-	if gold < node.Gold then
-		return false, string.format("Need %d Gold for %s.", node.Gold, node.Name)
+	local cost = FortressTree.NodeCost(tree, node.Id)
+	if gold < cost then
+		return false, string.format("Need %d Gold for %s.", cost, node.Name)
 	end
 	return true, nil
 end

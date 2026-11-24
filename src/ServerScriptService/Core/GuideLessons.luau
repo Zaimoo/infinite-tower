@@ -94,7 +94,7 @@ local function canSummonLimited(profile: any): boolean
 end
 
 local function canRoll(profile: any): boolean
-	return (profile.Currencies.Gold or 0) >= ArtifactCatalog.Banner.Cost1X
+	return (profile.Currencies.Gold or 0) >= ArtifactCatalog.RarityStandardPedestalCost[1]
 		and Capacity.ArtifactCount(profile) < Capacity.ArtifactCap(profile.FortressTree)
 end
 

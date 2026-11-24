@@ -248,8 +248,8 @@ FacilityConfig.FacilityLayout = {
 	BlacksmithForge = {
 		Offset = Vector3.new(54, 0, -2),
 		RotationY = math.rad(-90),
-		Radius = 22,
-		PromptText = "Blacksmith Forge",
+		Radius = 24,
+		PromptText = "Artifacts & Upgrade",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any), -- F, so it never competes with the [E] Recall hotkey
 	},
 	SynthesisChamber = {

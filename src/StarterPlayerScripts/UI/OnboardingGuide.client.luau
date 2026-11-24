@@ -358,19 +358,12 @@ local function modalControl(goal: any): (GuiObject?, boolean, string?)
 			if button then label = "Open the banner" end
 		end
 	elseif id == "Roll" then
-		root = forgeRoot()
-		button = control(root, "Summon1XBtn") or control(playerGui, "Summon1XBtn")
-		if not button then
-			button = control(root, "SummonTab")
-			if button then label = "Open Summon" end
-		end
+		-- Rolling and buying happen in 3D at the Open Forge Anvil & Pedestals, not inside the Smelter modal.
+		root = nil
+		button = nil
 	elseif id == "Equip" then
 		root = forgeRoot()
 		button = control(root, "EquipBestButton") or control(root, "ActionBarEquip")
-		if not button then
-			button = control(root, "ArtifactsTab")
-			if button then label = "Open Artifacts" end
-		end
 	elseif id == "Upgrade" then
 		root = forgeRoot()
 		button = control(root, "ConfirmUpgradeButton") or control(root, "ReviewUpgradeButton")
@@ -493,7 +486,23 @@ local function worldTarget(target: string, root: BasePart): (Vector3?, Instance?
 	local building = if target == "GodsBlessing" then plot:FindFirstChild("Facility_GodsBlessing")
 		else buildings and buildingName and buildings:FindFirstChild(buildingName)
 	if not building then return nil, nil end
-	local position = promptPosition(building:FindFirstChildWhichIsA("ProximityPrompt", true))
+	local prompt: Instance? = nil
+	if target == "Blacksmith" then
+		if Store.Goal and Store.Goal.Id == "Roll" then
+			-- Prefer an enabled BuyArtifactPrompt on any pedestal; fall back to the AnvilRollPrompt.
+			for _, desc in building:GetDescendants() do
+				if desc.Name == "BuyArtifactPrompt" and desc:IsA("ProximityPrompt") and desc.Enabled then
+					prompt = desc
+					break
+				end
+			end
+			prompt = prompt or building:FindFirstChild("AnvilRollPrompt", true)
+		else
+			prompt = building:FindFirstChild("BlacksmithPrompt", true)
+		end
+	end
+	prompt = prompt or building:FindFirstChildWhichIsA("ProximityPrompt", true)
+	local position = promptPosition(prompt)
 	if not position then return nil, nil end
 	if target == "GuardPost" and buildings then
 		local origin = buildings:GetAttribute("Origin")

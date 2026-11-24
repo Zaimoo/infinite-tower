@@ -183,7 +183,7 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	end
 end)
 
-local function isPromptOnOwnedPlot(prompt: ProximityPrompt): boolean
+local function isPromptOnOwnedPlot(prompt: Instance): boolean
 	local current: Instance? = prompt
 	while current and current.Parent do
 		if current.Parent.Name == "WaitingRoomPlots" then
@@ -198,24 +198,44 @@ local function isPromptOnOwnedPlot(prompt: ProximityPrompt): boolean
 	return true
 end
 
--- Keep prompts that cannot open for this player out of Roblox's OnePerButton selection.
--- Keep Enabled under server control so construction reveals still gate interaction.
+local OWNED_PLOT_PROMPTS: { [string]: boolean } = {
+	FacilityHUDPrompt = true,
+	BlacksmithPrompt = true,
+	SummonAltarPrompt = true,
+	AnvilRollPrompt = true,
+	BuyArtifactPrompt = true,
+}
+
+-- Keep prompts & anvil clicks that cannot open for this player out of Roblox's OnePerButton selection.
+-- Keep Enabled under server control so construction reveals and empty pedestals still gate interaction.
 task.spawn(function()
 	local plots = Workspace:WaitForChild("WaitingRoomPlots")
-	local distances: { [ProximityPrompt]: number } = {}
+	local distances: { [Instance]: number } = {}
 
-	local function update(prompt: Instance)
-		if not prompt:IsA("ProximityPrompt") then return end
-		if prompt.Name ~= "FacilityHUDPrompt" and prompt.Name ~= "BlacksmithPrompt" and prompt.Name ~= "SummonAltarPrompt" then return end
-		if isPromptOnOwnedPlot(prompt) then
-			local distance = distances[prompt]
-			if distance then
-				prompt.MaxActivationDistance = distance
-				distances[prompt] = nil
+	local function update(inst: Instance)
+		if inst:IsA("ProximityPrompt") then
+			if not OWNED_PLOT_PROMPTS[inst.Name] then return end
+			if isPromptOnOwnedPlot(inst) then
+				local distance = distances[inst]
+				if distance then
+					inst.MaxActivationDistance = distance
+					distances[inst] = nil
+				end
+			elseif not distances[inst] then
+				distances[inst] = inst.MaxActivationDistance
+				inst.MaxActivationDistance = 0
 			end
-		elseif not distances[prompt] then
-			distances[prompt] = prompt.MaxActivationDistance
-			prompt.MaxActivationDistance = 0
+		elseif inst:IsA("ClickDetector") and inst.Name == "AnvilClickDetector" then
+			if isPromptOnOwnedPlot(inst) then
+				local distance = distances[inst]
+				if distance then
+					inst.MaxActivationDistance = distance
+					distances[inst] = nil
+				end
+			elseif not distances[inst] then
+				distances[inst] = inst.MaxActivationDistance
+				inst.MaxActivationDistance = 0
+			end
 		end
 	end
 
@@ -231,10 +251,10 @@ task.spawn(function()
 	end
 	plots.DescendantAdded:Connect(update)
 	plots.DescendantRemoving:Connect(function(instance)
-		if instance:IsA("ProximityPrompt") then
+		if instance:IsA("ProximityPrompt") or instance:IsA("ClickDetector") then
 			local distance = distances[instance]
 			if distance then
-				instance.MaxActivationDistance = distance
+				(instance :: any).MaxActivationDistance = distance
 				distances[instance] = nil
 			end
 		end

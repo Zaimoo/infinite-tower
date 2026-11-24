@@ -97,6 +97,27 @@ ShopConfig.Gold = table.freeze({
 	table.freeze({ Id = "gold_1680k", ProductId = 0, RobuxPrice = 199, Label = "Dragon's Hoard", Tag = "BEST VALUE", IncomeMinutes = 168, Grant = { Kind = "Gold", Amount = 1680000 } }),
 } :: { Offer })
 
+export type PassOffer = {
+	Id: string,
+	GamePassId: number,
+	RobuxPrice: number,
+	Label: string,
+	Subtitle: string,
+	Attribute: string,
+}
+
+-- Permanent GamePasses (verified server-side via UserOwnsGamePassAsync + PromptGamePassPurchaseFinished).
+ShopConfig.Passes = table.freeze({
+	ForgeAutoRoll = table.freeze({
+		Id = "pass_forge_autoroll",
+		GamePassId = 0,
+		RobuxPrice = 199,
+		Label = "Forge Auto-Roll",
+		Subtitle = "Auto-reroll Open Forge pedestals until your target rarity appears",
+		Attribute = "OwnsForgeAutoRoll",
+	}),
+} :: { [string]: PassOffer })
+
 -- Premium Battle Pass (GDD §4.9). One purchase per season; the Battle Pass window sells it.
 ShopConfig.Pass = table.freeze({
 	table.freeze({ Id = "pass_premium", ProductId = 0, RobuxPrice = 399, Label = "Premium Pass", Grant = { Kind = "BattlePass", Amount = 1 } }),

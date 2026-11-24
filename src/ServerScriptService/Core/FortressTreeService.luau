@@ -43,6 +43,7 @@ function FortressTreeService.EnsureState(profile: any)
 	if type(profile.FortressTree) ~= "table" or type(profile.FortressTree.Nodes) ~= "table" then
 		profile.FortressTree = FortressTree.DefaultTree()
 	end
+	profile.FortressTree.RollLuckRank = FortressTree.RollLuckRank(profile.FortressTree)
 	-- Default nodes (root, Frontier Camp) are always owned, even on older saves.
 	for _, node in Config.Nodes do
 		if node.Default then
@@ -75,12 +76,25 @@ function FortressTreeService.Unlock(player: Player, nodeId: any): (boolean, stri
 		return false, reason or "Cannot unlock that node."
 	end
 	local node = Config.ById[nodeId :: string]
-	profile.Currencies.Gold -= node.Gold
-	profile.FortressTree.Nodes[node.Id] = true
+	local cost = FortressTree.NodeCost(profile.FortressTree, node.Id)
+	profile.Currencies.Gold -= cost
+	if node.Kind == "REPEATABLE" then
+		profile.FortressTree.RollLuckRank = FortressTree.RollLuckRank(profile.FortressTree) + 1
+	else
+		profile.FortressTree.Nodes[node.Id] = true
+	end
 	FortressTreeService.ApplyLevels(profile)
+
+	if node.Facility == "ForgePedestals" and (_G :: any).ForgeRollService and (_G :: any).ForgeRollService.OnPedestalUnlocked then
+		(_G :: any).ForgeRollService.OnPedestalUnlocked(player)
+	end
 
 	local message = if node.Facility == "Squad"
 		then string.format("%s|Squad slot %d open", node.Name, FortressTree.SquadSlots(profile.FortressTree))
+		elseif node.Facility == "ForgePedestals"
+		then string.format("%s|Forge Pedestal %d unlocked", node.Name, FortressTree.ForgePedestals(profile.FortressTree))
+		elseif node.Facility == "ForgeLuck"
+		then string.format("%s|+%d%% Forge Roll Luck", node.Name, math.round(FortressTree.RollLuck(profile.FortressTree) * 100))
 		elseif node.Facility == Config.StorageFacility
 		then string.format("%s|Holds %d heroes · %d artifacts", node.Name,
 			InventoryCapacity.HeroCap(profile.FortressTree), InventoryCapacity.ArtifactCap(profile.FortressTree))

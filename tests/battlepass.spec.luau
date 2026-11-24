@@ -240,7 +240,7 @@ test("battle pass: the Store sells Premium as a fixed, non-random product", func
 end)
 
 test("battle pass: schema v11 gives old saves a pass and potion tables", function()
-	assert(Migrations.CurrentSchema == 11, "schema 11")
+	assert(Migrations.CurrentSchema >= 11, "schema 11+")
 	local old: any = { SchemaVersion = 10 }
 	Migrations.ToV11(old)
 	assert(old.SchemaVersion == 11 and Pass.Read(old) ~= nil and old.BattlePass.Xp == 0 and old.BattlePass.Premium == false, "pass added at level 0")

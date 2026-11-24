@@ -81,6 +81,8 @@ local BRANCH_COLORS: { [string]: Color3 } = {
 	Divine = Color3.fromRGB(168, 96, 240),
 	Command = Color3.fromRGB(52, 150, 240),
 	Storage = Color3.fromRGB(196, 140, 84),
+	ForgePedestals = Color3.fromRGB(249, 115, 22),
+	ForgeLuck = Color3.fromRGB(251, 191, 36),
 }
 
 local WHITE = Color3.new(1, 1, 1)
@@ -107,6 +109,8 @@ local ICONS: { [string]: string } = {
 	Divine = "Blessing",
 	Command = "Banner",
 	Storage = "Backpack",
+	ForgePedestals = "Forge",
+	ForgeLuck = "Spark",
 	Perk = "Spark",
 }
 
@@ -136,6 +140,10 @@ local LAYOUT: { [string]: { number } } = {
 	sq_1 = { 1, -1 }, sq_2 = { 2, -2 }, sq_3 = { 3, -3 }, sq_4 = { 4, -4 },
 	-- Storage (backpack capacity) runs south-west, between Outskirts and Martial.
 	st_1 = { -1, 1 }, st_2 = { -2, 2 }, st_3 = { -3, 3 }, st_4 = { -4, 4 }, st_5 = { -5, 5 }, st_6 = { -6, 6 },
+	-- ForgePedestals climbs north-west, between Martial and Divine (up to 6 pedestals max).
+	fp_1 = { -1, -1 }, fp_2 = { -2, -2 }, fp_3 = { -3, -3 }, fp_4 = { -4, -4 }, fp_5 = { -5, -5 },
+	-- ForgeLuck runs south-east, between Commerce and Outskirts, ending in uncapped Eternal Stoking.
+	rl_1 = { 1, 1 }, rl_2 = { 2, 2 }, rl_3 = { 3, 3 }, rl_4 = { 4, 4 }, rl_endless = { 5, 5 },
 }
 
 local function hexToPixel(q: number, r: number): Vector2
@@ -764,28 +772,39 @@ end
 function Controller:TooltipFor(nodeId: string): (string, string, string, string, Color3)
 	local entry = self.Nodes[nodeId]
 	local node = entry.Node
+	local profile = self.GetProfile()
+	local tree = profile and profile.FortressTree
 	local branch = if node.Branch == "Root" then "Citadel" else node.Branch
+	local rank = if node.Kind == "REPEATABLE" then FortressTree.RollLuckRank(tree) else 0
 	local kind = if node.Kind == "ROOT" then "FOUNDATION"
+		elseif node.Kind == "REPEATABLE" then string.format("FORGE LUCK · RANK %d (NO MAX)", rank)
 		elseif node.Kind == "PERK" then string.upper(branch) .. " · PERK"
 		elseif node.Facility == "Squad" then string.format("COMMAND · SQUAD SLOT %d", (node.Level or 0) + TreeConfig.BaseSquadSlots)
+		elseif node.Facility == "ForgePedestals" then string.format("PEDESTALS · SLOT %d / %d", (node.Level or 0) + TreeConfig.BaseForgePedestals, TreeConfig.MaxForgePedestals)
 		elseif node.Facility == TreeConfig.StorageFacility then
 			string.format("STORAGE · %s +%d", if (node.Level or 0) % 2 == 1 then "HEROES" else "ARTIFACTS", TreeConfig.StorageStep)
 		else string.format("%s · LEVEL %d", string.upper(branch), node.Level or 0)
+	local body = node.Description
+	if node.Kind == "REPEATABLE" then
+		local curLuck = FortressTree.RollLuck(tree)
+		local nextLuck = curLuck + (node.LuckStep or 0.05)
+		body = string.format("%s\nCurrent: +%d%% → Next: +%d%% Forge Roll Luck", node.Description, math.round(curLuck * 100), math.round(nextLuck * 100))
+	end
+	local cost = FortressTree.NodeCost(tree, nodeId)
 	local footer, color
 	if entry.State == "OWNED" then
 		footer, color = "Built", C.Green
 	elseif entry.State == "AVAILABLE" then
-		local profile = self.GetProfile()
 		local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
-		if gold >= node.Gold then
-			footer, color = string.format("Cost: %s Gold · %s to build", formatGold(node.Gold), if self.LastTouch then "tap again" else "click"), C.Gold
+		if gold >= cost then
+			footer, color = string.format("Cost: %s Gold · %s to %s", formatGold(cost), if self.LastTouch then "tap again" else "click", if node.Kind == "REPEATABLE" then "upgrade" else "build"), C.Gold
 		else
-			footer, color = string.format("Cost: %s Gold (you have %s)", formatGold(node.Gold), formatGold(gold)), C.Red
+			footer, color = string.format("Cost: %s Gold (you have %s)", formatGold(cost), formatGold(gold)), C.Red
 		end
 	else
 		footer, color = "Locked: " .. (entry.Reason or "Locked"), C.Muted
 	end
-	return node.Name, kind, node.Description, footer, color
+	return node.Name, kind, body, footer, color
 end
 
 function Controller:ShowTooltip(nodeId: string)
@@ -952,7 +971,7 @@ function Controller:Refresh()
 		for _, required in node.Requires do
 			if not FortressTree.Owns(tree, required) then prereqsOwned = false break end
 		end
-		local owned = FortressTree.Owns(tree, nodeId)
+		local owned = node.Kind ~= "REPEATABLE" and FortressTree.Owns(tree, nodeId)
 		local _, reason = FortressTree.CanUnlock(tree, nodeId, math.huge, floor, unlocks)
 		local state = if owned then "OWNED"
 			elseif not prereqsOwned then "HIDDEN"
@@ -974,10 +993,11 @@ function Controller:Refresh()
 		local visible = (state ~= "HIDDEN") or (parentState ~= nil and parentState ~= "HIDDEN")
 		entry.Holder.Visible = visible
 
+		local repeatRank = if node.Kind == "REPEATABLE" then FortressTree.RollLuckRank(tree) else 0
 		local edge = self.EdgeTo[nodeId]
 		if edge then
 			edge.Frame.Visible = visible
-			local chainCol = if state == "OWNED" then lighten(entry.Accent, 0.08)
+			local chainCol = if state == "OWNED" or repeatRank > 0 then lighten(entry.Accent, 0.08)
 				elseif state == "AVAILABLE" or state == "GATED" then C.ChainSteel
 				else C.ChainDark
 			edge.Color = chainCol
@@ -1005,8 +1025,10 @@ function Controller:Refresh()
 		else
 			entry.Mark.Visible = false
 			entry.Sheen.Visible = true
-			entry.Title.Text = if node.Kind == "ROOT" then "Citadel" else node.Name
-			entry.Title.TextColor3 = C.Text
+			entry.Title.Text = if node.Kind == "ROOT" then "Citadel"
+				elseif repeatRank > 0 then string.format("%s · Lv.%d", node.Name, repeatRank)
+				else node.Name
+			entry.Title.TextColor3 = if repeatRank > 0 then C.Gold else C.Text
 
 			if node.Kind == "ROOT" or state == "OWNED" then
 				local fillCol = if node.Kind == "ROOT" then C.Root else entry.Accent
@@ -1017,14 +1039,16 @@ function Controller:Refresh()
 				entry.PriceRow.Visible = false
 				self:SetPulse(entry, false)
 			elseif state == "AVAILABLE" then
-				local canAfford = gold >= node.Gold
+				local cost = FortressTree.NodeCost(tree, nodeId)
+				local canAfford = gold >= cost
+				local faceCol = if repeatRank > 0 then C.Locked:Lerp(entry.Accent, 0.58) else C.Locked
 				paint(entry.Rim, C.Ink)
-				paint(entry.Lip, darken(C.Locked, 0.32))
-				paint(entry.Face, C.Locked)
+				paint(entry.Lip, darken(faceCol, 0.32))
+				paint(entry.Face, faceCol)
 				setIcon(entry.Icon, icon)
 				entry.PriceRow.Visible = true
-				entry.Coin.Visible = node.Gold > 0
-				entry.Sub.Text = if node.Gold > 0 then formatShort(node.Gold) else "FREE"
+				entry.Coin.Visible = cost > 0
+				entry.Sub.Text = if cost > 0 then formatShort(cost) else "FREE"
 				entry.Sub.TextColor3 = if canAfford then C.Green else C.Red
 				self:SetPulse(entry, canAfford)
 			else -- GATED
@@ -1076,6 +1100,19 @@ function Controller:Open()
 			tween(entry.Scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, ring * 0.035), { Scale = 1 })
 		end
 	end
+end
+
+function Controller:OpenBranch(branchId: string?)
+	local focusHex: { number }? = if branchId == "ForgePedestals" then LAYOUT.fp_2
+		elseif branchId == "ForgeLuck" then LAYOUT.rl_2
+		else nil
+	if focusHex then
+		local p = hexToPixel(focusHex[1], focusHex[2])
+		self.Pan = -p * (self.Zoom or 1)
+	else
+		self.Pan = Vector2.zero
+	end
+	self:Open()
 end
 
 function Controller:Close()

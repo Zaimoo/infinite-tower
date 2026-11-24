@@ -4,7 +4,7 @@
 -- The only way to unlock and level the support facilities. A facility's level is the number of
 -- LEVEL nodes owned in its branch; PERK nodes hang off level 3 and level 5.
 
-export type NodeKind = "ROOT" | "LEVEL" | "PERK"
+export type NodeKind = "ROOT" | "LEVEL" | "PERK" | "REPEATABLE"
 export type PerkKey =
 	"OfflineMinutes"
 	| "GuardPostRate"
@@ -14,6 +14,7 @@ export type PerkKey =
 	| "TrainingBonus"
 	| "BlessingWorkers"
 	| "BlessingLuck"
+	| "RollLuck"
 
 export type Node = {
 	Id: string,
@@ -24,6 +25,8 @@ export type Node = {
 	Name: string,
 	Description: string,
 	Gold: number,
+	Growth: number?, -- REPEATABLE cost multiplier per rank
+	LuckStep: number?, -- REPEATABLE roll luck added per rank
 	FloorGate: number, -- HighestClearedFloor required
 	Requires: { string },
 	Perk: { Key: PerkKey, Value: number }?,
@@ -44,6 +47,8 @@ FortressTreeConfig.Branches = table.freeze({
 	{ Id = "Divine", Title = "DIVINE", Facility = "GodsBlessing", Color = Color3.fromRGB(255, 226, 150) },
 	{ Id = "Command", Title = "COMMAND", Facility = "Squad", Color = Color3.fromRGB(56, 189, 248) },
 	{ Id = "Storage", Title = "STORAGE", Facility = "Storage", Color = Color3.fromRGB(196, 140, 84) },
+	{ Id = "ForgePedestals", Title = "PEDESTALS", Facility = "ForgePedestals", Color = Color3.fromRGB(249, 115, 22) },
+	{ Id = "ForgeLuck", Title = "FORGE LUCK", Facility = "ForgeLuck", Color = Color3.fromRGB(251, 191, 36) },
 } :: { Branch })
 
 local nodes: { Node } = {
@@ -133,8 +138,46 @@ level("gb", "Divine", "GodsBlessing", 4, "Radiant Halo", 70000, 15, "God's Bless
 level("gb", "Divine", "GodsBlessing", 5, "Seraph Ascendant", 180000, 25, "God's Blessing Lv.5: 3 Acolytes, +32% summon luck.")
 perk("gb_saints_favor", "Divine", "GodsBlessing", "gb_5", "Saint's Favor", 200000, 25, "BlessingLuck", 0.03, "+3% summon luck (still capped at +50%).")
 
+-- ForgePedestals: additional Open Forge display pedestals (starts at 1, up to 6 max).
+level("fp", "ForgePedestals", "ForgePedestals", 1, "Second Plinth", 1500, 0, "Unlocks Open Forge Pedestal 2.", "Forge")
+level("fp", "ForgePedestals", "ForgePedestals", 2, "Third Plinth", 6000, 5, "Unlocks Open Forge Pedestal 3.", "Forge")
+level("fp", "ForgePedestals", "ForgePedestals", 3, "Fourth Plinth", 25000, 15, "Unlocks Open Forge Pedestal 4.", "Forge")
+level("fp", "ForgePedestals", "ForgePedestals", 4, "Fifth Plinth", 90000, 25, "Unlocks Open Forge Pedestal 5.", "Forge")
+level("fp", "ForgePedestals", "ForgePedestals", 5, "Grand Display Arc", 350000, 35, "Unlocks Open Forge Pedestal 6 (maximum).", "Forge")
+
+-- ForgeLuck: dedicated Open Forge Roll Luck branch, independent from Summon Luck and uncapped at the tip.
+table.insert(nodes, {
+	Id = "rl_1", Branch = "ForgeLuck", Facility = "ForgeLuck", Kind = "LEVEL", Level = 1,
+	Name = "Stoked Bellows", Description = "+5% Forge Roll Luck.", Gold = 2000, FloorGate = 0,
+	Requires = { "root" }, Perk = { Key = "RollLuck", Value = 0.05 }, System = "Forge",
+})
+table.insert(nodes, {
+	Id = "rl_2", Branch = "ForgeLuck", Facility = "ForgeLuck", Kind = "LEVEL", Level = 2,
+	Name = "Runed Tuyere", Description = "+10% Forge Roll Luck (+15% total).", Gold = 7500, FloorGate = 5,
+	Requires = { "rl_1" }, Perk = { Key = "RollLuck", Value = 0.10 }, System = "Forge",
+})
+table.insert(nodes, {
+	Id = "rl_3", Branch = "ForgeLuck", Facility = "ForgeLuck", Kind = "LEVEL", Level = 3,
+	Name = "Flux Crucible", Description = "+15% Forge Roll Luck (+30% total).", Gold = 25000, FloorGate = 10,
+	Requires = { "rl_2" }, Perk = { Key = "RollLuck", Value = 0.15 }, System = "Forge",
+})
+table.insert(nodes, {
+	Id = "rl_4", Branch = "ForgeLuck", Facility = "ForgeLuck", Kind = "LEVEL", Level = 4,
+	Name = "Astral Coal", Description = "+20% Forge Roll Luck (+50% total).", Gold = 65000, FloorGate = 20,
+	Requires = { "rl_3" }, Perk = { Key = "RollLuck", Value = 0.20 }, System = "Forge",
+})
+table.insert(nodes, {
+	Id = "rl_endless", Branch = "ForgeLuck", Facility = "ForgeLuck", Kind = "REPEATABLE",
+	Name = "Eternal Stoking", Description = "+5% Forge Roll Luck per rank (no maximum).",
+	Gold = 50000, Growth = 1.22, LuckStep = 0.05, FloorGate = 20,
+	Requires = { "rl_4" }, System = "Forge",
+})
+
 local byId: { [string]: Node } = {}
 for _, node in nodes do
+	if node.Perk then
+		table.freeze(node.Perk)
+	end
 	table.freeze(node.Requires)
 	table.freeze(node)
 	byId[node.Id] = node
@@ -146,6 +189,11 @@ FortressTreeConfig.ById = table.freeze(byId)
 -- One squad slot is always open; the Command branch adds the rest.
 FortressTreeConfig.BaseSquadSlots = 1
 FortressTreeConfig.MaxSquadSlots = 5
+
+-- Open Forge pedestals: every Master starts with 1 pedestal; ForgePedestals branch unlocks up to 6 max.
+FortressTreeConfig.BaseForgePedestals = 1
+FortressTreeConfig.MaxForgePedestals = 6
+FortressTreeConfig.EndlessLuckNodeId = "rl_endless"
 
 -- Storage branch: each LEVEL node adds this many slots to the hero or artifact cap.
 FortressTreeConfig.StorageFacility = "Storage"
