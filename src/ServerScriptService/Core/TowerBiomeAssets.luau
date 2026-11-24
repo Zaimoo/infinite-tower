@@ -14,6 +14,7 @@ local ThunderSetPieces = require(script.Parent.TowerSetPieces.ThunderHighlands)
 local ThunderFloor27 = require(script.Parent.TowerSetPieces.ThunderFloor27)
 local ThunderFloor28 = require(script.Parent.TowerSetPieces.ThunderFloor28)
 local ThunderFloor29 = require(script.Parent.TowerSetPieces.ThunderFloor29)
+local ThunderFloor30 = require(script.Parent.TowerSetPieces.ThunderFloor30)
 local InfernalFloor24 = require(script.Parent.TowerSetPieces.InfernalFloor24)
 local InfernalFloor25 = require(script.Parent.TowerSetPieces.InfernalFloor25)
 local CorruptedSetPieces = require(script.Parent.TowerSetPieces.CorruptedGrove)
@@ -6482,6 +6483,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "thunder:2" then ThunderFloor27.Build
 		elseif layout.Authored == "thunder:3" then ThunderFloor28.Build
 		elseif layout.Authored == "thunder:4" then ThunderFloor29.Build
+		elseif layout.Authored == "thunder:5" then ThunderFloor30.Build
 		elseif layout.Authored == "corrupted:1" then CorruptedSetPieces.Floor31
 		elseif layout.Authored == "corrupted:2" then CorruptedFloor32.Build
 		elseif layout.Authored == "corrupted:3" then CorruptedFloor33.Build
@@ -6537,8 +6539,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
-	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or layout.Authored == "thunder:3" or layout.Authored == "thunder:4" or corruptedFloor then
-		-- Floors 16-25, 28-29 and 31-35 own their north horizon backdrops directly (Floors 21-25, 28-29, 31-35: TowerSetPieces).
+	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or layout.Authored == "thunder:3" or layout.Authored == "thunder:4" or layout.Authored == "thunder:5" or corruptedFloor then
+		-- Floors 16-25, 28-30 and 31-35 own their north horizon backdrops directly (Floors 21-25, 28-35: TowerSetPieces).
 	else
 		-- Authored Fungal floors have their own backdrop: the cavern wall itself (Floor 6's Crown Cluster grows on it).
 		for _, s in if fungalFloor then {} else { -1, 1 } do
@@ -7745,7 +7747,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 		-- Plateau rims: understory and boulders just inside each terrace's edge (never on a walkway or in a camp).
 		for id, t in layout.Platforms do
-			if id == "Sanctuary" then continue end
+			if id == "Sanctuary" or (id == "Apex" and layout.Authored == "thunder:5") then continue end
 			for _ = 1, math.floor((t.Width + t.Depth) / 40) do
 				local side = rand:NextInteger(1, 4)
 				local along = rand:NextNumber(-0.45, 0.45)

@@ -460,6 +460,16 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(220, 214, 250), Saturation = 0.1, Contrast = 0.22, ExposureCompensation = -0.02, BloomIntensity = 0.62,
 		SunRaysIntensity = 0.06, SunRaysSpread = 0.36,
 	},
+	-- Floor 30, Roc's Eyrie: Eye of the Maelstrom. A luminous lilac-white storm-eye column pouring down from the
+	-- open supercell onto the elevated wet-slate Eyrie dais, with deep violet-indigo shadow fill, swirling silver-
+	-- violet cloud bounce from the Cloud Eye below, and crisp contrast so the 206-stud Shattered Sky-Spire,
+	-- copper Lightning Crown arches and the Storm Roc's telegraphs all pop.
+	[30] = {
+		Ambient = c(64, 62, 98), OutdoorAmbient = c(108, 106, 156), ColorShift_Top = c(216, 214, 255), ColorShift_Bottom = c(186, 162, 238),
+		AtmosphereDensity = 0.27, AtmosphereColor = c(146, 138, 194), AtmosphereDecay = c(84, 76, 136), AtmosphereHaze = 1.15,
+		TintColor = c(232, 230, 255), Saturation = 0.08, Contrast = 0.2, ExposureCompensation = 0.04, BloomIntensity = 0.64,
+		SunRaysIntensity = 0.1, SunRaysSpread = 0.45,
+	},
 	-- Floor 31, Blighted Verge: a sickly gold late afternoon. Warm low light over the autumn bank, the magenta
 	-- murk of the biome thinned to a rose haze that thickens toward the rotten north-east; the least murky
 	-- Corrupted floor.
