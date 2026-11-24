@@ -15,6 +15,7 @@ local RING_TAG = "SunkenMaelstromRing"
 local SWIMMER_TAG = "SunkenDomeSwimmer"
 local SPRAY_TAG = "MaelstromSprayEmitter"
 local ACTIVE_DISTANCE = 1400
+local TAU = math.pi * 2
 
 type RingState = {
 	Model: Model,
@@ -237,10 +238,12 @@ RunService.Heartbeat:Connect(function()
 		end
 		local baseCF = st.BaseCF :: CFrame
 		if (baseCF.Position - camPos).Magnitude <= ACTIVE_DISTANCE then
-			local spinAngle = -t * st.Speed
-			local bobY = math.sin(t * st.BobFreq + st.Phase) * st.BobAmp
-			local wobX = if st.WobbleAmp > 0 then math.cos(t * 0.9 + st.Phase) * st.WobbleAmp else 0
-			local wobZ = if st.WobbleAmp > 0 then math.sin(t * 0.75 + st.Phase) * st.WobbleAmp else 0
+			-- Wrap angles modulo 2*pi in Luau float64 before passing to CFrame.Angles (which casts to float32,
+			-- where raw Unix timestamps ~1.8e9 lose sub-radian precision and freeze rotation completely).
+			local spinAngle = -((t * st.Speed) % TAU)
+			local bobY = math.sin((t * st.BobFreq + st.Phase) % TAU) * st.BobAmp
+			local wobX = if st.WobbleAmp > 0 then math.cos((t * 0.9 + st.Phase) % TAU) * st.WobbleAmp else 0
+			local wobZ = if st.WobbleAmp > 0 then math.sin((t * 0.75 + st.Phase) % TAU) * st.WobbleAmp else 0
 			local targetCF = baseCF * CFrame.new(wobX, bobY, wobZ) * CFrame.Angles(0, spinAngle, 0)
 			for part, relCF in st.Parts do
 				if part.Parent then
@@ -274,9 +277,9 @@ RunService.Heartbeat:Connect(function()
 		local cx, cz, rad, oy = sw.CenterX :: number, sw.CenterZ :: number, sw.Radius :: number, sw.OrbitY :: number
 		local center = Vector3.new(cx, oy, cz)
 		if (center - camPos).Magnitude <= ACTIVE_DISTANCE then
-			local ang = sw.Phase + t * sw.Speed
+			local ang = (sw.Phase + t * sw.Speed) % TAU
 			local nextAng = ang + (if sw.Speed >= 0 then 0.04 else -0.04)
-			local bob = math.sin(t * 0.45 + sw.Phase) * 4.5
+			local bob = math.sin((t * 0.45 + sw.Phase) % TAU) * 4.5
 			local pos = Vector3.new(cx + math.cos(ang) * rad, oy + bob, cz + math.sin(ang) * rad)
 			local ahead = Vector3.new(cx + math.cos(nextAng) * rad, oy + bob, cz + math.sin(nextAng) * rad)
 			model:PivotTo(CFrame.lookAt(pos, ahead))
