@@ -2164,7 +2164,7 @@ function Builder.Build(id: number, generation: number): any
 					local plank = decor(model, "BridgePlankSleeper", Vector3.new(link.Width + 0.6, 0.14, 2.6), at, if i % 2 == 0 then bridgeWoodA else bridgeWoodB, Enum.Material.Wood)
 					plank.CFrame = CFrame.lookAt(at, at + (stoneB - stoneA)) * CFrame.new(0, 0.06 + (i % 2) * 0.015, 0)
 				end
-			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "KAIRN_CAUSEWAY" then
+			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "KAIRN_CAUSEWAY" and not (layout.Skybridges and layout.Skybridges[link.Id]) then
 				-- Thunder Highlands dry-stone causeway: a slate deck carried on coursed dry-stone walling down into
 				-- the moor (sections tilted with the deck, so no daylight shows under it), culvert arches where it
 				-- stands tall, and slate flags laid askew along its spine.
@@ -2201,7 +2201,7 @@ function Builder.Build(id: number, generation: number): any
 					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.12, 3.4), at, if i % 2 == 0 then kairnGranite else kairnSlateDark, Enum.Material.Slate)
 					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.08 + (i % 3) * 0.02, 0) * CFrame.Angles(0, math.rad(((i * 21) % 16) - 8), 0)
 				end
-			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "KAIRN_SKYBRIDGE" then
+			elseif isSuspendedLink(layout, link.Id) and (bridgeKind == "KAIRN_SKYBRIDGE" or (bridgeKind == "KAIRN_CAUSEWAY" and layout.Skybridges ~= nil and layout.Skybridges[link.Id] == true)) then
 				-- Floor 28 Kairnfolk skybridge: a plank deck on two timber stringers, twin dry-stone pylons banded
 				-- in copper at both bridgeheads, braided copper main cables sagging between their heads, and hemp
 				-- hangers down to the hand ropes. The deck itself stays straight (the walking surface); the sag is
@@ -2662,7 +2662,7 @@ function Builder.Build(id: number, generation: number): any
 							local post = decor(curbGroup, "BridgeRailPost", Vector3.new(1.1, 3.6, 1.1), pt, bridgeWood, Enum.Material.Wood)
 							post.CFrame = CFrame.lookAt(pt, b + curbOffset) * CFrame.new(0, 1.65, 0)
 						end
-					elseif curbMode == "SKYBRIDGE_ROPE" then
+					elseif curbMode == "SKYBRIDGE_ROPE" or (curbMode == "KAIRN_WALL" and layout.Skybridges ~= nil and layout.Skybridges[link.Id] == true) then
 						-- A skybridge's side: an unseen collider for the railing, a timber kickboard along the deck edge,
 						-- hemp hand ropes on timber posts.
 						curb.Size = Vector3.new(1.2, 3.8, curbLen)
@@ -2685,9 +2685,11 @@ function Builder.Build(id: number, generation: number): any
 					elseif curbMode == "KAIRN_WALL" then
 						-- A coped dry-stone parapet: a low coursed wall, through-stones standing proud every few
 						-- studs, and copper-banded bollards at both ends where the causeway meets the ground.
+						-- Links in layout.CopperCoping (Floor 30's Storm Eye Pulpit causeway) cap the wall in hammered copper.
+						local copperTop = layout.CopperCoping ~= nil and layout.CopperCoping[link.Id] == true
 						curb.Size = Vector3.new(2.0, 2.4, curbLen)
 						curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 0.1, 0)
-						local coping = decor(curbGroup, "KairnParapetCoping", Vector3.new(2.5, 0.5, math.max(1, curbLen - 0.6)), mid + curbOffset, kairnGranite, Enum.Material.Slate)
+						local coping = decor(curbGroup, "KairnParapetCoping", Vector3.new(if copperTop then 2.6 else 2.5, if copperTop then 0.65 else 0.5, math.max(1, curbLen - 0.6)), mid + curbOffset, if copperTop then kairnCopper else kairnGranite, if copperTop then Enum.Material.Metal else Enum.Material.Slate)
 						coping.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 1.5, 0)
 						local throughs = math.max(1, math.floor(curbLen / 9))
 						for tIdx = 1, throughs do

@@ -2064,6 +2064,152 @@ local AUTHORED: {[number]: any} = {
 			Apex = "Tempest Redoubt",
 		},
 	},
+	-- Floor 30, Roc's Eyrie (Thunder Highlands Boss Arena; guide image reference/Thunder Highlands 30.jpg): the
+	-- summit caldera at the roof of the Thunder Highlands, wrapped as a Twin-Wing Caldera Amphitheatre around an
+	-- open central Cloud-Eye vortex (Bottom = -8). From the Thunderhead Threshold (Basin), the Eye-Rim Overlook
+	-- projects a copper-coped causeway straight out to the cantilevered circular Storm Eye Pulpit over the clouds
+	-- (no path crosses the Cloud Eye to the summit). The West Wing climbs via rope-and-copper suspension skybridges
+	-- past colossal shed Roc feathers, a cliff watchtower and wind-harps; the East Wing climbs via crenellated
+	-- dry-stone causeways beside roaring cliff waterfalls and the highland observatory; twin grand slate stairs
+	-- ascend from both Aerie Landings into the 180 x 132 Y 56 Roc's Eyrie boss dais, ringed by the Woven Great
+	-- Nest Rim and backed by the 206-stud Shattered Sky-Spire & Lightning Crown. 16 terraces, 19 links, 15 walk heights.
+	[30] = {
+		Key = "thunder:5",
+		Name = "Roc's Eyrie",
+		Size = { Width = 795, Depth = 795, Height = 290, Bottom = -8 },
+		PathStyle = "KAIRN",
+		DirectTerrain = true,
+		Surface = "KAIRN",
+		Masonry = "KAIRN_STONE",
+		-- Off-grid platforms (Y 10, 14, 18, 22, 34, 46), the cantilevered Storm Eye Pulpit (Y 16) and the flat
+		-- wet-slate 180 x 132 Roc's Eyrie boss dais (Y 56).
+		Decks = {
+			EastGallery = true,
+			WestPerch = true,
+			EyePulpit = true,
+			EastPerch = true,
+			EastPinion = true,
+			EastBastion = true,
+			EastAerie = true,
+			Apex = true,
+		},
+		-- Every chasm span and every link touching a built deck (solid visible skybridges, causeways and stairs).
+		Suspended = {
+			Links = {
+				Basin_Crossing = true,
+				Basin_EastGallery = true,
+				Crossing_EyePulpit = true,
+				Crossing_WestPinion = true,
+				Crossing_EastPinion = true,
+				WestGallery_Crossing = true,
+				WestGallery_WestPerch = true,
+				EastGallery_EastPerch = true,
+				WestGallery_WestPinion = true,
+				EastGallery_EastPinion = true,
+				WestPinion_WestBastion = true,
+				EastPinion_EastBastion = true,
+				WestBastion_WestCrown = true,
+				WestBastion_WestAerie = true,
+				EastBastion_EastAerie = true,
+				WestAerie_Apex = true,
+				EastAerie_Apex = true,
+			},
+		},
+		-- West Wing chasm crossings render as Kairnfolk rope-and-copper suspension skybridges (TowerRoomBuilder).
+		Skybridges = {
+			Crossing_WestPinion = true,
+			WestGallery_WestPerch = true,
+			WestGallery_WestPinion = true,
+			WestPinion_WestBastion = true,
+			WestBastion_WestCrown = true,
+			WestBastion_WestAerie = true,
+		},
+		-- Hammered-copper parapet coping along the causeway out to the Storm Eye Pulpit.
+		CopperCoping = {
+			Crossing_EyePulpit = true,
+		},
+		-- Bare wet slate beneath the swirling cloud-eye vortex (no swimming water).
+		Liquid = { Dry = true },
+		-- Boss portals spread wide on the 180-stud Eyrie dais so the 205-stud Shattered Sky-Spire frames them.
+		Portals = { Spread = 66 },
+		TerrainFeatures = {
+			-- Wide north mountain alcove leaving room for the Shattered Sky-Spire & Lightning Crown behind Apex.
+			{ Kind = "APEX_ALCOVE", Width = 152, Feather = 32 },
+			-- Hollow central Cloud-Eye abyss beneath the Storm Eye Pulpit and Twin-Wing amphitheatre.
+			{ Kind = "CLOUD_EYE", X = 0, Z = -108, RX = 185, RZ = 150 },
+			-- Sheer rock aprons under every crag terrace so the caldera drops cleanly into the cloud sea.
+			{ Kind = "SEA_STACK_APRON", Steep = 2.6 },
+			-- Blasted fulgurite lightning scar beside the western caldera cliffs.
+			{ Kind = "LIGHTNING_SCAR", X = -268, Z = -196, Radius = 24, Rim = 5 },
+		},
+		Basin = { X = 0, Y = 0, Z = 232, Width = 665, Depth = 108 },
+		Crossing = { X = 0, Y = 12, Z = 98, Width = 86, Depth = 64 },
+		WestGallery = { X = -208, Y = 8, Z = 92, Width = 92, Depth = 80 },
+		EastGallery = { X = 208, Y = 10, Z = 92, Width = 92, Depth = 80 },
+		WestBastion = { X = -194, Y = 32, Z = -140, Width = 92, Depth = 82 },
+		EastBastion = { X = 194, Y = 34, Z = -140, Width = 92, Depth = 82 },
+		ExtraPlatforms = {
+			EyePulpit = { X = 0, Y = 16, Z = -16, Width = 64, Depth = 54 },
+			WestPerch = { X = -322, Y = 14, Z = -14, Width = 62, Depth = 54 },
+			EastPerch = { X = 322, Y = 18, Z = -14, Width = 62, Depth = 54 },
+			WestPinion = { X = -148, Y = 20, Z = -22, Width = 72, Depth = 58 },
+			EastPinion = { X = 148, Y = 22, Z = -22, Width = 72, Depth = 58 },
+			WestCrown = { X = -316, Y = 40, Z = -266, Width = 64, Depth = 56 },
+			WestAerie = { X = -182, Y = 44, Z = -262, Width = 72, Depth = 58 },
+			EastAerie = { X = 182, Y = 46, Z = -262, Width = 72, Depth = 58 },
+		},
+		Apex = { X = 0, Y = 56, Z = -298, Width = 180, Depth = 132 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "Crossing" },
+			{ "Basin", "EastGallery" },
+			{ "Crossing", "EyePulpit" },
+			{ "Crossing", "WestPinion" },
+			{ "Crossing", "EastPinion" },
+			{ "WestGallery", "Crossing" },
+			{ "WestGallery", "WestPerch" },
+			{ "EastGallery", "EastPerch" },
+			{ "WestGallery", "WestPinion" },
+			{ "EastGallery", "EastPinion" },
+			{ "WestPinion", "WestBastion" },
+			{ "EastPinion", "EastBastion" },
+			{ "WestBastion", "WestCrown" },
+			{ "WestBastion", "WestAerie" },
+			{ "EastBastion", "EastAerie" },
+			{ "WestAerie", "Apex" },
+			{ "EastAerie", "Apex" },
+		},
+		Stairs = {
+			WestAerie_Apex = true,
+			EastAerie_Apex = true,
+		},
+		Patrols = {
+			WEST_WING = { "WestGallery", "WestPinion", "WestBastion", "WestAerie" },
+			EAST_WING = { "EastGallery", "EastPinion", "EastBastion", "EastAerie" },
+			EYE_CHORD = { "WestPinion", "Crossing", "EastPinion" },
+			EYRIE_CROWN = { "WestAerie", "Apex", "EastAerie" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Eyrie Approach",
+			Basin = "Thunderhead Threshold",
+			Crossing = "Eye-Rim Overlook",
+			EyePulpit = "Storm Eye Pulpit",
+			WestGallery = "West Feather Shelf",
+			EastGallery = "East Feather Shelf",
+			WestPerch = "West Talon Perch",
+			EastPerch = "East Talon Perch",
+			WestPinion = "West Pinion Crag",
+			EastPinion = "East Pinion Crag",
+			WestBastion = "West Gale Bastion",
+			EastBastion = "East Gale Bastion",
+			WestCrown = "Shattered Crown Spire",
+			WestAerie = "West Aerie Landing",
+			EastAerie = "East Aerie Landing",
+			Apex = "Roc's Eyrie",
+		},
+	},
 	-- Floor 31, Blighted Verge (Corrupted Grove Introduction; docs/prompts/corrupted-grove-floor-layouts-prompt.md):
 	-- the edge of the grove, where the Hollin grove-wardens still held the line. A blight-brook rises at the
 	-- Heartrot Spring in the north-east corner and meanders west-south-west to a sinkhole in the west wall,
@@ -2985,6 +3131,7 @@ local function build(index: number, v: any?): any
 		ReplacePatrols=v ~= nil and v.ReplacePatrols == true, Surface=v and v.Surface or nil,
 		Terrain=v and v.Terrain or nil, Skylight=v and v.Skylight or nil, Portals=v and v.Portals or nil,
 		GirderSpans=v and v.GirderSpans or nil, StonePiers=v and v.StonePiers or nil, Viaducts=v and v.Viaducts or nil,
+		Skybridges=v and v.Skybridges or nil, CopperCoping=v and v.CopperCoping or nil,
 		Fords=v and v.Fords or nil}
 end
 
