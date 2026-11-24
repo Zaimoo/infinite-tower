@@ -337,6 +337,20 @@ test("Floor 35 has its own Sovereign's Grove kit: at least twelve new templates 
 	end
 end)
 
+test("Floor 39 has its own Pearlguard Vault kit: at least twelve new templates and a 195+ stud Pearl Vault Dome", function()
+	local f39 = {
+		"PearlVaultDome", "ColossalClam", "SeaWallSegment", "DrownedGateWall", "CoralGateTower",
+		"TideArmillaryTower", "PortcullisGatehouse", "MuffledBellStack", "OysterRack", "DivingBell",
+		"PearlguardGalley", "CoralWardenStatue", "ShellAwningStall", "HarbourCrane", "CoralCageReliquary",
+	}
+	for _, name in f39 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 39 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f39 >= 12)
+	assert(Kit.ExtraTemplates.PearlVaultDome.Size.Y >= 195, "PearlVaultDome must clear the ladder's 195 studs")
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -454,6 +468,8 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	local g29 = Light.FloorGrades[29]
 	assert(lum(g29.OutdoorAmbient) < lum(g28.OutdoorAmbient) and g29.AtmosphereHaze > g28.AtmosphereHaze and g29.BloomIntensity > g28.BloomIntensity,
 		"floor 29's dusk is darker, hazier and blooms harder than floor 28's afternoon")
+	assert(Light.FloorGrades[39] ~= nil, "floor 39 (Pearlguard Vault) has its deep blue twilight grade")
+	assert(Light.FloorGrades[39].AtmosphereHaze >= 0.9 and Light.FloorGrades[39].BloomIntensity >= 0.48, "floor 39 keeps twilight haze and pearl-vault bloom")
 	assert(Light.TowerPreset(6, 30) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400

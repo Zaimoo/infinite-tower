@@ -90,6 +90,13 @@ local Surfaces: { [string]: Surface } = {
 	-- material colours so no other biome changes.
 	BLIGHT = { Trail = M.Cobblestone, Walk = M.Concrete, WalkAccent = M.Basalt, Bank = M.Pavement,
 		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Asphalt, Lush = M.Pavement },
+	-- Sunken Sanctuary deep-ward floors (38–40): wet dark earth and sea-moss walkways, dark slate banks,
+	-- blackened basalt cliffs and dark basalt channel/lock beds so the storm-tide water reads deep grey-teal
+	-- and glowing aqua runes pop. Walk, Trail and WalkAccent stay on zero-noise flat terrain materials
+	-- (Ground and LeafyGrass — never bumpy Rock/Slate/Basalt) so every terrace and ramp renders flush with
+	-- its walking plane. Shared materials only, none blocky or Fungal-owned.
+	DEEPWARD = { Trail = M.Ground, Walk = M.Ground, WalkAccent = M.LeafyGrass, Bank = M.Slate,
+		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.LeafyGrass },
 }
 TowerTerrain.Surfaces = Surfaces
 
@@ -398,10 +405,13 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			end
 		end
 		if edge < band then
+			local northScale = if td and td.WallBand and td.WallBand.NorthScale and z < 0
+				then 1 - (1 - td.WallBand.NorthScale) * math.clamp(((w / 2 - math.abs(x)) - (d / 2 + z)) / 40, 0, 1)
+				else 1
 			local t = 1 - math.max(edge, 0) / band
 			-- Ridged noise breaks the slopes into spurs and gullies instead of smooth pyramids.
 			local ridge = 1 - math.abs(fbm(x / 34, z / 34, seed + 17, 3)) * 2
-			local rise = (h + 40 - bottom) * t ^ 1.35 * (0.7 + 0.18 * fbm(x / 40, z / 40, seed + 11, 2) + 0.22 * ridge)
+			local rise = (h + 40 - bottom) * northScale * t ^ 1.35 * (0.7 + 0.18 * fbm(x / 40, z / 40, seed + 11, 2) + 0.22 * ridge)
 			local ledge = 9 + 3 * fbm(x / 60, z / 60, seed + 13, 1)
 			rise -= (rise % ledge) * 0.55
 			if bottom + rise > base then

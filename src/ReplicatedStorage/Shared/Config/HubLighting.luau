@@ -500,6 +500,15 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(234, 210, 255), Saturation = 0.16, Contrast = 0.14, ExposureCompensation = 0.05, BloomIntensity = 0.60,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.62,
 	},
+	-- Floor 39, Pearlguard Vault: deep blue coastal twilight lit by warm pearl-white glow spilling from the
+	-- Pearl Vault conservatory dome. Cool silver-blue atmosphere keeps the fortified sea-walls, harbour water
+	-- and red/orange combat telegraphs crisp while the vault dome shines as the brightest point on the floor.
+	[39] = {
+		Ambient = c(56, 72, 102), OutdoorAmbient = c(96, 116, 152), ColorShift_Top = c(170, 196, 252), ColorShift_Bottom = c(44, 72, 98),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(108, 134, 166), AtmosphereDecay = c(62, 82, 116), AtmosphereHaze = 1.05,
+		TintColor = c(226, 236, 252), Saturation = 0.08, Contrast = 0.15, ExposureCompensation = 0.02, BloomIntensity = 0.52,
+		SunRaysIntensity = 0.10, SunRaysSpread = 0.48,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

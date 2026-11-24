@@ -436,6 +436,22 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	StormkeepRoundTower = table.freeze({ Size = Vector3.new(20.78, 44.8, 20.6), Min = Vector3.new(-10.402, -0.4, -10.3), Roles = table.freeze({ "ACCENT", "ALT", "METAL", "MOSS", "STONE", "TRIM" }) }),
 	ThunderRamStable = table.freeze({ Size = Vector3.new(22.139, 13.103, 12.954), Min = Vector3.new(-11.139, -0.06, -6.177), Roles = table.freeze({ "ALT", "METAL", "STONE", "TRIM", "WOOD" }) }),
 	WarBannerPole = table.freeze({ Size = Vector3.new(5.2, 18.6, 3.875), Min = Vector3.new(-2.6, -0.2, -1.953), Roles = table.freeze({ "ACCENT", "ALT", "METAL", "STONE", "TRIM", "WOOD" }) }),
+	-- Sunken Sanctuary Floor 39 (Pearlguard Vault, sunken_f39_kit)
+	ColossalClam = table.freeze({ Size = Vector3.new(44.772, 33.285, 41.0), Min = Vector3.new(-22.386, 0.0, -20.5), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "GOLD", "TRIM" }) }),
+	CoralCageReliquary = table.freeze({ Size = Vector3.new(15.125, 18.0, 15.909), Min = Vector3.new(-9.029, 0.0, -7.412), Roles = table.freeze({ "ACCENT", "CORAL", "CRYSTAL", "GLOW", "GOLD", "STONE", "TRIM" }) }),
+	CoralGateTower = table.freeze({ Size = Vector3.new(42.419, 84.0, 31.858), Min = Vector3.new(-20.229, 0.0, -14.434), Roles = table.freeze({ "ACCENT", "CORAL", "GLOW", "GOLD", "SILK", "STONE", "TRIM" }) }),
+	CoralWardenStatue = table.freeze({ Size = Vector3.new(22.358, 31.176, 12.4), Min = Vector3.new(-10.965, 0.0, -6.2), Roles = table.freeze({ "ACCENT", "CORAL", "GLOW", "GOLD", "METAL", "STONE", "TRIM" }) }),
+	DivingBell = table.freeze({ Size = Vector3.new(11.718, 14.45, 9.6), Min = Vector3.new(-5.859, 0.0, -4.8), Roles = table.freeze({ "ACCENT", "ALT", "CANDLE", "GOLD", "METAL", "WOOD" }) }),
+	DrownedGateWall = table.freeze({ Size = Vector3.new(64.0, 48.15, 15.515), Min = Vector3.new(-32.0, 0.0, -6.3), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "MOSS", "SILK", "STONE", "TRIM" }) }),
+	HarbourCrane = table.freeze({ Size = Vector3.new(11.723, 26.297, 20.635), Min = Vector3.new(-5.862, 0.0, -5.635), Roles = table.freeze({ "ACCENT", "ALT", "GOLD", "METAL", "STONE", "WOOD" }) }),
+	MuffledBellStack = table.freeze({ Size = Vector3.new(21.311, 9.619, 8.8), Min = Vector3.new(-10.654, 0.0, -4.4), Roles = table.freeze({ "ACCENT", "METAL", "SILK", "STONE", "WOOD" }) }),
+	OysterRack = table.freeze({ Size = Vector3.new(17.2, 6.926, 8.571), Min = Vector3.new(-8.6, 0.0, -4.25), Roles = table.freeze({ "ALT", "GLOW", "MOSS", "TRIM", "WOOD" }) }),
+	PearlVaultDome = table.freeze({ Size = Vector3.new(145.286, 218.0, 40.536), Min = Vector3.new(-72.643, 0.0, -24.8), Roles = table.freeze({ "ACCENT", "CANDLE", "CORAL", "CRYSTAL", "GOLD", "STONE", "TRIM" }) }),
+	PearlguardGalley = table.freeze({ Size = Vector3.new(51.424, 33.5, 16.276), Min = Vector3.new(-30.024, 0.0, -7.949), Roles = table.freeze({ "ACCENT", "ALT", "GOLD", "MOSS", "SILK", "WOOD" }) }),
+	PortcullisGatehouse = table.freeze({ Size = Vector3.new(56.8, 46.21, 18.3), Min = Vector3.new(-28.4, 0.0, -7.9), Roles = table.freeze({ "CANDLE", "GOLD", "METAL", "SILK", "STONE", "TRIM" }) }),
+	SeaWallSegment = table.freeze({ Size = Vector3.new(44.88, 38.8, 12.2), Min = Vector3.new(-22.68, 0.0, -5.5), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "MOSS", "SILK", "STONE", "TRIM" }) }),
+	ShellAwningStall = table.freeze({ Size = Vector3.new(15.45, 12.003, 10.537), Min = Vector3.new(-7.725, 0.0, -5.135), Roles = table.freeze({ "ALT", "CANDLE", "GLOW", "GOLD", "SILK", "WOOD" }) }),
+	TideArmillaryTower = table.freeze({ Size = Vector3.new(24.2, 91.0, 24.2), Min = Vector3.new(-12.1, 0.0, -12.1), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "METAL", "SILK", "STONE", "TRIM" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -698,6 +714,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	TreehouseKeep = true, ShelfFungusBracket = true, StakePalisadeSegment = true, StiltHut = true, WeepingGallowsTree = true, BranchBridgeHanger = true,
 	MotherGraftTrunk = true, MotherGraftLimbOak = true, MotherGraftLimbPine = true, MotherGraftLimbFruit = true,
 	RootRidgeSegment = true, RootKneeJunction = true, LastWardenGraft = true, FallenCrownBranch = true, HeartrotGeode = true, ThornCagedSeed = true, WardenRootShrine = true,
+	PearlVaultDome = true, ColossalClam = true, SeaWallSegment = true, DrownedGateWall = true, CoralGateTower = true, TideArmillaryTower = true, PortcullisGatehouse = true, PearlguardGalley = true, CoralWardenStatue = true, HarbourCrane = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit

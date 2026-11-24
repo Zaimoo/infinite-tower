@@ -1,0 +1,325 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "ColossalClam": {
+      "Min": [
+        -22.386,
+        0.0,
+        -20.5
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "ALT": 264,
+        "GLOW": 168,
+        "GOLD": 456,
+        "TRIM": 44
+      },
+      "Size": [
+        44.772,
+        33.285,
+        41.0
+      ],
+      "Triangles": 976
+    },
+    "CoralCageReliquary": {
+      "Min": [
+        -9.029,
+        0.0,
+        -7.412
+      ],
+      "Roles": {
+        "ACCENT": 120,
+        "CORAL": 900,
+        "CRYSTAL": 80,
+        "GLOW": 120,
+        "GOLD": 260,
+        "STONE": 28,
+        "TRIM": 28
+      },
+      "Size": [
+        15.125,
+        18.0,
+        15.909
+      ],
+      "Triangles": 1536
+    },
+    "CoralGateTower": {
+      "Min": [
+        -20.229,
+        0.0,
+        -14.434
+      ],
+      "Roles": {
+        "ACCENT": 420,
+        "CORAL": 1000,
+        "GLOW": 28,
+        "GOLD": 468,
+        "SILK": 24,
+        "STONE": 146,
+        "TRIM": 56
+      },
+      "Size": [
+        42.419,
+        84.0,
+        31.858
+      ],
+      "Triangles": 2142
+    },
+    "CoralWardenStatue": {
+      "Min": [
+        -10.965,
+        0.0,
+        -6.2
+      ],
+      "Roles": {
+        "ACCENT": 90,
+        "CORAL": 500,
+        "GLOW": 36,
+        "GOLD": 216,
+        "METAL": 20,
+        "STONE": 168,
+        "TRIM": 40
+      },
+      "Size": [
+        22.358,
+        31.176,
+        12.4
+      ],
+      "Triangles": 1070
+    },
+    "DivingBell": {
+      "Min": [
+        -5.859,
+        0.0,
+        -4.8
+      ],
+      "Roles": {
+        "ACCENT": 138,
+        "ALT": 300,
+        "CANDLE": 56,
+        "GOLD": 380,
+        "METAL": 32,
+        "WOOD": 48
+      },
+      "Size": [
+        11.718,
+        14.45,
+        9.6
+      ],
+      "Triangles": 954
+    },
+    "DrownedGateWall": {
+      "Min": [
+        -32.0,
+        0.0,
+        -6.3
+      ],
+      "Roles": {
+        "ACCENT": 108,
+        "GLOW": 48,
+        "GOLD": 236,
+        "MOSS": 100,
+        "SILK": 24,
+        "STONE": 120,
+        "TRIM": 860
+      },
+      "Size": [
+        64.0,
+        48.15,
+        15.515
+      ],
+      "Triangles": 1496
+    },
+    "HarbourCrane": {
+      "Min": [
+        -5.862,
+        0.0,
+        -5.635
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "ALT": 12,
+        "GOLD": 100,
+        "METAL": 32,
+        "STONE": 12,
+        "WOOD": 84
+      },
+      "Size": [
+        11.723,
+        26.297,
+        20.635
+      ],
+      "Triangles": 252
+    },
+    "MuffledBellStack": {
+      "Min": [
+        -10.654,
+        0.0,
+        -4.4
+      ],
+      "Roles": {
+        "ACCENT": 354,
+        "METAL": 12,
+        "SILK": 276,
+        "STONE": 40,
+        "WOOD": 700
+      },
+      "Size": [
+        21.311,
+        9.619,
+        8.8
+      ],
+      "Triangles": 1382
+    },
+    "OysterRack": {
+      "Min": [
+        -8.6,
+        0.0,
+        -4.25
+      ],
+      "Roles": {
+        "ALT": 448,
+        "GLOW": 384,
+        "MOSS": 60,
+        "TRIM": 448,
+        "WOOD": 252
+      },
+      "Size": [
+        17.2,
+        6.926,
+        8.571
+      ],
+      "Triangles": 1592
+    },
+    "PearlVaultDome": {
+      "Min": [
+        -72.643,
+        0.0,
+        -24.8
+      ],
+      "Roles": {
+        "ACCENT": 1400,
+        "CANDLE": 612,
+        "CORAL": 900,
+        "CRYSTAL": 912,
+        "GOLD": 192,
+        "STONE": 156,
+        "TRIM": 896
+      },
+      "Size": [
+        145.286,
+        218.0,
+        40.536
+      ],
+      "Triangles": 5068
+    },
+    "PearlguardGalley": {
+      "Min": [
+        -30.024,
+        0.0,
+        -7.949
+      ],
+      "Roles": {
+        "ACCENT": 644,
+        "ALT": 84,
+        "GOLD": 600,
+        "MOSS": 60,
+        "SILK": 48,
+        "WOOD": 120
+      },
+      "Size": [
+        51.424,
+        33.5,
+        16.276
+      ],
+      "Triangles": 1556
+    },
+    "PortcullisGatehouse": {
+      "Min": [
+        -28.4,
+        0.0,
+        -7.9
+      ],
+      "Roles": {
+        "CANDLE": 96,
+        "GOLD": 352,
+        "METAL": 212,
+        "SILK": 24,
+        "STONE": 84,
+        "TRIM": 312
+      },
+      "Size": [
+        56.8,
+        46.21,
+        18.3
+      ],
+      "Triangles": 1080
+    },
+    "SeaWallSegment": {
+      "Min": [
+        -22.68,
+        0.0,
+        -5.5
+      ],
+      "Roles": {
+        "ACCENT": 24,
+        "GLOW": 96,
+        "GOLD": 60,
+        "MOSS": 80,
+        "SILK": 12,
+        "STONE": 108,
+        "TRIM": 144
+      },
+      "Size": [
+        44.88,
+        38.8,
+        12.2
+      ],
+      "Triangles": 524
+    },
+    "ShellAwningStall": {
+      "Min": [
+        -7.725,
+        0.0,
+        -5.135
+      ],
+      "Roles": {
+        "ALT": 228,
+        "CANDLE": 48,
+        "GLOW": 108,
+        "GOLD": 32,
+        "SILK": 192,
+        "WOOD": 72
+      },
+      "Size": [
+        15.45,
+        12.003,
+        10.537
+      ],
+      "Triangles": 680
+    },
+    "TideArmillaryTower": {
+      "Min": [
+        -12.1,
+        0.0,
+        -12.1
+      ],
+      "Roles": {
+        "ACCENT": 216,
+        "GLOW": 120,
+        "GOLD": 480,
+        "METAL": 236,
+        "SILK": 12,
+        "STONE": 168,
+        "TRIM": 88
+      },
+      "Size": [
+        24.2,
+        91.0,
+        24.2
+      ],
+      "Triangles": 1320
+    }
+  },
+  "Unit": "studs"
+}

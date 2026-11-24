@@ -258,7 +258,7 @@ end
 -- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
 -- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
-local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, KitCaravanseraiSkylight = true, ElderForearmGuard = true, ElderUpperArmGuard = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
 local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
@@ -389,6 +389,11 @@ function Builder.Build(id: number, generation: number): any
 	-- Hollin work (Corrupted Grove's grove-wardens): mossy fieldstone treads and pavers, per-deck looks
 	-- (`Terrain.DeckLooks`), and hung walkways that can be a fallen log instead of planks (`Terrain.BridgeStyles`).
 	local hollin = natural and layout.PathStyle == "HOLLIN"
+	local deepward = natural and layout.PathStyle == "DEEPWARD"
+	local deepStone = Color3.fromRGB(108, 118, 120)
+	local deepSlate = Color3.fromRGB(72, 82, 86)
+	local deepAqua = Color3.fromRGB(92, 242, 236)
+	local deepBronze = Color3.fromRGB(72, 126, 114)
 	local deckLooks = if direct then td.DeckLooks or {} else {}
 	local bridgeStyles = if direct then td.BridgeStyles or {} else {}
 	local fieldstone = Color3.fromRGB(112, 104, 90)
@@ -489,6 +494,7 @@ function Builder.Build(id: number, generation: number): any
 		or floorSpec.BiomeId == "ashen_dunes"
 		or floorSpec.BiomeId == "thunder_highlands"
 		or floorSpec.BiomeId == "corrupted_grove"
+		or (floorSpec.BiomeId == "sunken_sanctuary" and layout.Authored ~= nil)
 
 	local groundPalette = TowerTerrain.Palettes[floorSpec.BiomeId]
 	local naturalGrassColor = if natural and floorSpec.BiomeId == "verdant_ruins"
@@ -1818,12 +1824,13 @@ function Builder.Build(id: number, generation: number): any
 				local treadW = baseTreadW - (step % 2) * 0.08
 				local treadCol = if velmari then (if step % 2 == 0 then slateIndigo else slateDark)
 					elseif hollin then (if step % 2 == 0 then fieldstone else fieldstoneDark)
+					elseif deepward then (if step % 2 == 0 then deepStone else deepSlate)
 					elseif masonryStyle and masonryStyle.StairColorA
 					then (if step % 2 == 0 then masonryStyle.StairColorA else masonryStyle.StairColorB)
 					elseif pathStyle
 					then (if step % 2 == 0 then pathStyle.StairColorA else pathStyle.StairColorB)
 					else theme.TrimColor
-				local treadMat = if velmari or hollin then Enum.Material.Slate
+				local treadMat = if velmari or hollin or deepward then Enum.Material.Slate
 					elseif masonryStyle and masonryStyle.StairMatA
 					then (if step % 2 == 0 then masonryStyle.StairMatA else masonryStyle.StairMatB)
 					elseif pathStyle
@@ -1917,6 +1924,35 @@ function Builder.Build(id: number, generation: number): any
 				local worn = decor(model, "FordLogWornTop", Vector3.new(link.Width - 9, 0.2, delta.Magnitude), mid - right * 1.5, logWood, Enum.Material.Wood)
 				worn.CFrame = CFrame.lookAt(mid - right * 1.5, b - right * 1.5) * CFrame.new(0, 0.02, 0)
 				-- The root plate and broken crown stand off the lanes as set pieces (TowerSetPieces/CorruptedGrove).
+			elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "WALLWALK" then
+				-- Floor 39's fortified Inner Sea-Wall Wall-Walk: flagged limestone deck carried atop a tall
+				-- battered sea-wall curtain dropping straight down to the ground so the inner ward stays hidden
+				-- behind the wall from the arrival camera. Solid ramp stays the walking surface; masonry is dressing.
+				local wallStone = Color3.fromRGB(118, 126, 128)
+				local wallTrim = Color3.fromRGB(162, 168, 164)
+				local wallMoss = Color3.fromRGB(64, 96, 74)
+				ramp.Color = wallStone
+				ramp.Material = Enum.Material.Limestone
+				local length = delta.Magnitude
+				local flags = math.max(4, math.floor((length - 2) / 5.0))
+				for i = 1, flags do
+					local at = a:Lerp(b, (i - 0.5) / flags)
+					local flag = decor(model, "RampStepLip", Vector3.new(link.Width - 2.6, 0.16, 3.6), at,
+						if i % 2 == 0 then wallTrim else wallStone, Enum.Material.Limestone)
+					flag.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.08, 0)
+				end
+				-- Tall solid-looking fortified sea-wall curtain beneath the Wall-Walk deck
+				local wallH = math.clamp((mid.Y - origin.Y) - (layout.Bottom - 6), 24, 52)
+				local curtain = decor(model, "InnerSeaWallCurtain", Vector3.new(link.Width - 2.2, wallH, math.max(12, length - 4)), mid, wallStone, Enum.Material.Slate)
+				curtain.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.2 - wallH / 2, 0)
+				local buttresses = math.max(3, math.floor(length / 36))
+				for i = 1, buttresses do
+					local at = a:Lerp(b, i / (buttresses + 1))
+					local but = decor(model, "InnerSeaWallButtress", Vector3.new(link.Width + 0.6, wallH - 2, 5.2), at, wallTrim, Enum.Material.Limestone)
+					but.CFrame = CFrame.lookAt(at, at + flat) * CFrame.new(0, -2.0 - wallH / 2, 0)
+					local drape = decor(model, "InnerSeaWallMoss", Vector3.new(link.Width + 1.1, 8.5, 6.2), at, wallMoss, Enum.Material.Grass)
+					drape.CFrame = CFrame.lookAt(at, at + flat) * CFrame.new(0, -wallH + 4.5, 0)
+				end
 			elseif hungLinks[link.Id] then
 				-- Floor 10: Velmari silk-and-slate web spans; Floor 8: Lampkeeper rope-and-plank walkways.
 				ramp.Color = if matriarchHollow then slateIndigo else plank
@@ -1941,8 +1977,9 @@ function Builder.Build(id: number, generation: number): any
 					local stone = decor(model, "RampStepLip", Vector3.new(stoneW, 0.45, 2.2), at,
 						if velmari then (if i % 2 == 0 then slateIndigo else slateDark)
 							elseif hollin then (if i % 2 == 0 then fieldstone else fieldstoneDark)
+							elseif deepward then (if i % 2 == 0 then deepStone else deepSlate)
 							else flagstoneDark,
-						if velmari or hollin then Enum.Material.Slate else Enum.Material.Limestone)
+						if velmari or hollin or deepward then Enum.Material.Slate else Enum.Material.Limestone)
 					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "SOLMERE_ARCH" then
@@ -2582,6 +2619,28 @@ function Builder.Build(id: number, generation: number): any
 					rail.CFrame = CFrame.lookAt(mid + rootOffset, b + rootOffset) * CFrame.new(0, 1.3, 0)
 					local vein = decor(curbGroup, "BridgeRootVein", Vector3.new(2.35, 0.55, curbLen * 0.94), mid + rootOffset + Vector3.new(0, 2.35, 0), rootGlow, Enum.Material.Neon)
 					vein.CFrame = CFrame.lookAt(mid + rootOffset, b + rootOffset) * CFrame.new(0, 2.35, 0)
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "WALLWALK" then
+					-- Floor 39's Inner Sea-Wall crenellated battlements & hooded aqua glass braziers outside UsableWidth.
+					local wallOffset = right * (side * (link.Width / 2 - 0.55))
+					local wallStone = Color3.fromRGB(118, 126, 128)
+					local wallTrim = Color3.fromRGB(162, 168, 164)
+					local parapet = decor(curbGroup, "WallWalkParapet", Vector3.new(1.8, 2.8, curbLen), mid + wallOffset, wallStone, Enum.Material.Limestone)
+					parapet.CFrame = CFrame.lookAt(mid + wallOffset, b + wallOffset) * CFrame.new(0, 1.4, 0)
+					local coping = decor(curbGroup, "WallWalkCoping", Vector3.new(2.2, 0.5, curbLen), mid + wallOffset, wallTrim, Enum.Material.Limestone)
+					coping.CFrame = CFrame.lookAt(mid + wallOffset, b + wallOffset) * CFrame.new(0, 2.95, 0)
+					local merlons = math.max(3, math.floor(delta.Magnitude / 12))
+					for i = 0, merlons - 1 do
+						local at = a:Lerp(b, (i + 0.5) / merlons) + wallOffset
+						local merlon = decor(curbGroup, "WallWalkMerlon", Vector3.new(2.0, 2.6, 5.2), at + Vector3.new(0, 4.3, 0), wallStone, Enum.Material.Limestone)
+						merlon.CFrame = CFrame.lookAt(merlon.Position, merlon.Position + flat)
+						-- Cold hooded aqua glass brazier every 4th merlon on the south (arrival-facing) battlement
+						if side == -1 and i % 4 == 1 then
+							local hood = decor(curbGroup, "WallWalkBrazier", Vector3.new(2.2, 2.4, 2.2), at + Vector3.new(0, 6.6, 0), deepBronze, Enum.Material.Metal)
+							hood.CFrame = CFrame.lookAt(hood.Position, hood.Position + flat)
+							local ember = decor(curbGroup, "WallWalkAquaFlame", Vector3.new(1.4, 1.4, 1.4), at + Vector3.new(0, 7.6, 0), deepAqua, Enum.Material.Neon)
+							ember.Shape = Enum.PartType.Ball
+						end
+					end
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))
@@ -2801,8 +2860,8 @@ function Builder.Build(id: number, generation: number): any
 	local heartHollow = layout.Authored == "fungal:10"
 	local lanternStep = if rotKeep then 260 elseif heartHollow then 280 elseif sky then (if math.max(width, depth) > 540 then 185 else 150) else 100
 	local lanternIdx = 0
-	-- Open-sky Hollin floors light themselves with their own lanterns (TowerSetPieces/CorruptedGrove).
-	if (not pathStyle or pathStyle.ShowVaultLanterns ~= false) and not hollin then
+	-- Open-sky Hollin and Deepward floors light themselves with their own lanterns (TowerSetPieces).
+	if (not pathStyle or pathStyle.ShowVaultLanterns ~= false) and not hollin and not deepward then
 		for x = -width / 2 + 50, width / 2 - 40, lanternStep do
 			for z = -depth / 2 + 50, depth / 2 - 40, lanternStep do
 				lanternIdx += 1
