@@ -77,6 +77,8 @@ An ancient sacred city swallowed by the depths of a vast ocean. Majestic temples
 
 A mysterious library existing beyond the boundaries of the physical world. Endless shelves of ancient books, floating platforms, and colossal celestial structures drift through a realm filled with stars and swirling nebulae. Magical portals connect distant chambers, while glowing runes and constellations illuminate the surrounding void. The archives contain forbidden knowledge and forgotten cosmic secrets, protected by arcane entities and guardians of ancient wisdom.
 
+**Floors 41–45 (`docs/prompts/astral-archives-floor-layouts-prompt.md`):** the archive was built by the **Halcyr**, star-archivists who believed every star was a book and built an open-sky celestial library in vellum-white stone, lapis-indigo marble, brass, gold leaf and ebony. Their sigil is the **star-quill** (a four-pointed star pierced by a quill, inside a ring). When the last Grand Indexer ordered the **Index Engine** (Floor 43) to write the single blank entry — the **Rift** leading down toward the Abyssal Throne — the Rift read the Archive back, fracturing the Index, sealing the Runeguard Athenaeum (Floor 44) and cracking the **Rift Warden's** lens in the Observatory (Floor 45). The client-only **Conjunction** (`Conjunction.luau`, synced to `workspace:GetServerTimeNow()`) sweeps starlight across star-glyphs, brightens the **Index Lamps** that mark open routes, lifts loose pages and rings a far chime (answered from the Rift on Floors 43–45), accelerating from 16 s on Floor 41 to 6 s on Floor 45.
+
 ## 10. Abyssal Throne
 
 **Theme:** Abyss / Underworld Dominion

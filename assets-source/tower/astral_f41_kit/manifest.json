@@ -1,0 +1,386 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BookcaseCurved": {
+      "Min": [
+        -10.157,
+        -0.017,
+        -1.7
+      ],
+      "Roles": {
+        "ALT": 216,
+        "METAL": 178,
+        "SILK": 252,
+        "STONE": 234,
+        "TRIM": 420,
+        "WOOD": 552
+      },
+      "Size": [
+        20.313,
+        16.517,
+        6.55
+      ],
+      "Triangles": 1852
+    },
+    "CalamusArmillary": {
+      "Min": [
+        -8.2,
+        0.0,
+        -8.2
+      ],
+      "Roles": {
+        "ALT": 92,
+        "CRYSTAL": 168,
+        "GLOW": 168,
+        "METAL": 1466,
+        "STONE": 152,
+        "TRIM": 1272
+      },
+      "Size": [
+        16.4,
+        25.805,
+        16.4
+      ],
+      "Triangles": 3318
+    },
+    "CatalogueCabinet": {
+      "Min": [
+        -5.7,
+        -0.019,
+        -3.18
+      ],
+      "Roles": {
+        "ALT": 12,
+        "CRYSTAL": 12,
+        "GLOW": 112,
+        "METAL": 84,
+        "SILK": 240,
+        "TRIM": 856,
+        "WOOD": 952
+      },
+      "Size": [
+        14.0,
+        10.644,
+        6.96
+      ],
+      "Triangles": 2268
+    },
+    "ChainedSlab": {
+      "Min": [
+        -13.0,
+        -0.389,
+        -11.403
+      ],
+      "Roles": {
+        "ALT": 416,
+        "CRYSTAL": 416,
+        "GLOW": 400,
+        "METAL": 3400,
+        "STONE": 244,
+        "TRIM": 1598
+      },
+      "Size": [
+        26.0,
+        48.979,
+        22.403
+      ],
+      "Triangles": 6474
+    },
+    "CopyistDesk": {
+      "Min": [
+        -4.175,
+        -0.005,
+        -2.178
+      ],
+      "Roles": {
+        "ALT": 48,
+        "GLOW": 80,
+        "METAL": 144,
+        "SILK": 96,
+        "TRIM": 124,
+        "WOOD": 314
+      },
+      "Size": [
+        8.35,
+        6.371,
+        6.178
+      ],
+      "Triangles": 806
+    },
+    "FarArchiveTower": {
+      "Min": [
+        -9.08,
+        -0.0,
+        -9.08
+      ],
+      "Roles": {
+        "ALT": 536,
+        "CRYSTAL": 180,
+        "GLOW": 448,
+        "METAL": 28,
+        "SILK": 48,
+        "STONE": 180,
+        "TRIM": 1728,
+        "WOOD": 24
+      },
+      "Size": [
+        22.391,
+        58.4,
+        18.16
+      ],
+      "Triangles": 3172
+    },
+    "FloatingTomeCluster": {
+      "Min": [
+        -11.751,
+        -0.026,
+        -11.19
+      ],
+      "Roles": {
+        "ALT": 96,
+        "GLOW": 696,
+        "SILK": 336,
+        "TRIM": 420,
+        "WOOD": 72
+      },
+      "Size": [
+        23.378,
+        11.381,
+        23.141
+      ],
+      "Triangles": 1620
+    },
+    "IndexGateRing": {
+      "Min": [
+        -21.4,
+        0.0,
+        -4.498
+      ],
+      "Roles": {
+        "ALT": 468,
+        "CRYSTAL": 476,
+        "GLOW": 876,
+        "METAL": 1882,
+        "SILK": 24,
+        "STONE": 426,
+        "TRIM": 2162
+      },
+      "Size": [
+        42.8,
+        41.8,
+        8.798
+      ],
+      "Triangles": 6314
+    },
+    "IndexLamp": {
+      "Min": [
+        -1.524,
+        0.0,
+        -1.524
+      ],
+      "Roles": {
+        "CRYSTAL": 20,
+        "GLOW": 20,
+        "METAL": 374,
+        "STONE": 56,
+        "TRIM": 362
+      },
+      "Size": [
+        3.049,
+        12.545,
+        4.558
+      ],
+      "Triangles": 832
+    },
+    "InkwellBasin": {
+      "Min": [
+        -11.492,
+        -0.005,
+        -11.492
+      ],
+      "Roles": {
+        "ALT": 92,
+        "CRYSTAL": 92,
+        "GLOW": 456,
+        "METAL": 688,
+        "SILK": 48,
+        "STONE": 576,
+        "TRIM": 848
+      },
+      "Size": [
+        22.983,
+        6.638,
+        22.983
+      ],
+      "Triangles": 2800
+    },
+    "LamplighterRack": {
+      "Min": [
+        -6.95,
+        -0.022,
+        -1.153
+      ],
+      "Roles": {
+        "CRYSTAL": 120,
+        "GLOW": 120,
+        "METAL": 1356,
+        "STONE": 234,
+        "TRIM": 842,
+        "WOOD": 80
+      },
+      "Size": [
+        14.659,
+        12.372,
+        3.661
+      ],
+      "Triangles": 2752
+    },
+    "LecternSpire": {
+      "Min": [
+        -11.502,
+        0.0,
+        -11.364
+      ],
+      "Roles": {
+        "ALT": 100,
+        "GLOW": 452,
+        "METAL": 92,
+        "MOSS": 160,
+        "SILK": 48,
+        "STONE": 396,
+        "TRIM": 1652
+      },
+      "Size": [
+        23.318,
+        135.2,
+        22.669
+      ],
+      "Triangles": 2900
+    },
+    "RuneguardGatePost": {
+      "Min": [
+        -11.5,
+        0.0,
+        -2.7
+      ],
+      "Roles": {
+        "GLOW": 60,
+        "METAL": 372,
+        "SILK": 48,
+        "STONE": 166,
+        "TRIM": 400,
+        "WOOD": 72
+      },
+      "Size": [
+        21.6,
+        10.327,
+        5.6
+      ],
+      "Triangles": 1118
+    },
+    "StarIsleUndersideL": {
+      "Min": [
+        -34.035,
+        0.0,
+        -34.035
+      ],
+      "Roles": {
+        "ALT": 284,
+        "CRYSTAL": 556,
+        "GLOW": 336,
+        "METAL": 2200,
+        "STONE": 92,
+        "TRIM": 1400
+      },
+      "Size": [
+        68.086,
+        42.07,
+        68.071
+      ],
+      "Triangles": 4868
+    },
+    "StarIsleUndersideM": {
+      "Min": [
+        -24.11,
+        -0.0,
+        -24.11
+      ],
+      "Roles": {
+        "ALT": 204,
+        "CRYSTAL": 408,
+        "GLOW": 248,
+        "METAL": 1800,
+        "STONE": 92,
+        "TRIM": 1099
+      },
+      "Size": [
+        48.261,
+        34.07,
+        48.22
+      ],
+      "Triangles": 3851
+    },
+    "StarIsleUndersideS": {
+      "Min": [
+        -16.26,
+        0.0,
+        -16.26
+      ],
+      "Roles": {
+        "ALT": 172,
+        "CRYSTAL": 296,
+        "GLOW": 176,
+        "METAL": 1400,
+        "STONE": 92,
+        "TRIM": 899
+      },
+      "Size": [
+        32.491,
+        28.07,
+        32.52
+      ],
+      "Triangles": 3035
+    },
+    "StarMossPlanter": {
+      "Min": [
+        -6.057,
+        -0.005,
+        -2.519
+      ],
+      "Roles": {
+        "ALT": 12,
+        "GLOW": 288,
+        "MOSS": 560,
+        "STONE": 240,
+        "TRIM": 332
+      },
+      "Size": [
+        12.03,
+        4.784,
+        4.994
+      ],
+      "Triangles": 1432
+    },
+    "StarglassBridgeSpan": {
+      "Min": [
+        -7.265,
+        -0.036,
+        -12.345
+      ],
+      "Roles": {
+        "CRYSTAL": 12,
+        "GLOW": 768,
+        "METAL": 296,
+        "STONE": 1180,
+        "TRIM": 696
+      },
+      "Size": [
+        14.53,
+        7.106,
+        24.69
+      ],
+      "Triangles": 2952
+    }
+  },
+  "Unit": "studs"
+}

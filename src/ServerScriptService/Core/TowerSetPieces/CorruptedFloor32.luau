@@ -107,7 +107,7 @@ local LAMP_LIGHT = rgb(255, 182, 118)
 CorruptedFloor32.Landmarks = table.freeze({
 	{ Id = "GreatCiderPress", X = -108, Z = -280, Y = 40, HalfX = 25.0, HalfZ = 27.0, Top = 130.5 },
 	{ Id = "PressHouseRoof", X = -108, Z = -280, Y = 40, HalfX = 33.1, HalfZ = 32.2, Top = 54.4 },
-	{ Id = "GraftedCrownTree", X = 72, Z = -164, Y = 48, HalfX = 40.4, HalfZ = 18.4, Top = 61.0 },
+	{ Id = "GraftedCrownTree", X = 64, Z = -158, Y = 48, HalfX = 40.4, HalfZ = 18.4, Top = 61.0 },
 	{ Id = "WindfallPileMain", X = -110, Z = 10, Y = 6, HalfX = 8.5, HalfZ = 7.3, Top = 5.6 },
 	{ Id = "WindfallPileSide", X = -92, Z = 4, Y = 6, HalfX = 6.8, HalfZ = 5.8, Top = 4.5 },
 	{ Id = "WindfallArbor", X = -112, Z = -12, Y = 6, HalfX = 8.2, HalfZ = 7.2, Top = 8.9 },

@@ -1,0 +1,395 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BinderyPress": {
+      "Min": [
+        -9.16,
+        0.0,
+        -2.6
+      ],
+      "Roles": {
+        "ALT": 24,
+        "METAL": 128,
+        "SILK": 36,
+        "STONE": 44,
+        "TRIM": 2128,
+        "WOOD": 348
+      },
+      "Size": [
+        16.56,
+        12.35,
+        6.714
+      ],
+      "Triangles": 2708
+    },
+    "BrokenOrreryRing": {
+      "Min": [
+        -6.67,
+        -0.227,
+        -5.317
+      ],
+      "Roles": {
+        "ALT": 20,
+        "GLOW": 80,
+        "METAL": 642,
+        "STONE": 52,
+        "TRIM": 598
+      },
+      "Size": [
+        14.554,
+        7.783,
+        10.927
+      ],
+      "Triangles": 1392
+    },
+    "CardDrawerSpill": {
+      "Min": [
+        -5.864,
+        -0.223,
+        -3.785
+      ],
+      "Roles": {
+        "METAL": 36,
+        "SILK": 444,
+        "TRIM": 36,
+        "WOOD": 180
+      },
+      "Size": [
+        11.625,
+        2.242,
+        8.333
+      ],
+      "Triangles": 696
+    },
+    "CatalogueDeskTilted": {
+      "Min": [
+        -5.177,
+        -0.788,
+        -3.92
+      ],
+      "Roles": {
+        "ALT": 68,
+        "CRYSTAL": 36,
+        "METAL": 84,
+        "SILK": 108,
+        "TRIM": 72,
+        "WOOD": 164
+      },
+      "Size": [
+        9.154,
+        5.977,
+        9.672
+      ],
+      "Triangles": 532
+    },
+    "ColophonWall": {
+      "Min": [
+        -13.4,
+        0.0,
+        -1.826
+      ],
+      "Roles": {
+        "ALT": 180,
+        "GLOW": 640,
+        "SILK": 180,
+        "STONE": 322,
+        "TRIM": 776,
+        "WOOD": 12
+      },
+      "Size": [
+        26.8,
+        16.8,
+        3.626
+      ],
+      "Triangles": 2110
+    },
+    "CrookedIndexLamp": {
+      "Min": [
+        -1.524,
+        0.0,
+        -1.524
+      ],
+      "Roles": {
+        "CRYSTAL": 20,
+        "GLOW": 20,
+        "METAL": 674,
+        "STONE": 56,
+        "TRIM": 286
+      },
+      "Size": [
+        5.168,
+        12.537,
+        3.479
+      ],
+      "Triangles": 1056
+    },
+    "ErrataPress": {
+      "Min": [
+        -6.1,
+        -0.005,
+        -2.725
+      ],
+      "Roles": {
+        "ALT": 84,
+        "GLOW": 80,
+        "METAL": 484,
+        "SILK": 84,
+        "TRIM": 288,
+        "WOOD": 92
+      },
+      "Size": [
+        12.7,
+        9.605,
+        5.764
+      ],
+      "Triangles": 1112
+    },
+    "IndexEngineCore": {
+      "Min": [
+        -34.969,
+        -0.497,
+        -11.483
+      ],
+      "Roles": {
+        "ALT": 448,
+        "GLOW": 142,
+        "METAL": 616,
+        "SILK": 1344,
+        "STONE": 138,
+        "TRIM": 1240,
+        "WOOD": 528
+      },
+      "Size": [
+        69.939,
+        179.689,
+        27.23
+      ],
+      "Triangles": 4456
+    },
+    "IndexEngineGearBank": {
+      "Min": [
+        -44.42,
+        0.0,
+        -7.548
+      ],
+      "Roles": {
+        "ALT": 60,
+        "METAL": 1596,
+        "STONE": 44,
+        "TRIM": 1004
+      },
+      "Size": [
+        91.053,
+        86.054,
+        14.208
+      ],
+      "Triangles": 2704
+    },
+    "IndexEngineShelfTower": {
+      "Min": [
+        -12.0,
+        0.0,
+        -7.5
+      ],
+      "Roles": {
+        "ALT": 156,
+        "METAL": 68,
+        "SILK": 108,
+        "STONE": 44,
+        "TRIM": 324,
+        "WOOD": 300
+      },
+      "Size": [
+        36.427,
+        92.936,
+        15.0
+      ],
+      "Triangles": 1000
+    },
+    "InkVatCracked": {
+      "Min": [
+        -4.44,
+        -0.27,
+        -3.84
+      ],
+      "Roles": {
+        "ALT": 332,
+        "CRYSTAL": 280,
+        "GLOW": 240,
+        "METAL": 750,
+        "STONE": 120,
+        "TRIM": 220
+      },
+      "Size": [
+        9.185,
+        5.78,
+        13.84
+      ],
+      "Triangles": 1942
+    },
+    "LedgerStackTall": {
+      "Min": [
+        -4.8,
+        0.0,
+        -4.1
+      ],
+      "Roles": {
+        "ALT": 120,
+        "METAL": 48,
+        "SILK": 276,
+        "STONE": 44,
+        "TRIM": 300,
+        "WOOD": 84
+      },
+      "Size": [
+        9.774,
+        14.034,
+        9.325
+      ],
+      "Triangles": 872
+    },
+    "LiftedIndexGallery": {
+      "Min": [
+        -31.829,
+        -0.067,
+        -3.85
+      ],
+      "Roles": {
+        "ALT": 684,
+        "GLOW": 12,
+        "SILK": 696,
+        "STONE": 1828,
+        "TRIM": 1596,
+        "WOOD": 2158
+      },
+      "Size": [
+        63.658,
+        31.553,
+        23.607
+      ],
+      "Triangles": 6974
+    },
+    "PageFallRibbon": {
+      "Min": [
+        -4.632,
+        -0.496,
+        -5.72
+      ],
+      "Roles": {
+        "ALT": 48,
+        "GLOW": 288,
+        "SILK": 1536,
+        "TRIM": 156
+      },
+      "Size": [
+        9.799,
+        22.759,
+        13.599
+      ],
+      "Triangles": 2028
+    },
+    "ScarpShelfStrata": {
+      "Min": [
+        -16.778,
+        0.0,
+        -4.582
+      ],
+      "Roles": {
+        "ALT": 769,
+        "SILK": 192,
+        "STONE": 539,
+        "TRIM": 108,
+        "WOOD": 252
+      },
+      "Size": [
+        33.445,
+        17.848,
+        11.866
+      ],
+      "Triangles": 1860
+    },
+    "ShardSlabL": {
+      "Min": [
+        -18.976,
+        0.0,
+        -16.505
+      ],
+      "Roles": {
+        "ALT": 120,
+        "CRYSTAL": 20,
+        "GLOW": 20,
+        "METAL": 1800,
+        "STONE": 1443,
+        "TRIM": 1200
+      },
+      "Size": [
+        38.027,
+        35.314,
+        32.01
+      ],
+      "Triangles": 4603
+    },
+    "ShardSlabM": {
+      "Min": [
+        -12.557,
+        0.0,
+        -11.04
+      ],
+      "Roles": {
+        "ALT": 120,
+        "CRYSTAL": 20,
+        "GLOW": 20,
+        "METAL": 1400,
+        "STONE": 705,
+        "TRIM": 900
+      },
+      "Size": [
+        25.114,
+        29.314,
+        22.261
+      ],
+      "Triangles": 3165
+    },
+    "ShardSlabS": {
+      "Min": [
+        -7.268,
+        0.0,
+        -6.569
+      ],
+      "Roles": {
+        "ALT": 120,
+        "METAL": 800,
+        "STONE": 320,
+        "TRIM": 584
+      },
+      "Size": [
+        14.443,
+        14.08,
+        12.955
+      ],
+      "Triangles": 1824
+    },
+    "ToppledShelfRange": {
+      "Min": [
+        -7.267,
+        -1.519,
+        -7.507
+      ],
+      "Roles": {
+        "ALT": 72,
+        "METAL": 24,
+        "SILK": 336,
+        "STONE": 80,
+        "TRIM": 120,
+        "WOOD": 156
+      },
+      "Size": [
+        14.535,
+        7.862,
+        14.999
+      ],
+      "Triangles": 788
+    }
+  },
+  "Unit": "studs"
+}
