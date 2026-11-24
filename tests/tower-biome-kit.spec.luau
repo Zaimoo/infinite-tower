@@ -337,6 +337,21 @@ test("Floor 35 has its own Sovereign's Grove kit: at least twelve new templates 
 	end
 end)
 
+test("Floor 38 has its own Tidal Channels waterworks kit: at least eleven new templates and a 160+ stud Sea-Gate", function()
+	local f38 = {
+		"SeaGateArch", "TidebellTowerSlim", "TideMillHouse", "SluiceHouseKeep", "LockChamberWall",
+		"MitreGatePair", "BellGallowsBracket", "EelTrapRack", "MooredBarge", "TideGaugeColumn",
+		"SluiceGear", "BollardRope", "OverflowRibbon",
+	}
+	for _, name in f38 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 38 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f38 >= 11)
+	assert(Kit.ExtraTemplates.SeaGateArch.Size.Y >= 160, "SeaGateArch must clear the ladder's 160 studs")
+	assert(Kit.ExtraTemplates.TidebellTowerSlim.Size.Y >= 140, "TidebellTowerSlim must rise past 140 studs")
+end)
+
 test("Every biome has an ecosystem built from kit templates", function()
 	for biomeId in Kit.Biomes do
 		local e = Kit.Ecology[biomeId]
@@ -454,6 +469,8 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	local g29 = Light.FloorGrades[29]
 	assert(lum(g29.OutdoorAmbient) < lum(g28.OutdoorAmbient) and g29.AtmosphereHaze > g28.AtmosphereHaze and g29.BloomIntensity > g28.BloomIntensity,
 		"floor 29's dusk is darker, hazier and blooms harder than floor 28's afternoon")
+	assert(Light.FloorGrades[38] ~= nil, "floor 38 (Tidal Channels) has its grey-teal storm-tide grade")
+	assert(Light.FloorGrades[38].AtmosphereHaze >= 0.8 and Light.FloorGrades[38].BloomIntensity >= 0.45, "floor 38 keeps storm haze and glowing rune bloom")
 	assert(Light.TowerPreset(6, 30) == Light.TowerPreset(6), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400

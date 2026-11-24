@@ -389,6 +389,15 @@ function Builder.Build(id: number, generation: number): any
 	-- Hollin work (Corrupted Grove's grove-wardens): mossy fieldstone treads and pavers, per-deck looks
 	-- (`Terrain.DeckLooks`), and hung walkways that can be a fallen log instead of planks (`Terrain.BridgeStyles`).
 	local hollin = natural and layout.PathStyle == "HOLLIN"
+	-- Deepward work (Sunken Sanctuary waterworks & deep floors 38–40): wet dark slate and weathered limestone
+	-- treads and pavers, no vault lanterns, and timber-and-bronze lock-gate bridges (`BridgeStyles = "LOCKGATE"`).
+	local deepward = natural and layout.PathStyle == "DEEPWARD"
+	local deepStone = Color3.fromRGB(108, 118, 120)
+	local deepSlate = Color3.fromRGB(66, 76, 82)
+	local deepTimber = Color3.fromRGB(64, 54, 46)
+	local deepBronze = Color3.fromRGB(78, 134, 122)
+	local deepIron = Color3.fromRGB(48, 54, 58)
+	local deepAqua = Color3.fromRGB(96, 238, 232)
 	local deckLooks = if direct then td.DeckLooks or {} else {}
 	local bridgeStyles = if direct then td.BridgeStyles or {} else {}
 	local fieldstone = Color3.fromRGB(112, 104, 90)
@@ -1831,12 +1840,13 @@ function Builder.Build(id: number, generation: number): any
 				local treadCol = if velmari then (if step % 2 == 0 then slateIndigo else slateDark)
 					elseif hollin then (if step % 2 == 0 then fieldstone else fieldstoneDark)
 					elseif nereth then (if step % 2 == 0 then nerethMarble else nerethStone)
+					elseif deepward then (if step % 2 == 0 then deepStone else deepSlate)
 					elseif masonryStyle and masonryStyle.StairColorA
 					then (if step % 2 == 0 then masonryStyle.StairColorA else masonryStyle.StairColorB)
 					elseif pathStyle
 					then (if step % 2 == 0 then pathStyle.StairColorA else pathStyle.StairColorB)
 					else theme.TrimColor
-				local treadMat = if velmari or hollin then Enum.Material.Slate
+				local treadMat = if velmari or hollin or deepward then Enum.Material.Slate
 					elseif nereth then (if step % 2 == 0 then Enum.Material.Marble else Enum.Material.Limestone)
 					elseif masonryStyle and masonryStyle.StairMatA
 					then (if step % 2 == 0 then masonryStyle.StairMatA else masonryStyle.StairMatB)
@@ -2015,6 +2025,37 @@ function Builder.Build(id: number, generation: number): any
 						end
 					end
 				end
+			elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "LOCKGATE" then
+				-- Floor 38's lock-gate bridges: heavy drowned-timber and verdigris-bronze walkway carried on closed
+				-- mitre gates spanning the lock/channel, with glowing aqua tide-wave runes and foaming overflow
+				-- curtains below the deck. Solid ramp stays as the walking surface; gates & timbers are dressing.
+				ramp.Color = deepTimber
+				ramp.Material = Enum.Material.WoodPlanks
+				local length = delta.Magnitude
+				local planks = math.max(2, math.floor((length - 2) / 3.4))
+				for i = 1, planks do
+					local at = a:Lerp(b, (i - 0.5) / planks)
+					local plankPart = decor(model, "RampStepLip", Vector3.new(link.Width - 2.2, 0.18, 1.0), at,
+						if i % 3 == 0 then deepBronze elseif i % 2 == 0 then deepTimber else deepIron,
+						if i % 3 == 0 then Enum.Material.Metal else Enum.Material.Wood)
+					plankPart.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.08, 0)
+				end
+				-- Dark timber-and-iron mitre lock gates hanging beneath the deck down into the canal water.
+				local gateH = math.clamp((mid.Y - origin.Y) - (layout.Bottom - 4), 8, 22)
+				local gateBody = decor(model, "LockGateUnderLeaf", Vector3.new(link.Width - 3.6, gateH, math.max(4, length - 4)), mid, deepTimber, Enum.Material.Wood)
+				gateBody.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.2 - gateH / 2, 0)
+				for _, frac in { 0.25, 0.55, 0.85 } do
+					local strap = decor(model, "LockGateIronStrap", Vector3.new(link.Width - 2.8, 0.9, math.max(4, length - 3)), mid, deepIron, Enum.Material.Metal)
+					strap.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.2 - gateH * frac, 0)
+				end
+				-- Glowing aqua wave bar + frothy white overflow curtain down both faces of the closed gate!
+				for _, side in { -1, 1 } do
+					local faceOff = right * (side * (link.Width / 2 - 1.6))
+					local rune = decor(model, "LockGateWaveRune", Vector3.new(0.4, 1.4, math.min(12, length * 0.32)), mid + faceOff, deepAqua, Enum.Material.Neon)
+					rune.CFrame = CFrame.lookAt(mid + faceOff, b + faceOff) * CFrame.new(0, -4.2, 0)
+					local spill = decor(model, "LockGateOverflow", Vector3.new(1.2, gateH * 0.85, math.min(9, length * 0.22)), mid + faceOff + right * (side * 0.5), Color3.fromRGB(204, 238, 238), Enum.Material.Glass, 0.35)
+					spill.CFrame = CFrame.lookAt(mid + faceOff + right * (side * 0.5), b + faceOff + right * (side * 0.5)) * CFrame.new(0, -2.0 - gateH * 0.42, 0)
+				end
 			elseif hungLinks[link.Id] then
 				-- Floor 10: Velmari silk-and-slate web spans; Floor 8: Lampkeeper rope-and-plank walkways.
 				ramp.Color = if matriarchHollow then slateIndigo else plank
@@ -2040,8 +2081,9 @@ function Builder.Build(id: number, generation: number): any
 						if velmari then (if i % 2 == 0 then slateIndigo else slateDark)
 							elseif hollin then (if i % 2 == 0 then fieldstone else fieldstoneDark)
 							elseif nereth then (if i % 2 == 0 then nerethStone else nerethStoneDark)
+							elseif deepward then (if i % 2 == 0 then deepStone else deepSlate)
 							else flagstoneDark,
-						if velmari or hollin then Enum.Material.Slate else Enum.Material.Limestone)
+						if velmari or hollin or deepward then Enum.Material.Slate else Enum.Material.Limestone)
 					stone.CFrame = CFrame.lookAt(at, at + delta) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, math.rad(((i * 19) % 14) - 7), 0)
 				end
 			elseif isSuspendedLink(layout, link.Id) and bridgeKind == "SOLMERE_ARCH" then
@@ -2745,6 +2787,45 @@ function Builder.Build(id: number, generation: number): any
 					-- Longitudinal eaves cornice & coral garland along each side of the arcade
 					local eave = decor(curbGroup, "ArcadeEave", Vector3.new(2.4, 1.2, curbLen), mid + wallOffset + Vector3.new(0, colH + 2.2, 0), verdRoof, Enum.Material.Metal)
 					eave.CFrame = CFrame.lookAt(mid + wallOffset + Vector3.new(0, colH + 2.2, 0), b + wallOffset + Vector3.new(0, colH + 2.2, 0))
+				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "LOCKGATE" then
+					-- Floor 38's lock-gate bridges: heavy drowned-timber handrails, cantilevered balance beams,
+					-- iron posts outside UsableWidth, and an overhead mid-span bronze bell gallows (>= 19 studs clear).
+					local beamOff = right * (side * (link.Width / 2 - 0.55))
+					local rail = decor(curbGroup, "LockGateTimberRail", Vector3.new(1.3, 1.6, curbLen), mid + beamOff, deepTimber, Enum.Material.Wood)
+					rail.CFrame = CFrame.lookAt(mid + beamOff, b + beamOff) * CFrame.new(0, 3.2, 0)
+					local curbBeam = decor(curbGroup, "LockGateCurbBeam", Vector3.new(1.6, 1.4, curbLen), mid + beamOff, deepIron, Enum.Material.Metal)
+					curbBeam.CFrame = CFrame.lookAt(mid + beamOff, b + beamOff) * CFrame.new(0, 0.7, 0)
+					-- Cantilevered lock balance beam angling off each bank end (outside UsableWidth)
+					local balA = a + beamOff + Vector3.new(0, 4.4, 0)
+					local balB = a:Lerp(b, 0.24) + beamOff + Vector3.new(0, 5.8, 0)
+					local bal = decor(curbGroup, "LockBalanceBeam", Vector3.new(1.4, 1.4, (balB - balA).Magnitude), (balA + balB) / 2, deepTimber, Enum.Material.Wood)
+					bal.CFrame = CFrame.lookAt((balA + balB) / 2, balB)
+					local capEnd = decor(curbGroup, "LockBalanceCounterweight", Vector3.new(2.2, 2.0, 2.6), balA, deepBronze, Enum.Material.Metal)
+					capEnd.CFrame = CFrame.lookAt(balA, balB)
+					local posts = math.max(2, math.floor(delta.Magnitude / 16) + 1)
+					for i = 0, posts - 1 do
+						local at = a:Lerp(b, i / (posts - 1)) + beamOff
+						local post = decor(curbGroup, "LockGatePost", Vector3.new(1.2, 4.2, 1.2), at + Vector3.new(0, 2.0, 0), deepIron, Enum.Material.Metal)
+						post.CFrame = CFrame.lookAt(post.Position, post.Position + flat)
+					end
+					-- Overhead mid-span bell gallows spanning across the gate bridge (drawn once on side == 1, >= 19.5 studs clear!)
+					if side == 1 and delta.Magnitude >= 36 then
+						local colH = 23.5
+						for _, gs in { -1, 1 } do
+							local gOff = right * (gs * (link.Width / 2 - 0.55))
+							local mast = decor(curbGroup, "LockGallowsMast", Vector3.new(1.8, colH, 1.8), mid + gOff + Vector3.new(0, colH / 2, 0), deepTimber, Enum.Material.Wood)
+							mast.CFrame = CFrame.lookAt(mast.Position, mast.Position + flat)
+						end
+						local cross = decor(curbGroup, "LockGallowsBeam", Vector3.new(link.Width + 1.2, 2.0, 2.0), mid + Vector3.new(0, colH + 0.4, 0), deepTimber, Enum.Material.Wood)
+						cross.CFrame = CFrame.lookAt(cross.Position, cross.Position + flat)
+						-- Hanging bronze lock bell (lip at Y = 19.2 above the walkway: wide camera & player clearance)
+						local bell = decor(curbGroup, "LockGateBell", Vector3.new(3.6, 3.8, 3.8), mid + Vector3.new(0, colH - 2.6, 0), deepBronze, Enum.Material.Metal)
+						bell.Shape = Enum.PartType.Cylinder
+						bell.CFrame = CFrame.new(bell.Position) * CFrame.Angles(0, 0, math.pi / 2)
+						local bellRim = decor(curbGroup, "LockGateBellRim", Vector3.new(0.5, 4.4, 4.4), mid + Vector3.new(0, colH - 4.3, 0), Color3.fromRGB(214, 178, 92), Enum.Material.Metal)
+						bellRim.Shape = Enum.PartType.Cylinder
+						bellRim.CFrame = CFrame.new(bellRim.Position) * CFrame.Angles(0, 0, math.pi / 2)
+					end
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] ~= "LOG" then
 					-- Silk web cables (Floor 10) or rope rails on posts (part of the curb prop, so walkway clearance leaves them).
 					local railOffset = right * (side * (link.Width / 2 - 0.6))
@@ -2964,8 +3045,8 @@ function Builder.Build(id: number, generation: number): any
 	local heartHollow = layout.Authored == "fungal:10"
 	local lanternStep = if rotKeep then 260 elseif heartHollow then 280 elseif sky then (if math.max(width, depth) > 540 then 185 else 150) else 100
 	local lanternIdx = 0
-	-- Open-sky Hollin and Nereth floors light themselves with their own lanterns (TowerSetPieces/CorruptedGrove).
-	if (not pathStyle or pathStyle.ShowVaultLanterns ~= false) and not hollin and not nereth then
+	-- Open-sky Hollin, Nereth and Deepward floors light themselves with their own lanterns (TowerSetPieces).
+	if (not pathStyle or pathStyle.ShowVaultLanterns ~= false) and not hollin and not nereth and not deepward then
 		for x = -width / 2 + 50, width / 2 - 40, lanternStep do
 			for z = -depth / 2 + 50, depth / 2 - 40, lanternStep do
 				lanternIdx += 1

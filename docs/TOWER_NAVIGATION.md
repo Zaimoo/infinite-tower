@@ -146,3 +146,9 @@ Floor 37 (Coral Cloister, `sunken:2`) adds two options to the same system:
 - **`Terrain.BridgeStyles = "ARCADE"`**: a hung `STAIRS` bridge over water carried on arched limestone piers underneath, with a low limestone balustrade, tall coral-grown columns strictly outside `UsableWidth`, and overhead transverse arches ≥ 20 studs clear above the treads (non-colliding dressing inside `BridgeCurb`; navigation is unchanged).
 
 Floor 37's flush tide-spiral floor mosaics (`CloisterFloorMosaic`, non-colliding and `CanQuery = false`) are exempt from walkway and camp clearance so they lie cleanly across Lay Court and Chapter Isle without affecting grounding or combat.
+
+Floor 38 (Tidal Channels, `sunken:3`) adds stepped canal waterworks to `Terrain.Direct`:
+
+- **`Surfaces.DEEPWARD`**: wet storm-tide masonry surface using zero-noise flat shared terrain materials (`Ground` and `LeafyGrass` on walk/trail planes so every terrace and ramp renders flush with zero voxel-bump drift, `Slate` banks, and `Basalt` cliffs/peaks/lock beds — no blocky materials, no Fungal-owned materials, and no edits to shared `MaterialColors`).
+- **`Terrain.Locks`**: an array of `{ X, Z, Width, Depth, Level, Bed, Wall }` lock chambers whose beds carve as `POOL`, whose cheeks raise retaining lips around each chamber, and whose stepped water heights are exported via `field.WaterLevel(x, z)` and written column-by-column in `TowerTerrain.Build` so canal water steps up lock by lock (`-2 → 4 → 10 → 16 → 22`).
+- **`Terrain.BridgeStyles = "LOCKGATE"`**: hung canal and side-channel bridges over the locks keep their solid wet timber-and-bronze walking deck and add hanging V-mitre lock gates with aqua tide-wave runes and foaming overflow curtains underneath, timber handrails/balance beams strictly outside `UsableWidth`, and an overhead mid-span bell gallows with at least 19 studs of vertical headroom (all non-colliding dressing; navigation is unchanged).

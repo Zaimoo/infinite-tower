@@ -23,6 +23,7 @@ local CorruptedFloor34 = require(script.Parent.TowerSetPieces.CorruptedFloor34)
 local CorruptedFloor35 = require(script.Parent.TowerSetPieces.CorruptedFloor35)
 local SunkenSetPieces = require(script.Parent.TowerSetPieces.SunkenSanctuary)
 local SunkenFloor37 = require(script.Parent.TowerSetPieces.SunkenFloor37)
+local SunkenFloor38 = require(script.Parent.TowerSetPieces.SunkenFloor38)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
@@ -100,7 +101,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- Authored Corrupted Grove floors (31-35) build their own set pieces (TowerSetPieces/CorruptedGrove) and
 	-- skip the biome's generic thorn arches, corruption dais and citadel wings.
 	local corruptedFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 10) == "corrupted:"
-	-- Authored Sunken Sanctuary floors (36-40) build their own set pieces (TowerSetPieces/SunkenSanctuary) and
+	-- Authored Sunken Sanctuary floors (36-40) build their own set pieces (TowerSetPieces/Sunken*) and
 	-- skip the biome's generic marble arches, flanking statues, sanctuary spire and lotus portal.
 	local sunkenFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 7) == "sunken:"
 	local accent = theme.LightColor
@@ -6497,6 +6498,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		-- Sunken Sanctuary authored floors (Floor 36 onward): TowerSetPieces/SunkenSanctuary & SunkenFloor37+.
 		elseif layout.Authored == "sunken:1" then SunkenSetPieces.Floor36
 		elseif layout.Authored == "sunken:2" then SunkenFloor37.Build
+		elseif layout.Authored == "sunken:3" then SunkenFloor38.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({
@@ -7334,7 +7336,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	elseif corruptedFloor then
 		-- Floors 31-35 build their own Apex landmarks and horizon (TowerSetPieces/CorruptedGrove).
 	elseif sunkenFloor then
-		-- Floors 36-40 build their own Apex landmarks and the Tidewall (TowerSetPieces/SunkenSanctuary).
+		-- Floors 36-40 build their own Apex landmarks and the Tidewall (TowerSetPieces/Sunken*).
 	elseif biome == "corrupted_grove" then
 		group("CorruptionDais", function()
 			for step = 1, 3 do
