@@ -32,6 +32,9 @@ Config.BalanceStatus = "PROVISIONAL_NOT_PLAYTESTED"
 Config.FloorCount = 50
 Config.FloorsPerBiome = 5
 Config.HubFloorId = 0 -- context only, never a playable floor/catalog record
+-- TEMPORARY MANUAL TESTING TOGGLE: unlocks all 50 tower floors in TowerFloorService and TowerController.
+-- Set back to false before release to restore normal floor progression gating.
+Config.UnlockAllFloorsForTesting = true
 
 -- These curves are inputs for tower combat integration
 -- replacements. Rewards stay physical; these values do not grant a travel payout.

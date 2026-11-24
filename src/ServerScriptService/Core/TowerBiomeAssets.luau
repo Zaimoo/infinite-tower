@@ -27,13 +27,18 @@ local SunkenFloor37 = require(script.Parent.TowerSetPieces.SunkenFloor37)
 local SunkenFloor38 = require(script.Parent.TowerSetPieces.SunkenFloor38)
 local SunkenFloor39 = require(script.Parent.TowerSetPieces.SunkenFloor39)
 local SunkenFloor40 = require(script.Parent.TowerSetPieces.SunkenFloor40)
+local AstralFloor41 = require(script.Parent.TowerSetPieces.AstralFloor41)
+local AstralFloor42 = require(script.Parent.TowerSetPieces.AstralFloor42)
+local AstralFloor43 = require(script.Parent.TowerSetPieces.AstralFloor43)
+local AstralFloor44 = require(script.Parent.TowerSetPieces.AstralFloor44)
+local AstralFloor45 = require(script.Parent.TowerSetPieces.AstralFloor45)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
-local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, LeviathanDaisMosaic = true, MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true }
+local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, LeviathanDaisMosaic = true, MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, AstralGateRing = true, AstralOrbitRail = true, AstralDome = true, AstralIsleUnderside = true, AstralWardVeil = true, AstralRiftEye = true, ConcourseStarMap = true, AstralIndexLamp = true, AstralShutteredLamp = true, AstralSkyQuill = true, BlotterChainedSlab = true, RiftBedGlows = true, ObservatoryMeridianLine = true, AstralIsleDeck = true, AstralConcourseDeck = true, AstralNebulaSea = true, AstralSanctumRays = true, AstralIsleBalustrade = true }
 
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
@@ -88,6 +93,12 @@ Assets.AirborneKinds = table.freeze({
 	HedgeStileLantern = true, BogStairLantern = true,
 	-- Floor 40's animated whirlpool layers, overhead Sea-Dome & Eye of Daylight (TowerSetPieces/SunkenFloor40).
 	MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, LeviathanDaisMosaic = true,
+	-- Astral Archives (Floors 41-45) floating/hanging/sky pieces.
+	AstralGateRing = true, AstralOrbitRail = true, AstralDome = true, AstralIsleUnderside = true,
+	AstralOrbitTomes = true, AstralIndexLamp = true, AstralShutteredLamp = true,
+	AstralSkyQuill = true, AstralSkyHairlineRift = true, AstralSplitAurora = true,
+	AstralSkyNorthRift = true, AstralTornSky = true, AstralRiftEye = true, AstralWardVeil = true,
+	BlotterChainedSlab = true, PlanetGlobeExtra = true, ObservatoryMeridianLine = true, RiftBedGlows = true,
 })
 
 -- field: the floor's TowerTerrain field on a natural floor (the kit imported), else nil.
@@ -109,6 +120,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- Authored Sunken Sanctuary floors (36-40) build their own set pieces (TowerSetPieces/Sunken*) and
 	-- skip the biome's generic marble arches, flanking statues, sanctuary spire and lotus portal.
 	local sunkenFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 7) == "sunken:"
+	-- Authored Astral Archives floors (41-45) build their own set pieces (TowerSetPieces/AstralFloor41..45)
+	-- and skip the generic GalaxyPortal, crossing lecterns and north citadel wing cliffs.
+	local astralFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 7) == "astral:"
 	local accent = theme.LightColor
 	local cliffColor = theme.CliffColor or theme.WallColor
 	local cliffMat = theme.CliffMaterial or Enum.Material.Rock
@@ -713,7 +727,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif biome == "sunken_sanctuary" and not sunkenFloor then
 			arch(at, 26 * lScale, 24 * lScale, 7.5, theme.TrimColor, Enum.Material.Marble, math.pi / 3 * signX)
 			spire(at + V(signX * 8, 0, -8), 34 * lScale, 9 * lScale, theme.TrimColor, accent, false)
-		elseif biome == "astral_archives" then
+		elseif biome == "astral_archives" and not astralFloor then
 			libraryWing(at, 34 * lScale, 42 * lScale, if signX > 0 then -math.pi / 2.4 else math.pi / 2.4)
 		elseif biome == "abyssal_throne" then
 			spire(at, 50 * lScale, 12 * lScale, rgb(24, 18, 34), accent, false)
@@ -987,7 +1001,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			for v = 1, 4 do
 				beam("MyceliumVein", V(gal.X, bottom + 1, gal.Z - 25 + v * 12), V(gal.X - s * 28, gal.Y, gal.Z - 18 + v * 10), 0.8, accent, Enum.Material.Neon, 0.12)
 			end
-		elseif biome == "astral_archives" then
+		elseif biome == "astral_archives" and not astralFloor then
 			local pedAt = V(crossing.X + s * (crossing.Width * 0.5 + 12), crossing.Y, crossing.Z + 12)
 			group("Lectern", function()
 				block("GrimoireLectern", V(5, 6, 5), pedAt + V(0, 3, 0), theme.GroundColor, Enum.Material.Marble)
@@ -6507,6 +6521,11 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "sunken:3" then SunkenFloor38.Build
 		elseif layout.Authored == "sunken:4" then SunkenFloor39.Build
 		elseif layout.Authored == "sunken:5" then SunkenFloor40.Build
+		elseif layout.Authored == "astral:1" then AstralFloor41.Build
+		elseif layout.Authored == "astral:2" then AstralFloor42.Build
+		elseif layout.Authored == "astral:3" then AstralFloor43.Build
+		elseif layout.Authored == "astral:4" then AstralFloor44.Build
+		elseif layout.Authored == "astral:5" then AstralFloor45.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({
@@ -6557,8 +6576,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
-	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or layout.Authored == "thunder:3" or layout.Authored == "thunder:4" or layout.Authored == "thunder:5" or corruptedFloor or sunkenFloor then
-		-- Floors 16-25, 28-30 and 31-40 own their north horizon backdrops directly (Floors 21-25, 28-30, 31-40: TowerSetPieces).
+	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or layout.Authored == "thunder:3" or layout.Authored == "thunder:4" or layout.Authored == "thunder:5" or corruptedFloor or sunkenFloor or astralFloor then
+		-- Floors 16-25, 28-30, 31-40 and 41-45 own their north horizon backdrops directly (TowerSetPieces).
 	else
 		-- Authored Fungal floors have their own backdrop: the cavern wall itself (Floor 6's Crown Cluster grows on it).
 		for _, s in if fungalFloor then {} else { -1, 1 } do
@@ -7387,6 +7406,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			beam("OceanCausticSunbeam", V(bIdx * 52, h - 4, -d * 0.2 + bIdx * 25), V(bIdx * 42 + 18, 0, -d * 0.08 + bIdx * 25), 16, rgb(135, 245, 255), Enum.Material.SmoothPlastic, 0.90)
 		end
 
+	elseif astralFloor then
+		-- Floors 41-45 build their own Apex landmarks, open Starfield and Rift horizons (TowerSetPieces/AstralFloor41..45).
 	elseif biome == "astral_archives" then
 		arch(backdrop + V(0, 0, 12), 48 * scale, 46 * scale, 12, gold, Enum.Material.Metal, 0)
 		group("GalaxyPortal", function()
@@ -7617,7 +7638,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- Ecology (TowerBiomeKit). Spots come from the terrain field (ground kind and slope), keep apart from
 	-- each other (Poisson-style), stay out of every camp and walkway lane, and are seeded by the floor id,
 	-- so every floor grows its own landscape the same way each time it is built.
-	if natural and field and biomeKit then
+	if natural and field and biomeKit and not astralFloor then
 		local eco = Kit.Ecology[biome]
 		local floorId = (parent:GetAttribute("FloorId") :: number?) or index
 		local rand = Random.new(floorId * 7919 + 13)

@@ -81,4 +81,38 @@ test("Choosing rerun portal revives KO'd heroes at ReviveHPFraction while standi
 	assert(heroes.h3.CurrentHP == math.floor(1000 * Hardcore.ReviveHPFraction), "h3 must revive at ReviveHPFraction HP")
 end)
 
+test("Astral Archives Floors 41-45 boss portals stand grounded on every Apex and clear of all non-straddling landmarks", function()
+	local modules = {
+		[41] = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor41"]),
+		[42] = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor42"]),
+		[43] = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor43"]),
+		[44] = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor44"]),
+		[45] = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor45"]),
+	}
+	local half = Assets.Width * Assets.BossScale / 2
+	for fId = 41, 45 do
+		local idx = (fId - 1) % 5 + 1
+		local room = Layout.ForFloor(fId)
+		local apex = room.Platforms.Apex
+		local spots = Layout.PortalSpots(idx, fId)
+		assert(spots.Ascend and spots.Rerun, "Floor " .. fId .. " missing portals")
+		for pName, p in spots do
+			assert(p.Y == apex.Y, string.format("Floor %d %s portal Y mismatch", fId, pName))
+			assert(math.abs(p.X - apex.X) + half <= apex.Width / 2, string.format("Floor %d %s hangs off Apex side", fId, pName))
+			assert(math.abs(p.Z - apex.Z) + 2 <= apex.Depth / 2, string.format("Floor %d %s hangs off Apex back", fId, pName))
+			for _, lm in modules[fId].Landmarks do
+				if not lm.Straddles then
+					local y0 = lm.Y or (room.Bottom - 4)
+					local y1 = y0 + lm.Top
+					if y1 > p.Y - 2 and y0 < p.Y + 24 then
+						local nx = math.clamp(p.X, lm.X - lm.HalfX, lm.X + lm.HalfX)
+						local nz = math.clamp(p.Z, lm.Z - lm.HalfZ, lm.Z + lm.HalfZ)
+						assert((nx - p.X) ^ 2 + (nz - p.Z) ^ 2 >= 12 * 12, string.format("Floor %d %s covers %s portal", fId, lm.Id, pName))
+					end
+				end
+			end
+		end
+	end
+end)
+
 print("Portal tests: " .. passed .. " passed, 0 failed")

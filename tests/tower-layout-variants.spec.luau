@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -3595,8 +3595,290 @@ test("Every floor but the authored ones reshapes its own layout, the same way ev
 		end
 	end
 	assert(varied >= 40, "only " .. varied .. " of 49 floors are reshaped")
-	-- Hand-authored floors (1-40) have no seeded bends, so the count falls as more floors are authored.
-	assert(bends >= 3, "only " .. bends .. " winding paths")
+	-- Hand-authored floors (1-45) have no seeded bends, so the count falls as more floors are authored.
+	assert(bends >= 1, "only " .. bends .. " winding paths")
+end)
+
+test("Astral Archives Floors 41-45: authored layouts, defining shape rules, camps and escalation ladder", function()
+	local function linkMap(room: any): { [string]: string }
+		local m = {}
+		for _, l in room.Links do m[l.Id] = l.Kind end
+		return m
+	end
+	local function hasEdge(room: any, a: string, b: string): boolean
+		for _, l in room.Links do
+			if (l.From == a and l.To == b) or (l.From == b and l.To == a) then return true end
+		end
+		return false
+	end
+	local function reachableWithout(room: any, blockedNodes: { [string]: boolean }, blockedEdges: { [string]: boolean }?): { [string]: boolean }
+		local adj: { [string]: { string } } = {}
+		for _, l in room.Links do
+			if not blockedNodes[l.From] and not blockedNodes[l.To] and not (blockedEdges and blockedEdges[l.Id]) then
+				adj[l.From] = adj[l.From] or {}
+				adj[l.To] = adj[l.To] or {}
+				table.insert(adj[l.From], l.To)
+				table.insert(adj[l.To], l.From)
+			end
+		end
+		local seen: { [string]: boolean } = { Sanctuary = true }
+		local q = { "Sanctuary" }
+		local head = 1
+		while head <= #q do
+			local u = q[head]
+			head += 1
+			for _, v in adj[u] or {} do
+				if not seen[v] then
+					seen[v] = true
+					table.insert(q, v)
+				end
+			end
+		end
+		return seen
+	end
+
+	-- Floor 41: Starlit Vestibule (Quill constellation, floating star-isles)
+	do
+		local r = Layout.ForFloor(41)
+		assert(r.Authored == "astral:1" and r.Name == "Starlit Vestibule" and r.PathStyle == "HALCYR")
+		assert(r.Width == 600 and r.Depth == 620 and r.Height == 225 and r.Bottom == -4 and #r.ReturnLinks == 2)
+		assert(r.Platforms.Apex.X > 100 and r.Platforms.Apex.Z < -200, "F41 Apex must sit back-east")
+		local lm = linkMap(r)
+		assert(lm.NibLanding_Apex == "STAIRS", "NibLanding->Apex must be STAIRS")
+		-- The Quill rule: WestGallery -> Shaft -> Crossing -> NibLanding -> Apex rises at every step
+		local shaft = { "WestGallery", "Shaft", "Crossing", "NibLanding", "Apex" }
+		for i = 1, #shaft - 1 do
+			assert(hasEdge(r, shaft[i], shaft[i + 1]), "F41 missing Quill shaft link " .. shaft[i] .. "->" .. shaft[i + 1])
+			assert(r.Platforms[shaft[i + 1]].Y > r.Platforms[shaft[i]].Y, "F41 Quill shaft must rise at every step")
+		end
+		local apexIn = 0
+		for _, l in r.Links do if l.From == "Apex" or l.To == "Apex" then apexIn += 1 end end
+		assert(apexIn == 3, "F41 Apex must have exactly 3 links")
+		for id in r.Platforms do
+			if id ~= "Sanctuary" and id ~= "Basin" and not r.Terrain.Decks[id] then
+				assert(r.Terrain.Shapes[id] and r.Terrain.Shapes[id].Float, "F41 " .. id .. " must have Shapes[id].Float")
+			end
+		end
+		local mobs = 0
+		for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then mobs += c.Size end end
+		assert(mobs == 16 and r.EliteCount == 1)
+	end
+
+	-- Floor 42: Orbiting Stacks (Orrery orbits, conjunctions, dead-end Perihelion)
+	do
+		local r = Layout.ForFloor(42)
+		assert(r.Authored == "astral:2" and r.Name == "Orbiting Stacks" and r.PathStyle == "HALCYR")
+		assert(r.Width == 660 and r.Depth == 680 and r.Height == 250 and r.Bottom == -4 and #r.ReturnLinks == 2)
+		local lm = linkMap(r)
+		assert(lm.MiddleW_Apex == "STAIRS" and lm.MiddleE_Apex == "STAIRS")
+		assert(not hasEdge(r, "Crossing", "Apex") and not hasEdge(r, "Aphelion", "Apex"), "F42 Perihelion/Aphelion must not link to Apex")
+		local deg: { [string]: number } = {}
+		for _, l in r.Links do
+			deg[l.From] = (deg[l.From] or 0) + 1
+			deg[l.To] = (deg[l.To] or 0) + 1
+		end
+		assert(deg.Apex == 2 and deg.MiddleW == 3 and deg.MiddleE == 3, "F42 conjunction & Apex degree rule failed")
+		local outer = { "WestGallery", "MoonW", "OuterNW", "Aphelion", "OuterNE", "MoonE", "EastGallery" }
+		for i = 1, #outer - 1 do assert(hasEdge(r, outer[i], outer[i + 1]), "F42 broken outer orbit") end
+		local mobs = 0
+		for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then mobs += c.Size end end
+		assert(mobs == 22 and r.EliteCount == 2)
+	end
+
+	-- Floor 43: Fractured Index (Tilted plates, alternating rifts, shards)
+	do
+		local r = Layout.ForFloor(43)
+		assert(r.Authored == "astral:3" and r.Name == "Fractured Index" and r.PathStyle == "HALCYR")
+		assert(r.Width == 720 and r.Depth == 750 and r.Height == 280 and r.Bottom == -6 and #r.ReturnLinks == 2)
+		assert(r.Platforms.Apex.X < -150 and r.Platforms.Apex.Z < -250, "F43 Apex must sit back-west")
+		assert(linkMap(r).ShardB_Apex == "STAIRS")
+		-- The tilt rule: rise east-to-west along each range
+		local P = r.Platforms
+		assert(P.EastGallery.Y < P.Crossing.Y and P.Crossing.Y < P.WestGallery.Y)
+		assert(P.P2E.Y < P.P2C.Y and P.P2C.Y < P.P2W.Y)
+		assert(P.P3E.Y < P.P3C.Y)
+		-- The rift rule: every link from range 1 to range 2 touches ShardA/ShardE or is the pinch WestGallery->P2W
+		local r1 = { EastGallery = true, Crossing = true, WestGallery = true }
+		local r2 = { P2E = true, P2C = true, P2W = true }
+		for _, l in r.Links do
+			if (r1[l.From] and r2[l.To]) or (r2[l.From] and r1[l.To]) then
+				assert(l.Id == "WestGallery_P2W", "F43 illegal range1->range2 link " .. l.Id)
+			end
+		end
+		local mobs = 0
+		for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then mobs += c.Size end end
+		assert(mobs == 25 and r.EliteCount == 3)
+	end
+
+	-- Floor 44: Runeguard Athenaeum (Two rune-wards, alternating Waygates)
+	do
+		local r = Layout.ForFloor(44)
+		assert(r.Authored == "astral:4" and r.Name == "Runeguard Athenaeum" and r.PathStyle == "HALCYR")
+		assert(r.Width == 800 and r.Depth == 795 and r.Height == 305 and r.Bottom == -6 and #r.ReturnLinks == 2)
+		assert(r.Platforms.Apex.X > 150 and r.Platforms.Apex.Z < -250)
+		assert(r.Platforms.Gate1.X < 0 and r.Platforms.Gate2.X > 0, "F44 Waygates must alternate sides of centre")
+		local lm = linkMap(r)
+		assert(lm.Gate2_Apex == "STAIRS" and lm.Seals_Apex == "STAIRS")
+		assert(r.Platforms.WestBastion.Y > 30 and r.Platforms.EastBastion.Y > 30)
+		local noG1 = reachableWithout(r, { Gate1 = true })
+		for _, id in { "Hall", "WestBastion", "EastBastion", "Forge", "LanternWalk", "Apex" } do
+			assert(not noG1[id], "F44 " .. id .. " bypassed West Waygate")
+		end
+		local noG2 = reachableWithout(r, { Gate2 = true })
+		assert(not noG2.Apex, "F44 Apex bypassed East Waygate")
+		local mobs = 0
+		for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then mobs += c.Size end end
+		assert(mobs == 35 and r.EliteCount == 4)
+	end
+
+	-- Floor 45: Rift Warden's Observatory (Diagonal Rift, 3 sutures, 204x152 boss dais)
+	do
+		local r = Layout.ForFloor(45)
+		assert(r.Authored == "astral:5" and r.Name == "Rift Warden's Observatory" and r.PathStyle == "HALCYR")
+		assert(r.Width == 900 and r.Depth == 795 and r.Height == 350 and r.Bottom == -6 and #r.ReturnLinks == 2)
+		local apex = r.Platforms.Apex
+		assert(apex.Width == 204 and apex.Depth == 152 and apex.Y == 68)
+		for id, p in r.Platforms do if id ~= "Apex" then assert(p.Y < apex.Y, "F45 Apex must be highest") end end
+		local lm = linkMap(r)
+		assert(lm.WestAnchor_Apex == "STAIRS" and lm.EastAnchor_Apex == "STAIRS")
+		local deg: { [string]: number } = {}
+		for _, l in r.Links do
+			deg[l.From] = (deg[l.From] or 0) + 1
+			deg[l.To] = (deg[l.To] or 0) + 1
+		end
+		assert(deg.Apex == 2 and deg.Overlook == 1, "F45 Apex (2) and Overlook dead-end (1) degree rule failed")
+		-- The suture rule: removing Fallen->EastGallery, SutureMid and SutureW disconnects Apex
+		local cut = reachableWithout(r, { SutureMid = true, SutureW = true }, { Fallen_EastGallery = true })
+		assert(not cut.Apex, "F45 Apex must be unreachable without the three sutures")
+		local mobs = 0
+		for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then mobs += c.Size end end
+		assert(mobs == 35 and r.EliteCount == 4)
+	end
+
+	-- The Astral Archives Escalation Ladder across Floors 41..45
+	local prevArea, prevH, prevT, prevL, prevV, prevApexY = 0, 0, 0, 0, 0, -math.huge
+	for fId = 41, 45 do
+		local idx = (fId - 1) % 5 + 1
+		local r = Layout.ForFloor(fId)
+		local area = r.Width * r.Depth
+		local t, l, v = ladderCounts(r)
+		assert(area > prevArea and r.Height > prevH and t > prevT and l >= prevL and v > prevV and r.Platforms.Apex.Y > prevApexY,
+			"Astral ladder failed at Floor " .. fId)
+		prevArea, prevH, prevT, prevL, prevV, prevApexY = area, r.Height, t, l, v, r.Platforms.Apex.Y
+		-- Beats every earlier authored biome floor at its same index (1..39)
+		for earlier = idx, 39, 5 do
+			local er = Layout.ForFloor(earlier)
+			local et, el, ev = ladderCounts(er)
+			assert(area >= er.Width * er.Depth and r.Height > er.Height and t > et and l > el and v > ev and r.Platforms.Apex.Y > er.Platforms.Apex.Y,
+				string.format("Floor %d did not beat Floor %d on ladder", fId, earlier))
+		end
+		-- Unique terrace heights (except Sanctuary) and terrain terraces on 4-stud grid
+		local seenY: { [number]: string } = {}
+		for id, p in r.Platforms do
+			if not r.Terrain.Decks[id] then
+				assert(p.Y % 4 == 0, string.format("Floor %d %s terrain Y=%d off 4-stud grid", fId, id, p.Y))
+			end
+			if id ~= "Sanctuary" then
+				assert(seenY[p.Y] == nil, string.format("Floor %d %s shares Y=%d with %s", fId, id, p.Y, tostring(seenY[p.Y])))
+				seenY[p.Y] = id
+			end
+		end
+	end
+end)
+
+test("Astral Archives Floors 41-45 terrain surfaces, floating isles, scarps and rifts work cleanly", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	for fId = 41, 45 do
+		local r = Layout.ForFloor(fId)
+		local field = Terrain.Field(r, "astral_archives", fId)
+		local wantSurf = if fId <= 42 then Terrain.Surfaces.HALCYR else Terrain.Surfaces.RIFTWARD
+		assert(field.Surface == wantSurf, "Floor " .. fId .. " surface mismatch")
+		if fId <= 42 then
+			assert(field.FloatBody ~= nil and field.BaseSample ~= nil, "Floor " .. fId .. " needs FloatBody")
+			local ft, fb = (field.FloatBody :: any)(r.Platforms.Apex.X, r.Platforms.Apex.Z)
+			assert(ft ~= nil and fb ~= nil and ft - fb >= 10, "Floor " .. fId .. " Apex float underside missing")
+		end
+		for id, t in r.Platforms do
+			local y, kind = field.Sample(t.X, t.Z)
+			if r.Terrain.Decks[id] then
+				assert(y <= t.Y - 4.5 + 1e-6, string.format("Floor %d %s terrain rises into deck (%.2f vs %.2f)", fId, id, y, t.Y))
+			else
+				assert(y >= t.Y - 2 - 1e-6, string.format("Floor %d %s terrain %.2f sags below %.2f", fId, id, y, t.Y))
+				assert(kind == "WALK" or kind == "TRAIL", string.format("Floor %d %s kind=%s", fId, id, kind))
+				-- At least one point on the terrace away from outgoing steep ramps sits exactly flush at t.Y - 2.
+				local flush = math.abs(y - (t.Y - 2)) < 1e-6
+				if not flush then
+					for _, off in { { 18, 0 }, { -18, 0 }, { 0, 18 }, { 0, -18 } } do
+						local oy = field.Sample(t.X + off[1], t.Z + off[2])
+						if math.abs(oy - (t.Y - 2)) < 1e-6 then
+							flush = true
+							break
+						end
+					end
+				end
+				assert(flush, string.format("Floor %d %s has no flush terrain point at %.2f", fId, id, t.Y))
+			end
+		end
+	end
+end)
+
+test("Astral Archives Floors 41-45 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
+	local specs = {
+		{ Floor = 41, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor41"]), MinCount = 15, MinTop = 130 },
+		{ Floor = 42, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor42"]), MinCount = 17, MinTop = 150 },
+		{ Floor = 43, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor43"]), MinCount = 19, MinTop = 175 },
+		{ Floor = 44, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor44"]), MinCount = 21, MinTop = 210 },
+		{ Floor = 45, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor45"]), MinCount = 23, MinTop = 285 },
+	}
+	local function nearestDistSq(px: number, pz: number, lm: any): number
+		local nx = math.clamp(px, lm.X - lm.HalfX, lm.X + lm.HalfX)
+		local nz = math.clamp(pz, lm.Z - lm.HalfZ, lm.Z + lm.HalfZ)
+		return (nx - px) ^ 2 + (nz - pz) ^ 2
+	end
+	local function laneGap(lm: any, lane: any): number
+		local best = math.huge
+		for k = 0, 40 do
+			local t = k / 40
+			local x, z = lane.AX + (lane.BX - lane.AX) * t, lane.AZ + (lane.BZ - lane.AZ) * t
+			best = math.min(best, math.sqrt(nearestDistSq(x, z, lm)))
+		end
+		return best - lane.HalfWidth
+	end
+	for _, sp in specs do
+		local fId = sp.Floor
+		local idx = (fId - 1) % 5 + 1
+		local room = Layout.ForFloor(fId)
+		local lanes = Layout.Lanes(idx, fId)
+		local list = sp.Mod.Landmarks
+		assert(#list >= sp.MinCount, string.format("Floor %d has %d landmarks (need >= %d)", fId, #list, sp.MinCount))
+		local apexY = room.Platforms.Apex.Y
+		local maxSpan = 0
+		for _, lm in list do
+			local y0 = lm.Y or (room.Bottom - 4)
+			local y1 = y0 + lm.Top
+			maxSpan = math.max(maxSpan, lm.Top, y1 - apexY)
+			if not lm.Straddles then
+				for _, lane in lanes do
+					local ly0 = math.min(lane.AY, lane.BY) - lane.Below
+					local ly1 = math.max(lane.AY, lane.BY) + lane.Above
+					if y1 > ly0 and y0 < ly1 then
+						assert(laneGap(lm, lane) > 0, string.format("Floor %d %s overlaps walkway %s", fId, lm.Id, lane.Id))
+					end
+				end
+				for _, camp in room.Camps do
+					if y1 > camp.Y - 2 and y0 < camp.Y + 22 then
+						assert((lm.X - camp.X) ^ 2 + (lm.Z - camp.Z) ^ 2 >= 34 * 34, string.format("Floor %d %s centred in camp %s", fId, lm.Id, camp.Id))
+						for _, slot in { { 0, 0 }, { 18, 12 }, { -18, 12 }, { 12, -16 }, { -12, -16 } } do
+							assert(nearestDistSq(camp.X + slot[1], camp.Z + slot[2], lm) >= 7 * 7, string.format("Floor %d %s crowds camp %s slot", fId, lm.Id, camp.Id))
+						end
+					end
+				end
+			end
+			assert(math.abs(lm.X) + lm.HalfX <= room.Width / 2 + 0.5 and math.abs(lm.Z) + lm.HalfZ <= room.Depth / 2 + 0.5,
+				string.format("Floor %d %s leaves room bounds", fId, lm.Id))
+		end
+		assert(maxSpan >= sp.MinTop, string.format("Floor %d tallest landmark %.1f < %d", fId, maxSpan, sp.MinTop))
+	end
 end)
 
 test("Every floor's layout is sound: no new problems, terraces in the room, ramps at most 15 degrees", function()

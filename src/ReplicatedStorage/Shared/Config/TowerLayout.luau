@@ -2974,6 +2974,612 @@ local AUTHORED: {[number]: any} = {
 			MeadowScale = 0.04,
 		},
 	},
+	-- =========================================================================
+	-- ASTRAL ARCHIVES (Floors 41–45, the Halcyr)
+	-- Design: docs/prompts/astral-archives-floor-layouts-prompt.md
+	-- =========================================================================
+	[41] = {
+		Key = "astral:1", Name = "Starlit Vestibule", PathStyle = "HALCYR",
+		Size = { Width = 600, Depth = 620, Height = 225, Bottom = -4 },
+		Basin = { X = 0, Y = 0, Z = 165, Width = 568, Depth = 96 },
+		WestGallery = { X = -190, Y = 8, Z = 25, Width = 84, Depth = 72 },
+		EastGallery = { X = 190, Y = 12, Z = 24, Width = 84, Depth = 72 },
+		Crossing = { X = 0, Y = 24, Z = -85, Width = 76, Depth = 60 },
+		ExtraPlatforms = {
+			Catalogue = { X = 104, Y = 11, Z = -16, Width = 64, Depth = 52 },
+			Shaft = { X = -90, Y = 16, Z = -24, Width = 64, Depth = 56 },
+			Barb1 = { X = -215, Y = 20, Z = -100, Width = 60, Depth = 52 },
+			Barb2 = { X = -130, Y = 26, Z = -170, Width = 60, Depth = 52 },
+			Barb3 = { X = -30, Y = 32, Z = -235, Width = 60, Depth = 52 },
+			NibLanding = { X = 80, Y = 28, Z = -140, Width = 64, Depth = 56 },
+			Blotter = { X = 190, Y = 23, Z = -89, Width = 60, Depth = 52 },
+		},
+		Apex = { X = 175, Y = 36, Z = -225, Width = 112, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" }, { "Basin", "WestGallery" }, { "Basin", "EastGallery" }, { "Basin", "Catalogue" },
+			{ "WestGallery", "Shaft" }, { "Shaft", "Crossing" }, { "Crossing", "NibLanding" }, { "NibLanding", "Apex" },
+			{ "Shaft", "Barb1" }, { "Barb1", "Barb2" }, { "Crossing", "Barb2" }, { "Barb2", "Barb3" }, { "Barb3", "Apex" },
+			{ "Catalogue", "Crossing" }, { "Catalogue", "EastGallery" }, { "EastGallery", "Blotter" }, { "Blotter", "Apex" },
+			{ "Blotter", "NibLanding" },
+		},
+		Stairs = { NibLanding_Apex = true },
+		Names = {
+			Sanctuary = "The Index Gate",
+			Basin = "Readers' Concourse",
+			WestGallery = "Vane Root",
+			Catalogue = "Catalogue Isle",
+			EastGallery = "The Inkwell",
+			Shaft = "Lamplighters' Isle",
+			Barb1 = "First Barb",
+			Crossing = "The Calamus",
+			Barb2 = "Second Barb",
+			NibLanding = "Nib Landing",
+			Blotter = "The Blotter",
+			Barb3 = "Vane Tip",
+			Apex = "The Nib Star",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "HALCYR",
+			Decks = {
+				Sanctuary = true, Basin = true,
+				WestGallery = true, EastGallery = true, Catalogue = true,
+				Shaft = true, Barb1 = true, Crossing = true, Barb2 = true,
+				NibLanding = true, Blotter = true, Barb3 = true, Apex = true,
+			},
+			RoundDecks = {
+				WestGallery = true, EastGallery = true, Catalogue = true,
+				Shaft = true, Barb1 = true, Crossing = true, Barb2 = true,
+				NibLanding = true, Barb3 = true, Apex = true,
+			},
+			DeckThickness = {
+				Basin = 4.0, WestGallery = 3.2, EastGallery = 3.2, Catalogue = 3.2,
+				Shaft = 3.2, Barb1 = 3.2, Crossing = 3.2, Barb2 = 3.2,
+				NibLanding = 3.2, Blotter = 4.2, Barb3 = 3.2, Apex = 3.4,
+			},
+			DeckLooks = {
+				Basin = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				WestGallery = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				EastGallery = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				Catalogue = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				Shaft = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				Barb1 = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				Crossing = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				Barb2 = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				NibLanding = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				Blotter = { Color = Color3.fromRGB(232, 226, 214), Material = Enum.Material.Marble },
+				Barb3 = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+				Apex = { Color = Color3.fromRGB(234, 228, 214), Material = Enum.Material.Marble },
+			},
+			Shapes = {
+				Apex = { Round = 2.0, Grow = -4, Float = { Under = 30 } },
+			},
+			Bridges = {
+				Sanctuary_Basin = true,
+				Basin_WestGallery = true, Basin_EastGallery = true, Basin_Catalogue = true,
+				WestGallery_Shaft = true, Shaft_Crossing = true, Crossing_NibLanding = true, NibLanding_Apex = true,
+				Shaft_Barb1 = true, Barb1_Barb2 = true, Crossing_Barb2 = true, Barb2_Barb3 = true, Barb3_Apex = true,
+				Catalogue_Crossing = true, Catalogue_EastGallery = true, EastGallery_Blotter = true, Blotter_Apex = true,
+				Blotter_NibLanding = true,
+			},
+			BridgeStyles = {
+				Sanctuary_Basin = "WAYGATE",
+				Basin_WestGallery = "STARGLASS", Basin_EastGallery = "STARGLASS", Basin_Catalogue = "STARGLASS",
+				WestGallery_Shaft = "STARGLASS", Shaft_Crossing = "STARGLASS", Crossing_NibLanding = "STARGLASS", NibLanding_Apex = "STARGLASS",
+				Shaft_Barb1 = "STARGLASS", Barb1_Barb2 = "STARGLASS", Crossing_Barb2 = "STARGLASS", Barb2_Barb3 = "STARGLASS", Barb3_Apex = "STARGLASS",
+				Catalogue_Crossing = "STARGLASS", Catalogue_EastGallery = "STARGLASS", EastGallery_Blotter = "STARGLASS", Blotter_Apex = "STARGLASS",
+				Blotter_NibLanding = "STARGLASS",
+			},
+			NoApexShelf = true,
+			LiquidRise = 0,
+			Pools = {
+				{ X = 0, Z = -60, RX = 240, RZ = 210 },
+				{ X = -180, Z = -80, RX = 110, RZ = 130 },
+				{ X = 180, Z = -80, RX = 110, RZ = 130 },
+			},
+			WallBand = { Base = 0, Noise = 0 },
+			GroveScale = 0,
+			MeadowScale = 0,
+		},
+	},
+	[42] = {
+		Key = "astral:2", Name = "Orbiting Stacks", PathStyle = "HALCYR",
+		Size = { Width = 660, Depth = 680, Height = 250, Bottom = -4 },
+		Basin = { X = 0, Y = 0, Z = 198, Width = 628, Depth = 92 },
+		WestGallery = { X = -222, Y = 10, Z = 26, Width = 84, Depth = 72 },
+		EastGallery = { X = 222, Y = 12, Z = 26, Width = 84, Depth = 72 },
+		Crossing = { X = 0, Y = 8, Z = 70, Width = 72, Depth = 58 },
+		ExtraPlatforms = {
+			MoonSW = { X = -104, Y = 15, Z = 22, Width = 58, Depth = 50 },
+			MoonSE = { X = 104, Y = 17, Z = 22, Width = 58, Depth = 50 },
+			MoonW = { X = -264, Y = 20, Z = -90, Width = 56, Depth = 48 },
+			MoonE = { X = 264, Y = 22, Z = -90, Width = 56, Depth = 48 },
+			OuterNW = { X = -198, Y = 25, Z = -230, Width = 62, Depth = 52 },
+			OuterNE = { X = 198, Y = 27, Z = -230, Width = 62, Depth = 52 },
+			MiddleW = { X = -166, Y = 30, Z = -110, Width = 62, Depth = 54 },
+			MiddleE = { X = 166, Y = 34, Z = -110, Width = 62, Depth = 54 },
+			Aphelion = { X = 0, Y = 39, Z = -270, Width = 62, Depth = 52 },
+		},
+		Apex = { X = 0, Y = 44, Z = -70, Width = 124, Depth = 92 },
+		Paths = {
+			{ "Sanctuary", "Basin" }, { "Basin", "WestGallery" }, { "Basin", "EastGallery" }, { "Basin", "Crossing" },
+			{ "WestGallery", "MoonW" }, { "MoonW", "OuterNW" }, { "OuterNW", "Aphelion" }, { "Aphelion", "OuterNE" },
+			{ "OuterNE", "MoonE" }, { "MoonE", "EastGallery" },
+			{ "MoonSW", "MiddleW" }, { "MoonSE", "MiddleE" }, { "OuterNW", "MiddleW" }, { "OuterNE", "MiddleE" },
+			{ "MiddleW", "Apex" }, { "MiddleE", "Apex" },
+			{ "WestGallery", "MoonSW" }, { "MoonSW", "Crossing" }, { "EastGallery", "MoonSE" }, { "MoonSE", "Crossing" },
+		},
+		Stairs = { MiddleW_Apex = true, MiddleE_Apex = true },
+		Names = {
+			Sanctuary = "The Orrery Gate",
+			Basin = "The Orrery Plinth",
+			WestGallery = "Folio",
+			EastGallery = "Codex",
+			Crossing = "Perihelion Court",
+			MoonSW = "Folio Moon",
+			MoonSE = "Codex Moon",
+			MoonW = "Glossary",
+			MoonE = "Marginalia",
+			OuterNW = "Atlas",
+			OuterNE = "Almanac",
+			MiddleW = "Lexicon",
+			MiddleE = "Concordance",
+			Aphelion = "The Aphelion",
+			Apex = "The Sun-Lectern",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "HALCYR",
+			Decks = {
+				Sanctuary = true, Basin = true,
+				WestGallery = true, EastGallery = true, Crossing = true,
+				MoonSW = true, MoonSE = true, MoonW = true, MoonE = true,
+				OuterNW = true, OuterNE = true, MiddleW = true, MiddleE = true,
+				Aphelion = true, Apex = true,
+			},
+			RoundDecks = {
+				WestGallery = true, EastGallery = true, Crossing = true,
+				MoonSW = true, MoonSE = true, MoonW = true, MoonE = true,
+				OuterNW = true, OuterNE = true, MiddleW = true, MiddleE = true,
+				Aphelion = true, Apex = true,
+			},
+			DeckThickness = {
+				Basin = 4.0, WestGallery = 3.2, EastGallery = 3.2, Crossing = 3.2,
+				MoonSW = 3.2, MoonSE = 3.2, MoonW = 3.2, MoonE = 3.2,
+				OuterNW = 3.2, OuterNE = 3.2, MiddleW = 3.2, MiddleE = 3.2,
+				Aphelion = 3.2, Apex = 3.6,
+			},
+			DeckLooks = {
+				Basin = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				WestGallery = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				EastGallery = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				Crossing = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MoonSW = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MoonSE = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MoonW = { Color = Color3.fromRGB(224, 216, 200), Material = Enum.Material.Marble },
+				MoonE = { Color = Color3.fromRGB(224, 216, 200), Material = Enum.Material.Marble },
+				OuterNW = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				OuterNE = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MiddleW = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				MiddleE = { Color = Color3.fromRGB(228, 220, 204), Material = Enum.Material.Marble },
+				Aphelion = { Color = Color3.fromRGB(198, 226, 246), Material = Enum.Material.Ice },
+				Apex = { Color = Color3.fromRGB(234, 226, 208), Material = Enum.Material.Marble },
+			},
+			Shapes = {
+				Apex = { Round = 2.0, Grow = -4, Float = { Under = 30 } },
+			},
+			Bridges = {
+				Sanctuary_Basin = true,
+				Basin_WestGallery = true, Basin_EastGallery = true, Basin_Crossing = true,
+				WestGallery_MoonW = true, MoonW_OuterNW = true, OuterNW_Aphelion = true, Aphelion_OuterNE = true,
+				OuterNE_MoonE = true, MoonE_EastGallery = true,
+				MoonSW_MiddleW = true, MoonSE_MiddleE = true, OuterNW_MiddleW = true, OuterNE_MiddleE = true,
+				MiddleW_Apex = true, MiddleE_Apex = true,
+				WestGallery_MoonSW = true, MoonSW_Crossing = true, EastGallery_MoonSE = true, MoonSE_Crossing = true,
+			},
+			BridgeStyles = {
+				Sanctuary_Basin = "WAYGATE",
+				Basin_WestGallery = "STARGLASS", Basin_EastGallery = "STARGLASS", Basin_Crossing = "STARGLASS",
+				WestGallery_MoonW = "STARGLASS", MoonW_OuterNW = "STARGLASS", OuterNW_Aphelion = "STARGLASS", Aphelion_OuterNE = "STARGLASS",
+				OuterNE_MoonE = "STARGLASS", MoonE_EastGallery = "STARGLASS",
+				MoonSW_MiddleW = "ORBIT", MoonSE_MiddleE = "ORBIT", OuterNW_MiddleW = "ORBIT", OuterNE_MiddleE = "ORBIT",
+				MiddleW_Apex = "STARGLASS", MiddleE_Apex = "STARGLASS",
+				WestGallery_MoonSW = "STARGLASS", MoonSW_Crossing = "STARGLASS", EastGallery_MoonSE = "STARGLASS", MoonSE_Crossing = "STARGLASS",
+			},
+			NoApexShelf = true,
+			LiquidRise = 0,
+			Pools = {
+				{ X = 0, Z = -70, RX = 270, RZ = 230 },
+			},
+			WallBand = { Base = 0, Noise = 0 },
+			GroveScale = 0,
+			MeadowScale = 0,
+		},
+	},
+	[43] = {
+		Key = "astral:3", Name = "Fractured Index", PathStyle = "HALCYR",
+		Size = { Width = 720, Depth = 750, Height = 280, Bottom = -6 },
+		Basin = { X = 0, Y = 0, Z = 225, Width = 440, Depth = 96 },
+		WestGallery = { X = -176, Y = 16, Z = 76, Width = 84, Depth = 68 },
+		EastGallery = { X = 186, Y = 8, Z = 76, Width = 84, Depth = 66 },
+		Crossing = { X = 0, Y = 12, Z = 76, Width = 84, Depth = 64 },
+		ExtraPlatforms = {
+			ShardA = { X = 0, Y = 18, Z = -4, Width = 58, Depth = 44 },
+			ShardE = { X = 186, Y = 14, Z = -4, Width = 58, Depth = 44 },
+			P2W = { X = -176, Y = 28, Z = -80, Width = 80, Depth = 58 },
+			P2C = { X = 0, Y = 24, Z = -80, Width = 80, Depth = 58 },
+			P2E = { X = 186, Y = 20, Z = -80, Width = 80, Depth = 58 },
+			ShardB = { X = -176, Y = 39, Z = -180, Width = 68, Depth = 44 },
+			P3C = { X = 0, Y = 36, Z = -180, Width = 80, Depth = 54 },
+			P3E = { X = 186, Y = 32, Z = -180, Width = 80, Depth = 54 },
+			ShardC = { X = 96, Y = 42, Z = -296, Width = 54, Depth = 46 },
+			Engine = { X = 186, Y = 44, Z = -296, Width = 68, Depth = 54 },
+			P4C = { X = 0, Y = 48, Z = -296, Width = 76, Depth = 56 },
+		},
+		Apex = { X = -176, Y = 52, Z = -296, Width = 124, Depth = 80 },
+		Paths = {
+			{ "Sanctuary", "Basin" }, { "Basin", "WestGallery" }, { "Basin", "Crossing" }, { "Basin", "EastGallery" },
+			{ "WestGallery", "Crossing" },
+			{ "WestGallery", "P2W" }, { "Crossing", "ShardA" }, { "ShardA", "P2C" },
+			{ "EastGallery", "ShardE" }, { "ShardE", "P2E" },
+			{ "P2W", "P2C" }, { "P2C", "P2E" },
+			{ "P2W", "ShardB" }, { "P2C", "P3C" }, { "P2E", "P3E" },
+			{ "ShardB", "P3C" }, { "P3C", "P3E" },
+			{ "ShardB", "Apex" }, { "P3C", "P4C" }, { "P3E", "Engine" },
+			{ "Engine", "ShardC" }, { "ShardC", "P4C" }, { "P4C", "Apex" },
+		},
+		Stairs = { ShardB_Apex = true },
+		Patrols = {
+			WEST_PLATES = { "WestGallery", "P2W", "P2C" },
+			RIFT_CROSSING = { "Crossing", "ShardA", "P2C" },
+			EAST_PLATES = { "EastGallery", "ShardE", "P2E" },
+			UPPER_ROW = { "ShardB", "P3C", "P3E" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "The Shelfmark Stair",
+			Basin = "The Index Floor",
+			WestGallery = "Westrange",
+			EastGallery = "Eastrange",
+			Crossing = "The Ruled Court",
+			ShardA = "The Cleft Shard",
+			ShardE = "The Tilted Shard",
+			P2W = "Bindery Plate",
+			P2C = "Reading Plate",
+			P2E = "Errata Plate",
+			ShardB = "The Index Shard",
+			P3C = "Ledger Plate",
+			P3E = "Ink-Cellar Plate",
+			ShardC = "The Hanging Shard",
+			Engine = "The Index Engine",
+			P4C = "Colophon Plate",
+			Apex = "The Lifted Index",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "RIFTWARD",
+			Decks = {
+				Sanctuary = true, Basin = true,
+				WestGallery = true, EastGallery = true, Crossing = true,
+				ShardA = true, ShardE = true,
+				P2W = true, P2C = true, P2E = true,
+				ShardB = true, P3C = true, P3E = true,
+				ShardC = true, Engine = true, P4C = true,
+				Apex = true,
+			},
+			DeckThickness = {
+				Sanctuary = 4.2, Basin = 4.4,
+				WestGallery = 4.0, EastGallery = 4.0, Crossing = 4.0,
+				ShardA = 3.4, ShardE = 3.4,
+				P2W = 4.0, P2C = 4.0, P2E = 4.0,
+				ShardB = 3.8, P3C = 4.0, P3E = 4.0,
+				ShardC = 3.4, Engine = 4.2, P4C = 4.0,
+				Apex = 4.4,
+			},
+			DeckLooks = {
+				Sanctuary = { Color = Color3.fromRGB(118, 124, 140), Material = Enum.Material.Slate },
+				Basin = { Color = Color3.fromRGB(112, 118, 134), Material = Enum.Material.Slate },
+				WestGallery = { Color = Color3.fromRGB(110, 116, 132), Material = Enum.Material.Slate },
+				EastGallery = { Color = Color3.fromRGB(108, 114, 130), Material = Enum.Material.Slate },
+				Crossing = { Color = Color3.fromRGB(114, 120, 136), Material = Enum.Material.Slate },
+				ShardA = { Color = Color3.fromRGB(106, 112, 130), Material = Enum.Material.Slate },
+				ShardE = { Color = Color3.fromRGB(106, 112, 130), Material = Enum.Material.Slate },
+				P2W = { Color = Color3.fromRGB(114, 120, 136), Material = Enum.Material.Slate },
+				P2C = { Color = Color3.fromRGB(112, 118, 134), Material = Enum.Material.Slate },
+				P2E = { Color = Color3.fromRGB(110, 116, 132), Material = Enum.Material.Slate },
+				ShardB = { Color = Color3.fromRGB(110, 116, 134), Material = Enum.Material.Slate },
+				P3C = { Color = Color3.fromRGB(116, 122, 138), Material = Enum.Material.Slate },
+				P3E = { Color = Color3.fromRGB(112, 118, 134), Material = Enum.Material.Slate },
+				ShardC = { Color = Color3.fromRGB(108, 114, 132), Material = Enum.Material.Slate },
+				Engine = { Color = Color3.fromRGB(114, 120, 136), Material = Enum.Material.Slate },
+				P4C = { Color = Color3.fromRGB(118, 124, 140), Material = Enum.Material.Slate },
+				Apex = { Color = Color3.fromRGB(124, 130, 146), Material = Enum.Material.Slate },
+			},
+			Shapes = {
+				EastGallery = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 16 } },
+				Crossing = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 20 } },
+				WestGallery = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 24 } },
+				P2E = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 26 } },
+				P2C = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 30 } },
+				P2W = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 34 } },
+				P3E = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 36 } },
+				P3C = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 40 } },
+				Engine = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 44 } },
+				P4C = { Round = 4.0, Grow = 4, Scarp = { Sides = { "N", "W" }, Height = 46 } },
+				Apex = { Round = 2.2, Grow = 6, Scarp = { Sides = { "N", "W" }, Height = 48 } },
+				ShardA = { Round = 3.0, Grow = 2, Float = { Under = 16 } },
+				ShardE = { Round = 3.0, Grow = 2, Float = { Under = 14 } },
+				ShardB = { Round = 3.0, Grow = 2, Float = { Under = 22 } },
+				ShardC = { Round = 3.0, Grow = 2, Float = { Under = 20 } },
+			},
+			Rifts = {
+				-- Rift A: east wall to pinch west at X = -170
+				{ Points = { { 360, -10, 20 }, { 190, -10, 22 }, { -100, 5, 22 }, { -170, -8, 14 } }, Pinch = "W" },
+				-- Rift B: west wall to pinch east at X = 200
+				{ Points = { { -360, -128, 16 }, { -110, -135, 20 }, { 40, -126, 12 }, { 200, -130, 12 } }, Pinch = "E" },
+				-- Rift C: west wall east to the Index Engine's closed foot at X = 240
+				{ Points = { { -360, -213, 22 }, { -110, -210, 26 }, { 140, -245, 22 }, { 240, -252, 14 } }, Pinch = "E" },
+			},
+			Bridges = {
+				Sanctuary_Basin = true,
+				Basin_WestGallery = true, Basin_Crossing = true, Basin_EastGallery = true,
+				WestGallery_Crossing = true,
+				WestGallery_P2W = true, Crossing_ShardA = true, ShardA_P2C = true,
+				EastGallery_ShardE = true, ShardE_P2E = true,
+				P2W_P2C = true, P2C_P2E = true,
+				P2W_ShardB = true, P2C_P3C = true, P2E_P3E = true,
+				ShardB_P3C = true, P3C_P3E = true,
+				ShardB_Apex = true, P3C_P4C = true, P3E_Engine = true,
+				Engine_ShardC = true, ShardC_P4C = true, P4C_Apex = true,
+			},
+			BridgeStyles = {
+				Sanctuary_Basin = "SHARD",
+				Basin_WestGallery = "SHARD", Basin_Crossing = "SHARD", Basin_EastGallery = "SHARD",
+				WestGallery_Crossing = "SHARD",
+				WestGallery_P2W = "SHARD", Crossing_ShardA = "SHARD", ShardA_P2C = "SHARD",
+				EastGallery_ShardE = "SHARD", ShardE_P2E = "SHARD",
+				P2W_P2C = "SHARD", P2C_P2E = "SHARD",
+				P2W_ShardB = "SHARD", P2C_P3C = "SHARD", P2E_P3E = "SHARD",
+				ShardB_P3C = "SHARD", P3C_P3E = "SHARD",
+				ShardB_Apex = "SHARD", P3C_P4C = "SHARD", P3E_Engine = "SHARD",
+				Engine_ShardC = "SHARD", ShardC_P4C = "SHARD", P4C_Apex = "SHARD",
+			},
+			NoApexShelf = true,
+			LiquidRise = 0,
+			WallBand = { Base = 0, Noise = 0 },
+			GroveScale = 0,
+			MeadowScale = 0,
+		},
+	},
+	[44] = {
+		Key = "astral:4", Name = "Runeguard Athenaeum", PathStyle = "HALCYR",
+		Size = { Width = 800, Depth = 795, Height = 305, Bottom = -6 },
+		Basin = { X = 0, Y = 0, Z = 230, Width = 768, Depth = 104 },
+		WestGallery = { X = -290, Y = 12, Z = 70, Width = 92, Depth = 80 },
+		EastGallery = { X = 250, Y = 16, Z = 70, Width = 92, Depth = 80 },
+		Crossing = { X = -90, Y = 8, Z = 85, Width = 88, Depth = 68 },
+		WestBastion = { X = -270, Y = 32, Z = -110, Width = 92, Depth = 82 },
+		EastBastion = { X = 260, Y = 36, Z = -120, Width = 92, Depth = 82 },
+		ExtraPlatforms = {
+			Lodge = { X = 100, Y = 4, Z = 95, Width = 64, Depth = 52 },
+			Loft = { X = 40, Y = 18, Z = 15, Width = 60, Depth = 48 },
+			Gate1 = { X = -130, Y = 20, Z = -15, Width = 64, Depth = 48 },
+			Forge = { X = 110, Y = 24, Z = -60, Width = 64, Depth = 52 },
+			Hall = { X = -10, Y = 28, Z = -90, Width = 88, Depth = 64 },
+			LanternWalk = { X = -130, Y = 40, Z = -165, Width = 64, Depth = 52 },
+			Gate2 = { X = 140, Y = 44, Z = -195, Width = 64, Depth = 48 },
+			Reliquary = { X = -200, Y = 48, Z = -290, Width = 64, Depth = 52 },
+			Seals = { X = 30, Y = 52, Z = -300, Width = 72, Depth = 60 },
+			Vault = { X = -60, Y = 56, Z = -320, Width = 64, Depth = 52 },
+		},
+		Apex = { X = 230, Y = 60, Z = -300, Width = 140, Depth = 100 },
+		Paths = {
+			{ "Sanctuary", "Basin" }, { "Basin", "Crossing" }, { "Basin", "WestGallery" }, { "Basin", "EastGallery" },
+			{ "Basin", "Lodge" }, { "Lodge", "Loft" }, { "Loft", "Crossing" }, { "Lodge", "EastGallery" },
+			{ "Crossing", "Gate1" }, { "WestGallery", "Gate1" }, { "Gate1", "Hall" }, { "Gate1", "WestBastion" },
+			{ "WestBastion", "LanternWalk" }, { "Hall", "LanternWalk" }, { "Hall", "Forge" }, { "Forge", "EastBastion" },
+			{ "Hall", "Gate2" }, { "EastBastion", "Gate2" }, { "Gate2", "Apex" }, { "Gate2", "Seals" },
+			{ "Seals", "Vault" }, { "Seals", "Apex" }, { "Vault", "Reliquary" },
+		},
+		Stairs = { Gate2_Apex = true, Seals_Apex = true },
+		Patrols = {
+			OUTER_WARD = { "WestGallery", "Gate1", "Crossing" },
+			WEST_GATE = { "Gate1", "WestBastion", "LanternWalk" },
+			MIDDLE_WARD = { "LanternWalk", "Hall", "Forge", "EastBastion" },
+			EAST_GATE = { "EastBastion", "Gate2", "Seals" },
+			INNER_WARD = { "Seals", "Apex", "Gate2" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "The Postern Stair",
+			Basin = "Petitioners' Yard",
+			Lodge = "Porters' Lodge",
+			Crossing = "The Warded Court",
+			WestGallery = "Copyists' Yard",
+			EastGallery = "Binders' Yard",
+			Loft = "Overlook Loft",
+			Gate1 = "The West Waygate",
+			Forge = "Seal Forge",
+			Hall = "Hall of Indices",
+			WestBastion = "West Tower",
+			EastBastion = "East Tower",
+			LanternWalk = "The Lantern Walk",
+			Gate2 = "The East Waygate",
+			Reliquary = "Reliquary of Lenses",
+			Seals = "Court of Seals",
+			Vault = "The Forbidden Vault",
+			Apex = "The Sealed Stacks",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "RIFTWARD",
+			Decks = { Sanctuary = true, Loft = true, Gate1 = true, Gate2 = true },
+			DeckThickness = { Loft = 3.2, Gate1 = 3.2, Gate2 = 3.2 },
+			DeckLooks = {
+				Loft = { Color = Color3.fromRGB(116, 122, 140), Material = Enum.Material.Slate },
+				Gate1 = { Color = Color3.fromRGB(212, 206, 192), Material = Enum.Material.Limestone },
+				Gate2 = { Color = Color3.fromRGB(212, 206, 192), Material = Enum.Material.Limestone },
+			},
+			Shapes = {
+				Lodge = { Round = 3.6, Grow = 4 },
+				Crossing = { Round = 3.6, Grow = 5 },
+				WestGallery = { Round = 3.6, Grow = 5 },
+				EastGallery = { Round = 3.6, Grow = 5 },
+				Forge = { Round = 3.6, Grow = 4 },
+				Hall = { Round = 3.6, Grow = 5 },
+				WestBastion = { Round = 2.6, Grow = 5 },
+				EastBastion = { Round = 2.6, Grow = 5 },
+				LanternWalk = { Round = 3.6, Grow = 4 },
+				Reliquary = { Round = 3.6, Grow = 4 },
+				Seals = { Round = 3.6, Grow = 5 },
+				Vault = { Round = 3.6, Grow = 4 },
+				Apex = { Round = 2.0, Grow = 6 },
+			},
+			Rifts = {
+				-- First rune-ward void moat (wall to wall along Z = -22)
+				{ Points = { { -400, -22, 10 }, { 400, -22, 10 } } },
+				-- Second rune-ward void moat (wall to wall from Z = -215 west to Z = -235 east)
+				{ Points = { { -400, -215, 10 }, { 0, -222, 10 }, { 400, -235, 10 } } },
+			},
+			Bridges = {
+				Crossing_Gate1 = true, WestGallery_Gate1 = true, Gate1_Hall = true, Gate1_WestBastion = true,
+				Hall_Gate2 = true, EastBastion_Gate2 = true, Gate2_Apex = true, Gate2_Seals = true,
+			},
+			BridgeStyles = {
+				Crossing_Gate1 = "WAYGATE", WestGallery_Gate1 = "WAYGATE", Gate1_Hall = "WAYGATE", Gate1_WestBastion = "WAYGATE",
+				Hall_Gate2 = "WAYGATE", EastBastion_Gate2 = "WAYGATE", Gate2_Apex = "WAYGATE", Gate2_Seals = "WAYGATE",
+			},
+			NoApexShelf = true,
+			LiquidRise = 0,
+			WallBand = { Base = 0, Noise = 0 },
+			GroveScale = 0,
+			MeadowScale = 0,
+		},
+	},
+	[45] = {
+		Key = "astral:5", Name = "Rift Warden's Observatory", PathStyle = "HALCYR",
+		Size = { Width = 900, Depth = 795, Height = 350, Bottom = -6 },
+		Basin = { X = 0, Y = 0, Z = 236, Width = 868, Depth = 104 },
+		WestGallery = { X = -300, Y = 8, Z = 80, Width = 92, Depth = 80 },
+		EastGallery = { X = 300, Y = 10, Z = 10, Width = 92, Depth = 80 },
+		Crossing = { X = -60, Y = 12, Z = 100, Width = 88, Depth = 68 },
+		WestBastion = { X = -330, Y = 32, Z = -80, Width = 92, Depth = 82 },
+		EastBastion = { X = 300, Y = 40, Z = -150, Width = 92, Depth = 82 },
+		ExtraPlatforms = {
+			Fallen = { X = 180, Y = 4, Z = 120, Width = 64, Depth = 52 },
+			Ink = { X = -165, Y = 16, Z = 85, Width = 56, Depth = 48 },
+			Lectern = { X = -170, Y = 20, Z = -10, Width = 64, Depth = 52 },
+			Proof = { X = 50, Y = 22, Z = 55, Width = 60, Depth = 48 },
+			SutureMid = { X = 40, Y = 26, Z = -20, Width = 56, Depth = 48 },
+			Overlook = { X = -60, Y = 30, Z = -95, Width = 64, Depth = 52 },
+			Lens = { X = 150, Y = 36, Z = -60, Width = 72, Depth = 60 },
+			SutureW = { X = -230, Y = 42, Z = -165, Width = 56, Depth = 48 },
+			Orrery = { X = 340, Y = 46, Z = -300, Width = 64, Depth = 52 },
+			RiftLipW = { X = -300, Y = 48, Z = -250, Width = 64, Depth = 56 },
+			WestAnchor = { X = -205, Y = 56, Z = -235, Width = 64, Depth = 56 },
+			EastAnchor = { X = 215, Y = 60, Z = -235, Width = 64, Depth = 56 },
+		},
+		Apex = { X = 0, Y = 68, Z = -225, Width = 204, Depth = 152 },
+		Paths = {
+			{ "Sanctuary", "Basin" }, { "Basin", "WestGallery" }, { "Basin", "Crossing" }, { "Basin", "Fallen" },
+			{ "Fallen", "EastGallery" }, { "WestGallery", "Ink" }, { "Ink", "Crossing" }, { "Crossing", "Lectern" },
+			{ "WestGallery", "WestBastion" }, { "Lectern", "WestBastion" }, { "Crossing", "SutureMid" },
+			{ "Fallen", "Proof" }, { "Proof", "SutureMid" }, { "SutureMid", "Lens" }, { "SutureMid", "Overlook" },
+			{ "WestBastion", "SutureW" }, { "SutureW", "RiftLipW" }, { "RiftLipW", "WestAnchor" }, { "WestAnchor", "Apex" },
+			{ "EastGallery", "EastBastion" }, { "Lens", "EastBastion" }, { "EastBastion", "EastAnchor" },
+			{ "Lens", "EastAnchor" }, { "EastBastion", "Orrery" }, { "Orrery", "EastAnchor" }, { "EastAnchor", "Apex" },
+		},
+		Stairs = { WestAnchor_Apex = true, EastAnchor_Apex = true },
+		Patrols = {
+			WEST_BANK = { "WestGallery", "Ink", "Crossing", "Lectern" },
+			MID_SUTURE = { "Crossing", "SutureMid", "Lens" },
+			WEST_HORN = { "WestBastion", "SutureW", "RiftLipW", "WestAnchor" },
+			EAST_HORN = { "EastGallery", "EastBastion", "EastAnchor" },
+			EAST_CREST = { "EastBastion", "Orrery", "EastAnchor" },
+			ANCHOR_RING = { "WestAnchor", "Apex", "EastAnchor" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "The Last Lamp",
+			Basin = "Meridian Terrace",
+			Fallen = "Fallen Catalogue",
+			WestGallery = "West Stacks",
+			EastGallery = "East Stacks",
+			Crossing = "Meridian Court",
+			Ink = "The Ink Pools",
+			Lectern = "Star-Lectern",
+			Proof = "Proof Room",
+			SutureMid = "The Middle Suture",
+			Overlook = "Rift Overlook",
+			WestBastion = "West Transit Tower",
+			Lens = "Lens Gallery",
+			EastBastion = "East Transit Tower",
+			SutureW = "The West Suture",
+			Orrery = "Orrery Crest",
+			RiftLipW = "West Rift Lip",
+			WestAnchor = "The West Ring",
+			EastAnchor = "The East Ring",
+			Apex = "The Observing Floor",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "RIFTWARD",
+			Decks = { Sanctuary = true, EastGallery = true, Proof = true, SutureMid = true, Overlook = true, SutureW = true, Orrery = true },
+			DeckThickness = { EastGallery = 3.2, Proof = 3.0, SutureMid = 3.2, Overlook = 3.0, SutureW = 3.2, Orrery = 3.2 },
+			DeckLooks = {
+				EastGallery = { Color = Color3.fromRGB(54, 42, 48), Material = Enum.Material.Wood },
+				Proof = { Color = Color3.fromRGB(48, 52, 82), Material = Enum.Material.Slate },
+				SutureMid = { Color = Color3.fromRGB(50, 38, 44), Material = Enum.Material.Wood },
+				Overlook = { Color = Color3.fromRGB(168, 138, 80), Material = Enum.Material.Metal },
+				SutureW = { Color = Color3.fromRGB(50, 38, 44), Material = Enum.Material.Wood },
+				Orrery = { Color = Color3.fromRGB(48, 52, 82), Material = Enum.Material.Slate },
+			},
+			Shapes = {
+				Fallen = { Round = 3.0, Grow = 4 },
+				WestGallery = { Round = 3.0, Grow = 5 },
+				Crossing = { Round = 3.0, Grow = 5 },
+				Ink = { Round = 2.8, Grow = 4 },
+				Lectern = { Round = 2.8, Grow = 4 },
+				WestBastion = { Round = 2.6, Grow = 5 },
+				Lens = { Round = 3.0, Grow = 5 },
+				EastBastion = { Round = 2.6, Grow = 5 },
+				RiftLipW = { Round = 2.8, Grow = 4 },
+				WestAnchor = { Round = 2.6, Grow = 5 },
+				EastAnchor = { Round = 2.6, Grow = 5 },
+				Apex = { Round = 2.0, Grow = 6, Sheer = true },
+			},
+			Rifts = {
+				-- Diagonal Rift torn across the entire floor from front-east to back-west, widest under Middle Suture.
+				{
+					Points = {
+						{ 450, 145, 16 },
+						{ 245, 66, 18 },
+						{ 40, -20, 38 },
+						{ -115, -68, 36 },
+						{ -230, -162, 34 },
+						{ -450, -195, 28 },
+					},
+				},
+			},
+			Bridges = {
+				Fallen_EastGallery = true,
+				Crossing_SutureMid = true, Proof_SutureMid = true, SutureMid_Lens = true, SutureMid_Overlook = true,
+				WestBastion_SutureW = true, SutureW_RiftLipW = true,
+				WestAnchor_Apex = true, EastAnchor_Apex = true,
+			},
+			BridgeStyles = {
+				Fallen_EastGallery = "SUTURE",
+				Crossing_SutureMid = "SUTURE", Proof_SutureMid = "SUTURE", SutureMid_Lens = "SUTURE", SutureMid_Overlook = "SUTURE",
+				WestBastion_SutureW = "SUTURE", SutureW_RiftLipW = "SUTURE",
+				WestAnchor_Apex = "STARGLASS", EastAnchor_Apex = "STARGLASS",
+			},
+			NoApexShelf = true,
+			LiquidRise = 0,
+			WallBand = { Base = 0, Noise = 0 },
+			GroveScale = 0,
+			MeadowScale = 0,
+		},
+	},
 	-- Floor 36, Drowned Steps (Sunken Sanctuary Introduction; docs/prompts/sunken-sanctuary-floor-layouts-prompt.md,
 	-- guide image reference/Sunken Sanctuary 36.webp): the Nereth city's sea-front at low tide. A tide-flat of
 	-- turquoise shallows and sandbars; the Pilgrim Stair climbs from the Stair Foot up the First Flight to the
@@ -3708,10 +4314,52 @@ local function build(index: number, v: any?): any
 	end
 	local function link(a, b)
 		local p, q = platforms[a], platforms[b]
+		local isAstral41 = v and v.Key == "astral:1"
+		local isAstralArchipelago = v and (v.Key == "astral:1" or v.Key == "astral:2")
+		local roundIsles = isAstralArchipelago and v.Terrain and v.Terrain.RoundDecks or nil
+		-- Floor 43 (Fractured Index): bridges leaving the Ruled Court (Basin) run 100% straight north-south (0 deg slant)
+		-- directly from Basin's north stone edge into the south cliff face of WestGallery, Crossing and EastGallery!
+		if v and v.Key == "astral:3" and a == "Basin" and q.Z < p.Z then
+			local sx = math.clamp(q.X, p.X - p.Width / 2 + 20, p.X + p.Width / 2 - 20)
+			local az = p.Z - p.Depth / 2
+			local bz = q.Z + q.Depth / 2 + (if q.Y > p.Y then 1.0 else -1.0)
+			local run = az - bz
+			assert(math.abs(q.Y - p.Y) / run <= math.tan(math.rad(15)), a .. "->" .. b .. " straight ramp too steep")
+			local connector = { From = a, To = b, AX = sx, AZ = az, AY = p.Y, BX = sx, BZ = bz, BY = q.Y, Width = 28 }
+			landings(connector, 0, -1, 20, 20)
+			if v and v.Stairs and v.Stairs[connector.Id] then
+				connector.Kind = "STAIRS"
+			end
+			table.insert(links, connector)
+			return
+		end
+		-- Floors 41-42: bridges leaving the wide straight Concourse/Plinth (Basin) run 100% straight north-south (0 deg slant)
+		-- directly from Basin's north marble edge to the target island's south rim, with zero blue-glass overlap.
+		if isAstralArchipelago and a == "Basin" and q.Z < p.Z and roundIsles and roundIsles[b] then
+			local sx = math.clamp(q.X, p.X - p.Width / 2 + 20, p.X + p.Width / 2 - 20)
+			local az = p.Z - p.Depth / 2 -- flush with Basin & ConcourseMarbleFloor north edge
+			local rB = math.max(q.Width, q.Depth) / 2 + 2.2
+			local bz = q.Z + rB -- flush outside circular island rim; marble pier bridges the curve
+			local run = az - bz
+			assert(math.abs(q.Y - p.Y) / run <= math.tan(math.rad(15)), a .. "->" .. b .. " straight ramp too steep")
+			local connector = { From = a, To = b, AX = sx, AZ = az, AY = p.Y, BX = sx, BZ = bz, BY = q.Y, Width = 28 }
+			landings(connector, 0, -1, 20, 20)
+			if v and v.Stairs and v.Stairs[connector.Id] then
+				connector.Kind = "STAIRS"
+			end
+			table.insert(links, connector)
+			return
+		end
 		local dx, dz = q.X-p.X, q.Z-p.Z
 		local length = math.sqrt(dx*dx+dz*dz)
 		local ux, uz = dx/length, dz/length
 		local function edge(terrace, halfWidth)
+			if isAstralArchipelago and roundIsles and roundIsles[terrace.Id] then
+				-- Circular Floor 41-42 floating islands: keep BOTH ends flush outside the circular marble rim (R + 0.2)
+				-- so zero blue star-glass overlaps the white marble; solid marble piers terraform the curve flush.
+				local r = math.max(terrace.Width, terrace.Depth) / 2 + 2
+				return if halfWidth > 0 then (r - 0.8) else (r + 4.2)
+			end
 			return math.min((terrace.Width/2+math.abs(uz)*halfWidth)/math.max(math.abs(ux),.001),
 				(terrace.Depth/2+math.abs(ux)*halfWidth)/math.max(math.abs(uz),.001))
 		end
@@ -3721,6 +4369,10 @@ local function build(index: number, v: any?): any
 		-- diagonal shoulders. A flat landing bridges back into that slab.
 		if p.Y > q.Y then insetA = edge(p,14)+1 end
 		if q.Y > p.Y then insetB = edge(q,14)+1 end
+		-- On Floor 41 Blotter (rectangular slab), keep BOTH ends wholly outside its rectangle so zero blue
+		-- glass overlaps Blotter's marble; solid marble bridgehead piers terraform any angled join flush.
+		if isAstral41 and a == "Blotter" then insetA = edge(p, 14) + 0.3 end
+		if isAstral41 and b == "Blotter" then insetB = edge(q, 14) + 0.3 end
 		local run = length-insetA-insetB
 		local extra = math.max(0,math.abs(q.Y-p.Y)/math.tan(math.rad(15))+1-run)
 		-- The lower end can overlap its slab without creating a raised lip:

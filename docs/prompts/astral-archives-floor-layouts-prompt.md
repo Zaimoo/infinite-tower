@@ -828,7 +828,8 @@ pwsh tests/run.ps1
 
 ## Status
 
-- 2026-11-23: plan written and the Part 3 layouts validated in Studio (0 `Validate` problems on all five floors; walks 1.94× / 1.85× / 1.86× / 1.94× / 1.89×; every patrol under 240 s). No floor built yet; no guide images yet.
+- 2026-11-23: plan written and the Part 3 layouts validated in Studio (0 `Validate` problems on all five floors; walks 1.94× / 1.85× / 1.86× / 1.94× / 1.89×; every patrol under 240 s).
+- 2026-11-24: all five guide images imported (`reference/Astral Archives 41..45.jpg`), all five Blender kits generated (87 templates across `tools/blender/generate_astral_f41..45_kit.py`) and imported into `ServerStorage.TowerBiomeKit`, `AUTHORED[41..45]` layouts authored, `HALCYR`/`RIFTWARD` terrain surfaces + `Float`/`Scarp`/`Sheer`/`Rifts` + all five `BridgeStyles` (`STARGLASS`, `ORBIT`, `SHARD`, `WAYGATE`, `SUTURE`) implemented, `HubLighting.FloorGrades[41..45]` added, `AstralFloor41..45` set-piece modules wired into `TowerBiomeAssets`, client-only `Conjunction.luau` ambience implemented, and all automated test suites & docs updated.
 
 ---
 

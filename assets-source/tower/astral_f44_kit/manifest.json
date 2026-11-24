@@ -1,0 +1,358 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AthenaeumDomeCrown": {
+      "Min": [
+        -51.347,
+        0.175,
+        -51.347
+      ],
+      "Roles": {
+        "ALT": 798,
+        "CRYSTAL": 44,
+        "GLOW": 184,
+        "METAL": 4666,
+        "STONE": 476,
+        "TRIM": 4200
+      },
+      "Size": [
+        102.523,
+        104.125,
+        102.694
+      ],
+      "Triangles": 10368
+    },
+    "AthenaeumDomeDrum": {
+      "Min": [
+        -71.0,
+        0.0,
+        -50.55
+      ],
+      "Roles": {
+        "ALT": 756,
+        "GLOW": 96,
+        "METAL": 3400,
+        "SILK": 192,
+        "STONE": 2436,
+        "TRIM": 4200,
+        "WOOD": 96
+      },
+      "Size": [
+        142.0,
+        117.996,
+        101.1
+      ],
+      "Triangles": 11176
+    },
+    "BookCartLift": {
+      "Min": [
+        -5.3,
+        0.0,
+        -3.8
+      ],
+      "Roles": {
+        "ALT": 24,
+        "METAL": 784,
+        "SILK": 48,
+        "STONE": 44,
+        "TRIM": 392,
+        "WOOD": 380
+      },
+      "Size": [
+        14.433,
+        15.6,
+        8.913
+      ],
+      "Triangles": 1672
+    },
+    "ChainedTomeRack": {
+      "Min": [
+        -6.125,
+        -0.06,
+        -5.4
+      ],
+      "Roles": {
+        "ALT": 84,
+        "GLOW": 140,
+        "METAL": 944,
+        "SILK": 48,
+        "STONE": 60,
+        "TRIM": 784,
+        "WOOD": 24
+      },
+      "Size": [
+        12.25,
+        16.86,
+        10.8
+      ],
+      "Triangles": 2084
+    },
+    "CopyistAwning": {
+      "Min": [
+        -5.7,
+        0.0,
+        -3.514
+      ],
+      "Roles": {
+        "ALT": 12,
+        "METAL": 84,
+        "SILK": 60,
+        "TRIM": 60,
+        "WOOD": 380
+      },
+      "Size": [
+        11.4,
+        8.995,
+        7.05
+      ],
+      "Triangles": 596
+    },
+    "IndexBoard": {
+      "Min": [
+        -10.8,
+        0.0,
+        -1.6
+      ],
+      "Roles": {
+        "ALT": 288,
+        "GLOW": 240,
+        "METAL": 360,
+        "STONE": 44,
+        "TRIM": 132,
+        "WOOD": 138
+      },
+      "Size": [
+        21.6,
+        14.05,
+        3.2
+      ],
+      "Triangles": 1202
+    },
+    "LensRack": {
+      "Min": [
+        -6.8,
+        0.0,
+        -2.1
+      ],
+      "Roles": {
+        "CRYSTAL": 1580,
+        "GLOW": 38,
+        "METAL": 1256,
+        "STONE": 72,
+        "TRIM": 1164,
+        "WOOD": 112
+      },
+      "Size": [
+        16.918,
+        13.42,
+        4.5
+      ],
+      "Triangles": 4222
+    },
+    "RuneguardTower": {
+      "Min": [
+        -15.45,
+        0.0,
+        -15.45
+      ],
+      "Roles": {
+        "ALT": 76,
+        "GLOW": 48,
+        "METAL": 644,
+        "STONE": 763,
+        "TRIM": 380,
+        "WOOD": 138
+      },
+      "Size": [
+        30.896,
+        36.56,
+        30.9
+      ],
+      "Triangles": 2049
+    },
+    "RunewardPylon": {
+      "Min": [
+        -3.8,
+        0.0,
+        -3.8
+      ],
+      "Roles": {
+        "ALT": 60,
+        "CRYSTAL": 12,
+        "GLOW": 300,
+        "METAL": 36,
+        "STONE": 138,
+        "TRIM": 60
+      },
+      "Size": [
+        7.6,
+        26.877,
+        7.6
+      ],
+      "Triangles": 606
+    },
+    "RunewardVeil": {
+      "Min": [
+        -18.0,
+        0.0,
+        -1.6
+      ],
+      "Roles": {
+        "CRYSTAL": 180,
+        "GLOW": 1308,
+        "METAL": 12,
+        "STONE": 44,
+        "TRIM": 336
+      },
+      "Size": [
+        36.0,
+        18.775,
+        3.2
+      ],
+      "Triangles": 1880
+    },
+    "SealPress": {
+      "Min": [
+        -7.308,
+        -0.022,
+        -2.622
+      ],
+      "Roles": {
+        "ALT": 48,
+        "GLOW": 44,
+        "METAL": 448,
+        "STONE": 368,
+        "TRIM": 360
+      },
+      "Size": [
+        16.992,
+        9.886,
+        5.736
+      ],
+      "Triangles": 1268
+    },
+    "SewingFrame": {
+      "Min": [
+        -6.1,
+        0.0,
+        -1.6
+      ],
+      "Roles": {
+        "ALT": 12,
+        "METAL": 12,
+        "SILK": 24,
+        "TRIM": 276,
+        "WOOD": 248
+      },
+      "Size": [
+        11.9,
+        7.6,
+        3.2
+      ],
+      "Triangles": 572
+    },
+    "ShutteredLamp": {
+      "Min": [
+        -1.56,
+        0.0,
+        -1.524
+      ],
+      "Roles": {
+        "ALT": 48,
+        "GLOW": 12,
+        "METAL": 318,
+        "STONE": 56,
+        "TRIM": 96
+      },
+      "Size": [
+        3.118,
+        12.448,
+        4.724
+      ],
+      "Triangles": 530
+    },
+    "StarIronAnvil": {
+      "Min": [
+        -7.2,
+        0.0,
+        -4.772
+      ],
+      "Roles": {
+        "ALT": 116,
+        "GLOW": 24,
+        "METAL": 404,
+        "STONE": 136,
+        "TRIM": 172,
+        "WOOD": 44
+      },
+      "Size": [
+        14.9,
+        13.238,
+        8.438
+      ],
+      "Triangles": 896
+    },
+    "VaultRingDoor": {
+      "Min": [
+        -13.0,
+        0.0,
+        -6.1
+      ],
+      "Roles": {
+        "ALT": 108,
+        "GLOW": 12,
+        "METAL": 1060,
+        "STONE": 44,
+        "TRIM": 1956,
+        "WOOD": 24
+      },
+      "Size": [
+        26.0,
+        23.0,
+        26.85
+      ],
+      "Triangles": 3204
+    },
+    "WardedCirclePad": {
+      "Min": [
+        -12.0,
+        0.0,
+        -12.0
+      ],
+      "Roles": {
+        "ALT": 396,
+        "GLOW": 1152,
+        "STONE": 124,
+        "TRIM": 1120
+      },
+      "Size": [
+        24.0,
+        0.44,
+        24.0
+      ],
+      "Triangles": 2792
+    },
+    "WaygateRing": {
+      "Min": [
+        -18.7,
+        0.0,
+        -3.954
+      ],
+      "Roles": {
+        "ALT": 408,
+        "CRYSTAL": 52,
+        "GLOW": 504,
+        "METAL": 1620,
+        "STONE": 402,
+        "TRIM": 1734
+      },
+      "Size": [
+        37.4,
+        37.9,
+        7.754
+      ],
+      "Triangles": 4720
+    }
+  },
+  "Unit": "studs"
+}

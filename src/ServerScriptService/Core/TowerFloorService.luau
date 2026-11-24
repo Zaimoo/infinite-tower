@@ -8,6 +8,7 @@ local Protocol=require(RS.Shared.Util.TowerProtocol)
 local Policy=require(RS.Shared.Util.TowerRequestPolicy)
 local Builder=require(script.Parent.TowerRoomBuilder)
 local HubLayout=require(RS.Shared.Config.HubLayout)
+local TowerFloorConfig=require(RS.Shared.Config.TowerFloorConfig)
 local Service={}
 Service.SessionId=Http:GenerateGUID(false):gsub("-",""):lower()
 Service.Encounters={} -- retained across geometry retirement; Part 3 owns combat/reward contents
@@ -371,7 +372,8 @@ function Service.Request(player: Player,r: any)
 		reject('BOSS_LOCKED');return
 	end
 	if (r.Action=='VISIT' or r.Action=='ASSIGN') and id > 0 and not raidEntry then
-		local bypass = RunService:IsStudio() and workspace:GetAttribute('UnlockAllFloors') == true
+		local bypass = TowerFloorConfig.UnlockAllFloorsForTesting == true
+			or (RunService:IsStudio() and workspace:GetAttribute('UnlockAllFloors') == true)
 		if not bypass then
 			-- Phase 4 onboarding: the Tower, and Floor 5 onward, open through the quest chain.
 			local dm=_G.DataManager

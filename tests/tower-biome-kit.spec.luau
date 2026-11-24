@@ -350,6 +350,95 @@ test("Floor 35 has its own Sovereign's Grove kit: at least twelve new templates 
 	end
 end)
 
+test("Floor 41 has its own Starlit Vestibule kit: at least ten new templates and a 130+ stud Lectern Spire", function()
+	local f41 = {
+		"IndexGateRing", "LecternSpire", "StarIsleUndersideS", "StarIsleUndersideM", "StarIsleUndersideL",
+		"StarglassBridgeSpan", "IndexLamp", "CatalogueCabinet", "CopyistDesk", "BookcaseCurved",
+		"InkwellBasin", "ChainedSlab", "StarMossPlanter", "FloatingTomeCluster",
+		"CalamusArmillary", "RuneguardGatePost", "LamplighterRack", "FarArchiveTower",
+	}
+	for _, name in f41 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 41 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f41 >= 10)
+	-- The Lectern of First Light spire clears the Floor 41 ladder's 130 studs at scale 1.
+	assert(Kit.ExtraTemplates.LecternSpire.Size.Y >= 130)
+	-- The Index Gate Ring clears the arrival stair cleanly.
+	assert(Kit.ExtraTemplates.IndexGateRing.Size.X >= 36 and Kit.ExtraTemplates.IndexGateRing.Size.Y >= 36)
+end)
+
+test("Floor 42 has its own Orbiting Stacks kit: at least eleven new templates and a 150+ stud Armillary", function()
+	local f42 = {
+		"SunLecternGlobe", "ArmillarySphereTall", "OrbitRailSegment", "OrreryArmBridge", "PlanetGlobe",
+		"RingBookcase", "MoonPhaseDisc", "GlobeStand", "StarTableSlate", "LecternRow",
+		"RingGearHalf", "SundialBrass", "OrreryGateArch", "AphelionTelescope",
+		"MarginaliaStack", "OrreryGearUnderside",
+	}
+	for _, name in f42 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 42 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f42 >= 11)
+	-- The Sun-Lectern's tall armillary clears the Floor 42 ladder's 150 studs at scale 1.
+	assert(Kit.ExtraTemplates.ArmillarySphereTall.Size.Y >= 150)
+	-- The Orrery Gate Arch clears the arrival stair cleanly.
+	assert(Kit.ExtraTemplates.OrreryGateArch.Size.X >= 36 and Kit.ExtraTemplates.OrreryGateArch.Size.Y >= 28)
+end)
+
+test("Floor 43 has its own Fractured Index kit: at least twelve new templates and a 175+ stud Index Engine", function()
+	local f43 = {
+		"IndexEngineCore", "IndexEngineGearBank", "IndexEngineShelfTower", "LiftedIndexGallery",
+		"ScarpShelfStrata", "ShardSlabS", "ShardSlabM", "ShardSlabL", "ToppledShelfRange",
+		"CardDrawerSpill", "CatalogueDeskTilted", "BinderyPress", "ErrataPress",
+		"LedgerStackTall", "InkVatCracked", "ColophonWall", "BrokenOrreryRing",
+		"PageFallRibbon", "CrookedIndexLamp",
+	}
+	for _, name in f43 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 43 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f43 >= 12)
+	-- The split Index Engine core clears the Floor 43 ladder's 175 studs at scale 1.
+	assert(Kit.ExtraTemplates.IndexEngineCore.Size.Y >= 175)
+end)
+
+test("Floor 44 has its own Runeguard Athenaeum kit: at least thirteen new templates and a 210+ stud Dome", function()
+	local f44 = {
+		"AthenaeumDomeDrum", "AthenaeumDomeCrown", "RunewardPylon", "RunewardVeil", "WaygateRing",
+		"RuneguardTower", "IndexBoard", "SealPress", "StarIronAnvil", "ShutteredLamp",
+		"ChainedTomeRack", "VaultRingDoor", "LensRack", "SewingFrame", "BookCartLift",
+		"CopyistAwning", "WardedCirclePad",
+	}
+	for _, name in f44 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 44 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f44 >= 13)
+	-- The stacked Athenaeum dome (drum + crown) clears the Floor 44 ladder's 210 studs at scale 1.
+	assert(Kit.ExtraTemplates.AthenaeumDomeDrum.Size.Y + Kit.ExtraTemplates.AthenaeumDomeCrown.Size.Y >= 210)
+	-- The Waygate Ring clears the ward bridge lane cleanly.
+	assert(Kit.ExtraTemplates.WaygateRing.Size.X >= 34 and Kit.ExtraTemplates.WaygateRing.Size.Y >= 34)
+end)
+
+test("Floor 45 has its own Observatory kit: at least fourteen new templates and a 285+ stud Great Telescope", function()
+	local f45 = {
+		"GreatTelescopeMount", "GreatTelescopeTube", "ObservatoryDomeRibs", "AzimuthRing",
+		"RiftEyeMesh", "RiftLipCrystal", "SutureShelfSpan", "RiftOverlookDeck",
+		"TransitTower", "TransitInstrument", "LensBench", "FallenOrrery",
+		"StarLecternGrand", "InkPoolDecal", "ToppledCabinetRange", "ProofPress", "MeridianFooting",
+	}
+	for _, name in f45 do
+		assert(Kit.ExtraTemplates[name], "missing Floor 45 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+	end
+	assert(#f45 >= 14)
+	-- The Great Telescope (mount + tube) clears the Floor 45 ladder's 285 studs at scale 1.
+	assert(Kit.ExtraTemplates.GreatTelescopeMount.Size.Y + Kit.ExtraTemplates.GreatTelescopeTube.Size.Y >= 285)
+	-- The Azimuth Rings clear the Ring Stairs cleanly.
+	assert(Kit.ExtraTemplates.AzimuthRing.Size.X >= 34 and Kit.ExtraTemplates.AzimuthRing.Size.Y >= 38)
+end)
+
 test("Floor 38 has its own Tidal Channels waterworks kit: at least eleven new templates and a 160+ stud Sea-Gate", function()
 	local f38 = {
 		"SeaGateArch", "TidebellTowerSlim", "TideMillHouse", "SluiceHouseKeep", "LockChamberWall",
@@ -492,13 +581,34 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[39].AtmosphereHaze >= 0.9 and Light.FloorGrades[39].BloomIntensity >= 0.48, "floor 39 keeps twilight haze and pearl-vault bloom")
 	assert(Light.FloorGrades[40] ~= nil, "floor 40 (Leviathan's Basin) has its storm-eye under-the-sea grade")
 	assert(Light.FloorGrades[40].AtmosphereHaze >= 1.2 and Light.FloorGrades[40].BloomIntensity >= 0.55, "floor 40 keeps sea-dome haze and maelstrom/rune bloom")
-	assert(Light.TowerPreset(9, 41) == Light.TowerPreset(9), "a floor without its own grade shares its biome's")
+	for fId = 41, 45 do
+		assert(Light.FloorGrades[fId] ~= nil, "floor " .. fId .. " (Astral Archives) has its own lighting grade")
+		assert(Light.TowerPreset(9, fId) ~= Light.TowerPreset(9), "floor " .. fId .. " layers its grade over BiomeGrades[9]")
+	end
+	assert(Light.FloorGrades[41].AtmosphereDensity < Light.FloorGrades[45].AtmosphereDensity, "Astral atmosphere thickens from Floor 41 to Floor 45")
+	assert(Light.FloorGrades[45].BloomIntensity >= 0.58, "Floor 45 keeps rift-eye bloom")
+	assert(Light.TowerPreset(10, 46) == Light.TowerPreset(10), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400
 		assert(Light.TowerFloorAt(x + 200, z - 250) == id, "floor " .. id .. " reads the wrong floor id")
 	end
 	assert(Light.TowerFloorAt(0, 0) == nil)
+end)
+
+test("Astral Archives surfaces HALCYR and RIFTWARD avoid blocky materials, Fungal-owned materials, and Mud", function()
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local forbidden: { [any]: string } = {}
+	for _, m in Terrain.BlockyMaterials do forbidden[m] = "blocky" end
+	for _, m in Terrain.FungalMaterials do forbidden[m] = "Fungal-owned" end
+	forbidden[Enum.Material.Mud] = "Mud"
+	for _, name in { "HALCYR", "RIFTWARD" } do
+		local surf = Terrain.Surfaces[name]
+		assert(surf ~= nil, "missing surface " .. name)
+		for slot, mat in surf do
+			assert(forbidden[mat] == nil, string.format("%s.%s uses forbidden %s material", name, slot, tostring(forbidden[mat])))
+		end
+	end
 end)
 
 test("Floor 36 has its own Drowned Steps kit: at least nine new templates, a great Tidebell and a golden shell canopy", function()
