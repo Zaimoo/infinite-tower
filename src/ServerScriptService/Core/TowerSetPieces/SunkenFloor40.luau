@@ -78,16 +78,16 @@ local CORAL_OCHRE = tinted(BASIN_PAL, {
 	GLOW = swatch(168, 236, 244, Mat.Neon),
 })
 local MAELSTROM_OUTER_PAL = tinted(BASIN_PAL, {
-	ALT = swatch(24, 114, 144, Mat.Glass, 0.22),
-	CRYSTAL = swatch(74, 198, 224, Mat.Glass, 0.30),
-	SILK = swatch(216, 246, 255, Mat.SmoothPlastic, 0.14),
-	GLOW = swatch(140, 244, 255, Mat.Neon, 0.18),
+	ALT = swatch(20, 106, 138, Mat.Glass, 0.72),
+	CRYSTAL = swatch(74, 198, 224, Mat.Glass, 0.74),
+	SILK = swatch(208, 244, 255, Mat.SmoothPlastic, 0.58),
+	GLOW = swatch(132, 238, 255, Mat.Neon, 0.68),
 })
 local MAELSTROM_INNER_PAL = tinted(BASIN_PAL, {
-	ALT = swatch(36, 152, 182, Mat.Glass, 0.16),
-	CRYSTAL = swatch(124, 234, 248, Mat.Glass, 0.24),
-	SILK = swatch(234, 252, 255, Mat.Neon, 0.18),
-	GLOW = swatch(172, 250, 255, Mat.Neon, 0.08),
+	ALT = swatch(28, 136, 168, Mat.Glass, 0.64),
+	CRYSTAL = swatch(112, 226, 244, Mat.Glass, 0.68),
+	SILK = swatch(226, 250, 255, Mat.SmoothPlastic, 0.50),
+	GLOW = swatch(164, 246, 255, Mat.Neon, 0.56),
 })
 local SEADOME_PAL = tinted(BASIN_PAL, {
 	METAL = swatch(26, 42, 58, Mat.Metal),
@@ -499,13 +499,17 @@ function SunkenFloor40.Build(ctx: any)
 	end
 
 	-- =========================================================================
-	-- 3. ANIMATED 3-LAYER MAELSTROM VORTEX + SWIRLING DEBRIS + EYE SPRAY
+	-- 3. ANIMATED WATER-SURFACE MAELSTROM & SUBTLE WATER TORNADO FUNNELS
+	--    All surface swirls are flattened flush onto waterY (<= 2.8 studs tall,
+	--    well below every terrace/bridge) and subtle translucent water-tornado
+	--    funnels spin in the open abyssal water with zero platform overlap.
 	--    Driven purely client-side by MaelstromVortexController.client.luau!
 	-- =========================================================================
 	local vortexLayers = {
-		{ Name = "MaelstromOuterSwirl", X = 0, Y = waterY - 0.6, Z = -125, Scale = 2.65, Yaw = 0.0, Speed = 0.36, BobAmp = 0.65, BobFreq = 1.05, Phase = 0.0, Pal = MAELSTROM_OUTER_PAL },
-		{ Name = "MaelstromMidSwirl", X = 0, Y = waterY - 1.8, Z = -135, Scale = 1.98, Yaw = 0.55, Speed = 0.62, BobAmp = 0.55, BobFreq = 1.45, Phase = 2.1, Pal = MAELSTROM_OUTER_PAL },
-		{ Name = "MaelstromInnerEye", X = 0, Y = waterY - 2.8, Z = -152, Scale = 1.42, Yaw = 1.15, Speed = 1.05, BobAmp = 0.45, BobFreq = 1.90, Phase = 4.2, Pal = MAELSTROM_INNER_PAL },
+		{ Name = "MaelstromOuterSwirl", X = 0, Y = waterY - 0.9, Z = -135, Scale = V(2.15, 0.10, 2.15), Yaw = 0.0, Speed = 0.26, BobAmp = 0.24, BobFreq = 0.95, Phase = 0.0, Pal = MAELSTROM_OUTER_PAL },
+		{ Name = "MaelstromMidSwirl", X = 0, Y = waterY - 1.0, Z = -148, Scale = V(1.62, 0.12, 1.62), Yaw = 0.55, Speed = 0.46, BobAmp = 0.22, BobFreq = 1.30, Phase = 2.1, Pal = MAELSTROM_OUTER_PAL },
+		-- Oval inner swirl hugging the sheer 196 x 144 pillar foot strictly at water level
+		{ Name = "MaelstromInnerEye", X = 0, Y = waterY - 1.1, Z = -172, Scale = V(1.48, 0.14, 1.22), Yaw = 1.15, Speed = 0.72, BobAmp = 0.20, BobFreq = 1.70, Phase = 4.2, Pal = MAELSTROM_INNER_PAL },
 	}
 	for idx, vl in vortexLayers do
 		ctx.group(vl.Name, function()
@@ -538,27 +542,43 @@ function SunkenFloor40.Build(ctx: any)
 					end
 				end
 				kindsUsed.MaelstromSwirlRing = (kindsUsed.MaelstromSwirlRing or 0) + 1
-			else
-				-- Crisp sculpted part fallback so the whirlpool animates even before FBX import!
-				local rOuter = 68 * vl.Scale
-				local rInner = 26 * vl.Scale
-				for arm = 0, 5 do
-					local baseA = (arm / 6) * math.pi * 2 + vl.Yaw
-					for k = 0, 7 do
-						local u0, u1 = k / 8, (k + 1) / 8
-						local r0 = rOuter * (1 - u0) + rInner * u0
-						local r1 = rOuter * (1 - u1) + rInner * u1
-						local a0, a1 = baseA + u0 * 2.2, baseA + u1 * 2.2
-						local p0 = V(vl.X + math.cos(a0) * r0, vl.Y + (1 - u0) * 5.2, vl.Z + math.sin(a0) * r0)
-						local p1 = V(vl.X + math.cos(a1) * r1, vl.Y + (1 - u1) * 5.2, vl.Z + math.sin(a1) * r1)
-						local seg = H.boxAt("SwirlArm", V(8.5 * vl.Scale * (1 - u0 * 0.4), 1.6, (p1 - p0).Magnitude + 2), CFrame.lookAt((p0 + p1) * 0.5, p1), rgb(96, 224, 244), Mat.Glass, 0.28)
-						noCollide(seg)
-						seg.CastShadow = false
-						local foam = H.boxAt("SwirlFoam", V(3.0 * vl.Scale * (1 - u0 * 0.4), 0.7, (p1 - p0).Magnitude + 1), CFrame.lookAt((p0 + p1) * 0.5 + V(0, 1.1, 0), p1 + V(0, 1.1, 0)), rgb(224, 250, 255), Mat.Neon, 0.32)
-						noCollide(foam)
-						foam.CastShadow = false
-					end
-				end
+			end
+
+			-- Subtle curved Beam water-current streaks lying flat on the actual water surface
+			local rad = 64 * vl.Scale.X
+			for bIdx = 0, 2 do
+				local a0 = vl.Yaw + (bIdx / 3) * math.pi * 2
+				local a1 = a0 + 1.35
+				local p0 = V(vl.X + math.cos(a0) * rad, waterY + 0.18, vl.Z + math.sin(a0) * rad)
+				local p1 = V(vl.X + math.cos(a1) * (rad * 0.82), waterY + 0.18, vl.Z + math.sin(a1) * (rad * 0.82))
+				local host = boxAt("WaterCurrentHost" .. bIdx, V(1, 1, 1), (p0 + p1) * 0.5, 0, rgb(120, 232, 248), Mat.SmoothPlastic, 1)
+				noCollide(host)
+				host.CastShadow = false
+				local att0 = Instance.new("Attachment")
+				att0.WorldCFrame = CFrame.new(origin + p0) * CFrame.Angles(math.rad(90), 0, a0 + math.pi * 0.5)
+				att0.Parent = host
+				local att1 = Instance.new("Attachment")
+				att1.WorldCFrame = CFrame.new(origin + p1) * CFrame.Angles(math.rad(90), 0, a1 + math.pi * 0.5)
+				att1.Parent = host
+				local bm = Instance.new("Beam")
+				bm.Attachment0 = att0
+				bm.Attachment1 = att1
+				bm.CurveSize0 = rad * 0.28
+				bm.CurveSize1 = -rad * 0.24
+				bm.Segments = 14
+				bm.Width0 = 8.5
+				bm.Width1 = 3.2
+				bm.FaceCamera = false
+				bm.Color = ColorSequence.new(rgb(96, 224, 244), rgb(214, 248, 255))
+				bm.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 1.0),
+					NumberSequenceKeypoint.new(0.25, 0.64),
+					NumberSequenceKeypoint.new(0.75, 0.68),
+					NumberSequenceKeypoint.new(1, 1.0),
+				})
+				bm.LightEmission = 0.35
+				bm.TextureSpeed = 0.55
+				bm.Parent = host
 			end
 
 			if m:IsA("Model") then
@@ -576,12 +596,131 @@ function SunkenFloor40.Build(ctx: any)
 		props += 1
 	end
 
-	-- Swirling drowned wreckage ring slowly circling the outer maelstrom (also animated client-side!)
+	-- Subtle animated water-tornado funnels spinning in the open abyssal water pockets (zero platform overlap!)
+	-- Main tornado sits squarely in the open channel between DrownedAltar (Z=-36) and Leviathan's Dais (Z=-103);
+	-- twin flank eddies spin in the wide open western & eastern vortex basins.
+	local function buildWaterTornado(name: string, x: number, z: number, wideR: number, waistR: number, riseH: number, spinSpeed: number, wobbleAmp: number, withMist: boolean)
+		ctx.group(name, function()
+			ctx.tag("PropKind", "MaelstromVortex")
+			ctx.tag("OnTerrain", true)
+			local m = ctx.current()
+			local baseCF = CFrame.new(origin + V(x, waterY, z))
+			local pivot = Instance.new("Part")
+			pivot.Name = "VortexPivot"
+			pivot.Size = V(2, 2, 2)
+			pivot.CFrame = baseCF
+			pivot.Transparency = 1
+			pivot.Anchored = true
+			pivot.CastShadow = false
+			noCollide(pivot)
+			pivot.Parent = m
+
+			-- 7 translucent glassy water-funnel rings tapering downward into the drain & gently rising as a subtle waterspout
+			local tiers = {
+				{ DY = -3.8, R = waistR * 0.68, H = 2.6, Trans = 0.72, Col = rgb(22, 114, 146) },
+				{ DY = -1.6, R = waistR * 0.92, H = 2.4, Trans = 0.74, Col = rgb(36, 148, 178) },
+				{ DY = 0.4, R = wideR * 0.85, H = 2.0, Trans = 0.76, Col = rgb(88, 212, 236) },
+				{ DY = riseH * 0.22, R = waistR * 1.02, H = 2.6, Trans = 0.78, Col = rgb(118, 228, 246) },
+				{ DY = riseH * 0.48, R = waistR * 0.76, H = 3.0, Trans = 0.82, Col = rgb(154, 238, 252) },
+				{ DY = riseH * 0.74, R = waistR * 0.56, H = 3.2, Trans = 0.86, Col = rgb(188, 246, 255) },
+				{ DY = riseH * 0.96, R = waistR * 0.88, H = 2.2, Trans = 0.89, Col = rgb(210, 250, 255) },
+			}
+			for tIdx, tr in tiers do
+				local ring = Instance.new("Part")
+				ring.Name = "TornadoWaterTier" .. tIdx
+				ring.Shape = Enum.PartType.Cylinder
+				ring.Size = V(tr.H, tr.R * 2, tr.R * 2)
+				local offX = math.sin(tIdx * 1.1) * (waistR * 0.08)
+				local offZ = math.cos(tIdx * 1.1) * (waistR * 0.08)
+				ring.CFrame = CFrame.new(origin + V(x + offX, waterY + tr.DY, z + offZ)) * CFrame.Angles(0, 0, math.rad(90))
+				ring.Color = tr.Col
+				ring.Material = Mat.Glass
+				ring.Transparency = tr.Trans
+				ring.Anchored = true
+				ring.CastShadow = false
+				noCollide(ring)
+				ring.Parent = m
+			end
+
+			-- 4 helical translucent foam/mist Beam ribbons spiraling up the water tornado
+			for sIdx = 0, 3 do
+				local a0 = (sIdx / 4) * math.pi * 2
+				local a1 = a0 + 2.4
+				local pBot = V(x + math.cos(a0) * wideR, waterY - 1.2, z + math.sin(a0) * wideR)
+				local pTop = V(x + math.cos(a1) * (waistR * 0.72), waterY + riseH, z + math.sin(a1) * (waistR * 0.72))
+				local host = boxAt("TornadoRibbonHost" .. sIdx, V(1, 1, 1), (pBot + pTop) * 0.5, 0, rgb(164, 242, 255), Mat.SmoothPlastic, 1)
+				noCollide(host)
+				host.CastShadow = false
+				local att0 = Instance.new("Attachment")
+				att0.WorldPosition = origin + pBot
+				att0.Parent = host
+				local att1 = Instance.new("Attachment")
+				att1.WorldPosition = origin + pTop
+				att1.Parent = host
+				local bm = Instance.new("Beam")
+				bm.Attachment0 = att0
+				bm.Attachment1 = att1
+				bm.CurveSize0 = wideR * 0.65
+				bm.CurveSize1 = -waistR * 0.65
+				bm.Segments = 16
+				bm.Width0 = 5.2
+				bm.Width1 = 1.8
+				bm.FaceCamera = true
+				bm.Color = ColorSequence.new(rgb(112, 232, 248), rgb(224, 252, 255))
+				bm.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 1.0),
+					NumberSequenceKeypoint.new(0.22, 0.58),
+					NumberSequenceKeypoint.new(0.78, 0.66),
+					NumberSequenceKeypoint.new(1, 1.0),
+				})
+				bm.LightEmission = 0.4
+				bm.TextureSpeed = 0.85
+				bm.Parent = host
+			end
+
+			if withMist then
+				local mistAnchor = boxAt("TornadoMistCore", V(wideR * 1.1, 2, wideR * 1.1), V(x, waterY + 1.0, z), 0, rgb(164, 242, 255), Mat.SmoothPlastic, 1)
+				noCollide(mistAnchor)
+				addEmitter(mistAnchor, "MaelstromSprayEmitter", {
+					Color = ColorSequence.new(rgb(138, 236, 255), rgb(228, 252, 255)),
+					Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 3.5), NumberSequenceKeypoint.new(0.5, 8.5), NumberSequenceKeypoint.new(1, 13.0) }),
+					Trans = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.62), NumberSequenceKeypoint.new(0.5, 0.74), NumberSequenceKeypoint.new(1, 1.0) }),
+					Rate = 12,
+					Life = NumberRange.new(1.8, 3.0),
+					Speed = NumberRange.new(6, 13),
+					Spread = Vector2.new(28, 28),
+					Accel = V(0, 5, 0),
+					LightEm = 0.45,
+				})
+			end
+
+			if m:IsA("Model") then
+				m.PrimaryPart = pivot
+				m.WorldPivot = baseCF
+				m:SetAttribute("MaelstromBasePos", baseCF.Position)
+				m:SetAttribute("MaelstromBaseYaw", 0)
+				m:SetAttribute("MaelstromSpinSpeed", spinSpeed)
+				m:SetAttribute("MaelstromBobAmp", 0.45)
+				m:SetAttribute("MaelstromBobFreq", 1.35)
+				m:SetAttribute("MaelstromBobPhase", spinSpeed * 2.0)
+				m:SetAttribute("MaelstromWobbleAmp", wobbleAmp)
+				CollectionService:AddTag(m, "SunkenMaelstromRing")
+			end
+		end)
+		props += 1
+	end
+
+	-- Main subtle water-tornado in the open channel south of Leviathan's Dais (Emitter #1) + twin flank eddies
+	buildWaterTornado("MaelstromTornadoMain", 0, -68, 24, 11, 16, 1.15, 1.35, true)
+	buildWaterTornado("MaelstromTornadoWest", -158, -78, 19, 8.5, 12, 0.88, 0.95, false)
+	buildWaterTornado("MaelstromTornadoEast", 158, -78, 19, 8.5, 12, 0.92, 0.95, false)
+
+	-- Swirling drowned wreckage ring slowly circling flush on the outer maelstrom water (also animated client-side!)
 	ctx.group("MaelstromDebrisRing", function()
 		ctx.tag("PropKind", "MaelstromVortex")
 		ctx.tag("OnTerrain", true)
 		local m = ctx.current()
-		local debrisCF = CFrame.new(origin + V(0, waterY + 0.5, -125))
+		local debrisCF = CFrame.new(origin + V(0, waterY + 0.12, -135))
 		local pivot = Instance.new("Part")
 		pivot.Name = "DebrisPivot"
 		pivot.Size = V(2, 2, 2)
@@ -593,13 +732,13 @@ function SunkenFloor40.Build(ctx: any)
 		pivot.Parent = m
 		for i = 0, 7 do
 			local a = (i / 8) * math.pi * 2 + 0.35
-			local rad = 165 + (i % 3) * 18
+			local rad = 165 + (i % 3) * 16
 			local dx = math.cos(a) * rad
-			local dz = -125 + math.sin(a) * rad
-			local plank = boxAt("DriftTimber" .. i, V(11 + (i % 3) * 3, 1.2, 2.4), V(dx, waterY + 0.5, dz), -a + 0.3, rgb(66, 54, 46), Mat.Wood)
+			local dz = -135 + math.sin(a) * rad
+			local plank = boxAt("DriftTimber" .. i, V(10 + (i % 3) * 2.5, 0.7, 2.2), V(dx, waterY + 0.12, dz), -a + 0.3, rgb(66, 54, 46), Mat.Wood)
 			noCollide(plank)
 			plank.CastShadow = false
-			local wake = boxAt("DriftWake" .. i, V(14, 0.35, 3.6), V(dx, waterY + 0.2, dz), -a + 0.3, rgb(198, 244, 255), Mat.Neon, 0.54)
+			local wake = boxAt("DriftWake" .. i, V(13, 0.2, 3.2), V(dx, waterY + 0.05, dz), -a + 0.3, rgb(198, 244, 255), Mat.SmoothPlastic, 0.65)
 			noCollide(wake)
 			wake.CastShadow = false
 		end
@@ -608,20 +747,20 @@ function SunkenFloor40.Build(ctx: any)
 			m.WorldPivot = debrisCF
 			m:SetAttribute("MaelstromBasePos", debrisCF.Position)
 			m:SetAttribute("MaelstromBaseYaw", 0)
-			m:SetAttribute("MaelstromSpinSpeed", 0.28)
-			m:SetAttribute("MaelstromBobAmp", 0.65)
-			m:SetAttribute("MaelstromBobFreq", 1.2)
+			m:SetAttribute("MaelstromSpinSpeed", 0.22)
+			m:SetAttribute("MaelstromBobAmp", 0.28)
+			m:SetAttribute("MaelstromBobFreq", 1.1)
 			m:SetAttribute("MaelstromBobPhase", 1.2)
 			CollectionService:AddTag(m, "SunkenMaelstromRing")
 		end
 	end)
 	props += 1
 
-	-- 4 Eye-of-Maelstrom rising spray emitters hugging the sheer dais pillar foot (Emitters #1..4)
+	-- 3 Eye-of-Maelstrom rising spray emitters hugging the sheer dais pillar foot (Emitters #2..4)
 	ctx.group("MaelstromEyeSpray", function()
 		ctx.tag("PropKind", "MaelstromVortex")
 		ctx.tag("OnTerrain", true)
-		local sprayPts = { { -92, -110 }, { 92, -110 }, { -104, -182 }, { 104, -182 } }
+		local sprayPts = { { -104, -135 }, { 104, -135 }, { 0, -252 } }
 		for idx, sp in sprayPts do
 			local emitterAnchor = boxAt("EyeSprayAnchor" .. idx, V(14, 2, 14), V(sp[1], waterY + 1.5, sp[2]), 0, rgb(164, 242, 255), Mat.SmoothPlastic, 1)
 			noCollide(emitterAnchor)

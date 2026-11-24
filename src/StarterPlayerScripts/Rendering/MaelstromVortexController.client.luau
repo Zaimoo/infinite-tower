@@ -23,6 +23,7 @@ type RingState = {
 	BobAmp: number,
 	BobFreq: number,
 	Phase: number,
+	WobbleAmp: number,
 	Parts: { [BasePart]: CFrame },
 	Conn: RBXScriptConnection,
 }
@@ -102,6 +103,7 @@ local function registerRing(inst: Instance)
 		BobAmp = (inst:GetAttribute("MaelstromBobAmp") :: number?) or 0.55,
 		BobFreq = (inst:GetAttribute("MaelstromBobFreq") :: number?) or 1.2,
 		Phase = (inst:GetAttribute("MaelstromBobPhase") :: number?) or 0,
+		WobbleAmp = (inst:GetAttribute("MaelstromWobbleAmp") :: number?) or 0,
 		Parts = {},
 		Conn = nil :: any,
 	}
@@ -146,6 +148,8 @@ local function hydrateRing(st: RingState)
 		if typeof(frq) == "number" then st.BobFreq = frq end
 		local ph = model:GetAttribute("MaelstromBobPhase")
 		if typeof(ph) == "number" then st.Phase = ph end
+		local wob = model:GetAttribute("MaelstromWobbleAmp")
+		if typeof(wob) == "number" then st.WobbleAmp = wob end
 		for _, d in model:GetDescendants() do
 			captureRingPart(st, d)
 		end
@@ -235,7 +239,9 @@ RunService.Heartbeat:Connect(function()
 		if (baseCF.Position - camPos).Magnitude <= ACTIVE_DISTANCE then
 			local spinAngle = -t * st.Speed
 			local bobY = math.sin(t * st.BobFreq + st.Phase) * st.BobAmp
-			local targetCF = baseCF * CFrame.new(0, bobY, 0) * CFrame.Angles(0, spinAngle, 0)
+			local wobX = if st.WobbleAmp > 0 then math.cos(t * 0.9 + st.Phase) * st.WobbleAmp else 0
+			local wobZ = if st.WobbleAmp > 0 then math.sin(t * 0.75 + st.Phase) * st.WobbleAmp else 0
+			local targetCF = baseCF * CFrame.new(wobX, bobY, wobZ) * CFrame.Angles(0, spinAngle, 0)
 			for part, relCF in st.Parts do
 				if part.Parent then
 					part.CFrame = targetCF * relCF
