@@ -183,6 +183,33 @@ function SunkenFloor40.Build(ctx: any)
 		end
 		return bottom
 	end
+	local function isFlatEnough(x: number, z: number, span: number, maxDiff: number): boolean
+		local g0 = groundY(x, z)
+		local g1 = groundY(x + span, z)
+		local g2 = groundY(x - span, z)
+		local g3 = groundY(x, z + span)
+		local g4 = groundY(x, z - span)
+		return math.max(math.abs(g1 - g0), math.abs(g2 - g0), math.abs(g3 - g0), math.abs(g4 - g0)) <= maxDiff
+	end
+	-- Drops a wet dark-slate retaining pier beneath any rim landmark sitting above a sloping apron so nothing floats.
+	local function groundFoundation(name: string, x: number, topY: number, z: number, width: number, depth: number, yaw: number)
+		local low = math.min(
+			groundY(x, z),
+			groundY(x + width * 0.45, z),
+			groundY(x - width * 0.45, z),
+			groundY(x, z + depth * 0.45),
+			groundY(x, z - depth * 0.45)
+		)
+		local footY = math.min(low - 4, waterY - 8)
+		local hSpan = topY - footY
+		if hSpan > 1.5 then
+			ctx.group(name .. "Pier", function()
+				ctx.tag("OnTerrain", true)
+				local pier = boxAt("FoundationPier", V(width, hSpan, depth), V(x, footY + hSpan * 0.5, z), yaw, rgb(52, 66, 76), Mat.Slate)
+				noCollide(pier)
+			end)
+		end
+	end
 	local function placeKit(
 		templateName: string,
 		propKind: string,
@@ -305,12 +332,16 @@ function SunkenFloor40.Build(ctx: any)
 	buildWaterfallRibbon("TidebellCascadeE", 58, 56, waterY, -334, 10, 0, false)
 
 	-- Twin colossal waist-broken statues of the Tide-King & Tide-Queen flanking the Tidebell Tower on rock islands
-	placeKit("BrokenTideStatue", "BrokenTideStatueWest", V(-142, 18, -328), 0.34, 1.0, BASIN_PAL, true, true, false, function()
-		boxAt("StatueW", V(22, 46, 18), V(-142, 41, -328), 0.34, rgb(132, 146, 150), Mat.Limestone)
+	local statWY = groundY(-142, -328) - 1.5
+	local statEY = groundY(142, -328) - 1.5
+	placeKit("BrokenTideStatue", "BrokenTideStatueWest", V(-142, statWY, -328), 0.34, 1.0, BASIN_PAL, true, true, false, function()
+		boxAt("StatueW", V(22, 46, 18), V(-142, statWY + 23, -328), 0.34, rgb(132, 146, 150), Mat.Limestone)
 	end)
-	placeKit("BrokenTideStatue", "BrokenTideStatueEast", V(142, 18, -328), -0.34, 1.0, BASIN_PAL, true, true, false, function()
-		boxAt("StatueE", V(22, 46, 18), V(142, 41, -328), -0.34, rgb(132, 146, 150), Mat.Limestone)
+	groundFoundation("BrokenTideStatueWest", -142, statWY + 1.5, -328, 22, 18, 0.34)
+	placeKit("BrokenTideStatue", "BrokenTideStatueEast", V(142, statEY, -328), -0.34, 1.0, BASIN_PAL, true, true, false, function()
+		boxAt("StatueE", V(22, 46, 18), V(142, statEY + 23, -328), -0.34, rgb(132, 146, 150), Mat.Limestone)
 	end)
+	groundFoundation("BrokenTideStatueEast", 142, statEY + 1.5, -328, 22, 18, -0.34)
 
 	-- Abyssal North Tidewall sealing the far back horizon behind the Great Tidebell Tower
 	ctx.group("TidewallBasinNorth", function()
@@ -725,9 +756,11 @@ function SunkenFloor40.Build(ctx: any)
 	placeKit("ChainAnchorBollard", "WestChainAnchorBollard", V(-152, 52, -262), 0.78, 1.0, BASIN_PAL, true, true, false, function()
 		boxAt("AnchorW", V(16, 24, 16), V(-152, 64, -262), 0.78, rgb(56, 62, 70), Mat.Metal)
 	end)
+	groundFoundation("WestChainAnchor", -152, 52, -262, 18, 18, 0.78)
 	placeKit("ChainAnchorBollard", "EastChainAnchorBollard", V(152, 56, -262), -0.78, 1.0, BASIN_PAL, true, true, false, function()
 		boxAt("AnchorE", V(16, 24, 16), V(152, 68, -262), -0.78, rgb(56, 62, 70), Mat.Metal)
 	end)
+	groundFoundation("EastChainAnchor", 152, 56, -262, 18, 18, -0.78)
 	-- Twin anchor bollard aqua beacon lights (Lights #5 & #6)
 	light(V(-152, 76, -262), AQUA_LIGHT, 1.6, 44)
 	light(V(152, 76, -262), AQUA_LIGHT, 1.6, 44)
@@ -751,9 +784,11 @@ function SunkenFloor40.Build(ctx: any)
 	placeKit("ChainTowerRound", "WestChainTower", V(-346, 36, -120), 1.45, 1.0, CORAL_LAVENDER, true, true, false, function()
 		boxAt("ChainTowerW", V(28, 70, 28), V(-346, 71, -120), 1.45, rgb(84, 96, 104), Mat.Slate)
 	end)
+	groundFoundation("WestChainTower", -346, 36, -120, 28, 28, 1.45)
 	placeKit("ChainTowerRound", "EastChainTower", V(346, 38, -120), -1.45, 1.0, CORAL_AQUA, true, true, false, function()
 		boxAt("ChainTowerE", V(28, 70, 28), V(346, 73, -120), -1.45, rgb(84, 96, 104), Mat.Slate)
 	end)
+	groundFoundation("EastChainTower", 346, 38, -120, 28, 28, -1.45)
 
 	-- =========================================================================
 	-- 6. DROWNED ALTAR, HIGH CANTOR'S PULPIT, PEARL RELIQUARY & TIDE GATE
@@ -767,17 +802,21 @@ function SunkenFloor40.Build(ctx: any)
 	placeKit("CantorPulpit", "HighCantorPulpit", V(-258, 44, -360), 0.35, 1.0, CORAL_LAVENDER, true, true, false, function()
 		boxAt("CantorPulpitFallback", V(16, 22, 16), V(-258, 55, -360), 0.35, rgb(132, 146, 150), Mat.Limestone)
 	end)
+	groundFoundation("HighCantorPulpit", -258, 44, -360, 17, 17, 0.35)
 	placeKit("AbyssReliquaryShrine", "PearlReliquaryShrine", V(258, 42, -360), -0.35, 1.0, BASIN_PAL, true, true, false, function()
 		boxAt("ReliquaryFallback", V(20, 26, 18), V(258, 55, -360), -0.35, rgb(132, 146, 150), Mat.Limestone)
 	end)
+	groundFoundation("PearlReliquaryShrine", 258, 42, -360, 20, 18, -0.35)
 
 	-- Ruined Tide Gate flanking piers & Coral Warden sentinels at the maelstrom's mouth
 	placeKit("CoralWardenStatue", "TideGatePierWest", V(-68, 12, 138), 0.32, 1.0, CORAL_LAVENDER, true, true, false, function()
 		boxAt("TideGateW", V(16, 30, 12), V(-68, 27, 138), 0.32, rgb(118, 132, 138), Mat.Limestone)
 	end)
+	groundFoundation("TideGatePierWest", -68, 12, 138, 16, 12, 0.32)
 	placeKit("CoralWardenStatue", "TideGatePierEast", V(68, 12, 138), -0.32, 1.0, CORAL_AQUA, true, true, false, function()
 		boxAt("TideGateE", V(16, 30, 12), V(68, 27, 138), -0.32, rgb(118, 132, 138), Mat.Limestone)
 	end)
+	groundFoundation("TideGatePierEast", 68, 12, 138, 16, 12, -0.32)
 
 	-- =========================================================================
 	-- 7. BELL BARGE, KELP SHRINE, CREST LOOKOUTS, THE LAST BELL, CRACKED BELLS,
@@ -786,22 +825,26 @@ function SunkenFloor40.Build(ctx: any)
 	placeKit("BellBargeWreck", "BellBargeWreckEast", V(408, 28, 72), math.pi * 0.5, 1.0, BASIN_PAL, true, true, false, function()
 		boxAt("BellBargeFallback", V(15, 16, 44), V(408, 36, 72), 0, rgb(66, 54, 46), Mat.Wood)
 	end)
+	groundFoundation("BellBargeWreckEast", 408, 28, 72, 14, 38, 0)
 
 	-- Kelp Shrine: ring of carved standing stones inside towering bioluminescent kelp
-	placeKit("KelpForestTall", "KelpShrineStones", V(-406, 24, 74), 0.4, 1.0, BASIN_PAL, false, true, false, function()
-		boxAt("KelpShrineFallback", V(12, 42, 12), V(-406, 45, 74), 0, rgb(38, 102, 96), Mat.Grass)
+	local kelpShrineY = groundY(-406, 74) - 1.0
+	placeKit("KelpForestTall", "KelpShrineStones", V(-406, kelpShrineY, 74), 0.4, 1.0, BASIN_PAL, false, true, false, function()
+		boxAt("KelpShrineFallback", V(12, 42, 12), V(-406, kelpShrineY + 21, 74), 0, rgb(38, 102, 96), Mat.Grass)
 	end)
 	for k = 0, 4 do
 		local a = (k / 5) * math.pi * 2 + 0.3
 		local sx, sz = -404 + math.cos(a) * 14, 74 + math.sin(a) * 14
 		if math.abs(sx) < 424 and isClear(sx, sz, 4) then
-			placeKit("RuneTablet", "KelpShrineStone" .. k, V(sx, groundY(sx, sz), sz), a + math.pi * 0.5, 1.25, BASIN_PAL, true, false, false)
+			placeKit("RuneTablet", "KelpShrineStone" .. k, V(sx, groundY(sx, sz) - 0.8, sz), a + math.pi * 0.5, 1.25, BASIN_PAL, true, false, false)
 		end
 	end
 
 	-- Coral-fused Pearlguard lookouts atop West Crest & East Crest
 	placeKit("CoralWardenStatue", "WestCrestLookout", V(-394, 48, -246), 1.35, 1.0, CORAL_LAVENDER, true, true, false)
+	groundFoundation("WestCrestLookout", -394, 48, -246, 16, 12, 1.35)
 	placeKit("CoralWardenStatue", "EastCrestLookout", V(394, 50, -246), -1.35, 1.0, CORAL_AQUA, true, true, false)
+	groundFoundation("EastCrestLookout", 394, 50, -246, 16, 12, -1.35)
 
 	-- The Last Bell at Sanctuary: single uncracked ringing Nereth Tidebell on its bronze post
 	placeKit("GreatTidebell", "TheLastBellPost", V(-52, 8, 368), 0.35, 0.58, BASIN_PAL, true, true, false, function()
@@ -811,18 +854,20 @@ function SunkenFloor40.Build(ctx: any)
 	light(V(-52, 22, 368), AQUA_LIGHT, 1.6, 42)
 
 	-- Cracked Tidebells & fused bronze bell-tower debris on Wrack Shore
-	placeKit("CrackedTidebell", "WrackShoreBellWest", V(-255, 0, 272), 0.45, 1.05, BASIN_PAL, true, true, false)
-	placeKit("CrackedTidebell", "WrackShoreBellEast", V(255, 0, 272), -0.52, 1.05, BASIN_PAL, true, true, false)
+	placeKit("CrackedTidebell", "WrackShoreBellWest", V(-255, groundY(-255, 272) - 0.6, 272), 0.45, 1.05, BASIN_PAL, true, true, false)
+	placeKit("CrackedTidebell", "WrackShoreBellEast", V(255, groundY(255, 272) - 0.6, 272), -0.52, 1.05, BASIN_PAL, true, true, false)
 
 	-- Towering bioluminescent Reef Coral Spires anchoring the West & East Reef Horns (Lights #9 & #10)
-	placeKit("ReefCoralTable", "WestReefCoralSpire", V(-342, 20, 8), 0.6, 1.35, CORAL_LAVENDER, true, true, false)
-	placeKit("ReefCoralTable", "EastReefCoralSpire", V(342, 22, 8), -0.6, 1.35, CORAL_AQUA, true, true, false)
-	light(V(-342, 34, 8), VIOLET_REEF, 1.6, 46)
-	light(V(342, 34, 8), AQUA_LIGHT, 1.6, 46)
+	local westSpireY = groundY(-342, 8) - 1.5
+	local eastSpireY = groundY(342, 8) - 1.5
+	placeKit("ReefCoralTable", "WestReefCoralSpire", V(-342, westSpireY, 8), 0.6, 1.35, CORAL_LAVENDER, true, true, false)
+	placeKit("ReefCoralTable", "EastReefCoralSpire", V(342, eastSpireY, 8), -0.6, 1.35, CORAL_AQUA, true, true, false)
+	light(V(-342, westSpireY + 14, 8), VIOLET_REEF, 1.6, 46)
+	light(V(342, eastSpireY + 14, 8), AQUA_LIGHT, 1.6, 46)
 
 	-- Drowned Perimeter Colonnade ring curving around the outer basin flanks (just like the guide image!)
-	placeKit("LancetArchBay", "PerimeterColonnadeNW", V(-318, -4, -362), 0.42, 1.45, BASIN_PAL, false, true, false)
-	placeKit("LancetArchBay", "PerimeterColonnadeNE", V(318, -4, -362), -0.42, 1.45, BASIN_PAL, false, true, false)
+	placeKit("LancetArchBay", "PerimeterColonnadeNW", V(-318, groundY(-318, -362) - 2, -362), 0.42, 1.45, BASIN_PAL, false, true, false)
+	placeKit("LancetArchBay", "PerimeterColonnadeNE", V(318, groundY(318, -362) - 2, -362), -0.42, 1.45, BASIN_PAL, false, true, false)
 	local colonnadeArcs = {
 		{ X = -396, Z = -318, Yaw = 1.05, Scale = 1.35 },
 		{ X = 396, Z = -318, Yaw = -1.05, Scale = 1.35 },
@@ -835,23 +880,24 @@ function SunkenFloor40.Build(ctx: any)
 	}
 	for idx, ca in colonnadeArcs do
 		if isClear(ca.X, ca.Z, 12) then
-			placeKit(if idx % 2 == 0 then "CoralArcadeBay" else "LancetArchBay", "BasinColonnade" .. idx, V(ca.X, groundY(ca.X, ca.Z) - 1, ca.Z), ca.Yaw, ca.Scale, BASIN_PAL, false, false, false)
+			placeKit(if idx % 2 == 0 then "CoralArcadeBay" else "LancetArchBay", "BasinColonnade" .. idx, V(ca.X, groundY(ca.X, ca.Z) - 1.5, ca.Z), ca.Yaw, ca.Scale, BASIN_PAL, false, false, false)
 		end
 	end
 
-	-- Hydrothermal Bubble Vents in the maelstrom bed with rising bubble columns (Emitters #9..12)
+	-- Hydrothermal Bubble Vents firmly embedded in the rock islands & submerged maelstrom seabed (Emitters #9..12)
 	local bubbleVents = {
-		{ Id = "MaelstromBubbleVentW", X = -135, Z = 15, Y = 4, Mark = true },
-		{ Id = "MaelstromBubbleVentE", X = 135, Z = 15, Y = 4, Mark = true },
-		{ Id = "MaelstromBubbleVentNW", X = -108, Z = -282, Y = waterY - 2, Mark = false },
-		{ Id = "MaelstromBubbleVentNE", X = 108, Z = -282, Y = waterY - 2, Mark = false },
+		{ Id = "MaelstromBubbleVentW", X = -135, Z = 15, Mark = true },
+		{ Id = "MaelstromBubbleVentE", X = 135, Z = 15, Mark = true },
+		{ Id = "MaelstromBubbleVentNW", X = -108, Z = -282, Mark = false },
+		{ Id = "MaelstromBubbleVentNE", X = 108, Z = -282, Mark = false },
 	}
 	for idx, bv in bubbleVents do
-		placeKit("BubbleVentCluster", bv.Id, V(bv.X, bv.Y, bv.Z), idx * 1.1, 1.0, BASIN_PAL, false, bv.Mark, false)
+		local vy = groundY(bv.X, bv.Z) - 1.5
+		placeKit("BubbleVentCluster", bv.Id, V(bv.X, vy, bv.Z), idx * 1.1, 1.0, BASIN_PAL, false, bv.Mark, false)
 		ctx.group("BubbleColumn" .. idx, function()
 			ctx.tag("PropKind", "MaelstromVortex")
 			ctx.tag("OnTerrain", true)
-			local anchor = boxAt("BubbleSource", V(6, 1, 6), V(bv.X, bv.Y + 5, bv.Z), 0, rgb(124, 242, 255), Mat.SmoothPlastic, 1)
+			local anchor = boxAt("BubbleSource", V(6, 1, 6), V(bv.X, math.max(vy + 5, waterY - 1), bv.Z), 0, rgb(124, 242, 255), Mat.SmoothPlastic, 1)
 			noCollide(anchor)
 			addEmitter(anchor, "MaelstromSprayEmitter", {
 				Color = ColorSequence.new(rgb(138, 246, 255), rgb(224, 252, 255)),
@@ -1000,7 +1046,7 @@ function SunkenFloor40.Build(ctx: any)
 			continue
 		end
 		local y = groundY(x, z)
-		if y < waterY - 3.0 then
+		if y < waterY - 3.0 or not isFlatEnough(x, z, 5, 4.5) then
 			continue
 		end
 		local pickIdx = ((attempt + rng:NextInteger(0, #propPool - 1)) % #propPool) + 1
@@ -1014,7 +1060,8 @@ function SunkenFloor40.Build(ctx: any)
 			elseif tName == "CrackedTidebell" or tName == "MuffledBellStack" then rng:NextNumber(0.65, 0.92)
 			elseif tName == "DaisBrazierPedestal" or tName == "DivingBell" or tName == "CoralCageReliquary" then rng:NextNumber(0.72, 0.92)
 			else rng:NextNumber(0.82, 1.32)
-		placeKit(tName, "BasinProp" .. props, V(x, y, z), rng:NextNumber(0, math.pi * 2), sc, coralPalette(attempt), false, false, false)
+		local sink = if tName == "BubbleVentCluster" then 1.6 else 0.8
+		placeKit(tName, "BasinProp" .. props, V(x, y - sink, z), rng:NextNumber(0, math.pi * 2), sc, coralPalette(attempt), false, false, false)
 		propCount[tName] = (propCount[tName] or 0) + 1
 	end
 
