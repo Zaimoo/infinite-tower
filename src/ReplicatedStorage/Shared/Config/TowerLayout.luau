@@ -2828,6 +2828,396 @@ local AUTHORED: {[number]: any} = {
 			MeadowScale = 0.04,
 		},
 	},
+	-- Floor 36, Drowned Steps (Sunken Sanctuary Introduction; docs/prompts/sunken-sanctuary-floor-layouts-prompt.md,
+	-- guide image reference/Sunken Sanctuary 36.webp): the Nereth city's sea-front at low tide. A tide-flat of
+	-- turquoise shallows and sandbars; the Pilgrim Stair climbs from the Stair Foot up the First Flight to the
+	-- Pilgrims' Landing, and then stops: its middle flight lies broken in the surf with its bell drowned under it,
+	-- and there is NO link from the Landing to the Bell Landing beyond the gap. Detours run round it east (the Votive
+	-- Pool) and west (the wrecked Hollin barge on its sandbar, then Cantors' Rock), and a scenic one climbs the
+	-- Tidepool Steps to the Upper Pools. The Apex, the Bell Stack, is a sheer limestone sea-stack in the back-west,
+	-- crowned by the shrine of the first Tidebell and reached up the Bell Stair (south) or from Cantors' Rock (west).
+	[36] = {
+		Key = "sunken:1",
+		Name = "Drowned Steps",
+		Size = { Width = 570, Depth = 600, Height = 210 },
+		PathStyle = "NERETH",
+		Basin = { X = 0, Y = 0, Z = 155, Width = 538, Depth = 96 },
+		Crossing = { X = 30, Y = 8, Z = 30, Width = 76, Depth = 60 },
+		WestGallery = { X = -170, Y = 4, Z = 40, Width = 84, Depth = 72 },
+		EastGallery = { X = 195, Y = 12, Z = 45, Width = 84, Depth = 72 },
+		ExtraPlatforms = {
+			Wreck = { X = -185, Y = 6, Z = -62, Width = 64, Depth = 48 },
+			Votive = { X = 85, Y = 10, Z = -55, Width = 56, Depth = 48 },
+			PilgrimLanding = { X = -30, Y = 16, Z = -52, Width = 64, Depth = 52 },
+			CantorRock = { X = -222, Y = 20, Z = -196, Width = 56, Depth = 48 },
+			BellLanding = { X = 10, Y = 24, Z = -140, Width = 64, Depth = 52 },
+			UpperPools = { X = 150, Y = 28, Z = -150, Width = 72, Depth = 60 },
+		},
+		Apex = { X = -85, Y = 32, Z = -228, Width = 116, Depth = 84 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "Crossing" },
+			{ "Basin", "EastGallery" },
+			{ "Crossing", "PilgrimLanding" }, -- the First Flight
+			{ "WestGallery", "Wreck" }, -- the Barge Causeway
+			{ "PilgrimLanding", "Wreck" }, -- the Landing Causeway, down to the barge
+			{ "Wreck", "CantorRock" },
+			{ "CantorRock", "Apex" },
+			{ "Crossing", "Votive" }, -- the Votive Causeway
+			{ "PilgrimLanding", "Votive" },
+			{ "Votive", "EastGallery" },
+			{ "EastGallery", "UpperPools" },
+			{ "UpperPools", "BellLanding" },
+			{ "Votive", "BellLanding" }, -- the Bell Causeway, over the fallen flight's surf
+			{ "BellLanding", "Apex" }, -- the Bell Stair
+		},
+		-- The two flights of the Pilgrim Stair that still stand: limestone treads under bell arches.
+		Stairs = { Crossing_PilgrimLanding = true, BellLanding_Apex = true },
+		-- The fallen middle flight (specs: no PilgrimLanding-BellLanding link, and the Apex stays reachable without one).
+		BrokenFlight = { From = "PilgrimLanding", To = "BellLanding" },
+		Names = {
+			Sanctuary = "Pilgrims' Gate",
+			Basin = "The Tide-Flat",
+			WestGallery = "Shell Midden",
+			Crossing = "Stair Foot",
+			EastGallery = "Tidepool Steps",
+			Wreck = "The Hollin Barge",
+			Votive = "Votive Pool",
+			PilgrimLanding = "Pilgrims' Landing",
+			CantorRock = "Cantors' Rock",
+			BellLanding = "Bell Landing",
+			UpperPools = "Upper Pools",
+			Apex = "The Bell Stack",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "NERETH",
+			-- Built: the gate's flagged landing, the barge's deck on its sandbar, the Votive Pool's flagged rim and
+			-- the Pilgrims' Landing (a marble slab on piers over the surf, its north edge sheared off).
+			Decks = { Sanctuary = true, Wreck = true, Votive = true, PilgrimLanding = true },
+			DeckThickness = { PilgrimLanding = 3 },
+			DeckLooks = {
+				Wreck = { Color = Color3.fromRGB(112, 92, 72), Material = Enum.Material.Wood },
+				Votive = { Color = Color3.fromRGB(212, 204, 184), Material = Enum.Material.Limestone },
+				PilgrimLanding = { Color = Color3.fromRGB(222, 218, 204), Material = Enum.Material.Marble },
+			},
+			-- Every terrain terrace is a rounded rock in the surf; the Bell Stack's apron is sheer (a sea-stack).
+			Shapes = {
+				WestGallery = { Round = 2.8, Grow = 4 },
+				Crossing = { Round = 2.4, Grow = 4 },
+				EastGallery = { Round = 2.8, Grow = 4 },
+				CantorRock = { Round = 2.2, Grow = 4 },
+				BellLanding = { Round = 2.6, Grow = 4 },
+				UpperPools = { Round = 2.4, Grow = 4 },
+				Apex = { Round = 2.2, Grow = 6, Sheer = true },
+			},
+			-- The causeways: flagged limestone on arched piers, the surf running on under them.
+			Bridges = { WestGallery_Wreck = true, PilgrimLanding_Wreck = true, Crossing_Votive = true, Votive_BellLanding = true },
+			BridgeStyles = {
+				WestGallery_Wreck = "CAUSEWAY",
+				PilgrimLanding_Wreck = "CAUSEWAY",
+				Crossing_Votive = "CAUSEWAY",
+				Votive_BellLanding = "CAUSEWAY",
+			},
+			-- The Bell Stack is in the back-west: no full-width shelf behind it.
+			NoApexShelf = true,
+			-- The surf: just under the floor's slab (it carries walkers as wading ground), deep enough to read turquoise.
+			LiquidRise = -0.6,
+			FloorDip = 7,
+			-- The north wall is the far shore: a low sea-cliff, so the Tidewall stands over it (TowerSetPieces).
+			WallBand = { Base = 34, Noise = 12, NorthScale = 0.3 },
+			-- The sea: one sheet of shallows over all the open ground. The terraces and their banks, the sandbars and
+			-- the Tide-Flat's beach stand out of it; only the room's far corners stay dry.
+			Pools = {
+				{ X = 0, Z = -60, RX = 330, RZ = 300 },
+			},
+			-- Sandbars: the barge's bar (the largest), the fallen flight's rubble bar and low bars in the shallows.
+			Islands = {
+				{ X = -185, Z = -62, R = 46, Top = -2 },
+				{ X = -62, Z = -118, R = 16, Top = -3 },
+				{ X = 120, Z = -222, R = 22, Top = -3 },
+				{ X = -95, Z = 40, R = 18, Top = -3 },
+				{ X = 230, Z = -120, R = 18, Top = -2 },
+				{ X = 110, Z = 96, R = 20, Top = -3 },
+			},
+			-- The floor places its own coral, kelp and shells (TowerSetPieces/SunkenSanctuary).
+			GroveScale = 0,
+			MeadowScale = 0.1,
+		},
+	},
+	-- Floor 37, Coral Cloister (Sunken Sanctuary Expanded Encounter; docs/prompts/sunken-sanctuary-floor-layouts-prompt.md,
+	-- guide image reference/Sunken Sanctuary 37.jpg): the Nereth cantors' double cloister, a figure-eight of two
+	-- arcaded walks around two flooded squircle garths. From Lay Court you can cross the south garth directly on
+	-- the flagged Garth Causeway to the Lavabo (the domed fountain house at the waist) or walk either arcaded
+	-- gallery (West Walk, East Walk, each with an Elite). Across the north garth stands Chapter Isle (Apex, sheer
+	-- coral rock) with NO link from the Lavabo or the Bell Tower behind it: walk round by Cantors' Walk (west) or
+	-- Coral Walk (east) and climb one of the twin coral-arched Isle Stairs (`STAIRS`, BridgeStyles = "ARCADE").
+	-- Side spurs house the Dorter, Frater, Choir Loft, Sacristy and Scriptorium.
+	[37] = {
+		Key = "sunken:2",
+		Name = "Coral Cloister",
+		Size = { Width = 640, Depth = 690, Height = 235 },
+		PathStyle = "NERETH",
+		Basin = { X = 0, Y = 0, Z = 200, Width = 608, Depth = 100 },
+		WestGallery = { X = -135, Y = 8, Z = 60, Width = 88, Depth = 76 },
+		EastGallery = { X = 135, Y = 12, Z = 60, Width = 88, Depth = 76 },
+		Crossing = { X = 0, Y = 16, Z = -50, Width = 84, Depth = 64 },
+		ExtraPlatforms = {
+			Dorter = { X = -250, Y = 4, Z = -40, Width = 56, Depth = 48 },
+			Frater = { X = 250, Y = 10, Z = -40, Width = 56, Depth = 48 },
+			CantorsWalk = { X = -164, Y = 20, Z = -185, Width = 80, Depth = 64 },
+			CoralWalk = { X = 150, Y = 24, Z = -185, Width = 80, Depth = 64 },
+			ChoirLoft = { X = -252, Y = 26, Z = -150, Width = 56, Depth = 48 },
+			Sacristy = { X = -255, Y = 28, Z = -300, Width = 56, Depth = 44 },
+			Scriptorium = { X = 252, Y = 30, Z = -150, Width = 56, Depth = 48 },
+			BellTower = { X = 0, Y = 36, Z = -300, Width = 64, Depth = 48 },
+		},
+		Apex = { X = 0, Y = 40, Z = -185, Width = 120, Depth = 88 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "WestGallery" },
+			{ "Basin", "EastGallery" },
+			{ "Basin", "Crossing" }, -- the Garth Causeway
+			{ "WestGallery", "Crossing" },
+			{ "EastGallery", "Crossing" },
+			{ "WestGallery", "Dorter" },
+			{ "EastGallery", "Frater" },
+			{ "Crossing", "CantorsWalk" },
+			{ "Crossing", "CoralWalk" },
+			{ "CantorsWalk", "BellTower" },
+			{ "CoralWalk", "BellTower" },
+			{ "CantorsWalk", "Apex" }, -- the West Isle Stair
+			{ "CoralWalk", "Apex" }, -- the East Isle Stair
+			{ "CantorsWalk", "ChoirLoft" },
+			{ "CoralWalk", "Scriptorium" },
+			{ "CantorsWalk", "Sacristy" },
+		},
+		-- Twin coral-arched stair-bridges climbing onto Chapter Isle from the west and east walks.
+		Stairs = { CantorsWalk_Apex = true, CoralWalk_Apex = true },
+		Names = {
+			Sanctuary = "Lay Gate",
+			Basin = "Lay Court",
+			Dorter = "The Dorter",
+			WestGallery = "West Walk",
+			Frater = "The Frater",
+			EastGallery = "East Walk",
+			Crossing = "The Lavabo",
+			CantorsWalk = "Cantors' Walk",
+			CoralWalk = "Coral Walk",
+			ChoirLoft = "Choir Loft",
+			Sacristy = "Sacristy",
+			Scriptorium = "Scriptorium",
+			BellTower = "Bell Tower",
+			Apex = "Chapter Isle",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "NERETH",
+			-- Built cloister floors on undercrofts/corbels: Lay Gate, Frater, Choir Loft and Scriptorium.
+			Decks = { Sanctuary = true, Frater = true, ChoirLoft = true, Scriptorium = true },
+			DeckThickness = { Frater = 3, ChoirLoft = 3, Scriptorium = 3 },
+			DeckLooks = {
+				Frater = { Color = Color3.fromRGB(214, 206, 186), Material = Enum.Material.Limestone },
+				ChoirLoft = { Color = Color3.fromRGB(224, 218, 204), Material = Enum.Material.Marble },
+				Scriptorium = { Color = Color3.fromRGB(214, 206, 186), Material = Enum.Material.Limestone },
+			},
+			-- Sheer coral-rock & cloister retaining walls keep >= 44 studs of open turquoise water between the
+			-- Lavabo and Chapter Isle and full deep water under both Isle Stairs.
+			Shapes = {
+				WestGallery = { Round = 3.2, Grow = 3 },
+				EastGallery = { Round = 3.2, Grow = 3 },
+				Dorter = { Round = 3.0, Grow = 3 },
+				Crossing = { Round = 2.2, Grow = 2, Sheer = true },
+				CantorsWalk = { Round = 3.2, Grow = 2, Sheer = true },
+				CoralWalk = { Round = 3.2, Grow = 2, Sheer = true },
+				Sacristy = { Round = 3.0, Grow = 3 },
+				BellTower = { Round = 3.2, Grow = 3 },
+				Apex = { Round = 2.2, Grow = 3, Sheer = true },
+			},
+			Bridges = { Basin_Crossing = true, CantorsWalk_Apex = true, CoralWalk_Apex = true },
+			BridgeStyles = {
+				Basin_Crossing = "CAUSEWAY",
+				CantorsWalk_Apex = "ARCADE",
+				CoralWalk_Apex = "ARCADE",
+			},
+			NoApexShelf = true,
+			LiquidRise = 2.0,
+			FloorDip = 9,
+			-- Lower coastal cliffs around the cloister so coral arcades, the Bell Tower and the Tidewall lead the view.
+			WallBand = { Base = 24, Noise = 8, NorthScale = 0.22 },
+			-- Two flooded squircle cloister garths (Round = 5): the south garth crossed by the Garth Causeway,
+			-- and the wide north garth encircling Chapter Isle (impassable from the Lavabo).
+			Pools = {
+				{ X = 0, Z = 65, RX = 122, RZ = 94, Round = 5 },
+				{ X = -6, Z = -182, RX = 178, RZ = 122, Round = 5 },
+			},
+			GroveScale = 0,
+			MeadowScale = 0.06,
+		},
+	},
+	-- Floor 38, Tidal Channels (Sunken Sanctuary Terrain Variation; docs/prompts/sunken-sanctuary-floor-layouts-prompt.md,
+	-- guide image reference/Sunken Sanctuary 38.jpg): the Nereth waterworks under a grey-teal storm tide. A ladder of
+	-- two rising towpath rails climbing north alongside a central staircase of five stepped canal locks (`Terrain.Locks`,
+	-- water at Y -2, 4, 10, 16 and 22), joined across the canal by three lock-gate bridge rungs (Tail Gate, Middle Gate,
+	-- Head Gate; `BridgeStyles = "LOCKGATE"`). Side channels hold the Tide Mill, Sluice House, Eel Weir, Upper Pound and
+	-- the slender Tidebell Tower. At the head of the flight in the back-west stands the colossal open Sea-Gate (Apex,
+	-- Y 48), reached via twin stairs from the Head Gate (east) or Upper West Lock (south).
+	[38] = {
+		Key = "sunken:3",
+		Name = "Tidal Channels",
+		Size = { Width = 700, Depth = 740, Height = 265, Bottom = -6 },
+		PathStyle = "DEEPWARD",
+		Basin = { X = 0, Y = 0, Z = 212, Width = 668, Depth = 96 },
+		Crossing = { X = 0, Y = 8, Z = 95, Width = 88, Depth = 64 },
+		WestGallery = { X = -130, Y = 12, Z = 10, Width = 88, Depth = 76 },
+		EastGallery = { X = 130, Y = 16, Z = 0, Width = 88, Depth = 76 },
+		ExtraPlatforms = {
+			TideMill = { X = 255, Y = 4, Z = 60, Width = 56, Depth = 48 },
+			SluiceHouse = { X = -255, Y = 18, Z = -20, Width = 56, Depth = 48 },
+			WestLockhouse = { X = -120, Y = 20, Z = -95, Width = 72, Depth = 60 },
+			EastLockhouse = { X = 120, Y = 24, Z = -105, Width = 72, Depth = 60 },
+			EelWeir = { X = 255, Y = 26, Z = -120, Width = 56, Depth = 48 },
+			UpperWest = { X = -130, Y = 28, Z = -172, Width = 72, Depth = 60 },
+			UpperEast = { X = 120, Y = 32, Z = -215, Width = 72, Depth = 60 },
+			Pound = { X = 265, Y = 34, Z = -250, Width = 56, Depth = 48 },
+			HeadGate = { X = 0, Y = 36, Z = -300, Width = 72, Depth = 56 },
+			BellTower = { X = 170, Y = 44, Z = -310, Width = 56, Depth = 48 },
+		},
+		Apex = { X = -200, Y = 48, Z = -295, Width = 128, Depth = 92 },
+		Paths = {
+			{ "Sanctuary", "Basin" },
+			{ "Basin", "Crossing" },
+			{ "Crossing", "WestGallery" },
+			{ "Crossing", "EastGallery" },
+			{ "Basin", "TideMill" },
+			{ "TideMill", "EastGallery" },
+			{ "WestGallery", "SluiceHouse" },
+			{ "WestGallery", "WestLockhouse" },
+			{ "EastGallery", "EastLockhouse" },
+			{ "WestLockhouse", "EastLockhouse" }, -- the Middle Gate rung
+			{ "EastLockhouse", "EelWeir" },
+			{ "WestLockhouse", "UpperWest" },
+			{ "EastLockhouse", "UpperEast" },
+			{ "UpperWest", "HeadGate" },
+			{ "UpperEast", "HeadGate" },
+			{ "UpperEast", "Pound" },
+			{ "HeadGate", "Apex" }, -- the Sea-Gate Stair
+			{ "UpperWest", "Apex" }, -- the West Stair
+			{ "HeadGate", "BellTower" },
+		},
+		Stairs = {
+			HeadGate_Apex = true,
+			UpperWest_Apex = true,
+		},
+		Patrols = {
+			TAIL_GATE = { "WestGallery", "Crossing", "EastGallery" },
+			WEST_FLIGHT = { "WestGallery", "WestLockhouse", "UpperWest" },
+			EAST_FLIGHT = { "EastGallery", "EastLockhouse", "UpperEast" },
+			HEAD_RUNG = { "UpperWest", "HeadGate", "UpperEast" },
+		},
+		ReplacePatrols = true,
+		Names = {
+			Sanctuary = "Lock-keeper's Stair",
+			Basin = "Tailwater Quay",
+			TideMill = "Tide Mill",
+			Crossing = "Tail Gate",
+			WestGallery = "West Towpath",
+			EastGallery = "East Towpath",
+			SluiceHouse = "Sluice House",
+			WestLockhouse = "West Lockhouse",
+			EastLockhouse = "East Lockhouse",
+			EelWeir = "Eel Weir",
+			UpperWest = "Upper West Lock",
+			UpperEast = "Upper East Lock",
+			Pound = "Upper Pound",
+			HeadGate = "Head Gate",
+			BellTower = "Tidebell Tower",
+			Apex = "The Sea-Gate",
+		},
+		Terrain = {
+			Direct = true,
+			Surface = "DEEPWARD",
+			Decks = {
+				Sanctuary = true,
+				TideMill = true,
+				SluiceHouse = true,
+				EelWeir = true,
+				Pound = true,
+			},
+			DeckThickness = {
+				TideMill = 3,
+				SluiceHouse = 3,
+				EelWeir = 3,
+				Pound = 3,
+			},
+			DeckLooks = {
+				TideMill = { Color = Color3.fromRGB(78, 66, 56), Material = Enum.Material.Wood },
+				SluiceHouse = { Color = Color3.fromRGB(84, 92, 96), Material = Enum.Material.Slate },
+				EelWeir = { Color = Color3.fromRGB(76, 64, 54), Material = Enum.Material.Wood },
+				Pound = { Color = Color3.fromRGB(92, 100, 102), Material = Enum.Material.Limestone },
+			},
+			Shapes = {
+				Crossing = { Round = 3.2, Grow = 3 },
+				WestGallery = { Round = 3.2, Grow = 3 },
+				EastGallery = { Round = 3.2, Grow = 3 },
+				WestLockhouse = { Round = 3.2, Grow = 3 },
+				EastLockhouse = { Round = 3.2, Grow = 3 },
+				UpperWest = { Round = 3.2, Grow = 3 },
+				UpperEast = { Round = 3.2, Grow = 3 },
+				HeadGate = { Round = 3.2, Grow = 3 },
+				BellTower = { Round = 3.0, Grow = 3 },
+				Apex = { Round = 2.4, Grow = 5 },
+			},
+			-- Every link crossing the central lock flight or a side channel is a timber-and-bronze lock-gate bridge.
+			Bridges = {
+				Crossing_WestGallery = true,
+				Crossing_EastGallery = true,
+				WestLockhouse_EastLockhouse = true,
+				UpperWest_HeadGate = true,
+				UpperEast_HeadGate = true,
+				Basin_TideMill = true,
+				TideMill_EastGallery = true,
+				WestGallery_SluiceHouse = true,
+				EastLockhouse_EelWeir = true,
+				UpperEast_Pound = true,
+			},
+			BridgeStyles = {
+				Crossing_WestGallery = "LOCKGATE",
+				Crossing_EastGallery = "LOCKGATE",
+				WestLockhouse_EastLockhouse = "LOCKGATE",
+				UpperWest_HeadGate = "LOCKGATE",
+				UpperEast_HeadGate = "LOCKGATE",
+				Basin_TideMill = "LOCKGATE",
+				TideMill_EastGallery = "LOCKGATE",
+				WestGallery_SluiceHouse = "LOCKGATE",
+				EastLockhouse_EelWeir = "LOCKGATE",
+				UpperEast_Pound = "LOCKGATE",
+			},
+			NoApexShelf = true,
+			-- Tailwater & side channels sit at Y = -5.5 (bottom -10 + 4.5), cleanly below the quay at Y = 0.
+			LiquidRise = 4.5,
+			FloorDip = 7,
+			-- Five stepped canal lock chambers climbing north up the centreline (X = 0), water stepping -2 -> 4 -> 10 -> 16 -> 22.
+			Locks = {
+				{ X = 0, Z = 26, Width = 104, Depth = 48, Level = -2, Bed = -10, Wall = 2 },
+				{ X = 0, Z = -36, Width = 104, Depth = 50, Level = 4, Bed = -4, Wall = 8 },
+				{ X = 0, Z = -100, Width = 104, Depth = 54, Level = 10, Bed = 2, Wall = 14 },
+				{ X = 0, Z = -168, Width = 104, Depth = 54, Level = 16, Bed = 8, Wall = 20 },
+				{ X = 0, Z = -234, Width = 104, Depth = 54, Level = 22, Bed = 14, Wall = 26 },
+			},
+			-- Side channels & tailwater harbour at quay level.
+			Pools = {
+				{ X = 0, Z = 135, RX = 305, RZ = 64 },
+				{ X = -255, Z = -20, RX = 76, RZ = 185 },
+				{ X = 255, Z = -70, RX = 80, RZ = 210 },
+			},
+			-- Low north wall behind the Sea-Gate & Tidebell Tower so the Storm Tidewall and distant aqueduct loom.
+			WallBand = { Base = 26, Noise = 9, NorthScale = 0.22 },
+			GroveScale = 0,
+			MeadowScale = 0.04,
+		},
+	},
 	-- Floor 39, Pearlguard Vault (Sunken Sanctuary Elite Stronghold; docs/prompts/sunken-sanctuary-floor-layouts-prompt.md,
 	-- guide image reference/Sunken Sanctuary 39.jpg): the Pearlguard's fortified harbour keep. Two staggered
 	-- sea-walls guard the back-east Pearl Vault (Apex, Y 56): the outer sea-wall has one off-centre gate
@@ -3123,7 +3513,7 @@ local function build(index: number, v: any?): any
 		ReplacePatrols=v ~= nil and v.ReplacePatrols == true, Surface=v and v.Surface or nil,
 		Terrain=v and v.Terrain or nil, Skylight=v and v.Skylight or nil, Portals=v and v.Portals or nil,
 		GirderSpans=v and v.GirderSpans or nil, StonePiers=v and v.StonePiers or nil, Viaducts=v and v.Viaducts or nil,
-		Fords=v and v.Fords or nil}
+		Fords=v and v.Fords or nil, BrokenFlight=v and v.BrokenFlight or nil}
 end
 
 -- Problems with a layout (empty when it is sound): terraces overlapping or leaving the room's inner area,

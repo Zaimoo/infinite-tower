@@ -500,14 +500,38 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(234, 210, 255), Saturation = 0.16, Contrast = 0.14, ExposureCompensation = 0.05, BloomIntensity = 0.60,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.62,
 	},
-	-- Floor 39, Pearlguard Vault: deep blue coastal twilight lit by warm pearl-white glow spilling from the
-	-- Pearl Vault conservatory dome. Cool silver-blue atmosphere keeps the fortified sea-walls, harbour water
-	-- and red/orange combat telegraphs crisp while the vault dome shines as the brightest point on the floor.
+	-- Floor 36, Drowned Steps: bright turquoise noon on the sea-front. A white-gold key, an aqua bounce off the
+	-- shallows, strong sun rays and the clearest air of any Sunken floor (the ward is still open overhead).
+	[36] = {
+		Ambient = c(78, 112, 118), OutdoorAmbient = c(140, 186, 190), ColorShift_Top = c(210, 250, 255), ColorShift_Bottom = c(58, 150, 156),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(170, 226, 232), AtmosphereDecay = c(92, 178, 190), AtmosphereHaze = 0.6,
+		TintColor = c(248, 252, 246), Saturation = 0.18, Contrast = 0.08, ExposureCompensation = 0.1, BloomIntensity = 0.45,
+		SunRaysIntensity = 0.16, SunRaysSpread = 0.5,
+	},
+	-- Floor 37, Coral Cloister: warm gold-green afternoon slanting through coral-grown arcades, with luminous
+	-- turquoise-green fill bouncing off the two flooded garths and soft, dappled arcade shadows.
+	[37] = {
+		Ambient = c(86, 108, 98), OutdoorAmbient = c(148, 176, 152), ColorShift_Top = c(255, 226, 165), ColorShift_Bottom = c(62, 146, 134),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(184, 220, 204), AtmosphereDecay = c(108, 168, 154), AtmosphereHaze = 0.9,
+		TintColor = c(254, 248, 234), Saturation = 0.12, Contrast = 0.06, ExposureCompensation = 0.08, BloomIntensity = 0.42,
+		SunRaysIntensity = 0.18, SunRaysSpread = 0.56,
+	},
+	-- Floor 38, Tidal Channels: grey-teal storm tide over the lock flight. Overcast cool flat key and brooding
+	-- storm haze (kept clear enough for the 168-stud Sea-Gate, Tidebell Tower and distant viaduct to silhouette
+	-- cleanly) so the wet basalt waterworks stay moody and glowing aqua tide-runes are the sole saturated accent.
+	[38] = {
+		Ambient = c(52, 70, 76), OutdoorAmbient = c(86, 112, 120), ColorShift_Top = c(156, 188, 196), ColorShift_Bottom = c(28, 56, 66),
+		AtmosphereDensity = 0.28, AtmosphereColor = c(102, 134, 142), AtmosphereDecay = c(56, 86, 94), AtmosphereHaze = 0.95,
+		TintColor = c(226, 240, 244), Saturation = -0.04, Contrast = 0.16, ExposureCompensation = -0.02, BloomIntensity = 0.50,
+		SunRaysIntensity = 0.06, SunRaysSpread = 0.36,
+	},
+	-- Floor 39, Pearlguard Vault: deep blue twilight over the double-walled sea fortress and warm golden-pearl
+	-- glow from the colossal clam inside the 218-stud Pearl Vault dome against the towering Tidewall.
 	[39] = {
-		Ambient = c(56, 72, 102), OutdoorAmbient = c(96, 116, 152), ColorShift_Top = c(170, 196, 252), ColorShift_Bottom = c(44, 72, 98),
-		AtmosphereDensity = 0.30, AtmosphereColor = c(108, 134, 166), AtmosphereDecay = c(62, 82, 116), AtmosphereHaze = 1.05,
-		TintColor = c(226, 236, 252), Saturation = 0.08, Contrast = 0.15, ExposureCompensation = 0.02, BloomIntensity = 0.52,
-		SunRaysIntensity = 0.10, SunRaysSpread = 0.48,
+		Ambient = c(48, 72, 104), OutdoorAmbient = c(86, 118, 152), ColorShift_Top = c(140, 210, 255), ColorShift_Bottom = c(28, 56, 86),
+		AtmosphereDensity = 0.32, AtmosphereColor = c(92, 136, 174), AtmosphereDecay = c(44, 72, 108), AtmosphereHaze = 1.0,
+		TintColor = c(224, 240, 255), Saturation = 0.14, Contrast = 0.14, ExposureCompensation = -0.02, BloomIntensity = 0.52,
+		SunRaysIntensity = 0.14, SunRaysSpread = 0.50,
 	},
 }
 HubLighting.FloorGrades = FloorGrades

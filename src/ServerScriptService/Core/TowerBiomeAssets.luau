@@ -21,6 +21,9 @@ local CorruptedFloor32 = require(script.Parent.TowerSetPieces.CorruptedFloor32)
 local CorruptedFloor33 = require(script.Parent.TowerSetPieces.CorruptedFloor33)
 local CorruptedFloor34 = require(script.Parent.TowerSetPieces.CorruptedFloor34)
 local CorruptedFloor35 = require(script.Parent.TowerSetPieces.CorruptedFloor35)
+local SunkenSetPieces = require(script.Parent.TowerSetPieces.SunkenSanctuary)
+local SunkenFloor37 = require(script.Parent.TowerSetPieces.SunkenFloor37)
+local SunkenFloor38 = require(script.Parent.TowerSetPieces.SunkenFloor38)
 local SunkenFloor39 = require(script.Parent.TowerSetPieces.SunkenFloor39)
 local Assets = {}
 local V = Vector3.new
@@ -71,6 +74,8 @@ end
 
 -- Prop kinds that hang in the air by design (rings, chains, gears, sky pieces); the settle pass skips them.
 Assets.AirborneKinds = table.freeze({
+	-- Floor 36's golden shrine canopy and the great Tidebell hung under it (TowerSetPieces/SunkenSanctuary).
+	BellStackCanopy = true, BellStackTidebell = true,
 	Ring = true, Chain = true, Cogwheel = true, Orrery = true, Eclipse = true, CavernSkylight = true, CeilingRoots = true,
 	GalaxyPortal = true, LotusPortal = true, CorruptionCrescent = true, AirborneVineCable = true,
 	-- Floor 31's wicker lanterns hang from trees, the stile and the lean-to (TowerSetPieces/CorruptedGrove).
@@ -97,7 +102,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- Authored Corrupted Grove floors (31-35) build their own set pieces (TowerSetPieces/CorruptedGrove) and
 	-- skip the biome's generic thorn arches, corruption dais and citadel wings.
 	local corruptedFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 10) == "corrupted:"
-	-- Authored Sunken Sanctuary floors (36-40) build their own set pieces and skip generic marble arches/statues.
+	-- Authored Sunken Sanctuary floors (36-40) build their own set pieces (TowerSetPieces/Sunken*) and
+	-- skip the biome's generic marble arches, flanking statues, sanctuary spire and lotus portal.
 	local sunkenFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 7) == "sunken:"
 	local accent = theme.LightColor
 	local cliffColor = theme.CliffColor or theme.WallColor
@@ -6490,6 +6496,10 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "corrupted:3" then CorruptedFloor33.Build
 		elseif layout.Authored == "corrupted:4" then CorruptedFloor34.Build
 		elseif layout.Authored == "corrupted:5" then CorruptedFloor35.Build
+		-- Sunken Sanctuary authored floors (Floor 36 onward): TowerSetPieces/SunkenSanctuary & SunkenFloor37+.
+		elseif layout.Authored == "sunken:1" then SunkenSetPieces.Floor36
+		elseif layout.Authored == "sunken:2" then SunkenFloor37.Build
+		elseif layout.Authored == "sunken:3" then SunkenFloor38.Build
 		elseif layout.Authored == "sunken:4" then SunkenFloor39.Build
 		else nil
 	if setPieceBuild then

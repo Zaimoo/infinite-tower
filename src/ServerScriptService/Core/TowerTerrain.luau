@@ -90,6 +90,12 @@ local Surfaces: { [string]: Surface } = {
 	-- material colours so no other biome changes.
 	BLIGHT = { Trail = M.Cobblestone, Walk = M.Concrete, WalkAccent = M.Basalt, Bank = M.Pavement,
 		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Asphalt, Lush = M.Pavement },
+	-- Sunken Sanctuary sea-front floors (36-37, the Nereth tide-priests): pale limestone flag trails over wet
+	-- sand, sandstone patches, grey rock banks and headlands, pale limestone sea-cliffs and green-grey slate pool
+	-- beds, so the place-wide teal water reads turquoise over them (over pale sand it reads as dry ground).
+	-- Shared materials only, none of them blocky or Fungal-owned.
+	NERETH = { Trail = M.Limestone, Walk = M.Sand, WalkAccent = M.Sandstone, Bank = M.Rock,
+		Cliff = M.Limestone, Peak = M.Rock, PoolBed = M.Slate, Lush = M.Sand },
 	-- Sunken Sanctuary deep-ward floors (38–40): wet dark earth and sea-moss walkways, dark slate banks,
 	-- blackened basalt cliffs and dark basalt channel/lock beds so the storm-tide water reads deep grey-teal
 	-- and glowing aqua runes pop. Walk, Trail and WalkAccent stay on zero-noise flat terrain materials
@@ -146,6 +152,8 @@ export type Field = {
 	Sample: (x: number, z: number) -> (number, string),
 	Bottom: number,
 	LiquidLevel: number,
+	-- Water surface height at (x, z): returns a lock chamber's stepped Level inside Terrain.Locks, else LiquidLevel.
+	WaterLevel: (x: number, z: number) -> number,
 	Palette: Palette,
 	Surface: Surface?, -- direct floors only
 	-- An authored feature's own material at a spot (a slag tip's clinker and glowing seams), or nil.
@@ -393,6 +401,11 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		local edge = math.min(w / 2 - math.abs(x), d / 2 - math.abs(z))
 		local band = if td and td.WallBand then td.WallBand.Base + td.WallBand.Noise * fbm(x / 95, z / 95, seed + 7, 2)
 			else 58 + 26 * fbm(x / 95, z / 95, seed + 7, 2)
+		-- A floor can keep its north band low (`WallBand.NorthScale`, Floors 36-38: a low sea-cliff under the Tidewall),
+		-- blending back to full height toward the corners, where a side wall is the nearer one.
+		local northScale = if td and td.WallBand and td.WallBand.NorthScale and z < 0
+			then 1 - (1 - td.WallBand.NorthScale) * math.clamp(((w / 2 - math.abs(x)) - (d / 2 + z)) / 40, 0, 1)
+			else 1
 		if directTerrain then
 			band = 34 + 14 * fbm(x / 95, z / 95, seed + 7, 2)
 			if features and z < apex.Z then
@@ -405,13 +418,10 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 			end
 		end
 		if edge < band then
-			local northScale = if td and td.WallBand and td.WallBand.NorthScale and z < 0
-				then 1 - (1 - td.WallBand.NorthScale) * math.clamp(((w / 2 - math.abs(x)) - (d / 2 + z)) / 40, 0, 1)
-				else 1
 			local t = 1 - math.max(edge, 0) / band
 			-- Ridged noise breaks the slopes into spurs and gullies instead of smooth pyramids.
 			local ridge = 1 - math.abs(fbm(x / 34, z / 34, seed + 17, 3)) * 2
-			local rise = (h + 40 - bottom) * northScale * t ^ 1.35 * (0.7 + 0.18 * fbm(x / 40, z / 40, seed + 11, 2) + 0.22 * ridge)
+			local rise = (h + 40 - bottom) * t ^ 1.35 * (0.7 + 0.18 * fbm(x / 40, z / 40, seed + 11, 2) + 0.22 * ridge) * northScale
 			local ledge = 9 + 3 * fbm(x / 60, z / 60, seed + 13, 1)
 			rise -= (rise % ledge) * 0.55
 			if bottom + rise > base then
@@ -553,12 +563,45 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				end
 			end
 		end
+		-- Stepped canal lock chambers (`Terrain.Locks`, Floor 38): each chamber carves its own bed and fills
+		-- water up to its own Level, framed by crisp retaining walls between consecutive locks.
+		if td and td.Locks and kind ~= "MOUNTAIN" then
+			local inLock = false
+			for _, lk in td.Locks do
+				local hx, hz = lk.Width / 2, lk.Depth / 2
+				if math.abs(x - lk.X) <= hx and math.abs(z - lk.Z) <= hz then
+					local bed = lk.Bed or math.max(bottom - 4, lk.Level - 8)
+					base = bed
+					kind = "POOL"
+					inLock = true
+					break
+				end
+			end
+			if not inLock then
+				local rim = 7
+				for _, lk in td.Locks do
+					local hx, hz = lk.Width / 2, lk.Depth / 2
+					if math.abs(x - lk.X) <= hx + rim and math.abs(z - lk.Z) <= hz + rim then
+						local wallTop = lk.Wall or (lk.Level + 2)
+						if wallTop > base then
+							base = wallTop
+							kind = "CHASM"
+						end
+					end
+				end
+			end
+		end
 		-- Pools in the open chasm.
 		if kind == "CHASM" and not dryPools then
 			-- An authored floor has only its own pools (noisy shores), never random ones in its lanes.
 			local wet = if td and td.Pools then -1 else fbm(x / 75 + 40, z / 75 - 40, seed + 21, 2)
 			for _, pool in (td and td.Pools) or {} do
-				local e = ((x - pool.X) / pool.RX) ^ 2 + ((z - pool.Z) / pool.RZ) ^ 2 + 0.18 * fbm(x / 21, z / 21, seed + 29, 2)
+				-- Optional superellipse exponent `Round` (Floor 37's cloister garths: rounded squares, not ovals).
+				local p = pool.Round
+				local d2 = if p
+					then ((math.abs(x - pool.X) / pool.RX) ^ p + (math.abs(z - pool.Z) / pool.RZ) ^ p) ^ (2 / p)
+					else ((x - pool.X) / pool.RX) ^ 2 + ((z - pool.Z) / pool.RZ) ^ 2
+				local e = d2 + (if p then 0.08 else 0.18) * fbm(x / 21, z / 21, seed + 29, 2)
 				if e < 1 then
 					-- Steep: most of the ellipse is at full depth, so a pool round an island is open water, not a
 					-- shallow ring.
@@ -876,7 +919,8 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				if round then
 					-- A rounded terrace (`Terrain.Shapes`): a superellipse ("squircle") Grow studs past the
 					-- terrace's edges, so a terrain island reads as rock, not a square slab. Its corners fall
-					-- away; its edges' middles, where paths land, stay flat.
+					-- away; its edges' middles, where paths land, stay flat. `Sheer = true` drops its apron as a
+					-- near-vertical cliff instead of a bank (Floor 36's Bell Stack: a sea-stack, not a hill).
 					local ax, az = r.HX + round.Grow, r.HZ + round.Grow
 					local n = round.Round
 					local sq = ((math.abs(x - r.X) / ax) ^ n + (math.abs(z - r.Z) / az) ^ n) ^ (1 / n)
@@ -892,7 +936,8 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				surfaceY = math.max(surfaceY, r.Y)
 				cap = math.min(cap, if dist == 0 then r.Y - (if soft then SOFT else UNDER) else rim - APRON * warp)
 				if not r.IsBridge then
-					local steep = if soft then APRON * (0.72 + 0.45 * (0.5 + 0.5 * fbm(x / 16, z / 16, seed + 31, 2)))
+					local steep = if round and round.Sheer then APRON * (3.4 + 0.8 * fbm(x / 14, z / 14, seed + 31, 2))
+						elseif soft then APRON * (0.72 + 0.45 * (0.5 + 0.5 * fbm(x / 16, z / 16, seed + 31, 2)))
 						else APRON + 1.2 * (0.5 + 0.5 * fbm(x / 18, z / 18, seed + 31, 2))
 					raise = math.max(raise, rim - steep * warp)
 				end
@@ -996,6 +1041,16 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		Sample = shaped,
 		Bottom = bottom,
 		LiquidLevel = liquidLevel,
+		WaterLevel = function(x: number, z: number): number
+			if td and td.Locks then
+				for _, lk in td.Locks do
+					if math.abs(x - lk.X) <= lk.Width / 2 and math.abs(z - lk.Z) <= lk.Depth / 2 then
+						return lk.Level
+					end
+				end
+			end
+			return liquidLevel
+		end,
 		Palette = palette,
 		Surface = surface,
 		-- Authored feature materials: slag tips, glowing pour-pit rims, and volcanic lava-fall chutes.
@@ -1205,16 +1260,17 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 	local z0 = -nz * RES / 2
 	local seed = floorId * 3.71
 
-	-- Heights, kinds and materials per column.
-	local heights, kinds, mats = table.create(nx), table.create(nx), table.create(nx)
+	-- Heights, kinds, materials and per-column water surface levels (supports stepped Terrain.Locks).
+	local heights, kinds, mats, wLevels = table.create(nx), table.create(nx), table.create(nx), table.create(nx)
 	for i = 1, nx do
-		local hRow, kRow, mRow = table.create(nz), table.create(nz), table.create(nz)
+		local hRow, kRow, mRow, wRow = table.create(nz), table.create(nz), table.create(nz), table.create(nz)
 		local x = x0 + (i - 0.5) * RES
 		for k = 1, nz do
 			local z = z0 + (k - 0.5) * RES
 			hRow[k], kRow[k] = field.Sample(x, z)
+			wRow[k] = field.WaterLevel(x, z)
 		end
-		heights[i], kinds[i], mats[i] = hRow, kRow, mRow
+		heights[i], kinds[i], mats[i], wLevels[i] = hRow, kRow, mRow, wRow
 	end
 	for i = 1, nx do
 		for k = 1, nz do
@@ -1243,7 +1299,7 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 		local top = yMin
 		for i = i0, i1 do
 			for k = 1, nz do
-				top = math.max(top, heights[i][k], field.LiquidLevel)
+				top = math.max(top, heights[i][k], wLevels[i][k])
 			end
 		end
 		local ny = math.clamp(math.ceil((top + RES - yMin) / RES), 1, (yMax - yMin) / RES)
@@ -1255,13 +1311,14 @@ function TowerTerrain.Build(origin: Vector3, layout: any, biomeId: string, floor
 				local mRow, oRow = table.create(nz), table.create(nz)
 				for k = 1, nz do
 					local y = heights[i][k]
+					local wl = wLevels[i][k]
 					local fill = math.clamp((y - cellBottom) / RES, 0, 1)
 					if fill > 0 then
 						mRow[k] = if y - cellBottom < RES * 2 then mats[i][k] else deepCliff
 						oRow[k] = fill
-					elseif not palette.LiquidSolid and kinds[i][k] == "POOL" and cellBottom < field.LiquidLevel then
+					elseif not palette.LiquidSolid and kinds[i][k] == "POOL" and cellBottom < wl then
 						mRow[k] = palette.Liquid
-						oRow[k] = math.clamp((field.LiquidLevel - cellBottom) / RES, 0, 1)
+						oRow[k] = math.clamp((wl - cellBottom) / RES, 0, 1)
 					else
 						mRow[k] = Enum.Material.Air
 						oRow[k] = 0

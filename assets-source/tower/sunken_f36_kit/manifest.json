@@ -1,0 +1,327 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AnemoneCluster": {
+      "Min": [
+        -1.964,
+        0.0,
+        -1.783
+      ],
+      "Roles": {
+        "CORAL": 432,
+        "GLOW": 300,
+        "STONE": 20
+      },
+      "Size": [
+        3.598,
+        2.2,
+        4.174
+      ],
+      "Triangles": 752
+    },
+    "BellArch": {
+      "Min": [
+        -18.009,
+        0.0,
+        -3.924
+      ],
+      "Roles": {
+        "ACCENT": 72,
+        "GLOW": 298,
+        "GOLD": 160,
+        "METAL": 446,
+        "MOSS": 40,
+        "STONE": 282,
+        "TRIM": 392
+      },
+      "Size": [
+        35.809,
+        37.844,
+        7.971
+      ],
+      "Triangles": 1690
+    },
+    "BrokenLancetColumn": {
+      "Min": [
+        -8.811,
+        -0.721,
+        -6.554
+      ],
+      "Roles": {
+        "ACCENT": 112,
+        "MOSS": 40,
+        "STONE": 268,
+        "TRIM": 138
+      },
+      "Size": [
+        20.227,
+        20.021,
+        14.084
+      ],
+      "Triangles": 558
+    },
+    "CantorLectern": {
+      "Min": [
+        -1.85,
+        0.0,
+        -1.5
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "ALT": 158,
+        "STONE": 120,
+        "TRIM": 44
+      },
+      "Size": [
+        3.7,
+        5.548,
+        3.0
+      ],
+      "Triangles": 334
+    },
+    "FallenStairFlight": {
+      "Min": [
+        -13.207,
+        -2.2,
+        -25.319
+      ],
+      "Roles": {
+        "ACCENT": 44,
+        "MOSS": 140,
+        "STONE": 1374,
+        "TRIM": 922
+      },
+      "Size": [
+        30.902,
+        18.557,
+        42.205
+      ],
+      "Triangles": 2480
+    },
+    "GiantClam": {
+      "Min": [
+        -4.333,
+        0.2,
+        -2.467
+      ],
+      "Roles": {
+        "ALT": 528,
+        "CORAL": 576,
+        "CRYSTAL": 200
+      },
+      "Size": [
+        8.666,
+        4.299,
+        4.667
+      ],
+      "Triangles": 1304
+    },
+    "GoldenShellCanopy": {
+      "Min": [
+        -28.461,
+        -0.83,
+        -24.585
+      ],
+      "Roles": {
+        "ACCENT": 494,
+        "GLOW": 252,
+        "GOLD": 3378,
+        "TRIM": 1236
+      },
+      "Size": [
+        56.898,
+        34.66,
+        48.06
+      ],
+      "Triangles": 5360
+    },
+    "GreatTidebell": {
+      "Min": [
+        -8.0,
+        0.0,
+        -7.1
+      ],
+      "Roles": {
+        "ACCENT": 576,
+        "GLOW": 613,
+        "GOLD": 900,
+        "METAL": 970,
+        "WOOD": 44
+      },
+      "Size": [
+        16.0,
+        18.7,
+        14.2
+      ],
+      "Triangles": 3103
+    },
+    "HollinBarge": {
+      "Min": [
+        -22.67,
+        -0.897,
+        -6.985
+      ],
+      "Roles": {
+        "GOLD": 12,
+        "METAL": 224,
+        "MOSS": 80,
+        "SILK": 160,
+        "TRIM": 865,
+        "WOOD": 1038
+      },
+      "Size": [
+        46.149,
+        27.026,
+        15.122
+      ],
+      "Triangles": 2379
+    },
+    "KelpStand": {
+      "Min": [
+        -4.851,
+        -0.023,
+        -2.309
+      ],
+      "Roles": {
+        "FOLIAGE": 610,
+        "GLOW": 200,
+        "MOSS": 20
+      },
+      "Size": [
+        8.742,
+        26.03,
+        5.227
+      ],
+      "Triangles": 830
+    },
+    "LancetArchBay": {
+      "Min": [
+        -11.762,
+        0.0,
+        -2.929
+      ],
+      "Roles": {
+        "ACCENT": 224,
+        "GLOW": 399,
+        "MOSS": 40,
+        "STONE": 698,
+        "TRIM": 582
+      },
+      "Size": [
+        23.362,
+        48.4,
+        5.796
+      ],
+      "Triangles": 1943
+    },
+    "RuneTablet": {
+      "Min": [
+        -2.6,
+        0.0,
+        -1.703
+      ],
+      "Roles": {
+        "GLOW": 498,
+        "MOSS": 20,
+        "STONE": 138,
+        "TRIM": 44
+      },
+      "Size": [
+        5.2,
+        10.4,
+        3.003
+      ],
+      "Triangles": 700
+    },
+    "SeaFan": {
+      "Min": [
+        -4.259,
+        0.0,
+        -1.136
+      ],
+      "Roles": {
+        "CORAL": 344,
+        "STONE": 20
+      },
+      "Size": [
+        8.87,
+        9.784,
+        2.283
+      ],
+      "Triangles": 364
+    },
+    "SeagrassTuft": {
+      "Min": [
+        -2.078,
+        -0.044,
+        -2.226
+      ],
+      "Roles": {
+        "FOLIAGE": 168
+      },
+      "Size": [
+        4.108,
+        2.838,
+        4.146
+      ],
+      "Triangles": 168
+    },
+    "ShellMidden": {
+      "Min": [
+        -6.661,
+        0.0,
+        -6.137
+      ],
+      "Roles": {
+        "ALT": 1300,
+        "CORAL": 984,
+        "STONE": 80
+      },
+      "Size": [
+        13.542,
+        5.189,
+        13.314
+      ],
+      "Triangles": 2364
+    },
+    "TidepoolRockRing": {
+      "Min": [
+        -8.778,
+        0.0,
+        -7.818
+      ],
+      "Roles": {
+        "ALT": 210,
+        "CORAL": 700,
+        "CRYSTAL": 46,
+        "MOSS": 80,
+        "STONE": 1040
+      },
+      "Size": [
+        17.673,
+        2.899,
+        16.318
+      ],
+      "Triangles": 2076
+    },
+    "VotiveLampBowl": {
+      "Min": [
+        -1.41,
+        0.0,
+        -1.41
+      ],
+      "Roles": {
+        "CANDLE": 32,
+        "GOLD": 128,
+        "METAL": 110
+      },
+      "Size": [
+        2.818,
+        1.95,
+        2.82
+      ],
+      "Triangles": 270
+    }
+  },
+  "Unit": "studs"
+}
