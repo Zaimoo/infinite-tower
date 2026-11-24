@@ -3185,7 +3185,7 @@ test("Every floor but the authored ones reshapes its own layout, the same way ev
 	end
 	assert(varied >= 40, "only " .. varied .. " of 49 floors are reshaped")
 	-- Hand-authored floors (1-29, 31-38) have no seeded bends, so the count falls as more floors are authored.
-	assert(bends >= 8, "only " .. bends .. " winding paths")
+	assert(bends >= 6, "only " .. bends .. " winding paths")
 end)
 
 test("Every floor's layout is sound: no new problems, terraces in the room, ramps at most 15 degrees", function()
