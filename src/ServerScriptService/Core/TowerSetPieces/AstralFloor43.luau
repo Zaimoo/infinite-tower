@@ -2,13 +2,14 @@
 -- Hand-authored set pieces for Astral Archives Floor 43: Fractured Index (astral:3, TERRAIN_VARIATION).
 -- Design: docs/prompts/astral-archives-floor-layouts-prompt.md (Floor 43) & reference/Astral Archives 43.jpg.
 --
--- Where the Index Engine broke: a compact, dramatic archipelago of tall craggy grey-slate cliff islands
--- plunging deep into a dark misty violet Rift abyss, linked by short flush-anchored stone-and-brass bridges
+-- Where the Index Engine broke: a clean orthogonal 3-column archipelago of tall craggy grey-slate cliff islands
+-- plunging deep into a dark misty violet Rift abyss, linked by 24 straight 0°/90° flush-connected stone bridges
 -- and chained floating shard decks; foreground Ruled Court with cracked circular astrolabe, 8 wooden lecterns,
--- twin golden armillary spheres and cyan-runed Shelfmark Stair; back-west Lifted Index Gallery nestled in
--- mountain crags atop a grand lantern-lit staircase; back-east 180-stud split Index Engine with interlocking
--- bronze gears, flanking shelf towers & cascading page waterfalls; and wispy teal-violet aurora arching
--- across the starry sky between both peaks.
+-- twin golden armillary spheres and cyan-runed Shelfmark Stair; solid walkable outer cliff terrace bays holding
+-- every bookcase, press, ink vat and reading desk clear of all walkways; back-west Lifted Index Gallery nestled
+-- in jagged mountain peaks atop a straight lantern-lit grand staircase; back-east 183-stud split Index Engine
+-- with interlocking bronze gears, flanking shelf towers & cascading page waterfalls; and ethereal teal-violet
+-- aurora veils arching across the starry sky between both peaks.
 local CollectionService = game:GetService("CollectionService")
 local InfernalFoundry = require(script.Parent.InfernalFoundry)
 
@@ -47,8 +48,6 @@ local RIFTWARD_43 = table.freeze({
 	MOSS = swatch(82, 118, 122, Mat.Grass),
 })
 
--- Hide the flat grey STONE top lid on ShardSlabM / ShardSlabL so our crisp cracked flagstone deck caps shine
--- cleanly while the jagged dark slate rock underside & hanging brass chains dangle dramatically into the rift!
 local SHARD_UNDERSIDE_TINT = tinted(RIFTWARD_43, {
 	STONE = swatch(112, 118, 134, Mat.Slate, 1),
 	ALT = swatch(52, 58, 78, Mat.Slate),
@@ -58,14 +57,12 @@ local SHARD_UNDERSIDE_TINT = tinted(RIFTWARD_43, {
 	GLOW = swatch(252, 228, 158, Mat.Neon),
 })
 
--- Ink vat tint: glossy spilling indigo-violet ink puddle matching reference bottom-left!
 local INK_VAT_TINT = tinted(RIFTWARD_43, {
 	ALT = swatch(54, 46, 136, Mat.Glass),
 	CRYSTAL = swatch(88, 72, 198, Mat.Glass, 0.10),
 	GLOW = swatch(132, 106, 238, Mat.Neon),
 })
 
--- Rich warm mahogany & stone tint for LiftedIndexGallery & library bookcases
 local LIBRARY_TINT = tinted(RIFTWARD_43, {
 	STONE = swatch(148, 152, 166, Mat.Slate),
 	WOOD = swatch(112, 72, 46, Mat.Wood),
@@ -92,53 +89,52 @@ local AURORA_TEAL = rgb(86, 224, 206)
 local RUNE_CYAN = rgb(96, 218, 248)
 local GOLD_LIGHT = rgb(252, 226, 154)
 
--- Deep visual abyss floor so every cliff island plunges 34..86 studs down into moody misty depths!
+-- Deep visual abyss floor so every cliff island plunges 34..88 studs down into moody misty depths!
 local ABYSS_Y = -36
 
--- Floor 43's 20 landmark footprints (local floor space, 720 x 750, tightened compact archipelago).
--- Every single landmark is 100% grounded on its plate or integrated fractured cliff terrace bay, and
--- spec-checked against all walkway lanes, camps (>= 34 studs), portals (>= 12 studs) and room bounds.
+-- Floor 43's 20 landmark footprints (local floor space, 720 x 750, clean orthogonal 3-column archipelago).
+-- Every single landmark sits on a solid walkable outer terrace bay strictly clear of all bridges, camps & portals!
 AstralFloor43.Landmarks = table.freeze({
 	-- 1. Index Engine Core (>= 175 studs, 183 studs at 1.02) split down the middle behind Engine terrace
-	{ Id = "IndexEngineCore", X = 212, Z = -328, Y = 44, HalfX = 35.0, HalfZ = 13.8, Top = 183.3 },
-	-- 2. Index Engine Gear Bank rising directly behind IndexEngineCore (cohesive machine silhouette!)
-	{ Id = "IndexEngineGearBank", X = 220, Z = -346, Y = 44, HalfX = 45.6, HalfZ = 7.2, Top = 88.0 },
+	{ Id = "IndexEngineCore", X = 206, Z = -344, Y = 44, HalfX = 35.0, HalfZ = 13.8, Top = 183.3 },
+	-- 2. Index Engine Gear Bank rising directly behind IndexEngineCore
+	{ Id = "IndexEngineGearBank", X = 214, Z = -362, Y = 44, HalfX = 45.6, HalfZ = 7.2, Top = 88.0 },
 	-- 3. Index Engine Shelf Tower tightly flanking east side of IndexEngineCore
-	{ Id = "IndexEngineShelfTower", X = 278, Z = -316, Y = 44, HalfX = 18.4, HalfZ = 8.0, Top = 93.0 },
-	-- 4. Lifted Index Gallery grounded solidly on Apex's integrated north terrace & crag behind portals (-300)
-	{ Id = "LiftedIndexGallery", X = -172, Z = -340, Y = 52, HalfX = 36.0, HalfZ = 14.0, Top = 35.6 },
-	-- 5. Colophon Wall grounded on P4C's integrated north stone terrace
-	{ Id = "ColophonWall", X = 38, Z = -330, Y = 48, HalfX = 13.6, HalfZ = 2.0, Top = 16.8 },
-	-- 6. Bindery Press (wooden screw press + gold thread spools) grounded on P2W's western terrace bay
-	{ Id = "BinderyPress", X = -228, Z = -64, Y = 28, HalfX = 8.4, HalfZ = 3.6, Top = 12.4 },
-	-- 7. Errata Press grounded on P2E's eastern terrace bay
-	{ Id = "ErrataPress", X = 208, Z = -100, Y = 20, HalfX = 6.5, HalfZ = 3.2, Top = 9.7 },
-	-- 8. Reading Plate Tilted Desk grounded on P2C's south-east cliff shelf
-	{ Id = "ReadingTiltedDesk", X = 14, Z = -30, Y = 24, HalfX = 4.8, HalfZ = 5.0, Top = 6.0 },
-	-- 9. Ledger Plate Tall Ledger Stack grounded on P3C's northern cliff bay
-	{ Id = "LedgerStackTall", X = 18, Z = -212, Y = 36, HalfX = 5.0, HalfZ = 4.8, Top = 14.1 },
-	-- 10. Ink-Cellar Cracked Ink Vat grounded on P3E's eastern cliff bay
-	{ Id = "InkCellarVat", X = 248, Z = -182, Y = 32, HalfX = 4.8, HalfZ = 7.0, Top = 5.8 },
-	-- 11. Toppled Shelf Range grounded on WestGallery's integrated western cliff terrace bay
-	{ Id = "WestrangeToppledShelf", X = -236, Z = 76, Y = 16, HalfX = 7.5, HalfZ = 7.6, Top = 8.0 },
-	-- 12. Toppled Shelf Range grounded on EastGallery's integrated eastern cliff terrace bay
-	{ Id = "EastrangeToppledShelf", X = 234, Z = 78, Y = 8, HalfX = 7.5, HalfZ = 7.6, Top = 8.0 },
-	-- 13. Card Drawer Spill tumbling from Engine across its western ledge toward Rift C
-	{ Id = "EngineCardSpill", X = 156, Z = -282, Y = 44, HalfX = 6.0, HalfZ = 4.4, Top = 2.4 },
-	-- 14. Broken Orrery Ring + fallen column grounded solidly on Basin west foreground terrace
-	{ Id = "BrokenOrreryRingW", X = -168, Z = 250, Y = 0, HalfX = 7.4, HalfZ = 5.6, Top = 7.8 },
-	-- 15. Broken Orrery Ring + fallen column grounded solidly on Basin east foreground terrace
-	{ Id = "BrokenOrreryRingE", X = 168, Z = 250, Y = 0, HalfX = 7.4, HalfZ = 5.6, Top = 7.8 },
-	-- 16. Scarp Shelf Strata embedded flush into WestGallery's north-west rocky cliff face
-	{ Id = "ScarpStrataWest", X = -234, Z = 36, Y = 0, HalfX = 16.8, HalfZ = 6.0, Top = 16.0 },
-	-- 17. Scarp Shelf Strata embedded flush into P2W's north-west rocky cliff face
-	{ Id = "ScarpStrataP2W", X = -232, Z = -96, Y = 10, HalfX = 16.8, HalfZ = 6.0, Top = 18.0 },
-	-- 18. Scarp Shelf Strata embedded flush into P3E's north-east rocky cliff face
-	{ Id = "ScarpStrataP3E", X = 248, Z = -216, Y = 14, HalfX = 16.8, HalfZ = 6.0, Top = 18.0 },
-	-- 19. Page Fall Ribbon cascading directly off Reading Plate's south-east cliff lip into Rift A
-	{ Id = "PageFallRiftA", X = 14, Z = -18, Y = 0, HalfX = 5.0, HalfZ = 7.0, Top = 22.8 },
-	-- 20. Page Fall Ribbon cascading directly off Ledger Plate's north-west cliff lip into Rift C
-	{ Id = "PageFallRiftC", X = -10, Z = -206, Y = 12, HalfX = 5.0, HalfZ = 7.0, Top = 22.8 },
+	{ Id = "IndexEngineShelfTower", X = 272, Z = -334, Y = 44, HalfX = 18.4, HalfZ = 8.0, Top = 93.0 },
+	-- 4. Lifted Index Gallery grounded solidly on Apex's integrated north terrace behind portals (-324)
+	{ Id = "LiftedIndexGallery", X = -176, Z = -358, Y = 52, HalfX = 32.0, HalfZ = 12.0, Top = 31.6 },
+	-- 5. Colophon Wall grounded on P4C's solid north stone terrace
+	{ Id = "ColophonWall", X = 0, Z = -344, Y = 48, HalfX = 13.6, HalfZ = 2.0, Top = 16.8 },
+	-- 6. Bindery Press (wooden screw press + gold thread spools) grounded on P2W's solid western terrace bay
+	{ Id = "BinderyPress", X = -242, Z = -80, Y = 28, HalfX = 8.4, HalfZ = 3.6, Top = 12.4 },
+	-- 7. Errata Press grounded on P2E's solid eastern terrace bay
+	{ Id = "ErrataPress", X = 250, Z = -80, Y = 20, HalfX = 6.5, HalfZ = 3.2, Top = 9.7 },
+	-- 8. Reading Plate Tilted Desk grounded on P2C's solid south-east corner bay (clear of all 4 cardinal bridges!)
+	{ Id = "ReadingTiltedDesk", X = 28, Z = -40, Y = 24, HalfX = 4.8, HalfZ = 5.0, Top = 6.0 },
+	-- 9. Ledger Plate Tall Ledger Stack grounded on P3C's solid north-east corner bay (clear of all 4 cardinal bridges!)
+	{ Id = "LedgerStackTall", X = 32, Z = -218, Y = 36, HalfX = 5.0, HalfZ = 4.8, Top = 14.1 },
+	-- 10. Ink-Cellar Cracked Ink Vat grounded on P3E's solid eastern cliff bay
+	{ Id = "InkCellarVat", X = 250, Z = -180, Y = 32, HalfX = 4.8, HalfZ = 7.0, Top = 5.8 },
+	-- 11. Toppled Shelf Range grounded on WestGallery's solid western cliff bay
+	{ Id = "WestrangeToppledShelf", X = -244, Z = 76, Y = 16, HalfX = 7.5, HalfZ = 7.6, Top = 8.0 },
+	-- 12. Toppled Shelf Range grounded on EastGallery's solid eastern cliff bay
+	{ Id = "EastrangeToppledShelf", X = 252, Z = 76, Y = 8, HalfX = 7.5, HalfZ = 7.6, Top = 8.0 },
+	-- 13. Card Drawer Spill grounded on Engine's solid eastern spill bay (clear of south & west bridges!)
+	{ Id = "EngineCardSpill", X = 238, Z = -296, Y = 44, HalfX = 6.0, HalfZ = 4.4, Top = 2.4 },
+	-- 14. Broken Orrery Ring grounded solidly on Basin west foreground corner
+	{ Id = "BrokenOrreryRingW", X = -176, Z = 252, Y = 0, HalfX = 7.4, HalfZ = 5.6, Top = 7.8 },
+	-- 15. Broken Orrery Ring grounded solidly on Basin east foreground corner
+	{ Id = "BrokenOrreryRingE", X = 186, Z = 252, Y = 0, HalfX = 7.4, HalfZ = 5.6, Top = 7.8 },
+	-- 16. Scarp Shelf Strata embedded flush into WestGalleryBay's north cliff face
+	{ Id = "ScarpStrataWest", X = -242, Z = 40, Y = 0, HalfX = 16.8, HalfZ = 6.0, Top = 16.0 },
+	-- 17. Scarp Shelf Strata embedded flush into P2WBinderyBay's north cliff face
+	{ Id = "ScarpStrataP2W", X = -240, Z = -111, Y = 10, HalfX = 16.8, HalfZ = 6.0, Top = 18.0 },
+	-- 18. Scarp Shelf Strata embedded flush into P3EInkCellarBay's north cliff face
+	{ Id = "ScarpStrataP3E", X = 250, Z = -209, Y = 14, HalfX = 16.8, HalfZ = 6.0, Top = 18.0 },
+	-- 19. Page Fall Ribbon cascading directly off P2CDeskBay's south cliff lip into Rift A
+	{ Id = "PageFallRiftA", X = 28, Z = -24, Y = 0, HalfX = 5.0, HalfZ = 7.0, Top = 22.8 },
+	-- 20. Page Fall Ribbon cascading directly off P3C's north-west cliff lip into Rift C
+	{ Id = "PageFallRiftC", X = -30, Z = -212, Y = 12, HalfX = 5.0, HalfZ = 7.0, Top = 22.8 },
 }) :: { Landmark }
 
 local function safeTag(inst: Instance?, tagName: string)
@@ -304,72 +300,86 @@ function AstralFloor43.Build(ctx: any)
 	end
 
 	-- Helper: build a tall, craggy, multi-tiered rocky slate cliff massif plunging deep into the dark violet abyss.
-	-- Uses PropKind = "AstralIsleDeck" (exempt from Walkway & Camp pruning, pinned with OnTerrain = true).
-	local function buildFracturedCliffIsland(id: string, x: number, y: number, z: number, w: number, d: number, seed: number)
+	-- When `isWalkableBay` is true, creates a 100% SOLID walkable top stone deck (`CanCollide = true`) so players
+	-- never phase or fall through outer terrace bays! When false (main TowerRoomBuilder platform), keeps all trim
+	-- strictly BELOW `y` (`top = y - 0.14`) so there is ZERO z-fighting with the main platform slab!
+	local function buildFracturedCliffIsland(id: string, x: number, y: number, z: number, w: number, d: number, seed: number, isWalkableBay: boolean?)
 		local cliffBottom = ABYSS_Y + 1.0
 		local totalH = math.max(24.0, y - cliffBottom)
 		ctx.group("AstralIsleDeck", function()
-			-- Thick weathered stone coping rim + antique brass frieze directly beneath the walking slab
-			boxAt(id .. "DeckLip", CFrame.new(V(x, y - 0.85, z)), V(w + 1.4, 1.7, d + 1.4), STONE_TOP, Mat.Slate)
-			boxAt(id .. "BrassUnderTrim", CFrame.new(V(x, y - 1.85, z)), V(w + 1.8, 0.42, d + 1.8), BRASS_AGED, Mat.Metal)
+			local solidBayDeck: Part? = nil
+			if isWalkableBay then
+				-- Flush solid walkable stone bay deck (matches main platform top cleanly, 100% collidable!)
+				solidBayDeck = boxAt(id .. "WalkDeck", CFrame.new(V(x, y - 0.90, z)), V(w, 1.8, d), STONE_TOP, Mat.Slate)
+			else
+				-- On main platforms, keep the cornice lip strictly BELOW `y` (-0.14) to eliminate coplanar z-fighting!
+				boxAt(id .. "DeckLip", CFrame.new(V(x, y - 1.14, z)), V(w + 1.2, 2.0, d + 1.2), STONE_TOP, Mat.Slate)
+			end
+			boxAt(id .. "BrassUnderTrim", CFrame.new(V(x, y - 2.15, z)), V(w + 1.4, 0.40, d + 1.4), BRASS_AGED, Mat.Metal)
 
-			-- Multi-tiered tapered cliff core plunging deep into the abyss (never thin wafer slabs!)
-			local hullH = totalH - 2.0
+			-- Multi-tiered tapered cliff core plunging deep into the abyss
+			local hullH = totalH - 2.3
 			local h1, h2, h3 = hullH * 0.34, hullH * 0.36, hullH * 0.34
-			boxAt(id .. "CliffTier1", CFrame.new(V(x, y - 2.0 - h1 * 0.5, z)), V(w - 1.0, h1, d - 1.0), CLIFF_ROCK, Mat.Slate)
-			boxAt(id .. "CliffTier2", CFrame.new(V(x, y - 2.0 - h1 * 0.85 - h2 * 0.5, z)), V(w * 0.86, h2, d * 0.86), CLIFF_MID, Mat.Slate)
+			boxAt(id .. "CliffTier1", CFrame.new(V(x, y - 2.3 - h1 * 0.5, z)), V(w - 1.2, h1, d - 1.2), CLIFF_ROCK, Mat.Slate)
+			boxAt(id .. "CliffTier2", CFrame.new(V(x, y - 2.3 - h1 * 0.85 - h2 * 0.5, z)), V(w * 0.86, h2, d * 0.86), CLIFF_MID, Mat.Slate)
 			boxAt(id .. "CliffTier3", CFrame.new(V(x, cliffBottom + h3 * 0.5, z)), V(w * 0.66, h3, d * 0.66), CLIFF_DEEP, Mat.Slate)
 
 			-- Tall angled jagged rock crags wrapping corners & cliff walls, tapering inward toward the depths
 			local halfW, halfD = w * 0.5, d * 0.5
 			for _, sx in { -1, 1 } do
 				for _, sz in { -1, 1 } do
-					local rockW = math.min(24, w * 0.28)
-					local rockD = math.min(24, d * 0.28)
+					local rockW = math.min(22, w * 0.28)
+					local rockD = math.min(22, d * 0.28)
 					local rockH = hullH * (0.74 + ((seed + sx * 3 + sz * 5) % 3) * 0.08)
-					local rx = x + sx * (halfW - rockW * 0.34)
-					local rz = z + sz * (halfD - rockD * 0.34)
-					local cf = CFrame.new(V(rx, y - 2.2 - rockH * 0.5, rz))
+					local rx = x + sx * (halfW - rockW * 0.36)
+					local rz = z + sz * (halfD - rockD * 0.36)
+					local cf = CFrame.new(V(rx, y - 2.4 - rockH * 0.5, rz))
 						* CFrame.Angles(math.rad(-sz * 8), math.rad((seed * 17 + sx * 11 + sz * 7) % 24 - 12), math.rad(sx * 8))
 					boxAt(id .. "CornerCrag", cf, V(rockW, rockH, rockD), if (sx + sz) == 0 then CLIFF_ROCK else CLIFF_MID, Mat.Slate)
 				end
 			end
-			local nRibsX = math.clamp(math.floor(w / 44), 2, 6)
+			local nRibsX = math.clamp(math.floor(w / 46), 1, 5)
 			for i = 1, nRibsX do
 				local rx = x - halfW + (w * i / (nRibsX + 1))
 				for _, sz in { -1, 1 } do
 					local rh = hullH * (0.64 + ((i + seed) % 3) * 0.11)
-					local cf = CFrame.new(V(rx, y - 2.1 - rh * 0.5, z + sz * (halfD - 3.6)))
+					local cf = CFrame.new(V(rx, y - 2.3 - rh * 0.5, z + sz * (halfD - 3.8)))
 						* CFrame.Angles(math.rad(-sz * 9), math.rad(((i * 23 + seed) % 16) - 8), 0)
-					boxAt(id .. "WallCragZ", cf, V(18, rh, 12), if i % 2 == 0 then CLIFF_ROCK else CLIFF_MID, Mat.Slate)
+					boxAt(id .. "WallCragZ", cf, V(16, rh, 11), if i % 2 == 0 then CLIFF_ROCK else CLIFF_MID, Mat.Slate)
 				end
 			end
-			local nRibsZ = math.clamp(math.floor(d / 38), 1, 4)
+			local nRibsZ = math.clamp(math.floor(d / 40), 1, 3)
 			for i = 1, nRibsZ do
 				local rz = z - halfD + (d * i / (nRibsZ + 1))
 				for _, sx in { -1, 1 } do
 					local rh = hullH * (0.62 + ((i + seed) % 3) * 0.11)
-					local cf = CFrame.new(V(x + sx * (halfW - 3.6), y - 2.1 - rh * 0.5, rz))
+					local cf = CFrame.new(V(x + sx * (halfW - 3.8), y - 2.3 - rh * 0.5, rz))
 						* CFrame.Angles(0, math.rad(((i * 19 + seed) % 16) - 8), math.rad(sx * 9))
-					boxAt(id .. "WallCragX", cf, V(12, rh, 18), if i % 2 == 0 then CLIFF_MID else CLIFF_ROCK, Mat.Slate)
+					boxAt(id .. "WallCragX", cf, V(11, rh, 16), if i % 2 == 0 then CLIFF_MID else CLIFF_ROCK, Mat.Slate)
 				end
 			end
 
-			-- Subtle weathered stone flagstones & hairline fracture fissures across the walking deck
-			local nFlags = math.clamp(math.floor((w * d) / 620), 4, 14)
+			-- Subtle weathered flagstones raised cleanly above `y` (`bottom = y + 0.02`) so zero z-fighting!
+			local nFlags = math.clamp(math.floor((w * d) / 720), 2, 10)
 			for k = 1, nFlags do
-				local fx = x + math.sin(k * 2.13 + seed) * (halfW * 0.72)
-				local fz = z + math.cos(k * 1.71 + seed * 1.3) * (halfD * 0.70)
-				local fw = 8.0 + ((k * 7 + seed) % 6)
-				local fd = 6.5 + ((k * 5 + seed) % 5)
-				local fcf = CFrame.new(V(fx, y + 0.04 + (k % 3) * 0.015, fz)) * CFrame.Angles(0, math.rad(((k * 17 + seed) % 16) - 8), 0)
-				boxAt(id .. "Flagstone", fcf, V(fw, 0.08, fd), if k % 2 == 0 then STONE_LIGHT else STONE_DARK, Mat.Slate)
+				local fx = x + math.sin(k * 2.13 + seed) * (halfW * 0.62)
+				local fz = z + math.cos(k * 1.71 + seed * 1.3) * (halfD * 0.60)
+				local fw = 7.0 + ((k * 7 + seed) % 5)
+				local fd = 6.0 + ((k * 5 + seed) % 4)
+				local fcf = CFrame.new(V(fx, y + 0.05 + (k % 2) * 0.015, fz)) * CFrame.Angles(0, math.rad(((k * 17 + seed) % 16) - 8), 0)
+				boxAt(id .. "Flagstone", fcf, V(fw, 0.05, fd), if k % 2 == 0 then STONE_LIGHT else STONE_DARK, Mat.Slate)
 			end
-			local crackCF = CFrame.new(V(x + math.sin(seed) * halfW * 0.15, y + 0.08, z + math.cos(seed) * halfD * 0.15))
+			local crackCF = CFrame.new(V(x + math.sin(seed) * halfW * 0.14, y + 0.06, z + math.cos(seed) * halfD * 0.14))
 				* CFrame.Angles(0, math.rad((seed * 37) % 140 - 70), 0)
-			boxAt(id .. "FloorCrack", crackCF, V(math.min(w, d) * 0.56, 0.06, 0.75), CLIFF_DEEP, Mat.Slate)
+			boxAt(id .. "FloorCrack", crackCF, V(math.min(w, d) * 0.50, 0.04, 0.65), CLIFF_DEEP, Mat.Slate)
 
 			makeDecor(ctx.current())
+			-- Re-enable solid collision on walkable outer terrace bays so players walk on them seamlessly!
+			if solidBayDeck then
+				solidBayDeck.CanCollide = true
+				solidBayDeck.CanQuery = true
+				solidBayDeck.CanTouch = true
+			end
 			pin(ctx.current())
 		end)
 	end
@@ -387,23 +397,19 @@ function AstralFloor43.Build(ctx: any)
 	-- Sculpted stepped rocky slate mountain spire (tapered multi-faceted peak, never a flat cube!)
 	local function buildMountainCrag(pos: Vector3, size: Vector3, yawDeg: number, tiltDeg: number)
 		local baseCF = CFrame.new(pos) * CFrame.Angles(0, math.rad(yawDeg), 0)
-		-- Broad faceted base massif anchored down into the abyss
 		boxAt("MountainCragBase", baseCF * CFrame.new(0, size.Y * 0.12, 0) * CFrame.Angles(math.rad(tiltDeg * 0.4), math.rad(8), math.rad(-tiltDeg * 0.3)),
 			V(size.X * 1.05, size.Y * 0.52, size.Z * 1.05), CLIFF_DEEP, Mat.Slate)
-		-- Stepped mid-slope crag shoulder
 		boxAt("MountainCragMid", baseCF * CFrame.new(-size.X * 0.08, size.Y * 0.44, size.Z * 0.06) * CFrame.Angles(math.rad(tiltDeg), math.rad(-14), math.rad(tiltDeg * 0.6)),
 			V(size.X * 0.74, size.Y * 0.52, size.Z * 0.72), CLIFF_ROCK, Mat.Slate)
-		-- Secondary angled rock buttress on the opposite flank
 		boxAt("MountainCragShoulder", baseCF * CFrame.new(size.X * 0.24, size.Y * 0.30, -size.Z * 0.06) * CFrame.Angles(math.rad(-tiltDeg * 0.7), math.rad(22), math.rad(-14)),
 			V(size.X * 0.50, size.Y * 0.46, size.Z * 0.56), CLIFF_MID, Mat.Slate)
-		-- Pointed upper summit ridge tapering sharply toward the night sky
 		boxAt("MountainCragPeak", baseCF * CFrame.new(-size.X * 0.04, size.Y * 0.74, 0) * CFrame.Angles(math.rad(tiltDeg * 1.2), math.rad(28), math.rad(14)),
 			V(size.X * 0.40, size.Y * 0.36, size.Z * 0.38), STONE_DARK, Mat.Slate)
 		boxAt("MountainCragSpire", baseCF * CFrame.new(-size.X * 0.02, size.Y * 0.90, 0) * CFrame.Angles(math.rad(16), math.rad(-18), math.rad(-18)),
 			V(size.X * 0.20, size.Y * 0.22, size.Z * 0.20), STONE_DARK, Mat.Slate)
 	end
 
-	-- Ethereal wispy aurora veil: ultra-sheer non-overlapping vertical-shimmer beams + soft glowing aurora mist clouds!
+	-- Ethereal wispy aurora veil: ultra-sheer non-overlapping ribbons + soft glowing aurora mist clouds!
 	local function addAuroraCurtain(name: string, p0: Vector3, p1: Vector3, height0: number, height1: number, col0: Color3, col1: Color3, peakAlpha: number)
 		local mid = (p0 + p1) * 0.5
 		local anchor = ctx.block(name .. "_Anchor", V(1, 1, 1), mid, col0, Mat.SmoothPlastic, nil, 1)
@@ -471,20 +477,17 @@ function AstralFloor43.Build(ctx: any)
 	-- into dark starry indigo with soft misty purple glow only deep in the rifts!
 	-- =========================================================================
 	ctx.group("AstralNebulaSea", function()
-		-- Deep dark starry indigo abyssal bed far below all platforms
 		boxAt("RiftVoidFloor", CFrame.new(V(0, ABYSS_Y, -10)), V(920, 0.5, 920), rgb(10, 8, 22), Mat.SmoothPlastic, 0)
 
-		-- Soft, moody deep-chasm violet nebula pools concentrated ONLY deep inside the narrow rifts
 		local riftGlowPools = {
-			{ -95, ABYSS_Y + 0.6, 146, 68, rgb(104, 46, 182), 0.72 },
-			{ 82, ABYSS_Y + 0.6, 146, 68, rgb(104, 46, 182), 0.72 },
-			{ -82, ABYSS_Y + 0.7, 8, 86, rgb(134, 58, 212), 0.68 },
-			{ 58, ABYSS_Y + 0.7, 2, 82, rgb(126, 54, 202), 0.70 },
-			{ 164, ABYSS_Y + 0.7, -4, 68, rgb(118, 50, 194), 0.72 },
-			{ -104, ABYSS_Y + 0.8, -142, 92, rgb(142, 62, 220), 0.66 },
-			{ 76, ABYSS_Y + 0.7, -130, 76, rgb(120, 52, 198), 0.72 },
-			{ 114, ABYSS_Y + 0.8, -234, 88, rgb(146, 64, 224), 0.66 },
-			{ -52, ABYSS_Y + 0.7, -230, 78, rgb(128, 56, 208), 0.70 },
+			{ -90, ABYSS_Y + 0.6, 146, 68, rgb(104, 46, 182), 0.72 },
+			{ 92, ABYSS_Y + 0.6, 146, 68, rgb(104, 46, 182), 0.72 },
+			{ -88, ABYSS_Y + 0.7, -4, 86, rgb(134, 58, 212), 0.68 },
+			{ 92, ABYSS_Y + 0.7, -4, 86, rgb(126, 54, 202), 0.70 },
+			{ -88, ABYSS_Y + 0.8, -134, 92, rgb(142, 62, 220), 0.66 },
+			{ 92, ABYSS_Y + 0.7, -134, 82, rgb(120, 52, 198), 0.72 },
+			{ -88, ABYSS_Y + 0.8, -242, 88, rgb(146, 64, 224), 0.66 },
+			{ 92, ABYSS_Y + 0.7, -242, 82, rgb(128, 56, 208), 0.70 },
 		}
 		for idx, rp in riftGlowPools do
 			local disc = ctx.cyl("RiftGlowPool_" .. idx, V(rp[1], rp[2], rp[3]), rp[4], 0.20, rp[5], Mat.Neon)
@@ -495,11 +498,10 @@ function AstralFloor43.Build(ctx: any)
 			end
 		end
 
-		-- Subtle glowing violet rift fault veins snaking along the deepest chasm floor
 		local riftVeins = {
-			{ V(240, ABYSS_Y + 1.0, -8), V(120, ABYSS_Y + 1.0, -2), V(-82, ABYSS_Y + 1.0, 8), V(-172, ABYSS_Y + 1.0, -4) },
-			{ V(-240, ABYSS_Y + 1.0, -136), V(-104, ABYSS_Y + 1.0, -148), V(58, ABYSS_Y + 1.0, -132), V(182, ABYSS_Y + 1.0, -138) },
-			{ V(-240, ABYSS_Y + 1.0, -208), V(-88, ABYSS_Y + 1.0, -214), V(114, ABYSS_Y + 1.0, -236), V(212, ABYSS_Y + 1.0, -252) },
+			{ V(240, ABYSS_Y + 1.0, -4), V(92, ABYSS_Y + 1.0, -4), V(-88, ABYSS_Y + 1.0, -4), V(-220, ABYSS_Y + 1.0, -4) },
+			{ V(-240, ABYSS_Y + 1.0, -134), V(-88, ABYSS_Y + 1.0, -134), V(92, ABYSS_Y + 1.0, -134), V(230, ABYSS_Y + 1.0, -134) },
+			{ V(-240, ABYSS_Y + 1.0, -242), V(-88, ABYSS_Y + 1.0, -242), V(92, ABYSS_Y + 1.0, -242), V(230, ABYSS_Y + 1.0, -242) },
 		}
 		for vIdx, chain in riftVeins do
 			for i = 1, #chain - 1 do
@@ -509,7 +511,6 @@ function AstralFloor43.Build(ctx: any)
 			end
 		end
 
-		-- Delicate deep-space pinpoint stars around the outer chasm edges
 		for i = 1, 90 do
 			local sx = math.sin(i * 12.9898) * 380
 			local sz = math.cos(i * 78.233) * 385 - 10
@@ -522,36 +523,28 @@ function AstralFloor43.Build(ctx: any)
 		pin(ctx.current())
 	end)
 
-	-- Soft rising misty purple fog deep in the chasms (matches reference image's glowing purple rift mist!)
-	riftMistEmitter(V(-92, -24, 10), 42)
-	riftMistEmitter(V(78, -24, 14), 42)
-	riftMistEmitter(V(-100, -22, -146), 46)
-	riftMistEmitter(V(106, -22, -232), 46)
+	-- Soft rising misty purple fog deep in the chasms
+	riftMistEmitter(V(-90, -24, 10), 42)
+	riftMistEmitter(V(92, -24, 10), 42)
+	riftMistEmitter(V(-90, -22, -134), 46)
+	riftMistEmitter(V(92, -22, -242), 46)
 
-	-- Floating fractured void rock fragments strictly in OPEN chasm pockets (zero bridge clipping!)
+	-- Deep chasm violet uplights + 2 far-outer decorative foreground shards (ZERO floating blocks near any bridge!)
 	ctx.group("RiftBedGlows", function()
 		for idx, fr in {
-			{ -92, -3.5, 146, 14, 12, 12, 18 },   -- open pocket between Basin_WestGallery (-168) & Basin_Crossing (-8)
-			{ 78, -4.0, 148, 15, 12, 13, -24 },   -- open pocket between Basin_Crossing (-8) & Basin_EastGallery (+166)
-			{ -258, 1.0, 168, 20, 18, 18, 28 },   -- dramatic floating foreground shard bottom-left (Image 1!)
-			{ 258, 1.0, 168, 20, 18, 18, -28 },   -- dramatic floating foreground shard bottom-right (Image 1!)
-			{ 76, 1.0, 10, 15, 14, 14, 34 },      -- open pocket in Rift A east of Crossing
-			{ -22, 6.0, -134, 14, 12, 13, -15 },  -- open pocket in Rift B south of P3C
-			{ -188, 12.0, -154, 17, 15, 15, 22 }, -- open pocket west of ShardB
-			{ 106, 12.0, -148, 15, 13, 14, -32 }, -- open pocket between P2E/P3C/P3E
-			{ -60, 20.0, -232, 16, 14, 15, 19 },  -- open pocket between ShardB/P3C/P4C
+			{ -295, -2.0, 180, 20, 18, 18, 26 }, -- far outer foreground left (75+ studs from Basin & WestGallery!)
+			{ 300, -2.0, 180, 20, 18, 18, -26 }, -- far outer foreground right (75+ studs from Basin & EastGallery!)
 		} do
 			local cf = CFrame.new(V(fr[1], fr[2], fr[3])) * CFrame.Angles(math.rad(6), math.rad(fr[7]), math.rad(-5))
 			boxAt("VoidShardTop_" .. idx, cf * CFrame.new(0, fr[5] * 0.45, 0), V(fr[4], 1.8, fr[6]), STONE_TOP, Mat.Slate)
 			boxAt("VoidShardRock_" .. idx, cf * CFrame.new(0, -fr[5] * 0.1, 0), V(fr[4] * 0.84, fr[5], fr[6] * 0.84), CLIFF_ROCK, Mat.Slate)
 			boxAt("VoidShardTip_" .. idx, cf * CFrame.new(0, -fr[5] * 0.68, 0), V(fr[4] * 0.46, fr[5] * 0.72, fr[6] * 0.46), CLIFF_DEEP, Mat.Slate)
 		end
-		-- Moody purple uplights deep inside the narrow chasms to rim-light the cliff undersides
 		for i, pt in {
-			V(-92, -16, 8),
-			V(76, -16, 12),
-			V(-102, -14, -148),
-			V(112, -12, -236),
+			V(-90, -16, -4),
+			V(92, -16, -4),
+			V(-90, -14, -134),
+			V(92, -12, -242),
 		} do
 			local anchor = ctx.block("RiftGlowAnchor" .. i, V(2, 2, 2), pt, RIFT_VIOLET, Mat.SmoothPlastic, nil, 1)
 			addLight(anchor, RIFT_VIOLET, 2.2, 105)
@@ -561,7 +554,7 @@ function AstralFloor43.Build(ctx: any)
 	end)
 
 	-- =========================================================================
-	-- B. FRACTURED GREY-SLATE CLIFF PLATES & INTEGRATED LANDMARK TERRACE BAYS
+	-- B. FRACTURED GREY-SLATE CLIFF PLATES & SOLID WALKABLE OUTER TERRACE BAYS
 	-- =========================================================================
 	local plateOrder = {
 		"WestGallery", "Crossing", "EastGallery",
@@ -572,22 +565,22 @@ function AstralFloor43.Build(ctx: any)
 	for idx, pid in plateOrder do
 		local plat = P[pid]
 		if plat then
-			buildFracturedCliffIsland(pid, plat.X, plat.Y, plat.Z, plat.Width, plat.Depth, idx * 13 + 7)
+			buildFracturedCliffIsland(pid, plat.X, plat.Y, plat.Z, plat.Width, plat.Depth, idx * 13 + 7, false)
 		end
 	end
 
-	-- Integrated rocky cliff terrace bays so every landmark & mountain crag is 100% grounded!
-	buildFracturedCliffIsland("ApexGalleryApse", -172, 52, -328, 138, 50, 101)
-	buildFracturedCliffIsland("EngineCragTerrace", 216, 44, -330, 166, 64, 102)
-	buildFracturedCliffIsland("EngineWestSpillBay", 158, 44, -282, 32, 38, 103)
-	buildFracturedCliffIsland("P4CColophonBay", 38, 48, -326, 68, 30, 104)
-	buildFracturedCliffIsland("WestGalleryBay", -234, 16, 76, 44, 72, 105)
-	buildFracturedCliffIsland("EastGalleryBay", 232, 8, 78, 44, 72, 106)
-	buildFracturedCliffIsland("P2WBinderyBay", -228, 28, -64, 44, 56, 107)
-	buildFracturedCliffIsland("P2CDeskBay", 14, 24, -32, 32, 26, 108)
-	buildFracturedCliffIsland("P2EErrataBay", 208, 20, -100, 44, 54, 109)
-	buildFracturedCliffIsland("P3CLedgerBay", 18, 36, -208, 58, 28, 110)
-	buildFracturedCliffIsland("P3EInkCellarBay", 248, 32, -182, 44, 56, 111)
+	-- Every outer cliff bay sits strictly OUTSIDE its main platform edge (zero z-fighting!) AND is 100% SOLID WALKABLE!
+	buildFracturedCliffIsland("ApexGalleryApse", -176, 52, -354, 124, 36, 101, true)
+	buildFracturedCliffIsland("EngineCragTerrace", 214, 44, -345, 160, 44, 102, true)
+	buildFracturedCliffIsland("EngineEastSpillBay", 238, 44, -296, 36, 54, 103, true)
+	buildFracturedCliffIsland("P4CColophonBay", 0, 48, -340, 76, 32, 104, true)
+	buildFracturedCliffIsland("WestGalleryBay", -242, 16, 76, 48, 68, 105, true)
+	buildFracturedCliffIsland("EastGalleryBay", 252, 8, 76, 48, 66, 106, true)
+	buildFracturedCliffIsland("P2WBinderyBay", -240, 28, -80, 48, 58, 107, true)
+	buildFracturedCliffIsland("P2CDeskBay", 28, 24, -40, 24, 22, 108, true)
+	buildFracturedCliffIsland("P2EErrataBay", 250, 20, -80, 48, 58, 109, true)
+	buildFracturedCliffIsland("P3CLedgerBay", 32, 36, -218, 26, 22, 110, true)
+	buildFracturedCliffIsland("P3EInkCellarBay", 250, 32, -180, 48, 54, 111, true)
 
 	-- =========================================================================
 	-- C. SANCTUARY (THE SHELFMARK STAIR) & BASIN (THE INDEX FLOOR + RULED COURT)
@@ -595,14 +588,12 @@ function AstralFloor43.Build(ctx: any)
 	local sanctuary = P.Sanctuary
 	if sanctuary then
 		local sx, sy, sz = sanctuary.X, sanctuary.Y, sanctuary.Z
-		buildFracturedCliffIsland("SanctuaryBase", sx, sy, sz, sanctuary.Width, sanctuary.Depth, 201)
+		buildFracturedCliffIsland("SanctuaryBase", sx, sy, sz, sanctuary.Width, sanctuary.Depth, 201, false)
 		ctx.group("AstralConcourseDeck", function()
 			local frontZ = sz - sanctuary.Depth * 0.5 + 1.0
 			balustradeSpan(sx - 62, frontZ, -17, frontZ, sy, true)
 			balustradeSpan(17, frontZ, sx + 62, frontZ, sy, true)
 
-			-- The Shelfmark Stair (Sanctuary -> Basin, Z = 313..273, Y = 8..0):
-			-- Weathered slate steps with GLOWING CYAN/TEAL SHELFMARK RUNE GLYPHS on every tread (Image 1!)
 			local steps = 10
 			for s = 1, steps do
 				local t = (s - 0.5) / steps
@@ -630,7 +621,7 @@ function AstralFloor43.Build(ctx: any)
 		local bx, by, bz = basin.X, basin.Y, basin.Z
 		local bw, bd = basin.Width, basin.Depth
 		local halfW, halfD = bw * 0.5, bd * 0.5
-		buildFracturedCliffIsland("BasinIndexFloor", bx, by, bz, bw, bd, 202)
+		buildFracturedCliffIsland("BasinIndexFloor", bx, by, bz, bw, bd, 202, false)
 
 		ctx.group("AstralConcourseDeck", function()
 			local northZ = bz - halfD + 1.0
@@ -662,10 +653,10 @@ function AstralFloor43.Build(ctx: any)
 			balustradeSpan(-halfW + 1.5, northZ + 6, -halfW + 1.5, southZ - 6, by, false)
 			balustradeSpan(halfW - 1.5, northZ + 6, halfW - 1.5, southZ - 6, by, false)
 
-			-- ICONIC CENTER ARRIVAL ASTROLABE COURT & 8-LECTERN RING (X = 0, Z = 225, matching Image 1 foreground!)
+			-- ICONIC CENTER ARRIVAL ASTROLABE COURT & 8-LECTERN RING (X = 0, Z = 225)
 			local cx, cz = 0, bz
-			ctx.cyl("AstrolabeStoneRim", V(cx, by + 0.08, cz), 27.5, 0.22, STONE_LIGHT, Mat.Slate)
-			ctx.cyl("AstrolabeInnerDisc", V(cx, by + 0.14, cz), 24.0, 0.16, STONE_TOP, Mat.Slate)
+			ctx.cyl("AstrolabeStoneRim", V(cx, by + 0.08, cz), 27.5, 0.14, STONE_LIGHT, Mat.Slate)
+			ctx.cyl("AstrolabeInnerDisc", V(cx, by + 0.15, cz), 24.0, 0.12, STONE_TOP, Mat.Slate)
 			ctx.ring("AstrolabeGoldOuter", V(cx, by + 0.23, cz), 27.2, 0.65, GOLD_BRIGHT, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 32)
 			ctx.ring("AstrolabeGoldInner", V(cx, by + 0.24, cz), 23.6, 0.48, BRASS_AGED, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 28)
 			ctx.ring("AstrolabeCoreRing", V(cx, by + 0.25, cz), 8.5, 0.36, GOLD_BRIGHT, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 20)
@@ -676,10 +667,9 @@ function AstralFloor43.Build(ctx: any)
 				ray:SetAttribute("ConjunctionGlyph", true)
 				safeTag(ray, "ConjunctionGlyph")
 			end
-			boxAt("AstrolabeCrack1", CFrame.new(V(cx + 3, by + 0.26, cz - 1)) * CFrame.Angles(0, math.rad(28), 0), V(26, 0.12, 0.95), CLIFF_DEEP, Mat.Slate)
-			boxAt("AstrolabeCrack2", CFrame.new(V(cx - 8, by + 0.26, cz + 5)) * CFrame.Angles(0, math.rad(-14), 0), V(16, 0.12, 0.72), CLIFF_DEEP, Mat.Slate)
+			boxAt("AstrolabeCrack1", CFrame.new(V(cx + 3, by + 0.26, cz - 1)) * CFrame.Angles(0, math.rad(28), 0), V(26, 0.08, 0.95), CLIFF_DEEP, Mat.Slate)
+			boxAt("AstrolabeCrack2", CFrame.new(V(cx - 8, by + 0.26, cz + 5)) * CFrame.Angles(0, math.rad(-14), 0), V(16, 0.08, 0.72), CLIFF_DEEP, Mat.Slate)
 
-			-- Ring of 8 ornate wooden/brass lecterns encircling the cracked astrolabe (wide open N/S avenue!)
 			for _, deg in { -145, -115, -65, -35, 35, 65, 115, 145 } do
 				local a = math.rad(deg)
 				local lx = cx + math.sin(a) * 23.2
@@ -688,21 +678,20 @@ function AstralFloor43.Build(ctx: any)
 				buildWoodenLectern(V(lx, by, lz), faceInYaw)
 			end
 
-			-- Fallen fluted marble column stubs & loose vellum pages framing Basin foreground (Image 1!)
 			for _, colSpec in {
-				{ -46, 246, 26, 9.5, 2.2 },
-				{ 46, 246, -30, 9.5, 2.2 },
-				{ -188, 224, 15, 8.0, 2.0 },
-				{ 188, 224, -18, 8.0, 2.0 },
+				{ -46, 248, 26, 9.5, 2.2 },
+				{ 46, 248, -30, 9.5, 2.2 },
+				{ -204, 224, 15, 8.0, 2.0 },
+				{ 204, 224, -18, 8.0, 2.0 },
 			} do
 				local cf = CFrame.new(V(colSpec[1], by + colSpec[5] * 0.85, colSpec[2])) * CFrame.Angles(0, math.rad(colSpec[3]), math.pi / 2)
 				local cyl = boxAt("FallenColumn", cf, V(colSpec[5] * 2, colSpec[4], colSpec[5] * 2), STONE_LIGHT, Mat.Marble)
 				cyl.Shape = Enum.PartType.Cylinder
 			end
 			for i = 1, 14 do
-				local px = -170 + i * 24 + math.sin(i * 3.1) * 10
+				local px = -180 + i * 25 + math.sin(i * 3.1) * 10
 				local pz = 200 + math.cos(i * 2.4) * 28
-				boxAt("ScatteredPage", CFrame.new(V(px, by + 0.14, pz)) * CFrame.Angles(0, math.rad(i * 41), 0), V(2.4, 0.08, 1.8), VELLUM_PAGE, Mat.Fabric)
+				boxAt("ScatteredPage", CFrame.new(V(px, by + 0.12, pz)) * CFrame.Angles(0, math.rad(i * 41), 0), V(2.4, 0.06, 1.8), VELLUM_PAGE, Mat.Fabric)
 			end
 
 			makeDecor(ctx.current())
@@ -711,30 +700,31 @@ function AstralFloor43.Build(ctx: any)
 	end
 
 	-- =========================================================================
-	-- D. THE LIFTED INDEX (APEX: BACK-WEST Y=52) — MOUNTAIN CRAGS, MOSAIC & GALLERY
+	-- D. THE LIFTED INDEX (APEX: BACK-WEST Y=52) — MOUNTAIN PEAKS, MOSAIC & GALLERY
 	-- =========================================================================
 	local apex = P.Apex
 	if apex then
 		local ax, ay, az = apex.X, apex.Y, apex.Z
 		ctx.group("AstralSanctumRays", function()
-			ctx.cyl("LiftedMosaicOuter", V(ax, ay + 0.07, az), 38.0, 0.14, STONE_LIGHT, Mat.Slate)
-			ctx.cyl("LiftedMosaicInner", V(ax, ay + 0.11, az), 24.0, 0.14, STONE_TOP, Mat.Slate)
-			ctx.ring("LiftedGoldRing1", V(ax, ay + 0.19, az), 38.0, 0.65, GOLD_BRIGHT, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 32)
-			ctx.ring("LiftedGoldRing2", V(ax, ay + 0.20, az), 24.0, 0.45, BRASS_AGED, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 26)
-			ctx.ring("LiftedGoldRing3", V(ax, ay + 0.21, az), 12.0, 0.35, GOLD_LIGHT, Mat.Neon, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 20)
+			ctx.cyl("LiftedMosaicOuter", V(ax, ay + 0.08, az), 34.0, 0.10, STONE_LIGHT, Mat.Slate)
+			ctx.cyl("LiftedMosaicInner", V(ax, ay + 0.13, az), 22.0, 0.10, STONE_TOP, Mat.Slate)
+			ctx.ring("LiftedGoldRing1", V(ax, ay + 0.19, az), 34.0, 0.65, GOLD_BRIGHT, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 32)
+			ctx.ring("LiftedGoldRing2", V(ax, ay + 0.20, az), 22.0, 0.45, BRASS_AGED, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 26)
+			ctx.ring("LiftedGoldRing3", V(ax, ay + 0.21, az), 11.0, 0.35, GOLD_LIGHT, Mat.Neon, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 20)
 
-			buildStandingBookcase(V(ax - 56, ay, az - 44), 78, 1.40)
-			buildStandingBookcase(V(ax + 56, ay, az - 48), -78, 1.40)
+			-- Flanking wing bookcases strictly on the outer NW & NE corners of Apex (clear of both S & E bridges!)
+			buildStandingBookcase(V(ax - 54, ay, az - 30), 82, 1.35)
+			buildStandingBookcase(V(ax + 54, ay, az - 30), -82, 1.35)
 
-			-- Towering fractured mountain peaks rising cleanly BEHIND LiftedIndexGallery (never clipping its archway!)
-			buildMountainCrag(V(ax, ay - 6, az - 114), V(104, 112, 32), 4, -6)
-			buildMountainCrag(V(ax - 76, ay - 6, az - 88), V(62, 92, 42), 24, -6)
-			buildMountainCrag(V(ax + 76, ay - 6, az - 92), V(56, 74, 36), -22, -6)
-			buildMountainCrag(V(ax - 92, ay - 14, az - 16), V(42, 64, 58), 12, -8)
+			-- Towering jagged mountain peaks cleanly BEHIND LiftedIndexGallery (never clipping its archway!)
+			buildMountainCrag(V(ax, ay - 6, az - 98), V(98, 108, 30), 4, -6)
+			buildMountainCrag(V(ax - 74, ay - 6, az - 78), V(60, 88, 40), 24, -6)
+			buildMountainCrag(V(ax + 72, ay - 6, az - 82), V(54, 72, 34), -22, -6)
+			buildMountainCrag(V(ax - 84, ay - 14, az - 10), V(40, 62, 54), 12, -8)
 
-			-- Warm glowing lantern posts flanking the top of the grand staircase (ShardB -> Apex)
+			-- Warm glowing lantern posts flanking the top of the straight grand staircase (ShardB -> Apex at X = ax!)
 			local sZ = az + apex.Depth * 0.5 - 1.2
-			for _, lp in { V(ax + 12, ay, sZ), V(ax + 48, ay, sZ) } do
+			for _, lp in { V(ax - 17, ay, sZ), V(ax + 17, ay, sZ) } do
 				ctx.cyl("StairHeadLampPost", lp + V(0, 6.2, 0), 0.55, 12.4, BRASS_AGED, Mat.Metal)
 				local orb = lump("StairHeadLampBulb", lp + V(0, 12.8, 0), V(2.4, 2.8, 2.4), GOLD_LIGHT, Mat.Neon)
 				orb:SetAttribute("ConjunctionLamp", true)
@@ -750,17 +740,21 @@ function AstralFloor43.Build(ctx: any)
 			local sZ = az + apex.Depth * 0.5 - 1.2
 			local wX = ax - apex.Width * 0.5 + 1.5
 			local eX = ax + apex.Width * 0.5 - 1.5
-			balustradeSpan(wX + 4, sZ, ax + 10, sZ, ay, true)
-			balustradeSpan(wX, az - 42, wX, sZ - 4, ay, true)
-			balustradeSpan(eX, az + 6, eX, sZ - 4, ay, true)
-			balustradeSpan(eX, az - 44, eX, az - 24, ay, true)
+			-- South edge split cleanly around the straight grand staircase (ax ± 16)
+			balustradeSpan(wX + 3, sZ, ax - 16, sZ, ay, true)
+			balustradeSpan(ax + 16, sZ, eX - 3, sZ, ay, true)
+			-- West edge solid balustrade
+			balustradeSpan(wX, az - 34, wX, sZ - 4, ay, true)
+			-- East edge split cleanly around P4C -> Apex bridge (az ± 16)
+			balustradeSpan(eX, az + 16, eX, sZ - 4, ay, true)
+			balustradeSpan(eX, az - 34, eX, az - 16, ay, true)
 			makeDecor(ctx.current())
 			pin(ctx.current())
 		end)
 	end
 
 	-- =========================================================================
-	-- E. LANDMARKS (1..20) — COHESIVE, REPOSITIONED & 100% GROUNDED!
+	-- E. LANDMARKS (1..20) — COHESIVE, SOLIDLY GROUNDED & ZERO PATH BLOCKING!
 	-- =========================================================================
 
 	-- 1–3. THE BROKEN INDEX ENGINE (Back-East Y=44):
@@ -786,19 +780,19 @@ function AstralFloor43.Build(ctx: any)
 			boxAt("ShelfTower", cf * CFrame.new(0, 46, 0), V(32, 92, 14), WOOD_WARM, Mat.Wood)
 		end, st.Y))
 
-		local stW = piece("IndexEngineShelfTowerWest", 148, -324, -6, "IndexEngineShelfTower", 0.96, LIBRARY_TINT, function(cf)
+		local stW = piece("IndexEngineShelfTowerWest", 144, -340, -6, "IndexEngineShelfTower", 0.96, LIBRARY_TINT, function(cf)
 			boxAt("ShelfTowerW", cf * CFrame.new(0, 44, 0), V(30, 88, 14), WOOD_WARM, Mat.Wood)
 		end, core.Y)
 		pin(stW)
 		makeDecor(stW)
 
 		ctx.group("AstralIsleDeck", function()
-			buildMountainCrag(V(296, core.Y - 8, -338), V(54, 72, 44), -18, -6)
-			buildMountainCrag(V(132, core.Y - 8, -340), V(48, 58, 38), 22, -6)
-			for i = 1, 22 do
-				local px = 172 + (i % 7) * 14 + math.sin(i * 2.1) * 6
-				local pz = -316 + math.floor(i / 7) * 11 + math.cos(i * 1.7) * 4
-				boxAt("EngineSpillPage", CFrame.new(V(px, (core.Y :: number) + 0.16 + (i % 3) * 0.08, pz)) * CFrame.Angles(0, math.rad(i * 33), 0), V(3.2, 0.14, 2.4), VELLUM_PAGE, Mat.Fabric)
+			buildMountainCrag(V(294, core.Y - 8, -352), V(52, 72, 40), -18, -6)
+			buildMountainCrag(V(124, core.Y - 8, -354), V(46, 58, 36), 22, -6)
+			for i = 1, 20 do
+				local px = 166 + (i % 7) * 14 + math.sin(i * 2.1) * 5
+				local pz = -332 + math.floor(i / 7) * 8 + math.cos(i * 1.7) * 3
+				boxAt("EngineSpillPage", CFrame.new(V(px, (core.Y :: number) + 0.12 + (i % 3) * 0.05, pz)) * CFrame.Angles(0, math.rad(i * 33), 0), V(3.2, 0.10, 2.4), VELLUM_PAGE, Mat.Fabric)
 			end
 			makeDecor(ctx.current())
 			pin(ctx.current())
@@ -808,24 +802,24 @@ function AstralFloor43.Build(ctx: any)
 	-- 4. THE LIFTED INDEX GALLERY (Prominent curved two-tier mahogany library rotunda grounded behind Apex!)
 	do
 		local lm = AstralFloor43.Landmarks[4]
-		local mg = piece("LiftedIndexGallery", lm.X, lm.Z, 0, "LiftedIndexGallery", 1.62, LIBRARY_TINT, function(cf)
+		local mg = piece("LiftedIndexGallery", lm.X, lm.Z, 0, "LiftedIndexGallery", 1.44, LIBRARY_TINT, function(cf)
 			boxAt("LiftedGallery", cf * CFrame.new(0, 18, 0), V(74, 36, 24), WOOD_WARM, Mat.Wood)
 		end, lm.Y)
 		pin(mg)
 		if mg then addLight(H.glowOf(mg) or mg:FindFirstChildWhichIsA("BasePart", true), GOLD_LIGHT, 2.8, 130) end
 	end
 
-	-- 5–15. Grounded Plate Landmarks
+	-- 5–15. Grounded Plate Landmarks (every single one on its solid outer terrace bay!)
 	local plateSpecs = {
 		{ AstralFloor43.Landmarks[5], "ColophonWall", 0, LIBRARY_TINT, 1.08 },
 		{ AstralFloor43.Landmarks[6], "BinderyPress", 90, LIBRARY_TINT, 1.15 },
 		{ AstralFloor43.Landmarks[7], "ErrataPress", -90, LIBRARY_TINT, 1.12 },
-		{ AstralFloor43.Landmarks[8], "CatalogueDeskTilted", 18, LIBRARY_TINT, 1.15 },
-		{ AstralFloor43.Landmarks[9], "LedgerStackTall", 0, LIBRARY_TINT, 1.15 },
+		{ AstralFloor43.Landmarks[8], "CatalogueDeskTilted", 18, LIBRARY_TINT, 1.10 },
+		{ AstralFloor43.Landmarks[9], "LedgerStackTall", 0, LIBRARY_TINT, 1.12 },
 		{ AstralFloor43.Landmarks[10], "InkVatCracked", -80, INK_VAT_TINT, 1.18 },
 		{ AstralFloor43.Landmarks[11], "ToppledShelfRange", 72, LIBRARY_TINT, 1.10 },
 		{ AstralFloor43.Landmarks[12], "ToppledShelfRange", -72, LIBRARY_TINT, 1.10 },
-		{ AstralFloor43.Landmarks[13], "CardDrawerSpill", 25, LIBRARY_TINT, 1.18 },
+		{ AstralFloor43.Landmarks[13], "CardDrawerSpill", 25, LIBRARY_TINT, 1.15 },
 		{ AstralFloor43.Landmarks[14], "BrokenOrreryRing", 35, RIFTWARD_43, 1.25 },
 		{ AstralFloor43.Landmarks[15], "BrokenOrreryRing", -35, RIFTWARD_43, 1.25 },
 	}
@@ -840,46 +834,51 @@ function AstralFloor43.Build(ctx: any)
 		end
 	end
 
-	-- Extra rich library dressing & flanking crag backdrops grounded solidly on the integrated cliff bays
+	-- Extra rich library bookcases & jagged mountain peaks strictly on SOLID OUTER BAYS (ZERO blocking walkways!)
 	ctx.group("AstralIsleDeck", function()
-		buildStandingBookcase(V(-246, 16, 54), 96, 1.18)
-		buildStandingBookcase(V(-248, 16, 94), 82, 1.12)
-		buildMountainCrag(V(-270, 10, 76), V(38, 52, 72), 10, -8)
+		-- WestGalleryBay outer western rim (X = -258, backed cleanly by peaks at -300)
+		buildStandingBookcase(V(-258, 16, 56), 92, 1.15)
+		buildStandingBookcase(V(-258, 16, 96), 86, 1.12)
+		buildMountainCrag(V(-300, 10, 76), V(38, 56, 68), 10, -8)
 
-		buildStandingBookcase(V(244, 8, 56), -96, 1.18)
-		buildStandingBookcase(V(246, 8, 96), -80, 1.12)
-		buildMountainCrag(V(268, 2, 78), V(38, 52, 72), -10, -8)
+		-- EastGalleryBay outer eastern rim (X = +268, backed cleanly by peaks at +310)
+		buildStandingBookcase(V(268, 8, 56), -92, 1.15)
+		buildStandingBookcase(V(268, 8, 96), -86, 1.12)
+		buildMountainCrag(V(310, 2, 76), V(38, 56, 68), -10, -8)
 
-		buildStandingBookcase(V(-242, 28, -80), 72, 1.10)
-		ctx.cyl("BinderyColumnStub", V(-238, 32.5, -46), 2.3, 9.0, STONE_LIGHT, Mat.Marble)
-		buildMountainCrag(V(-264, 22, -64), V(36, 54, 62), 12, -8)
+		-- P2WBinderyBay outer western rim (X = -256, backed cleanly by peak at -298)
+		buildStandingBookcase(V(-256, 28, -98), 78, 1.08)
+		ctx.cyl("BinderyColumnStub", V(-252, 32.5, -60), 2.3, 9.0, STONE_LIGHT, Mat.Marble)
+		buildMountainCrag(V(-298, 22, -80), V(36, 56, 60), 12, -8)
 
-		buildStandingBookcase(V(-38, 24, -92), 6, 1.05)
-		buildStandingBookcase(V(-8, 36, -210), 12, 1.10)
-		buildStandingBookcase(V(42, 36, -210), -14, 1.08)
+		-- P2EErrataBay outer eastern rim (X = +266, backed cleanly by peak at +308)
+		buildStandingBookcase(V(266, 20, -96), -82, 1.08)
+		buildMountainCrag(V(308, 14, -80), V(36, 54, 58), -12, -8)
 
-		buildStandingBookcase(V(258, 32, -166), -102, 1.12)
-		buildMountainCrag(V(280, 26, -182), V(38, 56, 66), -12, -8)
-		buildMountainCrag(V(42, 42, -348), V(72, 48, 26), 4, -6)
+		-- P3EInkCellarBay outer eastern rim (X = +266, backed cleanly by peak at +308)
+		buildStandingBookcase(V(266, 32, -166), -98, 1.10)
+		buildMountainCrag(V(308, 26, -180), V(38, 58, 62), -12, -8)
+
+		-- P4CColophonBay outer northern backdrop peak (X = 0, Z = -372)
+		buildMountainCrag(V(0, 42, -372), V(70, 52, 24), 4, -6)
 
 		makeDecor(ctx.current())
 		pin(ctx.current())
 	end)
 
-	-- Companion spilled indigo ink vat on WestGallery south-west bay (Image 1 bottom-left!)
+	-- Companion spilled indigo ink vat on WestGalleryBay south-west corner (Image 1 bottom-left!)
 	do
-		local wVat = piece("WestrangeInkVat", -224, 104, 40, "InkVatCracked", 1.08, INK_VAT_TINT, function(cf)
+		local wVat = piece("WestrangeInkVat", -236, 100, 40, "InkVatCracked", 1.08, INK_VAT_TINT, function(cf)
 			ctx.cyl("WestInkPuddle", cf.Position + V(0, 0.2, 0), 5.0, 0.3, rgb(64, 52, 164), Mat.Glass)
 		end, 16)
 		pin(wVat)
 		tagDetail(wVat)
 	end
 
-	-- Companion tilted reading desks on WestGallery, EastGallery & P3C/P3E bays
+	-- Companion reading desks strictly on outer bays (never on walkways!)
 	for _, dSpec in {
-		{ -224, 58, 16, 115, 1.05 },
-		{ 222, 62, 8, -110, 1.05 },
-		{ 38, -196, 36, -20, 1.0 },
+		{ -234, 56, 16, 115, 1.02 },
+		{ 244, 56, 8, -110, 1.02 },
 		{ 242, -162, 32, -75, 1.0 },
 	} do
 		local md = piece("StudyDeskExtra", dSpec[1], dSpec[2], dSpec[4], "CatalogueDeskTilted", dSpec[5], LIBRARY_TINT, function(cf)
@@ -903,10 +902,9 @@ function AstralFloor43.Build(ctx: any)
 		makeDecor(ms)
 	end
 	for _, extraStrata in {
-		{ -234, 112, -2, 0 },
-		{ 232, 114, -8, 0 },
-		{ -172, -214, 34, 0 },
-		{ -22, -38, 6, 0 },
+		{ -242, 112, -2, 0 },
+		{ 252, 111, -8, 0 },
+		{ -214, -254, 34, 0 },
 	} do
 		local ms = piece("AstralIsleUnderside", extraStrata[1], extraStrata[2], extraStrata[4], "ScarpShelfStrata", 0.96, LIBRARY_TINT, function(cf)
 			boxAt("ShelfStrataExtra", cf * CFrame.new(0, 8, 0), V(30, 16, 9), CLIFF_ROCK, Mat.Slate)
@@ -915,15 +913,14 @@ function AstralFloor43.Build(ctx: any)
 		makeDecor(ms)
 	end
 
-	-- 19–20. Sculpted Page Fall Ribbons anchored FLUSH at the cliff lip pouring downward into the violet rifts!
-	-- (PageFallRibbon kit height at scale 1.45 is ~32 studs; sink placement Y so the top lip meets the terrace edge cleanly!)
+	-- 19–20. Sculpted Page Fall Ribbons anchored FLUSH at real cliff lips pouring downward into the violet rifts!
 	for _, spec in {
-		{ AstralFloor43.Landmarks[19], 24 }, -- P2C terrace Y = 24
-		{ AstralFloor43.Landmarks[20], 36 }, -- P3C terrace Y = 36
+		{ AstralFloor43.Landmarks[19], 24 }, -- P2CDeskBay south lip (Y=24)
+		{ AstralFloor43.Landmarks[20], 36 }, -- P3C NW lip (Y=36)
 	} do
 		local lm = spec[1]
 		local lipY = spec[2]
-		local mp = piece("AstralIsleUnderside", lm.X, lm.Z, 0, "PageFallRibbon", 1.42, RIFTWARD_43, function(cf)
+		local mp = piece("AstralIsleUnderside", lm.X, lm.Z, 0, "PageFallRibbon", 1.40, RIFTWARD_43, function(cf)
 			boxAt("PageCascade", cf * CFrame.new(0, 10, 0), V(8, 20, 10), VELLUM_PAGE, Mat.Fabric)
 		end, lipY - 30)
 		pin(mp)
@@ -931,10 +928,10 @@ function AstralFloor43.Build(ctx: any)
 		pageEmitter(V(lm.X, lipY - 4, lm.Z), 4)
 	end
 	for _, extra in {
-		{ -126, 16, 110, -28, 1.40 },   -- WestGallery SE cliff lip pouring into foreground chasm (Image 1 bottom-left!)
-		{ 126, 8, 112, 28, 1.36 },      -- EastGallery SW cliff lip pouring into foreground chasm (Image 1 bottom-right!)
-		{ 22, 36, -138, 0, 1.42 },      -- P3C Ledger Plate south cliff lip cascading into Rift B!
-		{ 168, 44, -262, 28, 1.50 },    -- Broken Index Engine cliff lip pouring into Rift C!
+		{ -136, 16, 110, -24, 1.38 },   -- WestGallery SE cliff lip pouring into foreground chasm (Image 1 bottom-left!)
+		{ 146, 8, 109, 24, 1.34 },      -- EastGallery SW cliff lip pouring into foreground chasm (Image 1 bottom-right!)
+		{ -28, 36, -153, 0, 1.40 },     -- P3C south-west cliff lip cascading into Rift B!
+		{ 154, 44, -268, 28, 1.48 },    -- Broken Index Engine SW cliff lip pouring into Rift C!
 	} do
 		local mp = piece("AstralIsleUnderside", extra[1], extra[3], extra[4], "PageFallRibbon", extra[5], RIFTWARD_43, function(cf)
 			boxAt("PageCascade", cf * CFrame.new(0, 10, 0), V(8, 20, 10), VELLUM_PAGE, Mat.Fabric)
@@ -947,9 +944,9 @@ function AstralFloor43.Build(ctx: any)
 	-- F. FLOATING JAGGED SHARD ISLANDS, HANGING BRASS CHAINS & CROOKED INDEX LAMPS
 	-- =========================================================================
 	for _, row in {
-		{ "ShardA", "ShardSlabM", 25.114, 29.314, 22.261, 54, 46, 30.0 },
-		{ "ShardE", "ShardSlabM", 25.114, 29.314, 22.261, 54, 46, 26.0 },
-		{ "ShardB", "ShardSlabL", 38.027, 35.314, 32.010, 58, 48, 38.0 },
+		{ "ShardA", "ShardSlabM", 25.114, 29.314, 22.261, 58, 44, 30.0 },
+		{ "ShardE", "ShardSlabM", 25.114, 29.314, 22.261, 58, 44, 26.0 },
+		{ "ShardB", "ShardSlabL", 38.027, 35.314, 32.010, 68, 44, 38.0 },
 		{ "ShardC", "ShardSlabM", 25.114, 29.314, 22.261, 54, 46, 38.0 },
 	} do
 		local id: string = row[1]
@@ -960,38 +957,35 @@ function AstralFloor43.Build(ctx: any)
 		local pw: number, pd: number = row[6], row[7]
 		local availH: number = row[8]
 
+		-- Keep Shard rim strictly BELOW `plat.Y` (`top = plat.Y - 0.14`) so zero z-fighting with the solid Shard deck!
 		ctx.group("AstralIsleUnderside", function()
-			boxAt(id .. "ShardRim", CFrame.new(V(plat.X, plat.Y - 0.85, plat.Z)), V(pw + 1.2, 1.7, pd + 1.2), STONE_TOP, Mat.Slate)
-			boxAt(id .. "ShardBrassBand", CFrame.new(V(plat.X, plat.Y - 1.85, plat.Z)), V(pw + 1.5, 0.42, pd + 1.5), BRASS_AGED, Mat.Metal)
-			boxAt(id .. "ShardCrack", CFrame.new(V(plat.X, plat.Y + 0.08, plat.Z)) * CFrame.Angles(0, math.rad(24), 0), V(pw * 0.65, 0.08, 0.72), CLIFF_DEEP, Mat.Slate)
+			boxAt(id .. "ShardRim", CFrame.new(V(plat.X, plat.Y - 1.14, plat.Z)), V(pw + 1.0, 2.0, pd + 1.0), STONE_TOP, Mat.Slate)
+			boxAt(id .. "ShardBrassBand", CFrame.new(V(plat.X, plat.Y - 2.20, plat.Z)), V(pw + 1.4, 0.42, pd + 1.4), BRASS_AGED, Mat.Metal)
+			boxAt(id .. "ShardCrack", CFrame.new(V(plat.X, plat.Y + 0.06, plat.Z)) * CFrame.Angles(0, math.rad(24), 0), V(pw * 0.58, 0.04, 0.65), CLIFF_DEEP, Mat.Slate)
 			makeDecor(ctx.current())
 			pin(ctx.current())
 		end)
 
-		local sx = (pw * 1.06) / kitW
+		local sx = (pw * 1.04) / kitW
 		local sy = availH / kitH
-		local sz = (pd * 1.06) / kitD
-		local ms = placeKitScaled("AstralIsleUnderside", plat.X, (plat.Y - 2.4) - availH, plat.Z, (plat.X * 0.3) % 360, kitName, V(sx, sy, sz), SHARD_UNDERSIDE_TINT, function(cf)
+		local sz = (pd * 1.04) / kitD
+		local ms = placeKitScaled("AstralIsleUnderside", plat.X, (plat.Y - 2.5) - availH, plat.Z, (plat.X * 0.3) % 360, kitName, V(sx, sy, sz), SHARD_UNDERSIDE_TINT, function(cf)
 			ctx.cyl("ShardUndersideCone", cf.Position + V(0, availH * 0.5, 0), pw * 0.44, availH, CLIFF_ROCK, Mat.Slate)
 		end)
 		makeDecor(ms)
 	end
 
-	-- Iconic catenary hanging brass chains anchoring floating shards across the violet chasm
+	-- Iconic catenary hanging brass chains anchoring floating shards cleanly across the violet chasm
 	ctx.group("AstralIsleUnderside", function()
 		local chainPairs = {
-			{ V(-108, 15, 18), V(-146, 13, 44), 10, 8 },
-			{ V(-58, 15, 22), V(-34, 10, 56), 9, 8 },
-			{ V(-104, 15, -12), V(-146, 24, -40), 11, 8 },
-			{ V(140, 8, 10), V(140, 6, 44), 8, 6 },
-			{ V(184, 8, -22), V(176, 17, -72), 10, 8 },
-			{ V(-128, 30, -132), V(-152, 25, -88), 11, 8 },
-			{ V(-78, 30, -128), V(-46, 21, -92), 11, 8 },
-			{ V(-124, 30, -168), V(-156, 46, -222), 14, 10 },
-			{ V(98, 36, -220), V(54, 33, -190), 11, 8 },
-			{ V(142, 36, -252), V(174, 40, -268), 10, 8 },
-			{ V(-92, -3, 146), V(-138, 8, 108), 10, 8 },
-			{ V(78, -4, 148), V(132, 3, 110), 10, 8 },
+			{ V(-28, 15, 6), V(-134, 13, 44), 12, 8 },
+			{ V(28, 15, 6), V(146, 6, 44), 12, 8 },
+			{ V(-28, 15, -18), V(-136, 25, -52), 12, 8 },
+			{ V(28, 15, -18), V(146, 17, -52), 12, 8 },
+			{ V(-144, 36, -162), V(-38, 22, -108), 13, 8 },
+			{ V(-144, 36, -200), V(-118, 48, -258), 14, 10 },
+			{ V(70, 39, -276), V(36, 33, -206), 12, 8 },
+			{ V(122, 39, -276), V(148, 30, -206), 12, 8 },
 		}
 		for _, cp in chainPairs do
 			buildHangingChain(cp[1], cp[2], cp[3], cp[4])
@@ -1000,17 +994,17 @@ function AstralFloor43.Build(ctx: any)
 		pin(ctx.current())
 	end)
 
-	-- Warm glowing Crooked Index Lamps on all 4 floating shards + key bridgeheads
+	-- Warm glowing Crooked Index Lamps strictly at outer corners of floating shards & platforms (ZERO bridge blocking!)
 	local lampSpecs = {
-		{ -104, 18, 22, 35, true },
-		{ 184, 10, 10, -45, true },
-		{ -126, 34, -130, 55, true },
-		{ 140, 40, -220, -55, true },
-		{ -42, 12, 110, 18, true },
-		{ -202, 28, -42, 40, true },
-		{ 182, 20, -76, -40, true },
-		{ 50, 36, -144, -25, false },
-		{ 176, 44, -262, 32, true },
+		{ -24, 18, 16, 35, true },
+		{ 210, 14, 16, -45, true },
+		{ -204, 39, -162, 55, true },
+		{ 96, 42, -314, 0, true },
+		{ -36, 12, 102, 18, true },
+		{ -210, 28, -56, 40, true },
+		{ 220, 20, -56, -40, true },
+		{ 34, 36, -158, -25, false },
+		{ 214, 44, -274, -32, true },
 	}
 	for _, sp in lampSpecs do
 		local ml = piece("AstralIndexLamp", sp[1], sp[3], sp[4], "CrookedIndexLamp", 1.12, RIFTWARD_43, function(cf)
@@ -1030,23 +1024,20 @@ function AstralFloor43.Build(ctx: any)
 
 	-- =========================================================================
 	-- G. WISPY ETHEREAL SPLIT VIOLET-TEAL AURORA VEIL & SKY-RIFT LIGHTNING
-	-- Ultra-sheer non-overlapping ribbons + drifting glowing aurora clouds!
 	-- =========================================================================
 	ctx.group("AstralSplitAurora", function()
-		-- Delicate sheer translucent aurora ribbons spaced apart so they NEVER additively blow out to white!
-		addAuroraCurtain("AuroraTealSweep", V(-185, 168, -350), V(175, 202, -372), 18, 24, AURORA_TEAL, rgb(86, 226, 208), 0.80)
-		addAuroraCurtain("AuroraVioletSweep", V(-125, 138, -338), V(215, 168, -360), 22, 28, RIFT_VIOLET, RIFT_MAGENTA, 0.82)
-		addAuroraCurtain("AuroraTealWisp", V(-75, 186, -362), V(130, 208, -376), 12, 16, rgb(120, 242, 224), AURORA_TEAL, 0.86)
+		addAuroraCurtain("AuroraTealSweep", V(-185, 168, -360), V(175, 202, -382), 18, 24, AURORA_TEAL, rgb(86, 226, 208), 0.80)
+		addAuroraCurtain("AuroraVioletSweep", V(-125, 138, -348), V(215, 168, -370), 22, 28, RIFT_VIOLET, RIFT_MAGENTA, 0.82)
+		addAuroraCurtain("AuroraTealWisp", V(-75, 186, -372), V(130, 208, -386), 12, 16, rgb(120, 242, 224), AURORA_TEAL, 0.86)
 
-		-- Soft drifting ethereal teal & violet nebula/aurora clouds feathering the night sky
-		addAuroraMistCloud(V(-60, 152, -346), AURORA_TEAL, RIFT_VIOLET, 130)
-		addAuroraMistCloud(V(65, 174, -358), RIFT_VIOLET, AURORA_TEAL, 140)
+		addAuroraMistCloud(V(-60, 152, -356), AURORA_TEAL, RIFT_VIOLET, 130)
+		addAuroraMistCloud(V(65, 174, -368), RIFT_VIOLET, AURORA_TEAL, 140)
 
 		local lightningBranches = {
-			{ V(-188, 128, -328), V(-146, 152, -342), V(-112, 170, -352), V(-80, 186, -360) },
-			{ V(-146, 152, -342), V(-172, 174, -350) },
-			{ V(214, 156, -334), V(256, 174, -348), V(298, 192, -360), V(334, 208, -368) },
-			{ V(256, 174, -348), V(284, 154, -344) },
+			{ V(-188, 128, -338), V(-146, 152, -352), V(-112, 170, -362), V(-80, 186, -370) },
+			{ V(-146, 152, -352), V(-172, 174, -360) },
+			{ V(214, 156, -344), V(256, 174, -358), V(298, 192, -370), V(334, 208, -378) },
+			{ V(256, 174, -358), V(284, 154, -354) },
 		}
 		for bIdx, pts in lightningBranches do
 			for i = 1, #pts - 1 do
@@ -1063,10 +1054,10 @@ function AstralFloor43.Build(ctx: any)
 		pin(ctx.current())
 	end)
 
-	pageEmitter(V(198, 54, -280), 4)
-	pageEmitter(V(-104, 40, -148), 3)
-	pageEmitter(V(-172, 58, -264), 3)
-	pageEmitter(V(14, 24, -18), 3)
+	pageEmitter(V(186, 54, -296), 4)
+	pageEmitter(V(-176, 44, -180), 3)
+	pageEmitter(V(-176, 58, -296), 3)
+	pageEmitter(V(28, 24, -24), 3)
 
 	ctx.setAttribute("AstralFloor", 43)
 	ctx.setAttribute("AstralLights", lightsUsed)

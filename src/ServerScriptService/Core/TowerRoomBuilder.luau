@@ -1740,44 +1740,6 @@ function Builder.Build(id: number, generation: number): any
 								end
 							end
 						end
-					elseif layout.Authored == "astral:3" and terraceName then
-						-- Floor 43 (Fractured Index): build a solid weathered grey-slate stone bridgehead pier
-						-- matching the bridge's exact width & angle so EVERY straight or angled bridge connects
-						-- flush into its cliff island with zero floating ends or invisible gaps!
-						local plat = layout.Platforms[terraceName]
-						if plat then
-							local pc = origin + Vector3.new(plat.X, plat.Y, plat.Z)
-							local rimPt = if (a - pc).Magnitude > (b - pc).Magnitude then a else b
-							local inDir = (if rimPt == a then b else a) - rimPt
-							local inFlat = Vector3.new(inDir.X, 0, inDir.Z)
-							if inFlat.Magnitude > 0.1 then
-								local maxReach = math.min(plat.Width, plat.Depth) * 0.44
-								local padLen = math.clamp(inFlat.Magnitude, 8, math.min(20, maxReach))
-								inFlat = inFlat.Unit
-								local pierRight = Vector3.new(-inFlat.Z, 0, inFlat.X)
-								local pierW = pad.Width - 8 -- matches 28-stud bridge width exactly
-								local tMid = rimPt + inFlat * (padLen * 0.5)
-								local topOff = -0.02
-								local shardStoneTop = Color3.fromRGB(114, 120, 136)
-								local shardCliffUnder = Color3.fromRGB(54, 60, 78)
-								-- Solid flush weathered-slate bridgehead deck (never pokes out far side of small Shards)
-								local th = part(model, "AstralShardPier", Vector3.new(pierW, 1.5, padLen + 1.2), tMid + Vector3.new(0, topOff - 0.75, 0), shardStoneTop, Enum.Material.Slate, true)
-								th.CFrame = CFrame.lookAt(tMid + Vector3.new(0, topOff - 0.75, 0), tMid + inFlat + Vector3.new(0, topOff - 0.75, 0))
-								th.CanQuery = true
-								th.CastShadow = false
-								-- Heavy dark-slate cliff abutment underside tapering under the pier
-								local thUnder = decor(model, "AstralShardPierUnder", Vector3.new(pierW - 1.4, 3.6, padLen), tMid + Vector3.new(0, topOff - 3.25, 0), shardCliffUnder, Enum.Material.Slate)
-								thUnder.CFrame = CFrame.lookAt(thUnder.Position, thUnder.Position + inFlat)
-								-- Antique brass cornice lip tying cleanly into the bridge's underside frieze
-								local thTrim = decor(model, "AstralShardPierTrim", Vector3.new(pierW + 0.4, 0.45, 0.85), rimPt + Vector3.new(0, topOff - 1.35, 0), halcyrBrass, Enum.Material.Metal)
-								thTrim.CFrame = CFrame.lookAt(thTrim.Position, thTrim.Position + inFlat)
-								for _, side in { -1, 1 } do
-									local sOff = pierRight * (side * (pierW * 0.5 - 0.45))
-									local sideTrim = decor(model, "AstralShardPierSideTrim", Vector3.new(0.45, 0.45, padLen), tMid + sOff + Vector3.new(0, topOff - 1.35, 0), halcyrBrass, Enum.Material.Metal)
-									sideTrim.CFrame = CFrame.lookAt(sideTrim.Position, sideTrim.Position + inFlat)
-								end
-							end
-						end
 					end
 				elseif bStyle == "CAUSEWAY" then
 					p.Color, p.Material = nerethStone, Enum.Material.Limestone
