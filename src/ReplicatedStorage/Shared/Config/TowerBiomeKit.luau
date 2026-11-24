@@ -638,6 +638,22 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	SeaWallSegment = table.freeze({ Size = Vector3.new(44.88, 38.8, 12.2), Min = Vector3.new(-22.68, 0.0, -5.5), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "MOSS", "SILK", "STONE", "TRIM" }) }),
 	ShellAwningStall = table.freeze({ Size = Vector3.new(15.45, 12.003, 10.537), Min = Vector3.new(-7.725, 0.0, -5.135), Roles = table.freeze({ "ALT", "CANDLE", "GLOW", "GOLD", "SILK", "WOOD" }) }),
 	TideArmillaryTower = table.freeze({ Size = Vector3.new(24.2, 91.0, 24.2), Min = Vector3.new(-12.1, 0.0, -12.1), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "METAL", "SILK", "STONE", "TRIM" }) }),
+	-- Sunken Sanctuary Floor 40 (Leviathan's Basin, sunken_f40_kit)
+	AbyssReliquaryShrine = table.freeze({ Size = Vector3.new(21.0, 28.946, 19.0), Min = Vector3.new(-10.5, 0.0, -9.5), Roles = table.freeze({ "ACCENT", "CRYSTAL", "GLOW", "GOLD", "STONE", "TRIM" }) }),
+	BellBargeWreck = table.freeze({ Size = Vector3.new(46.134, 25.389, 16.173), Min = Vector3.new(-22.771, -1.163, -8.273), Roles = table.freeze({ "ACCENT", "GOLD", "METAL", "MOSS", "WOOD" }) }),
+	BrokenTideStatue = table.freeze({ Size = Vector3.new(24.35, 48.6, 21.833), Min = Vector3.new(-12.0, 0.0, -9.0), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "MOSS", "STONE", "TRIM" }) }),
+	BubbleVentCluster = table.freeze({ Size = Vector3.new(14.026, 7.904, 11.6), Min = Vector3.new(-7.358, 0.0, -5.8), Roles = table.freeze({ "GLOW", "STONE", "TRIM" }) }),
+	CantorPulpit = table.freeze({ Size = Vector3.new(17.88, 24.645, 18.8), Min = Vector3.new(-8.94, 0.0, -9.4), Roles = table.freeze({ "CORAL", "GLOW", "GOLD", "STONE", "TRIM" }) }),
+	ChainAnchorBollard = table.freeze({ Size = Vector3.new(19.6, 26.4, 19.6), Min = Vector3.new(-9.8, 0.0, -9.8), Roles = table.freeze({ "GLOW", "GOLD", "METAL", "STONE", "TRIM" }) }),
+	ChainTowerRound = table.freeze({ Size = Vector3.new(30.223, 70.677, 31.507), Min = Vector3.new(-15.111, 0.0, -15.5), Roles = table.freeze({ "CORAL", "GLOW", "GOLD", "METAL", "SILK", "STONE", "TRIM" }) }),
+	CrackedTidebell = table.freeze({ Size = Vector3.new(11.2, 12.953, 11.465), Min = Vector3.new(-5.6, 0.0, -5.3), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "METAL", "STONE" }) }),
+	DaisBrazierPedestal = table.freeze({ Size = Vector3.new(7.6, 14.0, 7.6), Min = Vector3.new(-3.8, 0.0, -3.8), Roles = table.freeze({ "GLOW", "GOLD", "METAL", "STONE", "TRIM" }) }),
+	DrownedAltar = table.freeze({ Size = Vector3.new(21.058, 14.3, 21.6), Min = Vector3.new(-10.529, 0.0, -10.8), Roles = table.freeze({ "ACCENT", "CORAL", "GLOW", "GOLD", "STONE", "TRIM" }) }),
+	GreatTidebellTower = table.freeze({ Size = Vector3.new(140.0, 272.0, 44.0), Min = Vector3.new(-70.0, 0.0, -22.0), Roles = table.freeze({ "ACCENT", "GLOW", "GOLD", "METAL", "MOSS", "SILK", "STONE", "TRIM" }) }),
+	KelpForestTall = table.freeze({ Size = Vector3.new(17.278, 49.194, 17.512), Min = Vector3.new(-8.867, 0.0, -9.903), Roles = table.freeze({ "FOLIAGE", "GLOW", "STONE" }) }),
+	MaelstromSwirlRing = table.freeze({ Size = Vector3.new(145.792, 19.959, 131.784), Min = Vector3.new(-72.889, -1.309, -65.891), Roles = table.freeze({ "ALT", "CRYSTAL", "GLOW", "SILK" }) }),
+	ReefCoralTable = table.freeze({ Size = Vector3.new(19.713, 14.342, 15.564), Min = Vector3.new(-9.542, 0.0, -8.238), Roles = table.freeze({ "CORAL", "CRYSTAL", "GLOW", "STONE" }) }),
+	SeaDomeArchRib = table.freeze({ Size = Vector3.new(71.393, 114.726, 16.0), Min = Vector3.new(-38.0, 0.0, -8.0), Roles = table.freeze({ "ACCENT", "CRYSTAL", "METAL", "STONE" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -906,6 +922,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	CoralArcadeBay = true, CoralArcadeCorner = true, CampanileTower = true, ChapterHouseRib = true, LavaboFountain = true, CantorNicheStatue = true,
 	SeaGateArch = true, TidebellTowerSlim = true, TideMillHouse = true, SluiceHouseKeep = true, LockChamberWall = true, MitreGatePair = true, BellGallowsBracket = true, MooredBarge = true,
 	PearlVaultDome = true, ColossalClam = true, SeaWallSegment = true, DrownedGateWall = true, CoralGateTower = true, TideArmillaryTower = true, PortcullisGatehouse = true, PearlguardGalley = true, CoralWardenStatue = true, HarbourCrane = true,
+	GreatTidebellTower = true, ChainAnchorBollard = true, ChainTowerRound = true, DrownedAltar = true, CantorPulpit = true, AbyssReliquaryShrine = true, BellBargeWreck = true, BrokenTideStatue = true, CrackedTidebell = true, DaisBrazierPedestal = true,
 	IndexGateRing = true, LecternSpire = true, BookcaseCurved = true, CatalogueCabinet = true, ChainedSlab = true, CalamusArmillary = true, RuneguardGatePost = true, LamplighterRack = true, FarArchiveTower = true,
 	ArmillarySphereTall = true, SunLecternGlobe = true, OrreryGateArch = true, RingBookcase = true, PlanetGlobe = true, GlobeStand = true, StarTableSlate = true, RingGearHalf = true, MoonPhaseDisc = true, AphelionTelescope = true,
 	IndexEngineCore = true, IndexEngineGearBank = true, IndexEngineShelfTower = true, LiftedIndexGallery = true, ScarpShelfStrata = true, ToppledShelfRange = true, BinderyPress = true, ErrataPress = true, LedgerStackTall = true, ColophonWall = true,

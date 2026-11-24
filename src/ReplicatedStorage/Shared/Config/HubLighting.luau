@@ -543,6 +543,15 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		TintColor = c(224, 240, 255), Saturation = 0.14, Contrast = 0.14, ExposureCompensation = -0.02, BloomIntensity = 0.52,
 		SunRaysIntensity = 0.14, SunRaysSpread = 0.50,
 	},
+	-- Floor 40, Leviathan's Basin: storm-eye under the sea. Dark abyssal blue-black Sea-Dome ambient with a
+	-- crisp neutral-aqua daylight shaft from the overhead Eye of Daylight onto Leviathan's Dais, luminous
+	-- bioluminescent cyan-teal fill rising from the spinning maelstrom below, and zero red or orange tinting.
+	[40] = {
+		Ambient = c(34, 58, 78), OutdoorAmbient = c(68, 106, 128), ColorShift_Top = c(224, 246, 255), ColorShift_Bottom = c(46, 148, 168),
+		AtmosphereDensity = 0.40, AtmosphereColor = c(56, 110, 136), AtmosphereDecay = c(24, 52, 76), AtmosphereHaze = 1.35,
+		TintColor = c(226, 244, 255), Saturation = 0.08, Contrast = 0.12, ExposureCompensation = 0.02, BloomIntensity = 0.58,
+		SunRaysIntensity = 0.10, SunRaysSpread = 0.44,
+	},
 	-- Floor 41, Starlit Vestibule: pale gold first light — breaks cleanly from Floor 40's dark storm-eye
 	-- into soft starlight gold over indigo sky and silver fill off the star-glass Nebula Floor.
 	[41] = {

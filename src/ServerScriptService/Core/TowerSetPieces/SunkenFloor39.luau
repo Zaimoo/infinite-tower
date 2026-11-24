@@ -510,11 +510,11 @@ function SunkenFloor39.Build(ctx: any)
 		end
 	end)
 
-	-- Arrival Breakwater Steps framing: twin hooded wharf beacons & trident obelisks (off-lane)
-	for _, sx in { -54, 54 } do
-		if isClear(sx, 326, 8) then
+	-- Arrival Breakwater Steps framing: twin hooded wharf beacons & trident obelisks (well clear of Sanctuary deck)
+	for _, sx in { -78, 78 } do
+		if isClear(sx, 330, 8) then
 			ctx.group("ArrivalBeacon_" .. (if sx < 0 then "W" else "E"), function()
-				put("Obelisk", sx, groundY(sx, 326), 326, V(0.7, 1.15, 0.7), 0, VAULT_PAL, nil, true)
+				put("Obelisk", sx, groundY(sx, 330), 330, V(0.7, 1.15, 0.7), 0, VAULT_PAL, nil, true)
 				props += 1
 			end)
 		end
@@ -566,9 +566,15 @@ function SunkenFloor39.Build(ctx: any)
 	local propCap = 60 -- keeps every template well under the 12% variety rule (>= 570 props -> max 68)
 	local placedByKind: { [string]: number } = {}
 
+	local safe = layout.Sanctuary
+	local function offSanctuary(x: number, z: number, pad: number): boolean
+		return math.abs(x - safe.X) > (safe.Width * 0.5 + pad) or math.abs(z - safe.Z) > (safe.Depth * 0.5 + pad)
+	end
+
 	local function tryProp(name: string, x: number, z: number, minScale: number, maxScale: number, clearR: number, pal: any?): boolean
 		if (placedByKind[name] or 0) >= propCap then return false end
 		if math.abs(x) > w / 2 - 22 or math.abs(z) > d / 2 - 22 then return false end
+		if not offSanctuary(x, z, clearR + 36) then return false end
 		if not isClear(x, z, clearR) then return false end
 		local y = groundY(x, z)
 		local sc = minScale + rng:NextNumber() * (maxScale - minScale)
@@ -641,6 +647,7 @@ function SunkenFloor39.Build(ctx: any)
 		if math.abs(x - apex.X) < apex.Width / 2 + 8 and math.abs(z - apex.Z) < apex.Depth / 2 + 8 then
 			continue
 		end
+		if not offSanctuary(x, z, 16) then continue end
 		if not isClear(x, z, 4.5) then continue end
 		local cname = coverNames[(coverAttempts % #coverNames) + 1]
 		local pal = if coverAttempts % 3 == 0 then CORAL_AQUA elseif coverAttempts % 3 == 1 then CORAL_CREAM else VAULT_PAL

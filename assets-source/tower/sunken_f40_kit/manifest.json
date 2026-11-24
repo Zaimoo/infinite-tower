@@ -1,0 +1,307 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AbyssReliquaryShrine": {
+      "Min": [
+        -10.5,
+        0.0,
+        -9.5
+      ],
+      "Roles": {
+        "ACCENT": 116,
+        "CRYSTAL": 40,
+        "GLOW": 56,
+        "GOLD": 240,
+        "STONE": 36,
+        "TRIM": 280
+      },
+      "Size": [
+        21.0,
+        28.946,
+        19.0
+      ],
+      "Triangles": 768
+    },
+    "BellBargeWreck": {
+      "Min": [
+        -22.771,
+        -1.163,
+        -8.273
+      ],
+      "Roles": {
+        "ACCENT": 48,
+        "GOLD": 100,
+        "METAL": 148,
+        "MOSS": 24,
+        "WOOD": 232
+      },
+      "Size": [
+        46.134,
+        25.389,
+        16.173
+      ],
+      "Triangles": 552
+    },
+    "BrokenTideStatue": {
+      "Min": [
+        -12.0,
+        0.0,
+        -9.0
+      ],
+      "Roles": {
+        "ACCENT": 76,
+        "GLOW": 48,
+        "GOLD": 180,
+        "MOSS": 12,
+        "STONE": 152,
+        "TRIM": 172
+      },
+      "Size": [
+        24.35,
+        48.6,
+        21.833
+      ],
+      "Triangles": 640
+    },
+    "BubbleVentCluster": {
+      "Min": [
+        -7.358,
+        0.0,
+        -5.8
+      ],
+      "Roles": {
+        "GLOW": 140,
+        "STONE": 248,
+        "TRIM": 400
+      },
+      "Size": [
+        14.026,
+        7.904,
+        11.6
+      ],
+      "Triangles": 788
+    },
+    "CantorPulpit": {
+      "Min": [
+        -8.94,
+        0.0,
+        -9.4
+      ],
+      "Roles": {
+        "CORAL": 334,
+        "GLOW": 56,
+        "GOLD": 32,
+        "STONE": 92,
+        "TRIM": 232
+      },
+      "Size": [
+        17.88,
+        24.645,
+        18.8
+      ],
+      "Triangles": 746
+    },
+    "ChainAnchorBollard": {
+      "Min": [
+        -9.8,
+        0.0,
+        -9.8
+      ],
+      "Roles": {
+        "GLOW": 28,
+        "GOLD": 332,
+        "METAL": 820,
+        "STONE": 56,
+        "TRIM": 28
+      },
+      "Size": [
+        19.6,
+        26.4,
+        19.6
+      ],
+      "Triangles": 1264
+    },
+    "ChainTowerRound": {
+      "Min": [
+        -15.111,
+        0.0,
+        -15.5
+      ],
+      "Roles": {
+        "CORAL": 500,
+        "GLOW": 28,
+        "GOLD": 96,
+        "METAL": 740,
+        "SILK": 36,
+        "STONE": 104,
+        "TRIM": 700
+      },
+      "Size": [
+        30.223,
+        70.677,
+        31.507
+      ],
+      "Triangles": 2204
+    },
+    "CrackedTidebell": {
+      "Min": [
+        -5.6,
+        0.0,
+        -5.3
+      ],
+      "Roles": {
+        "ACCENT": 166,
+        "GLOW": 12,
+        "GOLD": 140,
+        "METAL": 240,
+        "STONE": 12
+      },
+      "Size": [
+        11.2,
+        12.953,
+        11.465
+      ],
+      "Triangles": 570
+    },
+    "DaisBrazierPedestal": {
+      "Min": [
+        -3.8,
+        0.0,
+        -3.8
+      ],
+      "Roles": {
+        "GLOW": 28,
+        "GOLD": 248,
+        "METAL": 36,
+        "STONE": 56,
+        "TRIM": 28
+      },
+      "Size": [
+        7.6,
+        14.0,
+        7.6
+      ],
+      "Triangles": 396
+    },
+    "DrownedAltar": {
+      "Min": [
+        -10.529,
+        0.0,
+        -10.8
+      ],
+      "Roles": {
+        "ACCENT": 40,
+        "CORAL": 500,
+        "GLOW": 252,
+        "GOLD": 268,
+        "STONE": 64,
+        "TRIM": 120
+      },
+      "Size": [
+        21.058,
+        14.3,
+        21.6
+      ],
+      "Triangles": 1244
+    },
+    "GreatTidebellTower": {
+      "Min": [
+        -70.0,
+        0.0,
+        -22.0
+      ],
+      "Roles": {
+        "ACCENT": 238,
+        "GLOW": 56,
+        "GOLD": 516,
+        "METAL": 176,
+        "MOSS": 48,
+        "SILK": 72,
+        "STONE": 840,
+        "TRIM": 1044
+      },
+      "Size": [
+        140.0,
+        272.0,
+        44.0
+      ],
+      "Triangles": 2990
+    },
+    "KelpForestTall": {
+      "Min": [
+        -8.867,
+        0.0,
+        -9.903
+      ],
+      "Roles": {
+        "FOLIAGE": 1100,
+        "GLOW": 500,
+        "STONE": 108
+      },
+      "Size": [
+        17.278,
+        49.194,
+        17.512
+      ],
+      "Triangles": 1708
+    },
+    "MaelstromSwirlRing": {
+      "Min": [
+        -72.889,
+        -1.309,
+        -65.891
+      ],
+      "Roles": {
+        "ALT": 1008,
+        "CRYSTAL": 1000,
+        "GLOW": 488,
+        "SILK": 672
+      },
+      "Size": [
+        145.792,
+        19.959,
+        131.784
+      ],
+      "Triangles": 3168
+    },
+    "ReefCoralTable": {
+      "Min": [
+        -9.542,
+        0.0,
+        -8.238
+      ],
+      "Roles": {
+        "CORAL": 674,
+        "CRYSTAL": 250,
+        "GLOW": 480,
+        "STONE": 108
+      },
+      "Size": [
+        19.713,
+        14.342,
+        15.564
+      ],
+      "Triangles": 1512
+    },
+    "SeaDomeArchRib": {
+      "Min": [
+        -38.0,
+        0.0,
+        -8.0
+      ],
+      "Roles": {
+        "ACCENT": 144,
+        "CRYSTAL": 144,
+        "METAL": 300,
+        "STONE": 12
+      },
+      "Size": [
+        71.393,
+        114.726,
+        16.0
+      ],
+      "Triangles": 600
+    }
+  },
+  "Unit": "studs"
+}

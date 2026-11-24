@@ -727,6 +727,30 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				end
 			end
 		end
+		-- Authored maelstrom whirlpool basin (`Terrain.Maelstrom`, Floor 40): circular funnel carved deeper
+		-- toward the eye with low logarithmic spiral rock ribs so the whirlpool's turn reads in terrain itself.
+		local mael = td and td.Maelstrom
+		if mael and kind ~= "MOUNTAIN" then
+			local dx, dz = x - (mael.X or 0), z - (mael.Z or 0)
+			local rad = mael.Radius or 230
+			local r = math.sqrt(dx * dx + dz * dz)
+			local nr = r / rad + 0.06 * fbm(x / 32, z / 32, seed + 53, 2)
+			if nr < 1 then
+				local t = math.clamp(1 - nr, 0, 1)
+				local funnel = t * t * (3 - 2 * t)
+				local theta = math.atan2(dz, dx)
+				local ribs = mael.Ribs or 6
+				local twist = mael.Twist or 0.048
+				local ribWave = 0.5 + 0.5 * math.cos(ribs * theta + r * twist)
+				local ribH = (mael.RibHeight or 2.6) * (0.25 + 0.75 * math.sin(t * math.pi)) * ribWave
+				local eyeDepth = mael.EyeDepth or 6
+				local bedY = (bottom - floorDip) - eyeDepth * funnel + ribH
+				if bedY < base or kind == "CHASM" then
+					base = math.min(base, bedY)
+					kind = "POOL"
+				end
+			end
+		end
 		-- Authored rock islands: a flat crown with steep, noisy shores, rising out of their pool.
 		for _, island in (td and td.Islands) or {} do
 			local dist = math.sqrt((x - island.X) ^ 2 + (z - island.Z) ^ 2) / island.R + 0.12 * fbm(x / 14, z / 14, seed + 33, 2)

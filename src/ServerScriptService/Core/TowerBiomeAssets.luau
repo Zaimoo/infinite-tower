@@ -26,6 +26,7 @@ local SunkenSetPieces = require(script.Parent.TowerSetPieces.SunkenSanctuary)
 local SunkenFloor37 = require(script.Parent.TowerSetPieces.SunkenFloor37)
 local SunkenFloor38 = require(script.Parent.TowerSetPieces.SunkenFloor38)
 local SunkenFloor39 = require(script.Parent.TowerSetPieces.SunkenFloor39)
+local SunkenFloor40 = require(script.Parent.TowerSetPieces.SunkenFloor40)
 local AstralFloor41 = require(script.Parent.TowerSetPieces.AstralFloor41)
 local AstralFloor42 = require(script.Parent.TowerSetPieces.AstralFloor42)
 local AstralFloor43 = require(script.Parent.TowerSetPieces.AstralFloor43)
@@ -37,7 +38,7 @@ local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
-local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, AstralGateRing = true, AstralOrbitRail = true, AstralDome = true, AstralIsleUnderside = true, AstralWardVeil = true, AstralRiftEye = true, ConcourseStarMap = true, AstralIndexLamp = true, AstralShutteredLamp = true, AstralSkyQuill = true, BlotterChainedSlab = true, RiftBedGlows = true, ObservatoryMeridianLine = true, AstralIsleDeck = true, AstralConcourseDeck = true, AstralNebulaSea = true, AstralSanctumRays = true, AstralIsleBalustrade = true }
+local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, LeviathanDaisMosaic = true, MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, AstralGateRing = true, AstralOrbitRail = true, AstralDome = true, AstralIsleUnderside = true, AstralWardVeil = true, AstralRiftEye = true, ConcourseStarMap = true, AstralIndexLamp = true, AstralShutteredLamp = true, AstralSkyQuill = true, BlotterChainedSlab = true, RiftBedGlows = true, ObservatoryMeridianLine = true, AstralIsleDeck = true, AstralConcourseDeck = true, AstralNebulaSea = true, AstralSanctumRays = true, AstralIsleBalustrade = true }
 
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
@@ -90,6 +91,8 @@ Assets.AirborneKinds = table.freeze({
 	OrchardGateLantern = true, YardLantern = true, VatsLantern = true,
 	-- Floor 33's Hedge Stile arrival lantern & Floor 34's Bog Stair arrival lantern.
 	HedgeStileLantern = true, BogStairLantern = true,
+	-- Floor 40's animated whirlpool layers, overhead Sea-Dome & Eye of Daylight (TowerSetPieces/SunkenFloor40).
+	MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, LeviathanDaisMosaic = true,
 	-- Astral Archives (Floors 41-45) floating/hanging/sky pieces.
 	AstralGateRing = true, AstralOrbitRail = true, AstralDome = true, AstralIsleUnderside = true,
 	AstralOrbitTomes = true, AstralIndexLamp = true, AstralShutteredLamp = true,
@@ -6517,6 +6520,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "sunken:2" then SunkenFloor37.Build
 		elseif layout.Authored == "sunken:3" then SunkenFloor38.Build
 		elseif layout.Authored == "sunken:4" then SunkenFloor39.Build
+		elseif layout.Authored == "sunken:5" then SunkenFloor40.Build
 		elseif layout.Authored == "astral:1" then AstralFloor41.Build
 		elseif layout.Authored == "astral:2" then AstralFloor42.Build
 		elseif layout.Authored == "astral:3" then AstralFloor43.Build
