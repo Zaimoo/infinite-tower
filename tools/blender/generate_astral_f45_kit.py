@@ -82,107 +82,105 @@ def great_telescope_mount(t):
     piers rising to a heavy declination drive wheel and cradle saddle."""
     stone, alt, metal, trim, glow = (t.bm(r) for r in ("STONE", "ALT", "METAL", "TRIM", "GLOW"))
 
-    # Stepped circular observatory azimuth base plinth (R = 30 -> 22, Z = 0..24).
+    # Stepped circular observatory azimuth base plinth (R = 30 -> 21, Z = 0..26).
     cone(stone, 30.0, 28.5, 6.0, 24, T((0, 0, 0)))
-    cone(alt, 26.5, 25.5, 5.5, 24, T((0, 0, 6.0)))
-    cone(stone, 23.0, 20.0, 12.5, 20, T((0, 0, 11.5)))
-    # Colossal toothed azimuth base ring-gear encircling the plinth top (Z = 24).
-    spoked_gear(metal, trim, 24.5, 3.2, 24, T((0, 0, 24.0)), spokes=8, hub_r=11.0)
+    cone(alt, 26.8, 25.6, 5.5, 24, T((0, 0, 6.0)))
+    cone(stone, 23.2, 20.5, 13.0, 20, T((0, 0, 11.5)))
+    # Heavy brass azimuth gear collar encircling the plinth top (Z = 24.5).
+    spoked_gear(metal, trim, 24.2, 3.0, 24, T((0, 0, 24.5)), spokes=8, hub_r=12.0)
     ring_mesh(trim, 28.8, 0.9, 32, T((0, 0, 6.2)), tube_segs=5)
+    ring_mesh(trim, 21.0, 0.75, 28, T((0, 0, 24.0)), tube_segs=5)
 
-    # Central heavy brass equatorial turntable column (Z = 24..54).
-    lathe(metal, [(14.5, 24.0), (11.5, 34.0), (13.0, 48.0), (16.5, 54.0)], 16, Matrix.Identity(4))
-    ring_mesh(trim, 14.2, 0.85, 24, T((0, 0, 38.0)), tube_segs=5)
+    # Central sculpted brass equatorial pedestal column (Z = 24..54).
+    lathe(metal, [(15.2, 24.0), (11.8, 35.0), (13.4, 47.0), (16.8, 54.0)], 18, Matrix.Identity(4))
+    ring_mesh(trim, 14.6, 0.85, 24, T((0, 0, 38.0)), tube_segs=5)
+    ring_mesh(alt, 12.4, 0.65, 24, T((0, 0, 32.0)), tube_segs=5)
 
-    # Twin sweeping cast-brass trunnion yoke arms rising from Z = 50 up to trunnion bearings at Z = 102!
+    # Twin sweeping cast-brass trunnion yoke arms rising from Z = 50 up to trunnion bearings at Z = 101!
     for sx in (-1, 1):
         arm_pts = [
-            (sx * 12.0, 0.0, 50.0),
-            (sx * 22.0, 0.0, 64.0),
-            (sx * 24.5, 0.0, 82.0),
-            (sx * 23.5, 0.0, 100.0),
+            (sx * 12.5, 0.0, 50.0),
+            (sx * 22.8, 0.0, 64.0),
+            (sx * 25.5, 0.0, 82.0),
+            (sx * 24.5, 0.0, 101.0),
         ]
-        tube(metal, arm_pts, [4.2, 3.8, 3.4, 3.2], 8, cap=True)
+        tube(metal, arm_pts, [4.6, 4.1, 3.6, 3.4], 10, cap=True)
         # Diagonal reinforcement struts down to turntable waist.
-        strut(trim, (sx * 13.5, -5.5, 46.0), (sx * 22.5, -3.5, 86.0), 1.4)
-        strut(trim, (sx * 13.5, 5.5, 46.0), (sx * 22.5, 3.5, 86.0), 1.4)
-        # Heavy trunnion bearing cap & glowing vernier degree dial at Z = 100!
-        cyl_x(metal, 5.2, 6.2, (sx * 23.5, 0.0, 100.0), segs=16)
-        ring_mesh(trim, 5.8, 0.55, 20, T((sx * 26.8, 0.0, 100.0)) @ R(math.pi / 2, 4, "Y"), tube_segs=5)
-        uvsphere(glow, 1.4, T((sx * 27.2, 0.0, 100.0)), 8, 6)
+        strut(trim, (sx * 13.8, -5.8, 46.0), (sx * 23.2, -3.6, 88.0), 1.45)
+        strut(trim, (sx * 13.8, 5.8, 46.0), (sx * 23.2, 3.6, 88.0), 1.45)
+        # Heavy trunnion bearing cap & glowing vernier degree dial at Z = 101!
+        cyl_x(metal, 5.5, 6.8, (sx * 24.5, 0.0, 101.0), segs=16)
+        ring_mesh(trim, 6.1, 0.6, 20, T((sx * 28.0, 0.0, 101.0)) @ R(math.pi / 2, 4, "Y"), tube_segs=5)
+        uvsphere(glow, 1.5, T((sx * 28.5, 0.0, 101.0)), 8, 6)
 
-    # Massive vertical brass declination altitude gear-arc slung between the yoke arms.
-    spoked_gear(metal, trim, 20.5, 2.2, 22, T((0, 0, 84.0)) @ R(math.pi / 2, 4, "Y"), spokes=6)
+    # Clean outer brass declination altitude gear-wheel on the east yoke cheek (leaves inner cradle open for tube!).
+    spoked_gear(metal, trim, 18.0, 1.8, 22, T((26.2, 0, 92.0)) @ R(math.pi / 2, 4, "Y"), spokes=6)
 
 
 # -----------------------------------------------------------------------------------------------------------
-# 2. GreatTelescopeTube — Colossal 192-stud brass refractor barrel with cracked star-glass objective lens!
+# 2. GreatTelescopeTube — Colossal 188-stud brass refractor barrel with cracked star-glass objective lens!
 # -----------------------------------------------------------------------------------------------------------
 @template("GreatTelescopeTube", METAL=5200, TRIM=4200, CRYSTAL=2200, ALT=1800, GLOW=1600)
 def great_telescope_tube(t):
-    """Colossal stepped brass refractor barrel of the Great Telescope (192 studs tall, 148 long; mounts onto
-    GreatTelescopeMount for a combined ~298-stud landmark clearing Floor 45's ≥285-stud ladder!): massive
-    stepped brass optical tube pitched downward 26 degrees toward -Y (the Rift!), flanked by a giant brass
-    finder scope, declination counterweights, focusing wheels, and a huge dramatically CRACKED star-glass
-    objective lens gleaming at the front hood."""
+    """Colossal stepped brass refractor barrel of the Great Telescope (188 studs tall, 146 long; mounts onto
+    GreatTelescopeMount for a combined ~294-stud landmark clearing Floor 45's >=285-stud ladder!): stout
+    stepped brass optical tube pitched cleanly at 32 deg toward -Y (so the huge dramatically CRACKED
+    star-glass objective lens gleams directly over the Observing Floor toward the Rift!), complete with a
+    parallel brass finder scope, gilded collars, focus handwheels, and a tall equatorial brass sighting spire."""
     metal, trim, crystal, alt, glow = (t.bm(r) for r in ("METAL", "TRIM", "CRYSTAL", "ALT", "GLOW"))
 
-    # Standing cradle saddle on z = 0..42 so the tube stands cleanly on its origin (Min.Y = 0) and sweeps up to Z = 192!
-    # Pitch: aim the wide cracked objective lens toward -Y and slightly DOWNWARD (-22 deg from horizontal? Wait:
-    # to span Z = 0..192 and aim the huge front lens down toward the Rift, the long optical axis runs steeply
-    # from low-front objective lens (Y = -70, Z = 22) up to towering rear breech & counterweight mast (Y = +62, Z = 186),
-    # OR let's make it an iconic 42-deg downward-aimed equatorial refractor whose giant objective lens faces -Y/down
-    # at Z = 44 while its tall rear focusing assembly & brass equatorial polar tower rises to Z = 192!).
-    pivot = Vector((0.0, 0.0, 96.0))
-    # Track direction from rear (+Y, +Z) down-and-forward toward Rift (-Y, -Z) at -38 deg!
-    pitch = math.radians(90 + 38)  # local +Z points along (0, -sin(128)= -0.788, cos(128)= -0.616) -> forward & DOWN!
+    # Cradle pivot centred at Z = 62 with a sturdy equatorial saddle block standing cleanly on z = 0..62!
+    # Local +Z of the tube points forward (-Y) and UPWARD at +30 deg so the giant cracked lens faces the player
+    # and the Rift proudly (matching reference/Astral Archives 45.jpg!).
+    pivot = Vector((0.0, 0.0, 62.0))
+    pitch = math.radians(60)  # local +Z -> (0, -sin(60)=-0.866, cos(60)=+0.500) forward (-Y) & up!
     tm = T(pivot) @ R(pitch, 4, "X")
 
-    # Central brass trunnion cradle ring & lower balance mast down to z = 0 so it sits grounded cleanly.
-    cone(metal, 9.0, 5.5, 96.0, 12, T((0, 0, 0.0)))
-    ring_mesh(trim, 17.5, 1.4, 28, tm @ T((0, 0, 0)), tube_segs=6)
-    cyl_x(metal, 4.2, 46.0, (0, 0, 96.0), segs=14)
+    # Heavy bronze trunnion cradle ring, cross-axle, and grounded counterweight saddle standing on z = 0.
+    box(alt, (24.0, 18.0, 14.0), T((0, 0, 7.0)), bevel=0.4)
+    cone(metal, 14.0, 10.5, 48.0, 16, T((0, 0, 14.0)))
+    ring_mesh(trim, 19.5, 1.6, 28, tm @ T((0, 0, 0)), tube_segs=6)
+    cyl_x(metal, 4.6, 50.0, (0, 0, 62.0), segs=16)
 
-    # Stepped brass refractor barrel (local Z = -92 rear eyepiece -> +82 giant front objective hood!).
-    # Rear focusing drawtube & giant brass eyepiece housing (high back end, Z ~ 152..188!).
-    cone(trim, 5.2, 7.6, 22.0, 16, tm @ T((0, 0, -96.0)))
-    cone(metal, 8.2, 11.8, 34.0, 20, tm @ T((0, 0, -74.0)))
-    # Main heavy optical barrel.
-    cone(metal, 12.6, 16.5, 76.0, 24, tm @ T((0, 0, -40.0)))
-    # Wide flared front objective lens dew-shield hood (UN-CAPPED so the giant cracked lens inside shines right out!).
-    cone(trim, 16.8, 19.6, 38.0, 24, tm @ T((0, 0, 36.0)), cap=False)
-    ring_mesh(trim, 19.8, 1.45, 28, tm @ T((0, 0, 74.0)), tube_segs=6)
+    # Stout stepped brass refractor barrel (rear eyepiece at local Z = -76 -> huge front objective hood at +88!).
+    cone(trim, 6.2, 8.8, 22.0, 18, tm @ T((0, 0, -76.0)))
+    cone(metal, 9.6, 13.8, 34.0, 22, tm @ T((0, 0, -54.0)))
+    # Main wide optical barrel.
+    cone(metal, 14.6, 19.4, 72.0, 26, tm @ T((0, 0, -20.0)))
+    # Wide flared front objective lens dew-shield hood (UN-CAPPED so the giant cracked lens shines boldly!).
+    cone(trim, 19.6, 22.8, 36.0, 26, tm @ T((0, 0, 52.0)), cap=False)
+    ring_mesh(trim, 23.0, 1.75, 30, tm @ T((0, 0, 88.0)), tube_segs=6)
 
-    # Bold gilded strengthening collars & recessed lapis-indigo optical bands along the barrel.
-    for z_c, r_c in ((-70.0, 8.8), (-36.0, 13.0), (0.0, 15.2), (36.0, 17.2), (58.0, 18.8)):
-        ring_mesh(trim, r_c + 0.9, 1.05, 24, tm @ T((0, 0, z_c)), tube_segs=6)
-        ring_mesh(alt, r_c + 0.4, 0.75, 24, tm @ T((0, 0, z_c - 3.0)), tube_segs=5)
+    # Bold gilded strengthening collars & recessed dark-lapis optical bands along the barrel.
+    for z_c, r_c in ((-52.0, 10.2), (-18.0, 15.2), (16.0, 17.6), (52.0, 20.2), (72.0, 21.8)):
+        ring_mesh(trim, r_c + 1.0, 1.15, 26, tm @ T((0, 0, z_c)), tube_segs=6)
+        ring_mesh(alt, r_c + 0.45, 0.85, 26, tm @ T((0, 0, z_c - 3.2)), tube_segs=5)
 
-    # THE CRACKED OBJECTIVE STAR-GLASS LENS seated visibly right inside the open front dew-shield hood!
-    cone(alt, 18.4, 18.4, 1.4, 24, tm @ T((0, 0, 68.5)))
-    cone(crystal, 18.8, 18.8, 2.2, 24, tm @ T((0, 0, 70.0)))
-    # Jagged glowing star-fracture cracks radiating boldly across the exposed objective lens!
+    # THE CRACKED OBJECTIVE STAR-GLASS LENS seated right inside the open front dew-shield hood!
+    cone(alt, 21.2, 21.2, 1.6, 26, tm @ T((0, 0, 81.5)))
+    cone(crystal, 21.6, 21.6, 2.4, 26, tm @ T((0, 0, 83.2)))
+    # Bold jagged glowing star-fracture cracks radiating across the exposed objective lens!
     crack_rays = (
-        [(0, 0, 72.6), (5.5, 4.0, 72.9), (11.2, 9.8, 72.7), (17.5, 13.5, 72.5)],
-        [(0, 0, 72.6), (-6.2, 5.5, 72.9), (-13.0, 8.2, 72.7), (-17.8, 10.5, 72.5)],
-        [(0, 0, 72.6), (-4.0, -7.2, 72.9), (-9.5, -14.0, 72.7)],
-        [(0, 0, 72.6), (7.0, -5.8, 72.9), (15.0, -10.8, 72.7)],
+        [(0, 0, 86.2), (6.5, 4.8, 86.5), (13.2, 11.4, 86.3), (20.2, 15.6, 86.0)],
+        [(0, 0, 86.2), (-7.2, 6.4, 86.5), (-15.0, 9.6, 86.3), (-20.4, 12.2, 86.0)],
+        [(0, 0, 86.2), (-4.6, -8.4, 86.5), (-11.0, -16.2, 86.3)],
+        [(0, 0, 86.2), (8.2, -6.8, 86.5), (17.2, -12.6, 86.3)],
     )
     for ray in crack_rays:
-        tube(glow, [tm @ Vector(p) for p in ray], [1.05, 0.78, 0.56, 0.36][:len(ray)], 5, cap=True)
-    uvsphere(glow, 3.0, tm @ T((0, 0, 72.6)), 10, 8)
+        tube(glow, [tm @ Vector(p) for p in ray], [1.25, 0.92, 0.65, 0.40][:len(ray)], 5, cap=True)
+    uvsphere(glow, 3.6, tm @ T((0, 0, 86.2)), 10, 8)
 
-    # Secondary side finder-telescope mounted parallel along top-east of the barrel.
-    cone(metal, 2.8, 4.2, 52.0, 14, tm @ T((16.5, 11.0, -18.0)))
-    ring_mesh(trim, 4.5, 0.55, 16, tm @ T((16.5, 11.0, 34.0)), tube_segs=5)
-    for z_st in (-10.0, 22.0):
-        strut(trim, tm @ Vector((10.0, 6.0, z_st)), tm @ Vector((16.5, 11.0, z_st)), 1.4)
+    # Secondary side finder-telescope mounted cleanly along top-east of the barrel (just like the reference art!).
+    cone(metal, 3.2, 4.8, 56.0, 16, tm @ T((19.5, 13.0, -10.0)))
+    ring_mesh(trim, 5.1, 0.65, 18, tm @ T((19.5, 13.0, 46.0)), tube_segs=5)
+    for z_st in (-2.0, 32.0):
+        strut(trim, tm @ Vector((12.0, 7.5, z_st)), tm @ Vector((19.5, 13.0, z_st)), 1.5)
 
-    # Tall rear brass sighting spire & counterweight fin rising at the high breech so total height clears 192 studs!
-    breech = tm @ Vector((0, 0, -96.0))
-    cone(trim, 2.2, 0.25, 36.0, 8, T((breech.x, breech.y, breech.z)))
-    ring_mesh(trim, 6.5, 0.65, 20, T((breech.x, breech.y, breech.z + 20.0)) @ R(math.pi / 2, 4, "X"), tube_segs=5)
-    uvsphere(glow, 1.8, T((breech.x, breech.y, breech.z + 34.5)), 10, 8)
+    # Tall brass zenith meridian arc & equatorial sighting finial rising cleanly above the barrel to Z = 188!
+    fin_base = tm @ Vector((0, 0, 52.0))
+    cone(trim, 2.4, 0.35, 84.0, 10, T((fin_base.x, fin_base.y, fin_base.z + 14.0)))
+    ring_mesh(trim, 8.5, 0.85, 22, T((fin_base.x, fin_base.y, fin_base.z + 72.0)) @ R(math.pi / 2, 4, "X"), tube_segs=5)
+    uvsphere(glow, 2.4, T((fin_base.x, fin_base.y, fin_base.z + 96.5)), 10, 8)
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -284,42 +282,45 @@ def azimuth_ring(t):
 # -----------------------------------------------------------------------------------------------------------
 # 5. RiftEyeMesh — Swirling concentric vortex eye deep in the Rift bed (client-side Rift centrepiece!)
 # -----------------------------------------------------------------------------------------------------------
-@template("RiftEyeMesh", ALT=2600, CRYSTAL=2400, GLOW=2400, SILK=900)
+@template("RiftEyeMesh", ALT=2600, CRYSTAL=2600, GLOW=2600, SILK=1000)
 def rift_eye_mesh(t):
     """The Rift-Eye deep in the chasm (seen swirling violently at the heart of the Floor 45 guide image!):
-    a 64-stud-diameter sculpted concentric spiral vortex mesh with a recessed black-lapis abyssal pupil,
-    six sweeping crystalline spiral vortex arms, glowing pale-violet/starlight filaments, and loose vellum
-    pages caught spiraling inward into the eye. Stands on z = 0."""
+    a 68-stud-diameter sculpted multi-layered cosmic whirlpool with a deep abyssal pupil, luminous inner
+    accretion bowl, eight thick sweeping spiral vortex arms, and 24 loose vellum pages spiralling inward
+    into the eye. Stands cleanly on z >= 0."""
     alt, crystal, glow, silk = (t.bm(r) for r in ("ALT", "CRYSTAL", "GLOW", "SILK"))
     rng = random.Random(4505)
 
-    # Deep dark abyssal pupil core & terraced concentric vortex dish.
-    cyl_z(alt, 9.5, 0.6, (0, 0, 0.0), segs=24)
-    ring_mesh(glow, 11.5, 0.75, 28, T((0, 0, 0.9)), tube_segs=5)
-    ring_mesh(crystal, 18.0, 0.95, 32, T((0, 0, 1.4)), tube_segs=5)
-    ring_mesh(alt, 26.5, 1.15, 36, T((0, 0, 1.9)), tube_segs=5)
+    # Deep abyssal pupil & terraced luminous swirling whirlpool funnel standing cleanly on z >= 0!
+    cyl_z(alt, 11.0, 0.8, (0, 0, 0.4), segs=28)
+    cone(alt, 33.5, 12.0, 1.2, 32, T((0, 0, 0.0)))
+    cone(crystal, 29.0, 11.5, 1.0, 32, T((0, 0, 1.0)))
+    cone(glow, 19.5, 10.5, 0.9, 28, T((0, 0, 1.7)))
+    ring_mesh(glow, 12.0, 1.05, 30, T((0, 0, 2.2)), tube_segs=6)
+    ring_mesh(crystal, 20.5, 1.25, 34, T((0, 0, 2.5)), tube_segs=6)
+    ring_mesh(alt, 29.5, 1.35, 36, T((0, 0, 2.6)), tube_segs=6)
 
-    # 6 sweeping logarithmic spiral vortex arms churning around the pupil!
-    for arm in range(6):
+    # 8 thick sweeping logarithmic spiral vortex arms churning around the pupil!
+    for arm in range(8):
         pts = []
         rads = []
-        a0 = 2 * math.pi * arm / 6
+        a0 = 2 * math.pi * arm / 8
         for k in range(18):
             f = k / 17.0
-            a = a0 + f * 2.85
-            rr = 9.0 + f * 23.0
-            zz = 0.65 + f * 2.8 + math.sin(f * math.pi) * 0.6
+            a = a0 + f * 3.1
+            rr = 9.8 + f * 24.0
+            zz = 1.6 + f * 3.0 + math.sin(f * math.pi) * 0.85
             pts.append((math.cos(a) * rr, math.sin(a) * rr, zz))
-            rads.append(1.15 * (1.0 - 0.55 * f))
-        tube(crystal if arm % 2 == 0 else glow, pts, rads, 5, cap=True)
+            rads.append(1.65 * (1.0 - 0.52 * f))
+        tube(glow if arm % 2 == 0 else crystal, pts, rads, 5, cap=True)
 
-    # 18 loose vellum pages spiralling inward & tilting down into the Rift Eye!
-    for k in range(18):
-        a = 2 * math.pi * k / 18 + rng.uniform(-0.2, 0.2)
-        rr = rng.uniform(11.5, 29.0)
-        zz = rng.uniform(1.6, 4.4)
+    # 24 loose vellum pages spiralling inward & tilting down into the Rift Eye!
+    for k in range(24):
+        a = 2 * math.pi * k / 24 + rng.uniform(-0.18, 0.18)
+        rr = rng.uniform(12.0, 31.5)
+        zz = rng.uniform(2.6, 5.6)
         pm = T((math.cos(a) * rr, math.sin(a) * rr, zz)) @ R(a + math.pi / 2, 4, "Z") @ R(math.radians(-26), 4, "X")
-        box(silk, (2.4, 1.8, 0.12), pm)
+        box(silk, (2.6, 1.9, 0.14), pm)
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -626,15 +627,15 @@ def ink_pool_decal(t):
         m = R(a, 4, "Z") @ T((R_p, 0, 0.45))
         box(stone, (1.4, 2.15, 0.9), m, bevel=0.08)
     ring_mesh(trim, R_p - 0.65, 0.16, 24, T((0, 0, 0.92)), tube_segs=5)
-    # Glossy indigo ink surface & star-glass sheen.
-    cyl_z(alt, R_p - 0.6, 0.35, (0, 0, 0.08), segs=20)
-    cyl_z(crystal, R_p - 0.7, 0.14, (0, 0, 0.42), segs=20)
+    # Glossy indigo ink surface & star-glass sheen (stands cleanly on z >= 0).
+    cyl_z(alt, R_p - 0.6, 0.40, (0, 0, 0.20), segs=20)
+    cyl_z(crystal, R_p - 0.7, 0.16, (0, 0, 0.48), segs=20)
     # Glowing star-glyphs written inside the pooled ink!
-    ring_mesh(glow, 3.2, 0.12, 20, T((0, 0, 0.60)), tube_segs=4)
+    ring_mesh(glow, 3.2, 0.12, 20, T((0, 0, 0.64)), tube_segs=4)
     for k in range(4):
         a = k * math.pi / 2
-        strut(glow, (math.cos(a) * 0.6, math.sin(a) * 0.6, 0.60), (math.cos(a) * 4.4, math.sin(a) * 4.4, 0.60), 0.16)
-    uvsphere(glow, 0.45, T((0, 0, 0.65)), 8, 6)
+        strut(glow, (math.cos(a) * 0.6, math.sin(a) * 0.6, 0.64), (math.cos(a) * 4.4, math.sin(a) * 4.4, 0.64), 0.16)
+    uvsphere(glow, 0.45, T((0, 0, 0.70)), 8, 6)
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -664,11 +665,11 @@ def toppled_cabinet_range(t):
                     box(silk, (1.3, 0.85, 1.1), mat @ T((cx, -1.75 - pull * 0.55, cz + 0.2)))
 
     # Cabinet 1 (back-left): still standing but canted 16 deg toward the Rift!
-    _mini_cabinet(T((-5.2, 1.8, 0.0)) @ R(0.25, 4, "Z") @ R(math.radians(-16), 4, "X"), {(0, 2), (2, 3), (1, 1)})
+    _mini_cabinet(T((-5.2, 1.8, 0.95)) @ R(0.25, 4, "Z") @ R(math.radians(-16), 4, "X"), {(0, 2), (2, 3), (1, 1)})
     # Cabinet 2 (centre): fallen 62 deg forward onto rubble & crates!
-    _mini_cabinet(T((1.2, 0.4, 2.4)) @ R(-0.18, 4, "Z") @ R(math.radians(-62), 4, "X"), {(1, 2), (2, 1), (0, 3)})
+    _mini_cabinet(T((1.2, 0.4, 3.1)) @ R(-0.18, 4, "Z") @ R(math.radians(-62), 4, "X"), {(1, 2), (2, 1), (0, 3)})
     # Cabinet 3 (east): crashed completely flat on its back/side!
-    _mini_cabinet(T((7.4, -1.8, 1.8)) @ R(-0.65, 4, "Z") @ R(math.radians(82), 4, "Y"), {(0, 1), (1, 3)})
+    _mini_cabinet(T((7.4, -1.8, 3.2)) @ R(-0.65, 4, "Z") @ R(math.radians(82), 4, "Y"), {(0, 1), (1, 3)})
 
     # Spilled cascade of index cards & loose pages sliding downhill toward -Y.
     for k in range(28):

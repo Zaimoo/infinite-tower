@@ -49,38 +49,38 @@
         -30.0
       ],
       "Roles": {
-        "ALT": 92,
+        "ALT": 332,
         "GLOW": 160,
-        "METAL": 1452,
+        "METAL": 1500,
         "STONE": 168,
-        "TRIM": 1724
+        "TRIM": 2004
       },
       "Size": [
         60.0,
-        106.35,
+        111.422,
         60.0
       ],
-      "Triangles": 3596
+      "Triangles": 4164
     },
     "GreatTelescopeTube": {
       "Min": [
-        -23.0,
+        -25.0,
         0.0,
-        -78.85
+        -68.918
       ],
       "Roles": {
-        "ALT": 1292,
-        "CRYSTAL": 92,
+        "ALT": 1444,
+        "CRYSTAL": 100,
         "GLOW": 412,
-        "METAL": 316,
-        "TRIM": 2632
+        "METAL": 364,
+        "TRIM": 2836
       },
       "Size": [
-        46.0,
-        191.404,
-        150.789
+        50.24,
+        186.9,
+        158.313
       ],
-      "Triangles": 4744
+      "Triangles": 5156
     },
     "InkPoolDecal": {
       "Min": [
@@ -185,22 +185,22 @@
     },
     "RiftEyeMesh": {
       "Min": [
-        -31.059,
-        -0.435,
-        -31.647
+        -34.494,
+        0.0,
+        -34.494
       ],
       "Roles": {
-        "ALT": 452,
-        "CRYSTAL": 854,
-        "GLOW": 814,
-        "SILK": 216
+        "ALT": 664,
+        "CRYSTAL": 1244,
+        "GLOW": 1180,
+        "SILK": 288
       },
       "Size": [
-        62.118,
-        5.244,
-        63.293
+        68.988,
+        6.038,
+        68.988
       ],
-      "Triangles": 2336
+      "Triangles": 3376
     },
     "RiftLipCrystal": {
       "Min": [
@@ -285,7 +285,7 @@
     "ToppledCabinetRange": {
       "Min": [
         -9.397,
-        -1.394,
+        -0.001,
         -9.576
       ],
       "Roles": {
@@ -297,7 +297,7 @@
       },
       "Size": [
         25.3,
-        10.525,
+        10.026,
         18.895
       ],
       "Triangles": 1556

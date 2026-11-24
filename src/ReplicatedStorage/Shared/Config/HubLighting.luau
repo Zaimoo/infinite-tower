@@ -571,18 +571,18 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.18, AtmosphereColor = c(84, 88, 148), AtmosphereDecay = c(56, 44, 108), AtmosphereHaze = 0.34,
 		TintColor = c(242, 246, 255), Saturation = 0.14, Contrast = 0.10, ExposureCompensation = 0.16, BloomIntensity = 0.48,
 	},
-	-- Floor 44, Runeguard Athenaeum: sealed indigo dusk, legible slate fortress with warm pools under the Waygates.
+	-- Floor 44, Runeguard Athenaeum: sealed indigo dusk, crisp legible slate fortress with warm pools under the Waygates & dome.
 	[44] = {
-		Ambient = c(78, 84, 130), OutdoorAmbient = c(122, 128, 178), ColorShift_Top = c(212, 204, 255), ColorShift_Bottom = c(68, 66, 118),
-		AtmosphereDensity = 0.30, AtmosphereColor = c(74, 78, 142), AtmosphereDecay = c(50, 48, 102), AtmosphereHaze = 0.85,
-		TintColor = c(236, 238, 255), Saturation = 0.06, Contrast = 0.10, ExposureCompensation = 0.12, BloomIntensity = 0.55,
+		Ambient = c(86, 92, 134), OutdoorAmbient = c(134, 140, 186), ColorShift_Top = c(218, 214, 255), ColorShift_Bottom = c(68, 66, 118),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(66, 70, 130), AtmosphereDecay = c(44, 42, 96), AtmosphereHaze = 0.55,
+		TintColor = c(240, 242, 255), Saturation = 0.08, Contrast = 0.10, ExposureCompensation = 0.14, BloomIntensity = 0.52,
 	},
-	-- Floor 45, Rift Warden's Observatory (Biome Boss: Rift Warden): rift-eye under a torn sky — dramatic indigo
-	-- night with crisp silver-white lens key on the telescope, dome and observing floor so everything reads cleanly.
+	-- Floor 45, Rift Warden's Observatory (Biome Boss: Rift Warden): rift-eye under a torn sky — rich indigo
+	-- twilight with crisp silver-white moonlight on the dome, warm gold lantern pools and deep violet chasm glow.
 	[45] = {
-		Ambient = c(76, 82, 128), OutdoorAmbient = c(122, 132, 178), ColorShift_Top = c(224, 232, 255), ColorShift_Bottom = c(86, 56, 132),
-		AtmosphereDensity = 0.32, AtmosphereColor = c(64, 60, 116), AtmosphereDecay = c(46, 36, 92), AtmosphereHaze = 0.95,
-		TintColor = c(240, 242, 255), Saturation = 0.06, Contrast = 0.10, ExposureCompensation = 0.16, BloomIntensity = 0.60,
+		Ambient = c(90, 98, 150), OutdoorAmbient = c(144, 154, 206), ColorShift_Top = c(222, 232, 255), ColorShift_Bottom = c(116, 74, 178),
+		AtmosphereDensity = 0.24, AtmosphereColor = c(62, 58, 128), AtmosphereDecay = c(44, 34, 98), AtmosphereHaze = 0.58,
+		TintColor = c(244, 246, 255), Saturation = 0.14, Contrast = 0.12, ExposureCompensation = 0.22, BloomIntensity = 0.60,
 	},
 }
 HubLighting.FloorGrades = FloorGrades
