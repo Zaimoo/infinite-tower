@@ -172,6 +172,7 @@ $modulePaths = @(
     'ServerScriptService/Core/TowerSetPieces/AbyssalCollision.luau',
     'ServerScriptService/Core/TowerSetPieces/AbyssalFloor46.luau',
     'ServerScriptService/Core/TowerSetPieces/AbyssalFloor47.luau',
+    'ServerScriptService/Core/TowerSetPieces/AbyssalFloor48.luau',
     'ServerScriptService/Core/NavigationRecovery.luau',
     'ServerScriptService/Core/NavigationQueue.luau',
     'ServerScriptService/Combat/SquadMovement.luau',

@@ -1,0 +1,289 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "AnchorSpire": {
+      "Min": [
+        -11.271,
+        0.0,
+        -11.271
+      ],
+      "Roles": {
+        "ACCENT": 160,
+        "GLOW": 120,
+        "METAL": 2744,
+        "STONE": 128,
+        "TRIM": 2600
+      },
+      "Size": [
+        22.543,
+        214.0,
+        26.229
+      ],
+      "Triangles": 5752
+    },
+    "AshGrateFloor": {
+      "Min": [
+        -9.629,
+        0.0,
+        -8.5
+      ],
+      "Roles": {
+        "METAL": 356,
+        "MOSS": 80,
+        "STONE": 12,
+        "TRIM": 392
+      },
+      "Size": [
+        19.287,
+        2.3,
+        17.0
+      ],
+      "Triangles": 840
+    },
+    "CatenarySpanDeck": {
+      "Min": [
+        -7.47,
+        -0.014,
+        -13.236
+      ],
+      "Roles": {
+        "METAL": 296,
+        "STONE": 12,
+        "TRIM": 464
+      },
+      "Size": [
+        14.94,
+        4.984,
+        26.364
+      ],
+      "Triangles": 772
+    },
+    "ChainBollard": {
+      "Min": [
+        -2.587,
+        0.0,
+        -2.587
+      ],
+      "Roles": {
+        "METAL": 984,
+        "STONE": 28,
+        "TRIM": 1400
+      },
+      "Size": [
+        5.174,
+        7.6,
+        5.174
+      ],
+      "Triangles": 2412
+    },
+    "ChainCapstanGreat": {
+      "Min": [
+        -8.75,
+        0.0,
+        -7.25
+      ],
+      "Roles": {
+        "METAL": 2452,
+        "STONE": 44,
+        "TRIM": 2599,
+        "WOOD": 96
+      },
+      "Size": [
+        17.5,
+        14.752,
+        14.5
+      ],
+      "Triangles": 5191
+    },
+    "Counterweight": {
+      "Min": [
+        -5.3,
+        0.025,
+        -5.3
+      ],
+      "Roles": {
+        "METAL": 296,
+        "STONE": 44,
+        "TRIM": 774
+      },
+      "Size": [
+        10.591,
+        28.471,
+        10.6
+      ],
+      "Triangles": 1114
+    },
+    "FarGatehouse": {
+      "Min": [
+        -28.5,
+        0.0,
+        -7.755
+      ],
+      "Roles": {
+        "ACCENT": 1168,
+        "GLOW": 520,
+        "METAL": 424,
+        "SILK": 96,
+        "STONE": 1479,
+        "TRIM": 2400
+      },
+      "Size": [
+        57.0,
+        54.25,
+        19.278
+      ],
+      "Triangles": 6087
+    },
+    "GibbetLedgeCage": {
+      "Min": [
+        -3.13,
+        0.0,
+        -6.3
+      ],
+      "Roles": {
+        "GLOW": 120,
+        "METAL": 632,
+        "STONE": 44,
+        "TRIM": 1236
+      },
+      "Size": [
+        6.253,
+        24.1,
+        13.752
+      ],
+      "Triangles": 2032
+    },
+    "GreatChainCatenary": {
+      "Min": [
+        -28.83,
+        -0.46,
+        -1.728
+      ],
+      "Roles": {
+        "METAL": 1560,
+        "TRIM": 936
+      },
+      "Size": [
+        57.337,
+        17.335,
+        3.457
+      ],
+      "Triangles": 2496
+    },
+    "GreatChainSegment": {
+      "Min": [
+        -17.28,
+        -0.57,
+        -2.13
+      ],
+      "Roles": {
+        "METAL": 1032,
+        "TRIM": 432
+      },
+      "Size": [
+        34.537,
+        4.25,
+        4.26
+      ],
+      "Triangles": 1464
+    },
+    "HalfForgedLink": {
+      "Min": [
+        -11.802,
+        0.0,
+        -6.818
+      ],
+      "Roles": {
+        "GLOW": 120,
+        "METAL": 442,
+        "STONE": 236,
+        "TRIM": 408,
+        "WOOD": 150
+      },
+      "Size": [
+        22.047,
+        12.487,
+        14.618
+      ],
+      "Triangles": 1356
+    },
+    "HookPulleyRack": {
+      "Min": [
+        -8.637,
+        0.0,
+        -2.9
+      ],
+      "Roles": {
+        "GLOW": 120,
+        "METAL": 930,
+        "STONE": 138,
+        "TRIM": 880
+      },
+      "Size": [
+        16.037,
+        13.6,
+        5.8
+      ],
+      "Triangles": 2068
+    },
+    "HungBeadPlatform": {
+      "Min": [
+        -23.9,
+        0.0,
+        -9.0
+      ],
+      "Roles": {
+        "GLOW": 120,
+        "METAL": 2894,
+        "STONE": 138,
+        "TRIM": 2400
+      },
+      "Size": [
+        47.8,
+        30.43,
+        18.0
+      ],
+      "Triangles": 5552
+    },
+    "KeystoneCage": {
+      "Min": [
+        -27.6,
+        0.0,
+        -23.6
+      ],
+      "Roles": {
+        "ACCENT": 584,
+        "GLOW": 120,
+        "METAL": 912,
+        "STONE": 320,
+        "TRIM": 2088
+      },
+      "Size": [
+        55.2,
+        44.86,
+        47.2
+      ],
+      "Triangles": 4024
+    },
+    "VoidPoolMesh": {
+      "Min": [
+        -36.0,
+        0.0,
+        -36.0
+      ],
+      "Roles": {
+        "ALT": 444,
+        "CRYSTAL": 1028,
+        "GLOW": 634,
+        "STONE": 124
+      },
+      "Size": [
+        72.0,
+        4.123,
+        72.0
+      ],
+      "Triangles": 2230
+    }
+  },
+  "Unit": "studs"
+}

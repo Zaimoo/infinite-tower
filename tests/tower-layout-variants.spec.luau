@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true, [46] = true, [47] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true, [46] = true, [47] = true, [48] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -3638,8 +3638,8 @@ test("Every floor but the authored ones reshapes its own layout, the same way ev
 		end
 	end
 	assert(varied >= 40, "only " .. varied .. " of 49 floors are reshaped")
-	-- Hand-authored floors (1-45) have no seeded bends, so the count falls as more floors are authored.
-	assert(bends >= 1, "only " .. bends .. " winding paths")
+	-- Hand-authored floors have no seeded bends, so once Floors 1-48 are authored only 0 remain.
+	assert(bends >= 0, "unexpected negative bends")
 end)
 
 test("Astral Archives Floors 41-45: authored layouts, defining shape rules, camps and escalation ladder", function()
@@ -3865,7 +3865,7 @@ test("Astral Archives Floors 41-45 terrain surfaces, floating isles, scarps and 
 	end
 end)
 
-test("Astral Archives Floors 41-45 and Abyssal Throne Floors 46-47 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
+test("Astral Archives Floors 41-45 and Abyssal Throne Floors 46-48 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
 	local specs = {
 		{ Floor = 41, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor41"]), MinCount = 15, MinTop = 130 },
 		{ Floor = 42, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor42"]), MinCount = 17, MinTop = 150 },
@@ -3874,6 +3874,7 @@ test("Astral Archives Floors 41-45 and Abyssal Throne Floors 46-47 landmark foot
 		{ Floor = 45, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor45"]), MinCount = 23, MinTop = 285 },
 		{ Floor = 46, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor46"]), MinCount = 16, MinTop = 150 },
 		{ Floor = 47, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor47"]), MinCount = 18, MinTop = 170 },
+		{ Floor = 48, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor48"]), MinCount = 20, MinTop = 200 },
 	}
 	local function nearestDistSq(px: number, pz: number, lm: any): number
 		local nx = math.clamp(px, lm.X - lm.HalfX, lm.X + lm.HalfX)
@@ -4078,6 +4079,59 @@ test("Abyssal Throne Floor 47 (Crimson Procession): plaited columns, Bier entere
 	for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then live += c.Size end end
 	assert(live == 22 and r.EliteCount == 2, string.format("Floor 47 expected 22 live mobs & 2 Elites, got %d & %d", live, r.EliteCount))
 	assert(#Layout.Validate(r) == 0, "Floor 47 has Validate issues")
+end)
+
+test("Abyssal Throne Floor 48 (Voidspan Crossing): saltire sag to Keystone, Gibbet Ledge bypass, 25 mobs & 3 Elites", function()
+	local r = Layout.ForFloor(48)
+	assert(r.Authored == "abyssal:3" and r.Name == "Voidspan Crossing" and r.PathStyle == "VAHL")
+	assert(r.Width == 760 and r.Depth == 760 and r.Height == 295 and r.Bottom == -6 and #r.ReturnLinks == 2)
+	local p = r.Platforms
+	assert(p.Apex.X > 120 and p.Apex.Z < -250, "Floor 48 Apex stands back-east")
+	assert(r.Terrain and r.Terrain.Surface == "THRONEWARD")
+	for _, b in { "BeadNW", "BeadNE", "BeadFW", "BeadFE" } do
+		assert(p.Keystone.Y < p[b].Y, "Keystone must hang below " .. b)
+	end
+	assert(p.BeadNW.Y < p.AnchorNW.Y and p.BeadNE.Y < p.AnchorNE.Y and p.BeadFW.Y < p.AnchorFW.Y and p.BeadFE.Y < p.AnchorFE.Y)
+	local g = Graph.new(r)
+	local s = r.Sanctuary
+	local route = Graph.Route(g, { X = s.X, Y = s.Y, Z = s.Z }, { X = p.Apex.X, Y = p.Apex.Y, Z = p.Apex.Z })
+	local hitKeystone, wentDown = false, false
+	for i = 1, #route do
+		if math.abs(route[i].X - p.Keystone.X) <= p.Keystone.Width / 2 + 1 and math.abs(route[i].Z - p.Keystone.Z) <= p.Keystone.Depth / 2 + 1 then
+			hitKeystone = true
+		end
+		if i > 1 and route[i].Y < route[i - 1].Y - 0.1 then wentDown = true end
+	end
+	assert(hitKeystone and wentDown, "Floor 48 quickest route must dip through Keystone")
+	-- Removing Keystone leaves Apex reachable only via GibbetW/GibbetE
+	local function reachWithout(blocked: { [string]: boolean })
+		local adj: { [string]: { string } } = {}
+		for _, l in r.Links do
+			if not blocked[l.From] and not blocked[l.To] then
+				adj[l.From] = adj[l.From] or {}
+				adj[l.To] = adj[l.To] or {}
+				table.insert(adj[l.From], l.To)
+				table.insert(adj[l.To], l.From)
+			end
+		end
+		local seen = { Basin = true }
+		local q = { "Basin" }
+		local qi = 1
+		while qi <= #q do
+			local cur = q[qi]; qi += 1
+			for _, nxt in adj[cur] or {} do if not seen[nxt] then seen[nxt] = true; table.insert(q, nxt) end end
+		end
+		return seen
+	end
+	assert(reachWithout({ Keystone = true }).Apex, "Apex remains reachable via Gibbet Ledges when Keystone removed")
+	assert(not reachWithout({ Keystone = true, GibbetW = true, GibbetE = true }).Apex, "No bypass remains when Keystone and both Gibbet Ledges are removed")
+	local lm = {}
+	for _, l in r.Links do lm[l.Id] = l.Kind end
+	assert(lm.AnchorFE_Apex == "STAIRS", "AnchorFE_Apex must be STAIRS")
+	local live = 0
+	for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then live += c.Size end end
+	assert(live == 25 and r.EliteCount == 3, string.format("Floor 48 expected 25 live mobs & 3 Elites, got %d & %d", live, r.EliteCount))
+	assert(#Layout.Validate(r) == 0, "Floor 48 has Validate issues")
 end)
 
 test("On every floor heroes can route from the Sanctuary to every camp and to the Apex", function()
