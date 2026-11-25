@@ -18,6 +18,8 @@
 -- The field is analytic (TowerTerrain.Field), so the ecosystem scatter (TowerBiomeAssets) can ask for the
 -- ground height, slope and kind of any spot without raycasting.
 
+local Layout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
+
 local TowerTerrain = {}
 
 local RES = 4
@@ -113,6 +115,12 @@ local Surfaces: { [string]: Surface } = {
 	-- basalt rift chasms and cliffs so glowing violet rift eyes, ward walls and pale gold lamps pop cleanly.
 	RIFTWARD = { Trail = M.Slate, Walk = M.Slate, WalkAccent = M.Basalt, Bank = M.Basalt,
 		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.Basalt },
+	-- Abyssal Throne obsidian & basalt surfaces (46–50): dark monolithic plates and slate shelves
+	-- with limestone border inlays so bone wardlights, iron chains, and void fissures pop cleanly.
+	VAHL = { Trail = M.Limestone, Walk = M.Basalt, WalkAccent = M.Slate, Bank = M.Slate,
+		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.Slate },
+	THRONEWARD = { Trail = M.Limestone, Walk = M.Basalt, WalkAccent = M.Basalt, Bank = M.Basalt,
+		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.Basalt },
 }
 TowerTerrain.Surfaces = Surfaces
 
@@ -179,6 +187,9 @@ export type Field = {
 -- walking plane (its part stays as an invisible proxy), STAIR_UNDER under stair treads, and UNDER under
 -- built decks (solid, visible masonry).
 local SOFT = 2.0
+-- A `Terrain.Shapes` entry without `Round` (e.g. `{ Sheer = true }`: a square terrace with a sheer apron) is a
+-- near-square superellipse; without `Grow` it grows 0 studs past the terrace's edges.
+local SQUARE_ROUND = 8
 local STAIR_UNDER = 2.8
 
 local function fbm(x: number, z: number, seed: number, octaves: number): number
@@ -224,6 +235,10 @@ local function walkways(layout: any): ({ any }, { any })
 		for _, name in { "LandingA", "LandingB" } do
 			local pad = link[name]
 			local padPlat = if name == "LandingA" then link.From else link.To
+			-- Abyssal floors: the pad stops at its terrace's far edge, as the room builder builds it.
+			if layout.PathStyle == "VAHL" and layout.Platforms[padPlat] then
+				pad = Layout.ClipLanding(pad, layout.Platforms[padPlat], if name == "LandingA" then "B" else "A")
+			end
 			if suspPlatMap and suspPlatMap[padPlat] then
 				continue
 			end
@@ -964,6 +979,8 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		end
 	end
 	local rifts = td and td.Rifts or nil
+	-- How far in from the walls rifts leave the mountain band whole: the band's full depth (Base + Noise).
+	local riftWallKeep = if td and td.WallBand and td.WallBand.Base > 0 then td.WallBand.Base + (td.WallBand.Noise or 0) else 0
 	local function riftCarve(x: number, z: number): number
 		if not rifts then return 0 end
 		local best = 0
@@ -978,8 +995,9 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 					if pt[1] < minX then minX = pt[1] end
 					if pt[1] > maxX then maxX = pt[1] end
 				end
-				for i = 1, nPts - 1 do
-					local a, b = pts[i], pts[i + 1]
+				local segCount = if rift.Loop and nPts >= 3 then nPts else nPts - 1
+				for i = 1, segCount do
+					local a, b = pts[i], pts[(i % nPts) + 1]
 					local dx, dz = b[1] - a[1], b[2] - a[2]
 					local len2 = math.max(dx * dx + dz * dz, 1e-3)
 					local t = math.clamp(((x - a[1]) * dx + (z - a[2]) * dz) / len2, 0, 1)
@@ -987,10 +1005,12 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 					local hwA = a[3] or defaultHW
 					local hwB = b[3] or defaultHW
 					local hw = hwA + (hwB - hwA) * t
-					if pinch == "W" then
-						hw *= math.clamp((cx - minX) / 45, 0, 1)
-					elseif pinch == "E" then
-						hw *= math.clamp((maxX - cx) / 45, 0, 1)
+					if not rift.Loop then
+						if pinch == "W" then
+							hw *= math.clamp((cx - minX) / 45, 0, 1)
+						elseif pinch == "E" then
+							hw *= math.clamp((maxX - cx) / 45, 0, 1)
+						end
 					end
 					if hw > 0.5 then
 						local warp = 2.6 * fbm(x / 18, z / 18, seed + 241 + rIdx * 11, 2)
@@ -1016,11 +1036,12 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				continue
 			end
 			local round = r.Round
-			local ax, az = r.HX + round.Grow, r.HZ + round.Grow
+			local grow = round.Grow or 0
+			local ax, az = r.HX + grow, r.HZ + grow
 			if math.abs(x - r.X) > ax + 1 or math.abs(z - r.Z) > az + 1 then
 				continue
 			end
-			local n = round.Round
+			local n = round.Round or SQUARE_ROUND
 			local sq = ((math.abs(x - r.X) / ax) ^ n + (math.abs(z - r.Z) / az) ^ n) ^ (1 / n)
 			if sq <= 1.0 then
 				local topY = r.Y - (if r.IsDeck then UNDER else SOFT)
@@ -1065,8 +1086,9 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 					-- terrace's edges, so a terrain island reads as rock, not a square slab. Its corners fall
 					-- away; its edges' middles, where paths land, stay flat. `Sheer = true` drops its apron as a
 					-- near-vertical cliff instead of a bank (Floor 36's Bell Stack: a sea-stack, not a hill).
-					local ax, az = r.HX + round.Grow, r.HZ + round.Grow
-					local n = round.Round
+					local grow = round.Grow or 0
+					local ax, az = r.HX + grow, r.HZ + grow
+					local n = round.Round or SQUARE_ROUND
 					local sq = ((math.abs(x - r.X) / ax) ^ n + (math.abs(z - r.Z) / az) ^ n) ^ (1 / n)
 					dist = math.max(0, (sq - 1) * math.min(ax, az))
 				end
@@ -1187,6 +1209,11 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		-- with rough walls, never cutting under a solid non-deck, non-bridge terrain terrace or earthen ramp.
 		if rifts and not (own > -math.huge and not ownDeck and not ownBridge) then
 			local rf = riftCarve(x, z)
+			-- A rift never cuts the mountain band along the walls (Floors 46-50): it fades out just inside the
+			-- band, so a moat running along the back edge leaves the wall standing instead of opening it to the sky.
+			if rf > 0 and riftWallKeep > 0 then
+				rf *= math.clamp((math.min(w / 2 - math.abs(x), d / 2 - math.abs(z)) - riftWallKeep) / 12, 0, 1)
+			end
 			if rf > 0 then
 				y = math.min(y, bottom + (y - bottom) * (1 - rf))
 				if rf >= 0.65 then
@@ -1389,7 +1416,7 @@ local function materialFor(field: Field, palette: Palette, kind: string, y: numb
 		elseif kind == "MOUNTAIN" and y - field.Bottom > 34 then
 			return s.Peak
 		end
-		if s == Surfaces.HALCYR or s == Surfaces.RIFTWARD then
+		if s == Surfaces.HALCYR or s == Surfaces.RIFTWARD or s == Surfaces.THRONEWARD then
 			return s.Lush
 		end
 		return if patch > 0.22 then s.WalkAccent else s.Lush

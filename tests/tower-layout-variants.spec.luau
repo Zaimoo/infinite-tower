@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true, [46] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -3582,6 +3582,49 @@ test("Floor 40's landmarks stand clear of every walkway, camp, boss arena and po
 	assert(tallest >= 265, "Floor 40's tallest landmark is under the ladder's 265 studs")
 end)
 
+test("Abyssal set pieces: overhead, sky, glow and hanging dressing is walk-through, structures collide", function()
+	local AbyssalCollision = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalCollision"])
+	for _, kind in { "DirgeUndertow", "CrimsonEclipseSky", "CourtSilhouette", "ThroneBanner", "FordWardlight",
+		"VigilOverheadChain", "AbyssHangingChain", "ThroneCrown", "MantleChain", "ChainClimbArch", "ChainFordSub_Basin_Crossing",
+		"EyotSkirt_EyotW", "NorthVaultRibChain", "BackRoseWindow", "AbyssalGateArch", "UndertowMoatRing" } do
+		assert(AbyssalCollision.IsGhostKind(kind), kind .. " should stay walk-through")
+	end
+	for _, kind in { "GallowsGibbet", "BonebarUrn", "FallstrandDebris", "ApexRimFrame", "FordChainPost", "EffigyOnBearers",
+		"OathgateArch", "PerimeterCurtainWall", "NorthVaultWall", "FarGatehouse", "DreadguardKeep", "ThroneMonument",
+		"LastOathGate", "KeepCornerSentry", "CovertPalisade", "CitadelScatter", "ChainedCrownKeystone", "VaultRibButtress",
+		-- Floor 49's platform supports: lane-exempt, but solid.
+		"DreadguardKeepMound", "StarFortRetainingAprons" } do
+		assert(not AbyssalCollision.IsGhostKind(kind), kind .. " should collide")
+	end
+end)
+
+test("Every authored floor's terrain field builds and samples without error", function()
+	-- A malformed Terrain entry (a Shapes entry missing a field the sampler reads) only fails when the room is
+	-- built, which the server reports to players as ROOM_NOT_READY: sample every authored field here instead.
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local biomes = { "verdant_ruins", "fungal_hollow", "ashen_dunes", "frozen_citadel", "infernal_foundry",
+		"thunder_highlands", "corrupted_grove", "sunken_sanctuary", "astral_archives", "abyssal_throne" }
+	for id = 1, 50 do
+		local room = Layout.ForFloor(id)
+		if room.Authored then
+			local ok, err = pcall(function()
+				local field = Terrain.Field(room, biomes[math.ceil(id / 5)], id)
+				for x = -room.Width / 2, room.Width / 2, 37 do
+					for z = -room.Depth / 2, room.Depth / 2, 37 do
+						field.Height(x, z)
+						field.Kind(x, z)
+						if field.Accent then field.Accent(x, z) end
+					end
+				end
+				for _, p in room.Platforms do
+					field.Height(p.X, p.Z)
+				end
+			end)
+			assert(ok, "floor " .. id .. "'s terrain field fails: " .. tostring(err))
+		end
+	end
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do
@@ -3822,13 +3865,14 @@ test("Astral Archives Floors 41-45 terrain surfaces, floating isles, scarps and 
 	end
 end)
 
-test("Astral Archives Floors 41-45 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
+test("Astral Archives Floors 41-45 and Abyssal Throne Floor 46 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
 	local specs = {
 		{ Floor = 41, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor41"]), MinCount = 15, MinTop = 130 },
 		{ Floor = 42, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor42"]), MinCount = 17, MinTop = 150 },
 		{ Floor = 43, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor43"]), MinCount = 19, MinTop = 175 },
 		{ Floor = 44, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor44"]), MinCount = 21, MinTop = 210 },
 		{ Floor = 45, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor45"]), MinCount = 23, MinTop = 285 },
+		{ Floor = 46, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor46"]), MinCount = 16, MinTop = 150 },
 	}
 	local function nearestDistSq(px: number, pz: number, lm: any): number
 		local nx = math.clamp(px, lm.X - lm.HalfX, lm.X + lm.HalfX)
@@ -3930,6 +3974,50 @@ test("Camps stand inside their terraces, never on a bend, and patrols walk on te
 			assert(spot.Y == apex.Y and math.abs(spot.X - apex.X) + 8 <= apex.Width / 2, "floor " .. id .. " boss portal off the Apex")
 		end
 	end
+end)
+
+test("Abyssal Throne Floor 46 (Abyssal Descent): braided upstream channels, 18 chain-fords, back-west Upfall, 16 mobs", function()
+	local r = Layout.ForFloor(46)
+	assert(r.Authored == "abyssal:1" and r.Name == "Abyssal Descent" and r.PathStyle == "VAHL")
+	assert(r.Width == 640 and r.Depth == 640 and r.Height == 240 and r.Bottom == -4)
+	assert(#r.ReturnLinks == 2, "Floor 46 keeps two basin return ramps")
+	local p = r.Platforms
+	assert(p.Apex.X < -100 and p.Apex.Z < -200, "Floor 46 Apex stands back-west")
+	assert(r.Terrain and r.Terrain.Direct and r.Terrain.Surface == "VAHL")
+	local bridgeCount = 0
+	for _, link in r.Links do
+		if link.Id == "Sanctuary_Basin" then
+			assert(not (r.Terrain.Bridges and r.Terrain.Bridges[link.Id]), "Sanctuary_Basin is earthen/stair arrival")
+		else
+			bridgeCount += 1
+			assert(r.Terrain.Bridges and r.Terrain.Bridges[link.Id] == true, link.Id .. " must be a Terrain.Bridges entry")
+			assert(r.Terrain.BridgeStyles and r.Terrain.BridgeStyles[link.Id] == "CHAINFORD", link.Id .. " must be CHAINFORD")
+			local a, b = p[link.From], p[link.To]
+			local touchesSpine = link.From == "Basin" or link.To == "Basin"
+				or link.From == "Crossing" or link.To == "Crossing"
+				or link.From == "EyotC" or link.To == "EyotC"
+				or link.From == "ShoalC" or link.To == "ShoalC"
+				or link.From == "HeadC" or link.To == "HeadC"
+			if not touchesSpine then
+				assert(math.abs(a.X - b.X) >= 40 and math.abs(a.Z - b.Z) >= 40, link.Id .. " must run diagonally between eyots")
+			end
+		end
+		if link.Id == "HeadC_Apex" then
+			assert(link.Kind == "STAIRS", "HeadC_Apex must be STAIRS")
+		end
+	end
+	assert(bridgeCount == 18, "Floor 46 has 18 CHAINFORD bridges")
+	for name, plat in p do
+		if name ~= "Sanctuary" and name ~= "Basin" then
+			assert(plat.Y > p.Basin.Y, name .. " must stand higher than Basin")
+		end
+	end
+	local live = 0
+	for _, c in r.Camps do
+		if c.Id ~= "APEX_SANCTUM" then live += c.Size end
+	end
+	assert(live == 16 and r.EliteCount == 1, string.format("Floor 46 expected 16 live mobs & 1 Elite, got %d & %d", live, r.EliteCount))
+	assert(#Layout.Validate(r) == 0, "Floor 46 has Validate issues")
 end)
 
 test("On every floor heroes can route from the Sanctuary to every camp and to the Apex", function()

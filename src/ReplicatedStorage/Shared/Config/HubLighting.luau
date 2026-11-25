@@ -584,6 +584,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.24, AtmosphereColor = c(62, 58, 128), AtmosphereDecay = c(44, 34, 98), AtmosphereHaze = 0.58,
 		TintColor = c(244, 246, 255), Saturation = 0.14, Contrast = 0.12, ExposureCompensation = 0.22, BloomIntensity = 0.60,
 	},
+	-- Floor 46, Abyssal Descent: ash-fall dusk under the Rift's wound — pale bone top key, dark violet
+	-- ambient, grey-violet ash haze, and violet Undertow glow rising through the braided channels.
+	[46] = {
+		Ambient = c(98, 88, 120), OutdoorAmbient = c(150, 140, 178), ColorShift_Top = c(222, 216, 236), ColorShift_Bottom = c(110, 80, 156),
+		AtmosphereDensity = 0.34, AtmosphereColor = c(118, 106, 142), AtmosphereDecay = c(70, 58, 104), AtmosphereHaze = 1.6,
+		TintColor = c(240, 236, 248), Saturation = 0.04, Contrast = 0.10, ExposureCompensation = 0.22, BloomIntensity = 0.42,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

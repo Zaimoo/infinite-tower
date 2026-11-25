@@ -1,0 +1,295 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "ChainFordSpan": {
+      "Min": [
+        -7.0,
+        0.0,
+        -12.0
+      ],
+      "Roles": {
+        "ALT": 24,
+        "METAL": 132,
+        "STONE": 72,
+        "TRIM": 580
+      },
+      "Size": [
+        14.0,
+        7.0,
+        24.0
+      ],
+      "Triangles": 808
+    },
+    "ChainPostIron": {
+      "Min": [
+        -2.033,
+        0.0,
+        -2.033
+      ],
+      "Roles": {
+        "ACCENT": 180,
+        "GLOW": 96,
+        "METAL": 216,
+        "TRIM": 1132
+      },
+      "Size": [
+        4.795,
+        11.2,
+        4.065
+      ],
+      "Triangles": 1624
+    },
+    "ChainedCrownKeystone": {
+      "Min": [
+        -5.8,
+        0.0,
+        -4.009
+      ],
+      "Roles": {
+        "ACCENT": 180,
+        "ALT": 44,
+        "METAL": 708,
+        "SILK": 24,
+        "STONE": 56,
+        "TRIM": 1199
+      },
+      "Size": [
+        11.6,
+        18.972,
+        8.019
+      ],
+      "Triangles": 2211
+    },
+    "ExecutionBlock": {
+      "Min": [
+        -4.3,
+        0.0,
+        -3.8
+      ],
+      "Roles": {
+        "ALT": 12,
+        "METAL": 492,
+        "SILK": 12,
+        "STONE": 166,
+        "TRIM": 492
+      },
+      "Size": [
+        8.6,
+        8.676,
+        7.6
+      ],
+      "Triangles": 1174
+    },
+    "EyotSlabL": {
+      "Min": [
+        -32.844,
+        0.0,
+        -35.431
+      ],
+      "Roles": {
+        "ALT": 120,
+        "MOSS": 120,
+        "STONE": 348
+      },
+      "Size": [
+        63.844,
+        18.671,
+        74.148
+      ],
+      "Triangles": 588
+    },
+    "EyotSlabM": {
+      "Min": [
+        -24.586,
+        0.0,
+        -25.942
+      ],
+      "Roles": {
+        "ALT": 120,
+        "MOSS": 120,
+        "STONE": 348
+      },
+      "Size": [
+        47.244,
+        16.651,
+        50.37
+      ],
+      "Triangles": 588
+    },
+    "EyotSlabS": {
+      "Min": [
+        -14.353,
+        0.0,
+        -16.989
+      ],
+      "Roles": {
+        "ALT": 120,
+        "MOSS": 120,
+        "STONE": 348
+      },
+      "Size": [
+        28.353,
+        14.638,
+        32.864
+      ],
+      "Triangles": 588
+    },
+    "FallenStackWreck": {
+      "Min": [
+        -6.627,
+        -0.485,
+        -5.765
+      ],
+      "Roles": {
+        "ACCENT": 48,
+        "ALT": 252,
+        "MOSS": 80,
+        "STONE": 20,
+        "WOOD": 132
+      },
+      "Size": [
+        14.617,
+        7.512,
+        10.867
+      ],
+      "Triangles": 532
+    },
+    "ObsidianGeodeSplit": {
+      "Min": [
+        -6.456,
+        -0.831,
+        -4.182
+      ],
+      "Roles": {
+        "CRYSTAL": 396,
+        "MOSS": 20,
+        "STONE": 160,
+        "TRIM": 24
+      },
+      "Size": [
+        11.959,
+        7.39,
+        8.447
+      ],
+      "Triangles": 600
+    },
+    "ReavingRack": {
+      "Min": [
+        -7.0,
+        0.0,
+        -1.833
+      ],
+      "Roles": {
+        "ALT": 148,
+        "METAL": 220,
+        "SILK": 24,
+        "STONE": 234,
+        "TRIM": 384
+      },
+      "Size": [
+        13.0,
+        10.0,
+        3.633
+      ],
+      "Triangles": 1010
+    },
+    "UndertowRibbon": {
+      "Min": [
+        -10.431,
+        -0.001,
+        -21.247
+      ],
+      "Roles": {
+        "CRYSTAL": 352,
+        "GLOW": 624,
+        "STONE": 200
+      },
+      "Size": [
+        21.202,
+        1.701,
+        42.344
+      ],
+      "Triangles": 1176
+    },
+    "UpfallColumn": {
+      "Min": [
+        -21.829,
+        -0.995,
+        -22.552
+      ],
+      "Roles": {
+        "CRYSTAL": 1938,
+        "GLOW": 756,
+        "METAL": 480,
+        "STONE": 448,
+        "TRIM": 476
+      },
+      "Size": [
+        43.278,
+        167.563,
+        45.687
+      ],
+      "Triangles": 4098
+    },
+    "VahlGibbetCage": {
+      "Min": [
+        -2.425,
+        0.0,
+        -5.4
+      ],
+      "Roles": {
+        "ALT": 80,
+        "METAL": 368,
+        "SILK": 12,
+        "STONE": 20,
+        "TRIM": 744
+      },
+      "Size": [
+        4.85,
+        22.8,
+        11.282
+      ],
+      "Triangles": 1224
+    },
+    "WardlightCage": {
+      "Min": [
+        -1.645,
+        0.0,
+        -2.5
+      ],
+      "Roles": {
+        "GLOW": 96,
+        "METAL": 210,
+        "STONE": 20,
+        "TRIM": 500
+      },
+      "Size": [
+        3.291,
+        13.28,
+        6.02
+      ],
+      "Triangles": 826
+    },
+    "WeirOfHooks": {
+      "Min": [
+        -11.3,
+        0.0,
+        -2.6
+      ],
+      "Roles": {
+        "ALT": 48,
+        "METAL": 966,
+        "SILK": 12,
+        "STONE": 150,
+        "TRIM": 760
+      },
+      "Size": [
+        22.6,
+        14.8,
+        5.2
+      ],
+      "Triangles": 1936
+    }
+  },
+  "Unit": "studs"
+}

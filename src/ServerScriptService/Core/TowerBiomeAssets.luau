@@ -32,13 +32,14 @@ local AstralFloor42 = require(script.Parent.TowerSetPieces.AstralFloor42)
 local AstralFloor43 = require(script.Parent.TowerSetPieces.AstralFloor43)
 local AstralFloor44 = require(script.Parent.TowerSetPieces.AstralFloor44)
 local AstralFloor45 = require(script.Parent.TowerSetPieces.AstralFloor45)
+local AbyssalFloor46 = require(script.Parent.TowerSetPieces.AbyssalFloor46)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
 local gold = rgb(218, 178, 88)
 local darkGold = rgb(168, 132, 58)
 
-local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, LeviathanDaisMosaic = true, MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, AstralGateRing = true, AstralOrbitRail = true, AstralDome = true, AstralIsleUnderside = true, AstralWardVeil = true, AstralRiftEye = true, ConcourseStarMap = true, AstralIndexLamp = true, AstralShutteredLamp = true, AstralSkyQuill = true, BlotterChainedSlab = true, RiftBedGlows = true, ObservatoryMeridianLine = true, AstralIsleDeck = true, AstralConcourseDeck = true, AstralNebulaSea = true, AstralSanctumRays = true, AstralIsleBalustrade = true }
+local CampExemptKinds = { RampArch = true, NerethBellArch = true, CloisterFloorMosaic = true, LeviathanDaisMosaic = true, MaelstromVortex = true, SeaDomeShell = true, EyeOfDaylight = true, HollinStile = true, GlassArchSpan = true, PortcullisGate = true, AstralGateRing = true, AstralOrbitRail = true, AstralDome = true, AstralIsleUnderside = true, AstralWardVeil = true, AstralRiftEye = true, ConcourseStarMap = true, AstralIndexLamp = true, AstralShutteredLamp = true, AstralSkyQuill = true, BlotterChainedSlab = true, RiftBedGlows = true, ObservatoryMeridianLine = true, AstralIsleDeck = true, AstralConcourseDeck = true, AstralNebulaSea = true, AstralSanctumRays = true, AstralIsleBalustrade = true, AbyssalVaultDome = true, AbyssalUndertow = true, AbyssalUpfall = true, AbyssalEclipse = true, AbyssalGreatChain = true, AbyssalGateArch = true, AbyssalFloorInlay = true, AbyssalWardlight = true, AbyssalEffigySpan = true, AbyssalChainCage = true, DirgeUndertowBed = true, EyotOutcropBay = true, PaleRiftWound = true, BlackVaultRiftSlit = true, CrossingOathsInlay = true, DirgeFarSilhouettes = true, DirgeUndertowMoat = true, VahlLandmarkBays = true, AbyssalSkyVault = true, AbyssalVoidFloor = true, AbyssalSkyHorizon = true, DreadguardKeepMound = true, KeepAnchorChains = true, StarFortRetainingAprons = true, UndertowMoatRing = true, AbyssalUndertowBed = true, ThroneSilverKey = true }
 
 -- True when a part reaches into an enemy camp. Mobs are grounded by raycasting downward, so props
 -- overlapping a camp obstruct navigation and embed mobs. Used as a TowerPropClearance hit test.
@@ -99,6 +100,12 @@ Assets.AirborneKinds = table.freeze({
 	AstralSkyQuill = true, AstralSkyHairlineRift = true, AstralSplitAurora = true,
 	AstralSkyNorthRift = true, AstralTornSky = true, AstralRiftEye = true, AstralWardVeil = true,
 	BlotterChainedSlab = true, PlanetGlobeExtra = true, ObservatoryMeridianLine = true, RiftBedGlows = true,
+	-- Abyssal Throne (Floors 46-50) sky fissures, Undertow beds, chains, Wardlights and floor inlays.
+	PaleRiftWound = true, BlackVaultRiftSlit = true, AbyssalSkyVault = true, AbyssalSkyHorizon = true,
+	DirgeUndertowBed = true, DirgeUndertowMoat = true, UndertowMoatRing = true, AbyssalUndertowBed = true,
+	AbyssalVoidFloor = true, AbyssalFloorInlay = true, CrossingOathsInlay = true, KeepAnchorChains = true,
+	AbyssalVaultDome = true, AbyssalUndertow = true, AbyssalUpfall = true, AbyssalEclipse = true,
+	AbyssalGreatChain = true, AbyssalWardlight = true, AbyssalChainCage = true, ThroneSilverKey = true,
 })
 
 -- field: the floor's TowerTerrain field on a natural floor (the kit imported), else nil.
@@ -123,6 +130,9 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- Authored Astral Archives floors (41-45) build their own set pieces (TowerSetPieces/AstralFloor41..45)
 	-- and skip the generic GalaxyPortal, crossing lecterns and north citadel wing cliffs.
 	local astralFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 7) == "astral:"
+	-- Authored Abyssal Throne floors (46-50) build their own set pieces (TowerSetPieces/AbyssalFloor46..50)
+	-- and skip the generic ObsidianKeep, ChainedSpire, Throne and Eclipse props.
+	local abyssalFloor = type(layout.Authored) == "string" and string.sub(layout.Authored, 1, 8) == "abyssal:"
 	local accent = theme.LightColor
 	local cliffColor = theme.CliffColor or theme.WallColor
 	local cliffMat = theme.CliffMaterial or Enum.Material.Rock
@@ -729,7 +739,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			spire(at + V(signX * 8, 0, -8), 34 * lScale, 9 * lScale, theme.TrimColor, accent, false)
 		elseif biome == "astral_archives" and not astralFloor then
 			libraryWing(at, 34 * lScale, 42 * lScale, if signX > 0 then -math.pi / 2.4 else math.pi / 2.4)
-		elseif biome == "abyssal_throne" then
+		elseif biome == "abyssal_throne" and not abyssalFloor then
 			spire(at, 50 * lScale, 12 * lScale, rgb(24, 18, 34), accent, false)
 		end
 	end
@@ -767,7 +777,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 					orb("MoltenBubbleGlow", V(cx + s * 6, seaLevel + 0.3, cz - 4), V(8, 1.2, 8), rgb(255, 175, 55), Enum.Material.SmoothPlastic, 0.15)
 				elseif isCosmic then
 					orb("CosmicNebulaCloud", V(cx, seaLevel + 1, cz), V(48, 8, 44), rgb(88, 64, 175), Enum.Material.SmoothPlastic, 0.65)
-				elseif isAbyss then
+				elseif isAbyss and not abyssalFloor then
 					orb("AbyssalTealMist", V(cx, seaLevel + 1, cz), V(48, 8, 44), rgb(52, 215, 228), Enum.Material.SmoothPlastic, 0.70)
 					spire(V(cx, bottom, cz), 21 + (k % 3) * 4, 6, cliffColor, accent, false)
 				else
@@ -1010,7 +1020,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				ring("BrassArmillaryInner", pedAt + V(0, 13, 0), 4.8, 0.55, gold, Enum.Material.Metal, CFrame.Angles(-0.5, 1.1, 0), 0, math.pi * 2, 12)
 				orb("ArmillaryCore", pedAt + V(0, 13, 0), V(2.4, 2.4, 2.4), accent, Enum.Material.Neon)
 			end)
-		elseif biome == "abyssal_throne" then
+		elseif biome == "abyssal_throne" and not abyssalFloor then
 			local obAt = V(crossing.X + s * (crossing.Width * 0.5 + 22), bottom, crossing.Z - 12)
 			group("ChainedSpire", function()
 				spire(obAt, 62 * scale, 14, rgb(22, 18, 30), accent, false)
@@ -6526,6 +6536,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "astral:3" then AstralFloor43.Build
 		elseif layout.Authored == "astral:4" then AstralFloor44.Build
 		elseif layout.Authored == "astral:5" then AstralFloor45.Build
+		elseif layout.Authored == "abyssal:1" then AbyssalFloor46.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({
@@ -6576,8 +6587,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 				block("StrataCliffTerra", V(23.5, math.max(10, ch - 34 * scale), 26), V(cx, apex.Y + 39 * scale - 10, cz), rgb(158, 88, 62), Enum.Material.Slate)
 			end
 		end)
-	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or layout.Authored == "thunder:3" or layout.Authored == "thunder:4" or layout.Authored == "thunder:5" or corruptedFloor or sunkenFloor or astralFloor then
-		-- Floors 16-25, 28-30, 31-40 and 41-45 own their north horizon backdrops directly (TowerSetPieces).
+	elseif layout.Authored == "frozen:1" or layout.Authored == "frozen:2" or layout.Authored == "frozen:3" or layout.Authored == "frozen:4" or layout.Authored == "frozen:5" or layout.Authored == "infernal:1" or layout.Authored == "infernal:2" or layout.Authored == "infernal:3" or layout.Authored == "infernal:4" or layout.Authored == "infernal:5" or layout.Authored == "thunder:3" or layout.Authored == "thunder:4" or layout.Authored == "thunder:5" or corruptedFloor or sunkenFloor or astralFloor or abyssalFloor then
+		-- Floors 16-25, 28-30, 31-40, 41-45 and 46-50 own their north horizon backdrops directly (TowerSetPieces).
 	else
 		-- Authored Fungal floors have their own backdrop: the cavern wall itself (Floor 6's Crown Cluster grows on it).
 		for _, s in if fungalFloor then {} else { -1, 1 } do
@@ -7408,6 +7419,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 	elseif astralFloor then
 		-- Floors 41-45 build their own Apex landmarks, open Starfield and Rift horizons (TowerSetPieces/AstralFloor41..45).
+	elseif abyssalFloor then
+		-- Floors 46-50 build their own Black Vault horizons, Undertow beds and Crown landmarks (TowerSetPieces/AbyssalFloor46..50).
 	elseif biome == "astral_archives" then
 		arch(backdrop + V(0, 0, 12), 48 * scale, 46 * scale, 12, gold, Enum.Material.Metal, 0)
 		group("GalaxyPortal", function()
@@ -7638,7 +7651,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	-- Ecology (TowerBiomeKit). Spots come from the terrain field (ground kind and slope), keep apart from
 	-- each other (Poisson-style), stay out of every camp and walkway lane, and are seeded by the floor id,
 	-- so every floor grows its own landscape the same way each time it is built.
-	if natural and field and biomeKit and not astralFloor then
+	if natural and field and biomeKit and not astralFloor and not abyssalFloor then
 		local eco = Kit.Ecology[biome]
 		local floorId = (parent:GetAttribute("FloorId") :: number?) or index
 		local rand = Random.new(floorId * 7919 + 13)

@@ -45,7 +45,20 @@ local workspace = {
 local CFrame = {}
 local cframeMeta = {}
 function CFrame.new(x, y, z)
+	if type(x) == "table" and x.X ~= nil then
+		local ry = 0
+		if type(y) == "table" and y.X ~= nil then
+			local dx, dz = y.X - x.X, y.Z - x.Z
+			if dx * dx + dz * dz > 1e-6 then
+				ry = math.atan2(-dx, -dz)
+			end
+		end
+		return setmetatable({ X = x.X, Y = x.Y, Z = x.Z, rx = 0, ry = ry, rz = 0 }, cframeMeta)
+	end
 	return setmetatable({ X = x or 0, Y = y or 0, Z = z or 0, rx = 0, ry = 0, rz = 0 }, cframeMeta)
+end
+function CFrame.lookAt(at, target)
+	return CFrame.new(at, target)
 end
 function CFrame.Angles(rx, ry, rz)
 	return setmetatable({ X = 0, Y = 0, Z = 0, rx = rx or 0, ry = ry or 0, rz = rz or 0 }, cframeMeta)
@@ -99,8 +112,25 @@ function Color3.fromHex(hex)
 end
 
 local Random = {}
-function Random.new()
-	return { NextNumber = function() return 0.5 end }
+function Random.new(seed)
+	local state = ((seed or 1) % 2147483647)
+	if state <= 0 then state = 1 end
+	local function next01()
+		state = (state * 48271) % 2147483647
+		return state / 2147483647
+	end
+	return {
+		NextNumber = function(_, a, b)
+			if a and b then return a + (b - a) * next01() end
+			if a then return a * next01() end
+			return next01()
+		end,
+		NextInteger = function(_, a, b)
+			local lo = math.min(a, b)
+			local hi = math.max(a, b)
+			return math.clamp(lo + math.floor(next01() * (hi - lo + 1)), lo, hi)
+		end,
+	}
 end
 
 local warn = print
@@ -161,3 +191,90 @@ local Enum = setmetatable({}, {
 		})
 	end,
 })
+
+local NumberRange = {
+	new = function(a, b) return { Min = a, Max = b or a } end,
+}
+local NumberSequenceKeypoint = {
+	new = function(t, v, e) return { Time = t, Value = v, Envelope = e or 0 } end,
+}
+local NumberSequence = {
+	new = function(arg)
+		if type(arg) == "table" then return { Keypoints = arg } end
+		return { Keypoints = { NumberSequenceKeypoint.new(0, arg), NumberSequenceKeypoint.new(1, arg) } }
+	end,
+}
+local ColorSequenceKeypoint = {
+	new = function(t, c) return { Time = t, Value = c } end,
+}
+local ColorSequence = {
+	new = function(a, b)
+		if type(a) == "table" and not a.R then return { Keypoints = a } end
+		return { Keypoints = { ColorSequenceKeypoint.new(0, a), ColorSequenceKeypoint.new(1, b or a) } }
+	end,
+}
+
+local Instance = {}
+function Instance.new(className)
+	local children = {}
+	local attrs = {}
+	local inst
+	inst = setmetatable({
+		ClassName = className,
+		Name = className,
+		Parent = nil,
+		SetAttribute = function(_, k, v) attrs[k] = v end,
+		GetAttribute = function(_, k) return attrs[k] end,
+		GetAttributes = function() return attrs end,
+		GetChildren = function() return children end,
+		GetDescendants = function()
+			local out = {}
+			local function walk(list)
+				for _, c in list do
+					table.insert(out, c)
+					if c._children then walk(c._children) end
+				end
+			end
+			walk(children)
+			return out
+		end,
+		FindFirstChild = function(_, name, recursive)
+			for _, c in children do
+				if c.Name == name then return c end
+				if recursive and c.FindFirstChild then
+					local sub = c:FindFirstChild(name, true)
+					if sub then return sub end
+				end
+			end
+			return nil
+		end,
+		FindFirstChildWhichIsA = function(_, className, recursive)
+			for _, c in children do
+				if c:IsA(className) then return c end
+				if recursive and c.FindFirstChildWhichIsA then
+					local sub = c:FindFirstChildWhichIsA(className, true)
+					if sub then return sub end
+				end
+			end
+			return nil
+		end,
+		FindFirstChildOfClass = function(self, className, recursive)
+			return self:FindFirstChildWhichIsA(className, recursive)
+		end,
+		GetPivot = function(self) return self.CFrame or CFrame.identity end,
+		PivotTo = function(self, cf) self.CFrame = cf end,
+		IsA = function(self, name)
+			return self.ClassName == name or name == "Instance" or (name == "BasePart" and (self.ClassName == "Part" or self.ClassName == "WedgePart" or self.ClassName == "MeshPart"))
+		end,
+		Destroy = function() end,
+		_children = children,
+	}, {
+		__newindex = function(t, k, v)
+			if k == "Parent" and type(v) == "table" and v._children then
+				table.insert(v._children, t)
+			end
+			rawset(t, k, v)
+		end,
+	})
+	return inst
+end

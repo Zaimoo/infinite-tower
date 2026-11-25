@@ -3671,6 +3671,101 @@ local AUTHORED: {[number]: any} = {
 			MeadowScale = 0,
 		},
 	},
+	[46] = {
+		Key = "abyssal:1", Name = "Abyssal Descent",
+		PathStyle = "VAHL",
+		Liquid = { Dry = true },
+		Size = { Width = 640, Depth = 640, Height = 240, Bottom = -4 },
+		Names = {
+			Sanctuary = "The Fallstair",
+			Basin = "The Fallstrand",
+			WestGallery = "Reaving Eyot",
+			EastGallery = "Ashbar",
+			Crossing = "The Ford of Pages",
+			Apex = "The Upfall",
+			EyotW = "Cinder Eyot",
+			EyotC = "The Drift",
+			EyotE = "Gallows Eyot",
+			ShoalW = "Wreck Shoal",
+			ShoalC = "Midbraid",
+			ShoalE = "Bonebar",
+			HeadC = "The Lip",
+			HeadE = "Weir of Hooks",
+		},
+		Basin = { X = 0, Y = 0, Z = 180, Width = 608, Depth = 96 },
+		WestGallery = { X = -175, Y = 8, Z = 55, Width = 84, Depth = 76 },
+		EastGallery = { X = 175, Y = 4, Z = 55, Width = 84, Depth = 76 },
+		Crossing = { X = 0, Y = 12, Z = 60, Width = 76, Depth = 64 },
+		ExtraPlatforms = {
+			EyotW = { X = -100, Y = 16, Z = -45, Width = 60, Depth = 76 },
+			EyotC = { X = 0, Y = 14, Z = -55, Width = 52, Depth = 60 },
+			EyotE = { X = 100, Y = 20, Z = -45, Width = 60, Depth = 76 },
+			ShoalW = { X = -215, Y = 22, Z = -120, Width = 60, Depth = 76 },
+			ShoalC = { X = 0, Y = 24, Z = -160, Width = 64, Depth = 72 },
+			ShoalE = { X = 215, Y = 28, Z = -120, Width = 60, Depth = 76 },
+			HeadC = { X = 25, Y = 30, Z = -262, Width = 56, Depth = 52 },
+			HeadE = { X = 160, Y = 32, Z = -245, Width = 64, Depth = 60 },
+		},
+		Apex = { X = -150, Y = 40, Z = -240, Width = 120, Depth = 88 },
+		Paths = {
+			{ "Sanctuary", "Basin" }, { "Basin", "WestGallery" }, { "Basin", "Crossing" }, { "Basin", "EastGallery" },
+			{ "WestGallery", "EyotW" }, { "Crossing", "EyotW" }, { "Crossing", "EyotE" }, { "EastGallery", "EyotE" },
+			{ "Crossing", "EyotC" },
+			{ "EyotW", "ShoalW" }, { "EyotW", "ShoalC" }, { "EyotC", "ShoalC" }, { "EyotE", "ShoalC" }, { "EyotE", "ShoalE" },
+			{ "ShoalW", "Apex" }, { "ShoalC", "HeadC" }, { "ShoalE", "HeadE" }, { "HeadC", "Apex" }, { "HeadE", "HeadC" },
+		},
+		Stairs = { HeadC_Apex = true },
+		Terrain = {
+			Direct = true,
+			Surface = "VAHL",
+			Decks = { Sanctuary = true, EyotC = true, ShoalW = true, HeadC = true },
+			DeckThickness = { EyotC = 2.4, ShoalW = 2.6, HeadC = 3.2 },
+			DeckLooks = {
+				EyotC = { Color = Color3.fromRGB(78, 56, 40), Material = Enum.Material.WoodPlanks },
+				ShoalW = { Color = Color3.fromRGB(168, 162, 148), Material = Enum.Material.Limestone },
+				HeadC = { Color = Color3.fromRGB(28, 26, 34), Material = Enum.Material.Basalt },
+			},
+			Shapes = {
+				WestGallery = { Round = 2.4, Sheer = true },
+				EastGallery = { Round = 2.4, Sheer = true },
+				Crossing = { Round = 2.4, Sheer = true },
+				EyotW = { Round = 2.4, Sheer = true },
+				EyotE = { Round = 2.4, Sheer = true },
+				ShoalC = { Round = 2.4, Sheer = true },
+				ShoalE = { Round = 2.4, Sheer = true },
+				HeadE = { Round = 2.2, Sheer = true },
+				Apex = { Round = 2.8, Sheer = true },
+			},
+			Rifts = {
+				{ HalfWidth = 17, Points = { { -245, 125, 16 }, { -255, 45, 18 }, { -195, -35, 16 }, { -270, -100, 16 }, { -235, -185, 18 }, { -205, -265, 22 } } },
+				{ HalfWidth = 15, Points = { { -105, 125, 16 }, { -115, 45, 15 }, { -175, -15, 14 }, { -110, -100, 16 }, { -140, -175, 18 }, { -155, -240, 22 } } },
+				{ HalfWidth = 14, Points = { { -55, 125, 14 }, { -65, 12, 15 }, { -50, -95, 15 }, { -85, -165, 18 }, { -125, -230, 22 } } },
+				{ HalfWidth = 14, Points = { { 55, 125, 14 }, { 65, 12, 15 }, { 50, -95, 15 }, { 95, -160, 16 }, { 90, -240, 18 }, { -55, -288, 20 }, { -155, -280, 22 } } },
+				{ HalfWidth = 15, Points = { { 120, 125, 16 }, { 118, 35, 15 }, { 175, -25, 14 }, { 110, -105, 16 }, { 95, -195, 16 }, { 5, -292, 18 }, { -160, -285, 22 } } },
+				{ HalfWidth = 17, Points = { { 238, 125, 16 }, { 245, 35, 18 }, { 190, -35, 16 }, { 265, -110, 16 }, { 225, -195, 16 }, { 140, -295, 16 }, { -80, -305, 18 }, { -175, -290, 22 } } },
+			},
+			Bridges = {
+				Basin_WestGallery = true, Basin_Crossing = true, Basin_EastGallery = true,
+				WestGallery_EyotW = true, Crossing_EyotW = true, Crossing_EyotE = true, EastGallery_EyotE = true,
+				Crossing_EyotC = true,
+				EyotW_ShoalW = true, EyotW_ShoalC = true, EyotC_ShoalC = true, EyotE_ShoalC = true, EyotE_ShoalE = true,
+				ShoalW_Apex = true, ShoalC_HeadC = true, ShoalE_HeadE = true, HeadC_Apex = true, HeadE_HeadC = true,
+			},
+			BridgeStyles = {
+				Basin_WestGallery = "CHAINFORD", Basin_Crossing = "CHAINFORD", Basin_EastGallery = "CHAINFORD",
+				WestGallery_EyotW = "CHAINFORD", Crossing_EyotW = "CHAINFORD", Crossing_EyotE = "CHAINFORD", EastGallery_EyotE = "CHAINFORD",
+				Crossing_EyotC = "CHAINFORD",
+				EyotW_ShoalW = "CHAINFORD", EyotW_ShoalC = "CHAINFORD", EyotC_ShoalC = "CHAINFORD", EyotE_ShoalC = "CHAINFORD", EyotE_ShoalE = "CHAINFORD",
+				ShoalW_Apex = "CHAINFORD", ShoalC_HeadC = "CHAINFORD", ShoalE_HeadE = "CHAINFORD", HeadC_Apex = "CHAINFORD", HeadE_HeadC = "CHAINFORD",
+			},
+			NoApexShelf = true,
+			LiquidRise = 0,
+			WallBand = { Base = 14, Noise = 6 },
+			GroveScale = 0,
+			MeadowScale = 0,
+			GroundCover = false,
+		},
+	},
 	-- Floor 36, Drowned Steps (Sunken Sanctuary Introduction; docs/prompts/sunken-sanctuary-floor-layouts-prompt.md,
 	-- guide image reference/Sunken Sanctuary 36.webp): the Nereth city's sea-front at low tide. A tide-flat of
 	-- turquoise shallows and sandbars; the Pilgrim Stair climbs from the Stair Foot up the First Flight to the
@@ -4837,6 +4932,45 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 		end
 	end
 	return routes
+end
+
+-- A landing pad runs from its ramp's end (`rampEnd`, "A" or "B": LandingA's ramp end is its B, LandingB's its A)
+-- into its terrace. A ramp too short for its climb starts deep inside its terrace, and its pad (twice that depth
+-- long) runs out past the far side into the void at the terrace's height, across any walkway below it (Floor 48's
+-- Keystone). Returns the pad with its far end stopped 2 studs past the terrace's edge (the same table when it
+-- already stops there); the ramp end never moves. The room builder and the terrain use it on the Abyssal floors
+-- (PathStyle "VAHL"); the layout data itself keeps the full pads.
+function Layout.ClipLanding(pad: any, terrace: any, rampEnd: string): any
+	local rx, rz = if rampEnd == "B" then pad.BX else pad.AX, if rampEnd == "B" then pad.BZ else pad.AZ
+	local fx, fz = if rampEnd == "B" then pad.AX else pad.BX, if rampEnd == "B" then pad.AZ else pad.BZ
+	local len = math.sqrt((fx - rx) ^ 2 + (fz - rz) ^ 2)
+	if len < 1 then
+		return pad
+	end
+	local dx, dz = (fx - rx) / len, (fz - rz) / len
+	local tIn, tOut = -math.huge, math.huge
+	for _, axis in { { rx, dx, terrace.X, terrace.Width / 2 + 2 }, { rz, dz, terrace.Z, terrace.Depth / 2 + 2 } } do
+		local r0, d, c, half = axis[1], axis[2], axis[3], axis[4]
+		if math.abs(d) < 1e-6 then
+			if math.abs(r0 - c) > half then
+				return pad
+			end
+		else
+			local t1, t2 = (c - half - r0) / d, (c + half - r0) / d
+			tIn, tOut = math.max(tIn, math.min(t1, t2)), math.min(tOut, math.max(t1, t2))
+		end
+	end
+	if tOut < tIn or tOut >= len - 0.5 then
+		return pad
+	end
+	local keep = math.max(tOut, 6)
+	local clipped = table.clone(pad)
+	if rampEnd == "B" then
+		clipped.AX, clipped.AZ = rx + dx * keep, rz + dz * keep
+	else
+		clipped.BX, clipped.BZ = rx + dx * keep, rz + dz * keep
+	end
+	return clipped
 end
 
 function Layout.Lanes(index: number, floorId: number?): {any}

@@ -85,6 +85,8 @@ A mysterious library existing beyond the boundaries of the physical world. Endle
 
 A terrifying kingdom situated in the deepest reaches of an endless abyss. Colossal obsidian structures rise from a shattered landscape, surrounded by rivers of dark energy and towering black spires. At its center stands an immense throne overlooking the forsaken domain, radiating an overwhelming supernatural presence. Monstrous beings and ancient abyssal guardians inhabit the region, serving an unknown ruler whose influence extends throughout the darkness.
 
+**Floors 46–50 (`docs/prompts/abyssal-throne-floor-layouts-prompt.md`):** the abyssal kingdom is the court of the **Vahl**, mortal wardens who followed **Vharos the Warden-King** below the Rift so the dark would have a master instead of a mouth. They built in black obsidian, blackened iron chains, bone-white marble walkway trim (the **Wardlights** whose pale flames mark every open road) and matte wine-crimson silk, beneath the **Chained Crown** crest. Below every walkway the **Undertow** runs uphill toward the Throne, answered by the client-only **Dirge** (`Dirge.luau`, synced to `workspace:GetServerTimeNow()`), whose slow bell toll tightens from 16 s on Floor 46 to 6 s on Floor 50 (where the Crimson Eclipse answers with a deep red-black heartbeat).
+
 ---
 
 These descriptions establish each biome's environment, atmosphere, and lore without locking in gameplay mechanics. They can form the basis for map creation, enemy factions, resources, environmental hazards, and bosses.

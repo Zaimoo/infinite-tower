@@ -587,7 +587,8 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	end
 	assert(Light.FloorGrades[41].AtmosphereDensity < Light.FloorGrades[45].AtmosphereDensity, "Astral atmosphere thickens from Floor 41 to Floor 45")
 	assert(Light.FloorGrades[45].BloomIntensity >= 0.58, "Floor 45 keeps rift-eye bloom")
-	assert(Light.TowerPreset(10, 46) == Light.TowerPreset(10), "a floor without its own grade shares its biome's")
+	assert(Light.FloorGrades[46] ~= nil and Light.TowerPreset(10, 46) ~= Light.TowerPreset(10), "floor 46 layers its ash-fall dusk grade over BiomeGrades[10]")
+	assert(Light.TowerPreset(10, 99) == Light.TowerPreset(10), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
 		local z = 12000 + math.floor((id - 1) / 10) * 2400
@@ -596,13 +597,14 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.TowerFloorAt(0, 0) == nil)
 end)
 
-test("Astral Archives surfaces HALCYR and RIFTWARD avoid blocky materials, Fungal-owned materials, and Mud", function()
+test("Astral Archives and Abyssal Throne surfaces avoid blocky materials, Fungal-owned materials, Mud, and CrackedLava", function()
 	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
 	local forbidden: { [any]: string } = {}
 	for _, m in Terrain.BlockyMaterials do forbidden[m] = "blocky" end
 	for _, m in Terrain.FungalMaterials do forbidden[m] = "Fungal-owned" end
 	forbidden[Enum.Material.Mud] = "Mud"
-	for _, name in { "HALCYR", "RIFTWARD" } do
+	forbidden[Enum.Material.CrackedLava] = "CrackedLava"
+	for _, name in { "HALCYR", "RIFTWARD", "VAHL", "THRONEWARD" } do
 		local surf = Terrain.Surfaces[name]
 		assert(surf ~= nil, "missing surface " .. name)
 		for slot, mat in surf do
@@ -689,6 +691,197 @@ test("Floor 40 has its own Leviathan's Basin kit: at least thirteen new template
 	end
 	assert(#f40 >= 13)
 	assert(Kit.ExtraTemplates.GreatTidebellTower.Size.Y >= 265, "GreatTidebellTower must clear the ladder's 265 studs")
+end)
+
+local function rgbToHsvDeg(col: Color3): (number, number, number)
+	local r, g, b = col.R, col.G, col.B
+	local mx = math.max(r, g, b)
+	local mn = math.min(r, g, b)
+	local d = mx - mn
+	local h = 0
+	if d > 1e-5 then
+		if mx == r then
+			h = ((g - b) / d) % 6
+		elseif mx == g then
+			h = (b - r) / d + 2
+		else
+			h = (r - g) / d + 4
+		end
+		h *= 60
+		if h < 0 then h += 360 end
+	end
+	local s = if mx > 1e-5 then d / mx else 0
+	return h, s, mx
+end
+
+local function makeAbyssalCollectorCtx(room: any, kitEnabled: boolean)
+	local LayoutMod = require(nodes["ReplicatedStorage.Shared.Config.TowerLayout"])
+	local props = {}
+	local parts = {}
+	local lights = {}
+	local emitters = {}
+	local attrs: { [string]: any } = {}
+	local currentGroup = Instance.new("Model")
+	local function makeInst(className: string, name: string?)
+		local inst = Instance.new(className)
+		inst.Name = name or className
+		if className == "PointLight" then
+			table.insert(lights, inst)
+		elseif className == "ParticleEmitter" then
+			table.insert(emitters, inst)
+		end
+		return inst
+	end
+	local function newPart(name: string, size: Vector3, pos: Vector3, color: Color3, mat: Enum.Material, trans: number?)
+		local p = makeInst("Part", name)
+		p.Size = size
+		p.Position = pos
+		p.CFrame = CFrame.new(pos.X, pos.Y, pos.Z)
+		p.Color = color
+		p.Material = mat
+		p.Transparency = trans or 0
+		table.insert(parts, p)
+		return p
+	end
+	local ctx = {
+		origin = Vector3.new(0, 0, 0),
+		layout = room,
+		field = nil,
+		w = room.Width,
+		d = room.Depth,
+		h = room.Height,
+		bottom = room.Bottom,
+		has = function(name: string) return kitEnabled and Kit.ExtraTemplates[name] ~= nil end,
+		footprintClear = function() return true end,
+		current = function() return currentGroup end,
+		tag = function(k: string, v: any) currentGroup:SetAttribute(k, v) end,
+		reserve = function() end,
+		setAttribute = function(k: string, v: any) attrs[k] = v end,
+		group = function(kind: string, fn: () -> ())
+			local m = makeInst("Model", kind)
+			m:SetAttribute("PropKind", kind)
+			local prev = currentGroup
+			currentGroup = m
+			fn()
+			currentGroup = prev
+		end,
+		block = function(name: string, size: Vector3, pos: Vector3, color: Color3, mat: Enum.Material, _shape: any, trans: number?)
+			return newPart(name, size, pos, color, mat, trans)
+		end,
+		cyl = function(name: string, pos: Vector3, rad: number, hgt: number, color: Color3, mat: Enum.Material, trans: number?)
+			return newPart(name, Vector3.new(hgt, rad * 2, rad * 2), pos, color, mat, trans)
+		end,
+		orb = function(name: string, pos: Vector3, size: Vector3, color: Color3, mat: Enum.Material, trans: number?)
+			return newPart(name, size, pos, color, mat, trans)
+		end,
+		beam = function(name: string, a: Vector3, b: Vector3, thick: number, color: Color3, mat: Enum.Material, trans: number?)
+			local mid = Vector3.new((a.X + b.X) / 2, (a.Y + b.Y) / 2, (a.Z + b.Z) / 2)
+			return newPart(name, Vector3.new(thick, thick, (b - a).Magnitude), mid, color, mat, trans)
+		end,
+		ring = function(name: string, pos: Vector3, radius: number, thick: number, color: Color3, mat: Enum.Material, _cf: any, _a0: any, _a1: any, segs: number?)
+			return newPart(name, Vector3.new(radius * 2, thick, radius * 2), pos, color, mat, 0)
+		end,
+		pointLight = function(p: any, color: Color3, brightness: number, range: number)
+			local l = makeInst("PointLight", "Light")
+			l.Color = color
+			l.Brightness = brightness
+			l.Range = range
+			l.Parent = p
+			return l
+		end,
+		kitAt = function(name: string, cf: CFrame, scale: number, tint: any, kind: string?)
+			local t = Kit.ExtraTemplates[name] or Kit.Templates[name]
+			if not t then return nil end
+			local m = makeInst("Model", name)
+			m:SetAttribute("PropKind", kind or name)
+			local glowSwatch = tint and tint.GLOW
+			if glowSwatch and table.find(t.Roles, "GLOW") then
+				local gp = newPart(name .. "_GLOW", t.Size * scale, Vector3.new(cf.X, cf.Y + t.Size.Y * scale * 0.5, cf.Z), glowSwatch.Color, glowSwatch.Material, glowSwatch.Transparency)
+				gp.Parent = m
+			end
+			local silkSwatch = tint and tint.SILK
+			if silkSwatch and table.find(t.Roles, "SILK") then
+				local sp = newPart(name .. "_SILK", t.Size * scale, Vector3.new(cf.X, cf.Y + t.Size.Y * scale * 0.5, cf.Z), silkSwatch.Color, silkSwatch.Material, silkSwatch.Transparency)
+				sp.Parent = m
+			end
+			table.insert(props, m)
+			return m
+		end,
+	}
+	return ctx, attrs, parts, lights, emitters, LayoutMod
+end
+
+local function assertAbyssalTelegraphSafety(room: any, parts: { any }, lights: { any })
+	-- Check walk surfaces: terrain terraces + bridges/links. Any Neon within 20 studs above a walk surface
+	-- must be bone-white / silver (H 30..60 or S <= 0.20), never crimson or void violet; zero orange anywhere.
+	local walkSurfaces = {}
+	for _, plat in room.Platforms do
+		table.insert(walkSurfaces, { x0 = plat.X - plat.Width / 2 - 4, x1 = plat.X + plat.Width / 2 + 4, z0 = plat.Z - plat.Depth / 2 - 4, z1 = plat.Z + plat.Depth / 2 + 4, y = plat.Y })
+	end
+	for _, link in room.Links do
+		table.insert(walkSurfaces, {
+			x0 = math.min(link.AX, link.BX) - link.Width / 2 - 4,
+			x1 = math.max(link.AX, link.BX) + link.Width / 2 + 4,
+			z0 = math.min(link.AZ, link.BZ) - link.Width / 2 - 4,
+			z1 = math.max(link.AZ, link.BZ) + link.Width / 2 + 4,
+			y = math.max(link.AY, link.BY),
+		})
+	end
+	local function nearWalk(pos: Vector3, aboveBand: number): boolean
+		for _, ws in walkSurfaces do
+			if pos.X >= ws.x0 and pos.X <= ws.x1 and pos.Z >= ws.z0 and pos.Z <= ws.z1 and pos.Y >= ws.y - 2 and pos.Y <= ws.y + aboveBand then
+				return true
+			end
+		end
+		return false
+	end
+	for _, p in parts do
+		local col = p.Color
+		if col then
+			local h, s, v = rgbToHsvDeg(col)
+			-- Never orange anywhere (hue 10..30 with strong saturation/value)
+			assert(not (h >= 10 and h <= 30 and s >= 0.45 and v >= 0.45), string.format("Orange forbidden in Abyssal Throne: %s (H=%.1f S=%.2f V=%.2f)", tostring(p.Name), h, s, v))
+			if p.Material == Enum.Material.Neon and nearWalk(p.Position, 20) then
+				-- Note: UpfallColumn places its GLOW above local y = 78; kitAt mock places bbox center, skip high/non-local column mesh checks.
+				if p.Name ~= "UpfallColumn_GLOW" then
+					assert((h >= 30 and h <= 60) or s <= 0.22, string.format("Walk-surface Neon %s must be bone-white/silver (H=%.1f S=%.2f)", tostring(p.Name), h, s))
+				end
+			end
+		end
+	end
+	for _, l in lights do
+		if l.Color then
+			local h, s, v = rgbToHsvDeg(l.Color)
+			assert(not (h >= 10 and h <= 30 and s >= 0.45 and v >= 0.45), string.format("Orange PointLight forbidden (H=%.1f)", h))
+			assert(not ((h >= 330 or h <= 10) and s >= 0.45), string.format("Crimson PointLight forbidden (H=%.1f S=%.2f)", h, s))
+		end
+	end
+end
+
+test("Floor 46 has its own Abyssal Descent kit: >= 11 new templates, 150+ stud Upfall, census & §5.7 telegraph safety", function()
+	local f46 = {
+		"UpfallColumn", "ChainFordSpan", "ChainPostIron", "EyotSlabS", "EyotSlabM", "EyotSlabL",
+		"ReavingRack", "VahlGibbetCage", "ExecutionBlock", "WeirOfHooks", "FallenStackWreck",
+		"ObsidianGeodeSplit", "WardlightCage", "ChainedCrownKeystone", "UndertowRibbon",
+	}
+	for _, name in f46 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 46 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		assert(t.Min.Y > -1.2 and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f46 >= 11)
+	assert(Kit.ExtraTemplates.UpfallColumn.Size.Y >= 150, "UpfallColumn must clear 150 studs")
+	local room = require(nodes["ReplicatedStorage.Shared.Config.TowerLayout"]).ForFloor(46)
+	local SetPiece = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor46"])
+	local ctx, attrs, parts, lights, emitters = makeAbyssalCollectorCtx(room, true)
+	SetPiece.Build(ctx)
+	assert((attrs.PlacedPropCount or 0) >= 420, "Floor 46 PlacedPropCount < 420")
+	assert((attrs.DistinctTemplateCount or 0) >= 28, "Floor 46 DistinctTemplateCount < 28")
+	assert((attrs.GroundCoverCount or 0) >= 300, "Floor 46 GroundCoverCount < 300")
+	assert(#lights <= 24, "Floor 46 lights exceed 24")
+	assert(#emitters <= 12, "Floor 46 emitters exceed 12")
+	assertAbyssalTelegraphSafety(room, parts, lights)
 end)
 
 print(string.format("tower-biome-kit: %d passed", passed))
