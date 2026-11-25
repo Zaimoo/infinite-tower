@@ -15,6 +15,10 @@ local GHOST_KINDS = table.freeze({
 	"VaultRib", "Skirt", "ChainFordSub", "ChainClimb", "MantleChain", "GreatChain", "ChasmChain", "Detail",
 })
 
+-- Words that keep a kind solid even when a ghost word also matches it ("VaultRibButtress": the ribs arch
+-- overhead, but their buttresses stand on the ground).
+local SOLID_KINDS = table.freeze({ "Buttress" })
+
 -- Kinds TowerRoomBuilder.WalkwayExemptKinds lets stand on a walkway (gates over a path, chains and cages round
 -- a span, floor inlays, moat rings and retaining aprons under a lane). They are allowed there only because they
 -- don't block it, so they always stay walk-through. Keep in step with WalkwayExemptKinds.
@@ -34,6 +38,11 @@ AbyssalCollision.ClutterSize = 3.5
 function AbyssalCollision.IsGhostKind(kind: string): boolean
 	if AbyssalCollision.LaneKinds[kind] then
 		return true
+	end
+	for _, word in SOLID_KINDS do
+		if string.find(kind, word, 1, true) then
+			return false
+		end
 	end
 	for _, word in GHOST_KINDS do
 		if string.find(kind, word, 1, true) then
