@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true, [46] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true, [46] = true, [47] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -3865,7 +3865,7 @@ test("Astral Archives Floors 41-45 terrain surfaces, floating isles, scarps and 
 	end
 end)
 
-test("Astral Archives Floors 41-45 and Abyssal Throne Floor 46 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
+test("Astral Archives Floors 41-45 and Abyssal Throne Floors 46-47 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
 	local specs = {
 		{ Floor = 41, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor41"]), MinCount = 15, MinTop = 130 },
 		{ Floor = 42, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor42"]), MinCount = 17, MinTop = 150 },
@@ -3873,6 +3873,7 @@ test("Astral Archives Floors 41-45 and Abyssal Throne Floor 46 landmark footprin
 		{ Floor = 44, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor44"]), MinCount = 21, MinTop = 210 },
 		{ Floor = 45, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor45"]), MinCount = 23, MinTop = 285 },
 		{ Floor = 46, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor46"]), MinCount = 16, MinTop = 150 },
+		{ Floor = 47, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor47"]), MinCount = 18, MinTop = 170 },
 	}
 	local function nearestDistSq(px: number, pz: number, lm: any): number
 		local nx = math.clamp(px, lm.X - lm.HalfX, lm.X + lm.HalfX)
@@ -4018,6 +4019,65 @@ test("Abyssal Throne Floor 46 (Abyssal Descent): braided upstream channels, 18 c
 	end
 	assert(live == 16 and r.EliteCount == 1, string.format("Floor 46 expected 16 live mobs & 1 Elite, got %d & %d", live, r.EliteCount))
 	assert(#Layout.Validate(r) == 0, "Floor 46 has Validate issues")
+end)
+
+test("Abyssal Throne Floor 47 (Crimson Procession): plaited columns, Bier entered only by StationW/StationE stairs, 22 mobs", function()
+	local r = Layout.ForFloor(47)
+	assert(r.Authored == "abyssal:2" and r.Name == "Crimson Procession" and r.PathStyle == "VAHL")
+	assert(r.Width == 700 and r.Depth == 700 and r.Height == 265 and r.Bottom == -4 and #r.ReturnLinks == 2)
+	local apex = r.Platforms.Apex
+	assert(math.abs(apex.X) < 20 and apex.Z > -220 and apex.Z < -100, "Floor 47 Apex stands in the center")
+	local apexLinks = {}
+	local deg: { [string]: number } = {}
+	for _, l in r.Links do
+		deg[l.From] = (deg[l.From] or 0) + 1
+		deg[l.To] = (deg[l.To] or 0) + 1
+		if l.To == "Apex" or l.From == "Apex" then
+			apexLinks[l.Id] = l.Kind
+		end
+	end
+	assert(deg.Apex == 2 and apexLinks.StationW_Apex == "STAIRS" and apexLinks.StationE_Apex == "STAIRS", "Apex entered only by StationW/StationE STAIRS")
+	assert(deg.Mourners == 1, "Mourners must be a single-link dead end")
+	-- Removing Crossing + outer aisle chapels cuts both Stations off from Basin
+	local function cutReach(blockedPlat: { [string]: boolean })
+		local adj: { [string]: { string } } = {}
+		for _, l in r.Links do
+			if not blockedPlat[l.From] and not blockedPlat[l.To] then
+				adj[l.From] = adj[l.From] or {}
+				adj[l.To] = adj[l.To] or {}
+				table.insert(adj[l.From], l.To)
+				table.insert(adj[l.To], l.From)
+			end
+		end
+		local seen = { Basin = true }
+		local q = { "Basin" }
+		local qi = 1
+		while qi <= #q do
+			local cur = q[qi]
+			qi += 1
+			for _, nxt in adj[cur] or {} do
+				if not seen[nxt] then seen[nxt] = true; table.insert(q, nxt) end
+			end
+		end
+		return seen
+	end
+	local noCrossNoAisle = cutReach({ Crossing = true, ShrineW = true, ShrineE = true, ChapelW = true, ChapelE = true })
+	assert(not noCrossNoAisle.StationW and not noCrossNoAisle.StationE, "Stations require Crossing unless going round outer aisle")
+	local g = Graph.new(r)
+	local s = r.Sanctuary
+	local route = Graph.Route(g, { X = s.X, Y = s.Y, Z = s.Z }, { X = apex.X, Y = apex.Y, Z = apex.Z })
+	local crossP = r.Platforms.Crossing
+	local passesCrossing = false
+	for _, wp in route do
+		if math.abs(wp.X - crossP.X) <= crossP.Width / 2 + 1 and math.abs(wp.Z - crossP.Z) <= crossP.Depth / 2 + 1 then
+			passesCrossing = true
+		end
+	end
+	assert(passesCrossing, "Measured shortest route to Bier must pass through Crossing")
+	local live = 0
+	for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then live += c.Size end end
+	assert(live == 22 and r.EliteCount == 2, string.format("Floor 47 expected 22 live mobs & 2 Elites, got %d & %d", live, r.EliteCount))
+	assert(#Layout.Validate(r) == 0, "Floor 47 has Validate issues")
 end)
 
 test("On every floor heroes can route from the Sanctuary to every camp and to the Apex", function()

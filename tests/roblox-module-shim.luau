@@ -175,6 +175,14 @@ function cframeMeta:VectorToObjectSpace(v)
 	local c, s = math.cos(self.ry), math.sin(self.ry)
 	return Vector3.new(v.X * c - v.Z * s, v.Y, v.X * s + v.Z * c)
 end
+function cframeMeta:VectorToWorldSpace(v)
+	local c, s = math.cos(-self.ry), math.sin(-self.ry)
+	return Vector3.new(v.X * c - v.Z * s, v.Y, v.X * s + v.Z * c)
+end
+function cframeMeta:PointToWorldSpace(v)
+	local r = self:VectorToWorldSpace(v)
+	return Vector3.new(self.X + r.X, self.Y + r.Y, self.Z + r.Z)
+end
 cframeMeta.__index = function(t, k)
 	if k == "Position" then return Vector3.new(t.X, t.Y, t.Z) end
 	if k == "Rotation" then return setmetatable({ X = 0, Y = 0, Z = 0, rx = t.rx, ry = t.ry, rz = t.rz }, cframeMeta) end
