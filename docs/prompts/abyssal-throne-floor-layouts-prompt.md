@@ -505,7 +505,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 
 **Shape: down a sagging chain of hung platforms to the low Keystone, then back up the far chain to the Far Gate in the back-east.** From the arrival you look across the void and see the saltire whole: two chains from the near spires dipping to the Keystone, two rising from it to the far spires.
 - **The near rim:** the **Hookward** (west gallery, Elite), the **Chainwright's Yard** (Crossing, Elite) and the **Ashgrate** (east gallery, Elite) climb to the **West** and **East Anchor Spires**, joined by the **Rim Walk**.
-- **The saltire (quickest, measured):** an Anchor Spire → its **near bead** → **the Keystone** (Y 22, the lowest platform past the rim) → the opposite **far bead** → the opposite **Far Anchor** → the Far Gate up the **Gate Stair** (`STAIRS`, +12). Every chain crosses to the other side, so the quick way is a diagonal across the void.
+- **The saltire (quickest, measured):** an Anchor Spire → its **near bead** → **the Keystone** (Y 25, the lowest platform past the rim) → the opposite **far bead** → the opposite **Far Anchor** → the Far Gate up the **Gate Stair** (`STAIRS`, +12). Every chain crosses to the other side, so the quick way is a diagonal across the void.
 - **The Gibbet Ledges (the long way):** from each near-rim gallery, a ledge path along the void's end wall (the **West** and **East Gibbet Ledges**) to the far anchors, never touching the chains.
 - **The Spireward:** a back terrace from the Far West Anchor to the Far Gate from the west.
 
@@ -544,16 +544,16 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 | `Sanctuary` | The Chain Stair | 0, 8, 346 | 128 × 56 | deck |
 | `Basin` | The Capstan Quay | 0, 0, 238 | 728 × 100 | terrain |
 | `WestGallery` | The Hookward | −215, 8, 100 | 88 × 76 | terrain (Elite) |
-| `Crossing` | The Chainwright's Yard | 0, 12, 115 | 84 × 64 | terrain (Elite) |
+| `Crossing` | The Chainwright's Yard | 0, 24, 115 | 84 × 64 | terrain (Elite) |
 | `EastGallery` | The Ashgrate | 215, 16, 100 | 88 × 76 | terrain (Elite) |
 | `GibbetE` (extra) | East Gibbet Ledge | 295, 20, −100 | 60 × 52 | terrain (a ledge on the void's end wall) |
-| `Keystone` (extra) | The Keystone | 0, 22, −105 | 60 × 52 | deck (hung where the chains cross) |
+| `Keystone` (extra) | The Keystone | 0, 25, −105 | 60 × 52 | deck (hung where the chains cross) |
 | `BeadNW` (extra) | Near Bead West | −32, 26, −35 | 52 × 44 | deck (hung) |
 | `AnchorNW` (extra) | West Anchor Spire | −60, 28, 30 | 64 × 52 | terrain (the spire's footing) |
 | `BeadNE` (extra) | Near Bead East | 32, 30, −35 | 52 × 44 | deck (hung) |
-| `BeadFW` (extra) | Far Bead West | −32, 31, −175 | 52 × 44 | deck (hung) |
+| `BeadFW` (extra) | Far Bead West | −32, 29, −175 | 52 × 44 | deck (hung) |
 | `AnchorNE` (extra) | East Anchor Spire | 60, 32, 30 | 64 × 52 | terrain |
-| `BeadFE` (extra) | Far Bead East | 32, 33, −175 | 52 × 44 | deck (hung) |
+| `BeadFE` (extra) | Far Bead East | 32, 31, −175 | 52 × 44 | deck (hung) |
 | `GibbetW` (extra) | West Gibbet Ledge | −295, 36, −100 | 60 × 52 | terrain (a ledge on the void's end wall) |
 | `AnchorFW` (extra) | Far West Anchor | −60, 40, −240 | 64 × 52 | terrain |
 | `AnchorFE` (extra) | Far East Anchor | 60, 44, −240 | 64 × 52 | terrain |
@@ -563,7 +563,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 **Paths (24 links):**
 - **From the Quay:** `Sanctuary→Basin` (−8), `Basin→WestGallery` (+8), `Basin→Crossing` (+12, 14.69°), `Basin→EastGallery` (+16).
 - **Up to the Anchor Spires:** `WestGallery→AnchorNW` (+20), `Crossing→AnchorNW` (+16, 14.76°), `Crossing→AnchorNE` (+20, 14.81°), `EastGallery→AnchorNE` (+16), `AnchorNW→AnchorNE` (+4: the Rim Walk).
-- **The saltire:** `AnchorNW→BeadNW` (−2), `BeadNW→Keystone` (−4), `AnchorNE→BeadNE` (−2), `BeadNE→Keystone` (−8, 14.53°), `Keystone→BeadFW` (+9, 14.59°), `Keystone→BeadFE` (+11, 14.66°), `BeadFW→AnchorFW` (+9, 14.59°), `BeadFE→AnchorFE` (+11, 14.66°).
+- **The saltire:** `AnchorNW→BeadNW` (−2), `BeadNW→Keystone` (−1), `AnchorNE→BeadNE` (−2), `BeadNE→Keystone` (−5), `Keystone→BeadFW` (+4), `Keystone→BeadFE` (+6), `BeadFW→AnchorFW` (+11), `BeadFE→AnchorFE` (+13). The four Keystone links stay within +6: a steeper one is too short for 15°, starts deep inside the Keystone, and runs across its neighbour (the build bug the Keystone had at Y 22).
 - **To the Far Gate:** `AnchorFE→Apex` (`STAIRS`: the Gate Stair, +12, 14.69°), `AnchorFW→Spireward` (+8), `Spireward→Apex` (+8).
 - **The Gibbet Ledges:** `WestGallery→GibbetW` (+28), `GibbetW→AnchorFW` (+4), `EastGallery→GibbetE` (+4), `GibbetE→AnchorFE` (+24).
 
@@ -1244,15 +1244,15 @@ Layout fields only, exactly as validated on 2026-11-25. Each floor's PR adds `Pa
 	Basin = { X = 0, Y = 0, Z = 238, Width = 728, Depth = 100 },
 	WestGallery = { X = -215, Y = 8, Z = 100, Width = 88, Depth = 76 },
 	EastGallery = { X = 215, Y = 16, Z = 100, Width = 88, Depth = 76 },
-	Crossing = { X = 0, Y = 12, Z = 115, Width = 84, Depth = 64 },
+	Crossing = { X = 0, Y = 24, Z = 115, Width = 84, Depth = 64 },
 	ExtraPlatforms = {
 		AnchorNW = { X = -60, Y = 28, Z = 30, Width = 64, Depth = 52 },
 		AnchorNE = { X = 60, Y = 32, Z = 30, Width = 64, Depth = 52 },
 		BeadNW = { X = -32, Y = 26, Z = -35, Width = 52, Depth = 44 },
 		BeadNE = { X = 32, Y = 30, Z = -35, Width = 52, Depth = 44 },
-		Keystone = { X = 0, Y = 22, Z = -105, Width = 60, Depth = 52 },
-		BeadFW = { X = -32, Y = 31, Z = -175, Width = 52, Depth = 44 },
-		BeadFE = { X = 32, Y = 33, Z = -175, Width = 52, Depth = 44 },
+		Keystone = { X = 0, Y = 25, Z = -105, Width = 60, Depth = 52 },
+		BeadFW = { X = -32, Y = 29, Z = -175, Width = 52, Depth = 44 },
+		BeadFE = { X = 32, Y = 31, Z = -175, Width = 52, Depth = 44 },
 		AnchorFW = { X = -60, Y = 40, Z = -240, Width = 64, Depth = 52 },
 		AnchorFE = { X = 60, Y = 44, Z = -240, Width = 64, Depth = 52 },
 		GibbetW = { X = -295, Y = 36, Z = -100, Width = 60, Depth = 52 },
