@@ -453,37 +453,66 @@ function AbyssalFloor48.Build(ctx: any)
 		end
 	end
 
-	-- The Keystone Cage-Platform (Y = 25, open diagonal entries, brightest bone-white Wardlight at Y = 52)
-	local ks = placeTemplate("AbyssalChainCage", "KeystoneCage",
-		CFrame.new(V(0, 25, -105)), 1.0, VAHL_48, false, false, "DirgeWardlight",
-		function(cf)
-			for _, p in { V(-25, 11, 0), V(25, 11, 0), V(0, 11, -21), V(0, 11, 21) } do
-				boxAt("KeystonePier", cf * CFrame.new(p), V(4, 22, 4), IRON_BLACK, Mat.Metal)
-			end
-			lump("KeystoneWard", (cf * CFrame.new(0, 27, 0)).Position, V(3.5, 4.5, 3.5), WARD_GLOW, Mat.Neon)
-		end)
-	if ks then
-		local g = H.glowOf(ks)
-		if g then addLight(g, WARD_GLOW, 3.2, 88) end
+	-- The four saltire great chains: each sags SAG studs from its anchor-spire collar to the Keystone crown.
+	local SAG = 24
+	local saltire = {
+		NW = { V(-112, 166, 8), V(-21.5, 49.5, -87.5) },
+		NE = { V(112, 170, 8), V(21.5, 49.5, -87.5) },
+		FW = { V(-21.5, 49.5, -122.5), V(-114, 178, -256) },
+		FE = { V(21.5, 49.5, -122.5), V(144, 182, -244) },
+	}
+	local function chainAt(span: { Vector3 }, t: number): Vector3
+		return span[1]:Lerp(span[2], t) - V(0, SAG * 4 * t * (1 - t), 0)
 	end
 
-	-- Four Hung Bead Cradles (straddling BeadNW, BeadNE, BeadFW, BeadFE cleanly along diagonal path yaw)
-	local beadSpecs = {
-		{ Id = "BeadNW", Yaw = -24 },
-		{ Id = "BeadNE", Yaw = 24 },
-		{ Id = "BeadFW", Yaw = 24 },
-		{ Id = "BeadFE", Yaw = -24 },
-	}
-	for _, bs in beadSpecs do
-		local plat = P[bs.Id]
-		if plat then
-			placeTemplate("AbyssalChainCage", "HungBeadPlatform",
-				CFrame.new(V(plat.X, plat.Y, plat.Z)) * CFrame.Angles(0, math.rad(bs.Yaw), 0),
-				1.0, VAHL_48, false, false, "DirgeWardlight",
-				function(cf)
-					boxAt("BeadArch", cf * CFrame.new(0, 25, 0), V(42, 2, 3), IRON_BLACK, Mat.Metal)
-				end)
+	-- The Keystone crown: an iron ring where the four great chains meet (Y = 49.5, 24.5 studs over the deck),
+	-- with the brightest bone-white Wardlight hung under it and four stays down to the deck's corners. Nothing
+	-- stands on the deck itself, so both arriving bridges and both leaving bridges meet on open floor.
+	ctx.group("AbyssalChainCage", function()
+		local c = V(0, 49.5, -105)
+		ctx.ring("KeystoneCrownRing", c, 27.7, 1.8, IRON_BLACK, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 24)
+		ctx.ring("KeystoneLanternRing", c - V(0, 5.5, 0), 6, 1.0, IRON_BLACK, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 12)
+		for _, sx in { -1, 1 } do
+			for _, sz in { -1, 1 } do
+				-- Spokes from where each great chain meets the crown to the lantern ring.
+				rod("KeystoneCrownSpoke", c + V(sx * 21.5, 0, sz * 17.5), c + V(sx * 4.6, -5.5, sz * 3.8), 0.45, IRON_BLACK, Mat.Metal)
+				-- Stays from the crown down to the deck's corners, clear of the four bridges.
+				local a = math.atan2(26, 30)
+				rod("KeystoneCrownStay", c + V(sx * 27.7 * math.cos(a), 0, sz * 27.7 * math.sin(a)), V(sx * 29, 25.4, -105 + sz * 25), 0.4, IRON_BLACK, Mat.Metal)
+			end
 		end
+		rod("KeystoneLanternHanger", c - V(0, 5.5, 0), c - V(0, 7.6, 0), 0.3, IRON_BLACK, Mat.Metal)
+		local ward = lump("KeystoneWard", (c - V(0, 10, 0)), V(3.5, 4.5, 3.5), WARD_GLOW, Mat.Neon)
+		tagDirge(ward, "DirgeWardlight")
+		addLight(ward, WARD_GLOW, 3.2, 88)
+		ctx.tag("OnTerrain", true)
+		makeDecor(ctx.current())
+	end)
+
+	-- The four Beads hang from their great chains: an iron yoke over each Bead, a stay up to the nearest point
+	-- of its chain, and two drop chains to the middle of the Bead's east and west edges (the bridges land on
+	-- its north and south edges).
+	for id, key in { BeadNW = "NW", BeadNE = "NE", BeadFW = "FW", BeadFE = "FE" } do
+		local plat = P[id]
+		if not plat then continue end
+		local span = saltire[key]
+		local bestT, bestD = 0.5, math.huge
+		for i = 0, 100 do
+			local q = chainAt(span, i / 100)
+			local d = (q.X - plat.X) ^ 2 + (q.Z - plat.Z) ^ 2
+			if d < bestD then bestT, bestD = i / 100, d end
+		end
+		local hook = chainAt(span, bestT)
+		local yokeY = math.min(hook.Y - 6, plat.Y + 30)
+		ctx.group("AbyssalChainCage", function()
+			boxAt("BeadYoke", CFrame.new(V(plat.X, yokeY, plat.Z)), V(plat.Width + 2, 1.6, 2.2), IRON_BLACK, Mat.Metal)
+			rod("BeadYokeStay", V(plat.X, yokeY + 0.8, plat.Z), hook, 0.55, IRON_BLACK, Mat.Metal)
+			for _, sx in { -1, 1 } do
+				rod("BeadDropChain", V(plat.X + sx * (plat.Width / 2 + 0.6), yokeY, plat.Z), V(plat.X + sx * (plat.Width / 2 + 0.6), plat.Y + 0.4, plat.Z), 0.4, IRON_BLACK, Mat.Metal)
+			end
+			ctx.tag("OnTerrain", true)
+			makeDecor(ctx.current())
+		end)
 	end
 
 	-- Four Colossal Saltire Great Chains (all chain geometry strictly >= 24 studs above every deck!)
@@ -511,10 +540,10 @@ function AbyssalFloor48.Build(ctx: any)
 	end
 
 	-- Saltire lower chains converging onto KeystoneCage's upper diagonal horns (Y = 49.5 -> 24.5 studs above Keystone!)
-	spanGreatChain("SaltireNW", V(-112, 166, 8), V(-21.5, 49.5, -87.5), 24, 4, 1.15)
-	spanGreatChain("SaltireNE", V(112, 170, 8), V(21.5, 49.5, -87.5), 24, 4, 1.15)
-	spanGreatChain("SaltireFW", V(-21.5, 49.5, -122.5), V(-114, 178, -256), 24, 5, 1.15)
-	spanGreatChain("SaltireFE", V(21.5, 49.5, -122.5), V(144, 182, -244), 24, 5, 1.15)
+	spanGreatChain("SaltireNW", saltire.NW[1], saltire.NW[2], SAG, 4, 1.15)
+	spanGreatChain("SaltireNE", saltire.NE[1], saltire.NE[2], SAG, 4, 1.15)
+	spanGreatChain("SaltireFW", saltire.FW[1], saltire.FW[2], SAG, 5, 1.15)
+	spanGreatChain("SaltireFE", saltire.FE[1], saltire.FE[2], SAG, 5, 1.15)
 
 	-- Upper sweeping catenary stay-chains joining the four spires high overhead (Y >= 120, matching the jpg!)
 	local function placeCatenarySpan(name: string, a: Vector3, b: Vector3, lowDrop: number)

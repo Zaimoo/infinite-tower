@@ -263,6 +263,39 @@ function AbyssalFloor50.Build(ctx: any)
 		return prop
 	end
 
+	-- The ground (terrain) under a spot, and the lowest ground under a footprint.
+	local field = ctx.field
+	local function groundAt(x: number, z: number): number
+		return if field then field.Height(x, z) else ctx.layout.Bottom - 4
+	end
+	local function groundMin(x: number, z: number, hx: number, hz: number): number
+		local g = groundAt(x, z)
+		for _, c in { { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } } do
+			g = math.min(g, groundAt(x + c[1] * hx, z + c[2] * hz))
+		end
+		return g
+	end
+	-- A masonry plinth from the ground up to `topY` under a piece that stands past its terrace's edge, so it is
+	-- carried instead of floating. Solid, but kept out of the solid-scenery lane check like Floor 49's supports.
+	local function pierUnder(name: string, x: number, z: number, hx: number, hz: number, topY: number)
+		-- From the floor of the void (buried where terrain is higher): the terrain field reads the deck height
+		-- under a hung walkway, so it can't say how far down the ground really is.
+		local g = math.min(groundMin(x, z, hx, hz), ctx.layout.Bottom - 4)
+		if topY - g < 2 then return end
+		ctx.group("ThronePier", function()
+			local h = topY - g + 2
+			boxAt(name, CFrame.new(V(x, g - 2 + h / 2, z)), V(hx * 2, h, hz * 2), OBSIDIAN_MID, Mat.Basalt)
+			boxAt(name .. "Band", CFrame.new(V(x, topY - 1.6, z)), V(hx * 2 + 0.8, 1.1, hz * 2 + 0.8), IRON_BLACK, Mat.Metal)
+			for _, d in ctx.current():GetDescendants() do
+				if d:IsA("BasePart") then
+					d.CanTouch = false
+					d:SetAttribute("SolidScenery", false)
+				end
+			end
+			pin(ctx.current())
+		end)
+	end
+
 	local function ashEmitter(pos: Vector3, rate: number)
 		if emittersUsed >= 16 then return end
 		emittersUsed += 1
@@ -430,6 +463,7 @@ function AbyssalFloor50.Build(ctx: any)
 	-- =========================================================================
 	do
 		local br = AbyssalFloor50.Landmarks[1]
+		pierUnder("ThroneBackrestPlinth", br.X, br.Z, br.HalfX - 2, br.HalfZ - 2, br.Y :: number)
 		local mb = placeKit("ThroneMonument", br.X, br.Y :: number, br.Z, 0, "ThroneBackrest", 1.0, VAHL_50, function(cf)
 			boxAt("ThroneBackrestWallFB", cf * CFrame.new(0, 167, 0), V(136, 334, 42), OBSIDIAN_DARK, Mat.Basalt)
 		end)
@@ -461,6 +495,7 @@ function AbyssalFloor50.Build(ctx: any)
 
 		-- 6. Throne's Heart Crack in the front Throne base wall (deep matte red-black SmoothPlastic, NEVER Neon!).
 		local hc = AbyssalFloor50.Landmarks[6]
+		pierUnder("ThroneHeartBase", hc.X, hc.Z, hc.HalfX, hc.HalfZ, hc.Y :: number)
 		local mhc = placeKit("ThroneHeartCrackProp", hc.X, hc.Y :: number, hc.Z, 0, "ThroneHeartCrack", 1.0, HEART_CRACK_TINT, function(cf)
 			boxAt("HeartCrackCleftFB", cf * CFrame.new(0, 10, 0), V(6, 18, 4), HEART_MATTE, Mat.SmoothPlastic)
 		end)
@@ -483,6 +518,7 @@ function AbyssalFloor50.Build(ctx: any)
 		-- Seat SW/SE & NW/NE outer armrest rim walls (outside Apex).
 		for _, id in { "ThroneArmrestWallW", "ThroneArmrestWallE", "ThroneArmrestWallNW", "ThroneArmrestWallNE" } do
 			local lm = byId[id]
+			pierUnder(id .. "Pier", lm.X, lm.Z, lm.HalfX, lm.HalfZ, lm.Y :: number)
 			placeKit("ThroneArmrest", lm.X, lm.Y :: number, lm.Z, 0, "ThroneArmrestWall", V(1.0, 1.0, 0.77), VAHL_50, function(cf)
 				boxAt("ArmrestWallFB", cf * CFrame.new(0, 11, 0), V(8, 22, 28), OBSIDIAN_DARK, Mat.Basalt)
 			end)
@@ -490,6 +526,7 @@ function AbyssalFloor50.Build(ctx: any)
 		-- ArmW and ArmE outer battlement walls.
 		for _, id in { "ArmWOuterWall", "ArmEOuterWall" } do
 			local lm = byId[id]
+			pierUnder(id .. "Pier", lm.X, lm.Z, lm.HalfX, lm.HalfZ, lm.Y :: number)
 			placeKit("ThroneArmrest", lm.X, lm.Y :: number, lm.Z, 0, "ThroneArmrestWall", V(1.0, 1.0, 0.55), VAHL_50, function(cf)
 				boxAt("ArmrestOuterFB", cf * CFrame.new(0, 11, 0), V(8, 22, 20), OBSIDIAN_DARK, Mat.Basalt)
 			end)
@@ -498,6 +535,7 @@ function AbyssalFloor50.Build(ctx: any)
 		-- Colossal Gauntlet Hands cradling the last two bone-white Wardlights!
 		for _, spec in { { byId.GauntletHandWest, 18 }, { byId.GauntletHandEast, -18 } } do
 			local lm = spec[1]
+			pierUnder(lm.Id .. "Wrist", lm.X, lm.Z, lm.HalfX * 0.7, lm.HalfZ * 0.7, lm.Y :: number)
 			local mg = placeKit("ThroneGauntlet", lm.X, lm.Y :: number, lm.Z, spec[2], "GauntletHandOpen", 1.0, VAHL_50, function(cf)
 				boxAt("GauntletPalmFB", cf * CFrame.new(0, 12, 0), V(18, 24, 18), IRON_BLACK, Mat.Metal)
 				lump("GauntletWardlightFB", cf.Position + V(0, 20, 0), V(3, 4, 3), WARDLIGHT_BONE, Mat.Neon)
@@ -512,6 +550,7 @@ function AbyssalFloor50.Build(ctx: any)
 		-- Towering armored Greave columns flanking ShinW & ShinE.
 		for _, spec in { { byId.GreaveTowerWest, 18 }, { byId.GreaveTowerEast, -18 } } do
 			local lm = spec[1]
+			pierUnder(lm.Id .. "Pier", lm.X, lm.Z, lm.HalfX * 0.85, lm.HalfZ * 0.85, lm.Y :: number)
 			placeKit("ThroneGreave", lm.X, lm.Y :: number, lm.Z, spec[2], "GreaveTower", 1.0, VAHL_50, function(cf)
 				boxAt("GreaveTowerFB", cf * CFrame.new(0, 25, 0), V(20, 50, 20), IRON_BLACK, Mat.Metal)
 			end)
@@ -527,20 +566,38 @@ function AbyssalFloor50.Build(ctx: any)
 
 		-- The old Grand Stair's fallen flight in the void, under the restored BrokenStair -> Seat stair.
 		local bs = byId.BrokenGrandStair
-		placeKit("BrokenStairSpan", bs.X, bs.Y :: number, bs.Z, 0, "BrokenGrandStair", 1.0, VAHL_50, function(cf)
+		placeKit("BrokenStairSpan", bs.X, groundMin(bs.X, bs.Z, bs.HalfX, bs.HalfZ), bs.Z, 0, "BrokenGrandStair", 1.0, VAHL_50, function(cf)
 			boxAt("BrokenGrandStairFB", cf * CFrame.new(0, 9, 0), V(22, 18, 28), OBSIDIAN_MID, Mat.Basalt)
 		end)
 
-		-- Colossal Mantle-Chains sweeping from the Throne's shoulders toward ChainW & ChainE.
-		for _, spec in { { byId.MantleChainWest, -22 }, { byId.MantleChainEast, 22 } } do
-			local lm = spec[1]
-			local mc = placeKit("MantleChain", lm.X, lm.Y :: number, lm.Z, spec[2], "MantleChainColossal", V(1.65, 1.45, 1.45), VAHL_50, function(cf)
-				boxAt("MantleChainFB", cf * CFrame.new(0, 12, 0), V(64, 4, 4), IRON_BLACK, Mat.Metal)
-			end)
-			makeDecor(mc)
-			if mc then
-				mc:SetAttribute("DirgeChain", true)
-				safeTag(mc, "DirgeChain")
+		-- Colossal Mantle-Chains draped from the Throne Backrest's shoulders to the hall's side walls (they hung in
+		-- mid-air before): great chain links along a sagging line, fixed at both ends, high over every walkway.
+		do
+			local br = byId.ThroneBackrest
+			local wallX = ctx.layout.Width / 2 + 2
+			for _, side in { -1, 1 } do
+				local a = V(side * (br.HalfX - 6), 318, br.Z + br.HalfZ - 2)
+				local b = V(side * wallX, 300, -205)
+				local segments, sag = 9, 70
+				ctx.group("MantleChain", function()
+					for k = 0, segments - 1 do
+						local t0, t1 = k / segments, (k + 1) / segments
+						local p0 = a:Lerp(b, t0) - V(0, sag * 4 * t0 * (1 - t0), 0)
+						local p1 = a:Lerp(b, t1) - V(0, sag * 4 * t1 * (1 - t1), 0)
+						local dir = (p1 - p0).Unit
+						local right = dir:Cross(V(0, 1, 0)).Unit
+						local up = right:Cross(dir).Unit
+						local cf = CFrame.fromMatrix((p0 + p1) / 2, dir, up, -right)
+						if ctx.has("GreatChainSegment") then
+							ctx.kitAt("GreatChainSegment", cf, V((p1 - p0).Magnitude / 32, 1.6, 1.6), VAHL_50)
+						else
+							H.rod("MantleChainFB", p0, p1, 1.4, IRON_BLACK, Mat.Metal)
+						end
+					end
+					makeDecor(ctx.current())
+					pin(ctx.current())
+				end)
+				recordTemplate("GreatChainSegment")
 			end
 		end
 
@@ -587,17 +644,20 @@ function AbyssalFloor50.Build(ctx: any)
 
 		-- Hall of Kneeling supplicant row along WestGallery's outer west rim.
 		local hk = byId.HallOfKneelingLineW
+		pierUnder("HallOfKneelingLedge", hk.X, hk.Z, hk.HalfX, hk.HalfZ, hk.Y :: number)
 		for kz = -18, 18, 12 do
 			placeKit("SupplicantStatue", hk.X, hk.Y :: number, hk.Z + kz, 90, "KneelingSupplicant", 1.05, VAHL_50, nil)
 		end
 
 		-- Hall of Oaths chained tablet register wall along EastGallery's outer east rim.
 		local ho = byId.HallOfOathsWallE
+		pierUnder("HallOfOathsLedge", ho.X, ho.Z, ho.HalfX, ho.HalfZ, ho.Y :: number)
 		placeKit("OathRegister", ho.X, ho.Y :: number, ho.Z - 11, -90, "OathRegisterWall", 1.0, VAHL_50, nil)
 		placeKit("OathRegister", ho.X, ho.Y :: number, ho.Z + 11, -90, "OathRegisterWall", 1.0, VAHL_50, nil)
 
 		-- Chain Anchor Bollards anchoring the Mantle-Chains at ChainW and ChainE.
 		for _, cb in { byId.WestChainAnchorBollard, byId.EastChainAnchorBollard } do
+			pierUnder(cb.Id .. "Pier", cb.X, cb.Z, cb.HalfX * 0.8, cb.HalfZ * 0.8, cb.Y :: number)
 			placeKit("ChainAnchor", cb.X, cb.Y :: number, cb.Z, if cb.X < 0 then 90 else -90, "ChainAnchorBollard", 1.0, VAHL_50, nil)
 		end
 	end
@@ -811,6 +871,8 @@ function AbyssalFloor50.Build(ctx: any)
 	}
 	for _, fs in farStructures do
 		local x, y, z, yaw, tpl, sc = fs[1] :: number, fs[2] :: number, fs[3] :: number, fs[4] :: number, fs[5] :: string, fs[6] :: number
+		-- Stand on the ground behind the Seat (the listed height was above it in places, leaving them floating).
+		y = math.min(y, groundMin(x, z, 6, 6))
 		local m = placeKit("VaultSkyline_" .. tpl, x, y, z, yaw, tpl, sc, VAHL_50, nil)
 		makeDecor(m)
 	end
@@ -829,6 +891,17 @@ function AbyssalFloor50.Build(ctx: any)
 		local mc = placeKit("AbyssHangingChain", ch[1] :: number, ch[2] :: number, ch[3] :: number, ch[4] :: number, ch[5] :: string, ch[6] :: number, VAHL_50, nil)
 		makeDecor(mc)
 		if mc then
+			-- Hung from the hall ceiling: a drop chain from the top of the chain (its kit height) up to the coffer beams.
+			local tplHeight = ({ HangingAbyssChain = 17.8, HangingChainRun = 35.3 } :: { [string]: number })[ch[5] :: string] or 20
+			local top = (ch[2] :: number) + tplHeight * (ch[6] :: number)
+			local x, z = ch[1] :: number, ch[3] :: number
+			ctx.group("ThroneHallOverhead", function()
+				H.rod("HallChainDrop", V(x, top - 1, z), V(x, 422, z), 0.45, IRON_BLACK, Mat.Metal)
+				ghost(ctx.current())
+				pin(ctx.current())
+			end)
+		end
+		if mc then
 			mc:SetAttribute("DirgeChain", true)
 			safeTag(mc, "DirgeChain")
 		end
@@ -839,7 +912,7 @@ function AbyssalFloor50.Build(ctx: any)
 		local side = if k % 2 == 0 then -1 else 1
 		local sz = -325 + math.floor(k / 2) * 58
 		local sx = side * 442
-		local ms = placeKit("CourtSilhouette", sx, 18 + (k % 3) * 6, sz, side * 90, "KneelingSupplicant", 1.25, VAHL_50, nil)
+		local ms = placeKit("CourtSilhouette", sx, groundAt(sx, sz), sz, side * 90, "KneelingSupplicant", 1.25, VAHL_50, nil)
 		makeDecor(ms)
 		if ms then
 			ms:SetAttribute("DirgeSilhouette", true)

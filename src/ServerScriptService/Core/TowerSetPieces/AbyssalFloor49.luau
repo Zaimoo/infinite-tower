@@ -492,6 +492,15 @@ function AbyssalFloor49.Build(ctx: any)
 			boxAt("SallyportWallBase", CFrame.new(V(sally.X, (sally.Y - 10) * 0.5, sally.Z - 4)), V(sally.Width - 2, sally.Y + 9.2, sally.Depth + 8), OBSIDIAN_DARK, Mat.Basalt)
 			boxAt("SallyportTrim", CFrame.new(V(sally.X, sally.Y - 0.6, sally.Z - 4)), V(sally.Width + 1.2, 0.8, sally.Depth + 9.2), IRON_BLACK, Mat.Metal)
 		end
+		-- Masonry piers from the moat floor under the salient prows that jut past their terraces (the North
+		-- Bastion's prow at the Throne Gate, and the Ravelin's two wings off the Crossing's north corners).
+		for _, idx in { 15, 9, 10 } do
+			local lm = AbyssalFloor49.Landmarks[idx]
+			local topY = lm.Y :: number
+			local h = topY + 12
+			boxAt(lm.Id .. "Pier", CFrame.new(V(lm.X, topY - h / 2, lm.Z)), V(lm.HalfX * 1.7, h, lm.HalfZ * 1.7), OBSIDIAN, Mat.Basalt)
+			boxAt(lm.Id .. "PierBand", CFrame.new(V(lm.X, topY - 2.2, lm.Z)), V(lm.HalfX * 1.7 + 0.8, 1.1, lm.HalfZ * 1.7 + 0.8), IRON_BLACK, Mat.Metal)
+		end
 		local cm = P.Countermine
 		if cm then
 			boxAt("CountermineHoistApron", CFrame.new(V(cm.X, (cm.Y - 10) * 0.5, cm.Z + 20)), V(26, cm.Y + 9.2, 24), OBSIDIAN_DARK, Mat.Basalt)
@@ -599,21 +608,60 @@ function AbyssalFloor49.Build(ctx: any)
 	-- 27–28. Far North Fortress Towers framing the crimson horizon
 	for _, idx in { 27, 28 } do
 		local lm = AbyssalFloor49.Landmarks[idx]
-		placeProp(lm.Id, "ChainTowerRound", lm.X, lm.Y :: number, lm.Z, if idx == 27 then 28 else -28, 1.85, FAR_SPIRE_TINT)
+		-- StormkeepRoundTower at 2.9x (about 130 studs): the ChainTowerRound kit isn't imported, and its fallback
+		-- left a 7-stud stub on the moat floor in each far corner instead of a tower.
+		placeProp(lm.Id, "StormkeepRoundTower", lm.X, lm.Y :: number, lm.Z, if idx == 27 then 28 else -28, 2.9, FAR_SPIRE_TINT)
 	end
 
 	-- =========================================================================
 	-- C. COLOSSAL KEEP CHAINS, LINK DRESSING & BASTION VIGNETTES
 	-- =========================================================================
-	-- Giant iron chains anchoring DreadguardKeepTower to Keep corners & Drawbridge Gatehouses
+	-- The Keep (Apex) is round (a superellipse, Shapes.Apex.Round), not its 144 x 108 rectangle: its battlements
+	-- and corner sentries stand on that round edge, facing out, instead of on the rectangle's corners where the
+	-- edge has fallen away under them.
+	local apex = P.Apex
+	local apexRound = (ctx.layout.Terrain and ctx.layout.Terrain.Shapes and ctx.layout.Terrain.Shapes.Apex
+		and ctx.layout.Terrain.Shapes.Apex.Round) or 2.8
+	local ax, az = apex.Width / 2, apex.Depth / 2
+	-- A point `inset` studs inside the Keep's edge in direction `deg` (0 = east, 90 = south), and the yaw that
+	-- turns a piece's front (-Z at yaw 0) to face out of the Keep there.
+	local function keepEdge(deg: number, inset: number): (number, number, number)
+		local c, sn = math.cos(math.rad(deg)), math.sin(math.rad(deg))
+		local r = 1 / ((math.abs(c) / ax) ^ apexRound + (math.abs(sn) / az) ^ apexRound) ^ (1 / apexRound)
+		local ex, ez = r * c, r * sn
+		local gx = (if ex < 0 then -1 else 1) * math.abs(ex) ^ (apexRound - 1) / ax ^ apexRound
+		local gz = (if ez < 0 then -1 else 1) * math.abs(ez) ^ (apexRound - 1) / az ^ apexRound
+		local gl = math.sqrt(gx * gx + gz * gz)
+		gx, gz = gx / gl, gz / gl
+		return apex.X + ex - gx * inset, apex.Z + ez - gz * inset, math.deg(math.atan2(-gx, -gz))
+	end
+
+	-- Corner sentries on the four diagonals of the Keep's edge (clear of the boss portals on the north side and
+	-- the drawbridge landings on the east and west).
+	local sentryTops: { [string]: Vector3 } = {}
+	for _, deg in { 45, 135, 225, 315 } do
+		local x, z, yaw = keepEdge(deg, 6)
+		placeProp("KeepCornerSentry", "DreadguardSentry", x, apex.Y, z, yaw, 0.9, DREAD_49)
+		sentryTops[tostring(deg)] = V(x, apex.Y + 17, z)
+	end
+	-- South battlements following the curve between the two south sentries (the north edge keeps the portals).
+	for _, deg in { 72, 108 } do
+		local x, z, yaw = keepEdge(deg, 4)
+		placeProp("KeepSouthCurtain", "CurtainWallCrenel", x, apex.Y, z, yaw, V(1.0, 1.0, 0.9), DREAD_49)
+	end
+
+	-- Giant iron chains from the Keep Tower to things that hold them: the two north corner sentries, the two
+	-- drawbridge gatehouses and the two drawbridge frames out on the inner wards.
 	ctx.group("KeepAnchorChains", function()
+		local frameW = AbyssalFloor49.Landmarks[6]
+		local frameE = AbyssalFloor49.Landmarks[7]
 		local chains = {
-			{ V(-16, 152, -162), V(-68, 92, -138) },
-			{ V(16, 152, -162), V(68, 92, -138) },
+			{ V(-16, 152, -162), sentryTops["225"] },
+			{ V(16, 152, -162), sentryTops["315"] },
 			{ V(-16, 118, -160), V(-74, 96, -80) },
 			{ V(16, 118, -160), V(74, 96, -80) },
-			{ V(-18, 96, -184), V(-138, 92, -104) },
-			{ V(18, 96, -184), V(138, 92, -104) },
+			{ V(-18, 96, -184), V(frameW.X, (frameW.Y :: number) + 24, frameW.Z) },
+			{ V(18, 96, -184), V(frameE.X, (frameE.Y :: number) + 24, frameE.Z) },
 		}
 		for _, ch in chains do
 			local r = H.rod("ColossalKeepChain", ch[1], ch[2], 0.55, IRON_DARK, Mat.Metal)
@@ -622,19 +670,6 @@ function AbyssalFloor49.Build(ctx: any)
 		makeDecor(ctx.current())
 		pin(ctx.current())
 	end)
-
-	-- Keep outer north & south perimeter battlements (strictly outside 144x108 Apex arena and clear of portals!)
-	for _, bx in { -56, 56 } do
-		placeProp("KeepSouthCurtain", "CurtainWallCrenel", bx, 64, -37, 180, V(1.0, 1.0, 0.9), DREAD_49)
-	end
-	for _, bx in { -54, 54 } do
-		placeProp("KeepNorthCurtain", "CurtainWallCrenel", bx, 64, -143, 0, V(1.0, 1.0, 0.9), DREAD_49)
-	end
-	for _, bx in { -72, 72 } do
-		for _, bz in { -126, -48 } do
-			placeProp("KeepCornerSentry", "DreadguardSentry", bx, 64, bz, if bx < 0 then 90 else -90, 0.9, DREAD_49)
-		end
-	end
 
 	-- Covered Way Iron-Stake Palisades flanking the Glacis & Ravelin
 	local palisadeLine = {

@@ -588,28 +588,28 @@ local FloorGrades: { [number]: { [string]: any } } = {
 	-- ambient, grey-violet ash haze, and violet Undertow glow rising through the braided channels.
 	[46] = {
 		Ambient = c(98, 88, 120), OutdoorAmbient = c(150, 140, 178), ColorShift_Top = c(222, 216, 236), ColorShift_Bottom = c(110, 80, 156),
-		AtmosphereDensity = 0.26, AtmosphereColor = c(118, 106, 142), AtmosphereDecay = c(70, 58, 104), AtmosphereHaze = 0.7,
+		AtmosphereDensity = 0.34, AtmosphereColor = c(118, 106, 142), AtmosphereDecay = c(70, 58, 104), AtmosphereHaze = 1.6,
 		TintColor = c(240, 236, 248), Saturation = 0.04, Contrast = 0.10, ExposureCompensation = 0.22, BloomIntensity = 0.42,
 	},
 	-- Floor 47, Crimson Procession: crimson vigil — dark cool ambient, warm bone-white pools under Wardlights,
 	-- wine silk catching muted rose top fill with faint high-altitude glow behind the Effigy.
 	[47] = {
 		Ambient = c(96, 84, 112), OutdoorAmbient = c(148, 132, 162), ColorShift_Top = c(232, 214, 222), ColorShift_Bottom = c(98, 68, 140),
-		AtmosphereDensity = 0.27, AtmosphereColor = c(110, 92, 128), AtmosphereDecay = c(66, 50, 92), AtmosphereHaze = 0.62,
+		AtmosphereDensity = 0.36, AtmosphereColor = c(110, 92, 128), AtmosphereDecay = c(66, 50, 92), AtmosphereHaze = 1.7,
 		TintColor = c(246, 238, 244), Saturation = 0.12, Contrast = 0.12, ExposureCompensation = 0.20, BloomIntensity = 0.45,
 	},
 	-- Floor 48, Voidspan Crossing: void-glare — black vault over a wall-to-wall Undertow void pooling cold violet
 	-- up-light onto the hung catenary spans, with neutral bone-white Wardlight illumination across every deck.
 	[48] = {
 		Ambient = c(90, 86, 124), OutdoorAmbient = c(140, 136, 184), ColorShift_Top = c(196, 194, 216), ColorShift_Bottom = c(158, 122, 226),
-		AtmosphereDensity = 0.28, AtmosphereColor = c(92, 78, 140), AtmosphereDecay = c(58, 46, 108), AtmosphereHaze = 0.75,
+		AtmosphereDensity = 0.38, AtmosphereColor = c(92, 78, 140), AtmosphereDecay = c(58, 46, 108), AtmosphereHaze = 1.8,
 		TintColor = c(240, 238, 250), Saturation = 0.08, Contrast = 0.12, ExposureCompensation = 0.20, BloomIntensity = 0.55,
 	},
 	-- Floor 49, Dreadguard Citadel: iron night — moonless steel-blue dark across the shuttered star fort,
 	-- warm bone-white only on the drawbridge gate-towers and a faint crimson glow beyond the north wall.
 	[49] = {
 		Ambient = c(88, 96, 124), OutdoorAmbient = c(136, 148, 184), ColorShift_Top = c(196, 206, 230), ColorShift_Bottom = c(84, 72, 114),
-		AtmosphereDensity = 0.29, AtmosphereColor = c(84, 92, 124), AtmosphereDecay = c(54, 56, 92), AtmosphereHaze = 0.66,
+		AtmosphereDensity = 0.40, AtmosphereColor = c(84, 92, 124), AtmosphereDecay = c(54, 56, 92), AtmosphereHaze = 1.9,
 		TintColor = c(238, 242, 250), Saturation = 0.04, Contrast = 0.13, ExposureCompensation = 0.18, BloomIntensity = 0.50,
 	},
 	-- Floor 50, Overlord's Throne (Biome Boss: Crimson Overlord): The Crimson Eclipse — black-violet ambient
@@ -617,7 +617,7 @@ local FloorGrades: { [number]: { [string]: any } } = {
 	-- the Throne while the Crimson Eclipse burns exclusively behind the distant Crown.
 	[50] = {
 		Ambient = c(86, 80, 112), OutdoorAmbient = c(136, 128, 172), ColorShift_Top = c(218, 214, 232), ColorShift_Bottom = c(92, 64, 130),
-		AtmosphereDensity = 0.30, AtmosphereColor = c(80, 68, 112), AtmosphereDecay = c(58, 42, 88), AtmosphereHaze = 0.8,
+		AtmosphereDensity = 0.42, AtmosphereColor = c(80, 68, 112), AtmosphereDecay = c(58, 42, 88), AtmosphereHaze = 2.0,
 		TintColor = c(242, 238, 248), Saturation = 0.06, Contrast = 0.14, ExposureCompensation = 0.18, BloomIntensity = 0.60,
 	},
 }
