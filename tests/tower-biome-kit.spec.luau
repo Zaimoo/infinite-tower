@@ -591,6 +591,9 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[47] ~= nil and Light.TowerPreset(10, 47) ~= Light.TowerPreset(10), "floor 47 layers its crimson vigil grade over BiomeGrades[10]")
 	assert(Light.FloorGrades[48] ~= nil and Light.TowerPreset(10, 48) ~= Light.TowerPreset(10), "floor 48 layers its void-glare grade over BiomeGrades[10]")
 	assert(Light.FloorGrades[49] ~= nil and Light.TowerPreset(10, 49) ~= Light.TowerPreset(10), "floor 49 layers its iron night grade over BiomeGrades[10]")
+	assert(Light.FloorGrades[50] ~= nil and Light.TowerPreset(10, 50) ~= Light.TowerPreset(10), "floor 50 layers its Crimson Eclipse grade over BiomeGrades[10]")
+	assert(Light.FloorGrades[46].AtmosphereDensity < Light.FloorGrades[50].AtmosphereDensity, "Abyssal atmosphere thickens from Floor 46 to Floor 50")
+	assert(Light.FloorGrades[50].BloomIntensity >= 0.58, "Floor 50 keeps eclipse bloom")
 	assert(Light.TowerPreset(10, 99) == Light.TowerPreset(10), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
@@ -847,8 +850,8 @@ local function assertAbyssalTelegraphSafety(room: any, parts: { any }, lights: {
 			-- Never orange anywhere (hue 10..30 with strong saturation/value)
 			assert(not (h >= 10 and h <= 30 and s >= 0.45 and v >= 0.45), string.format("Orange forbidden in Abyssal Throne: %s (H=%.1f S=%.2f V=%.2f)", tostring(p.Name), h, s, v))
 			if p.Material == Enum.Material.Neon and nearWalk(p.Position, 20) then
-				-- Note: UpfallColumn places its GLOW above local y = 78; kitAt mock places bbox center, skip high/non-local column mesh checks.
-				if p.Name ~= "UpfallColumn_GLOW" then
+				-- High sky/vertical meshes placed at bbox center in mock (`UpfallColumn_GLOW`, `CrimsonEclipseDisc_GLOW`) keep their actual GLOW far above walk surfaces.
+				if p.Name ~= "UpfallColumn_GLOW" and p.Name ~= "CrimsonEclipseDisc_GLOW" then
 					assert((h >= 30 and h <= 60) or s <= 0.22, string.format("Walk-surface Neon %s must be bone-white/silver (H=%.1f S=%.2f)", tostring(p.Name), h, s))
 				end
 			end
@@ -964,6 +967,32 @@ test("Floor 49 has its own Dreadguard Citadel kit: >= 14 new templates, 235+ stu
 	assert((attrs.GroundCoverCount or 0) >= 450, "Floor 49 GroundCoverCount < 450")
 	assert(#lights <= 24, "Floor 49 lights exceed 24")
 	assert(#emitters <= 16, "Floor 49 emitters exceed 16")
+	assertAbyssalTelegraphSafety(room, parts, lights)
+end)
+
+test("Floor 50 has its own Overlord's Throne kit: >= 15 new templates, 320+ stud Backrest, census & §5.7 telegraph safety", function()
+	local f50 = {
+		"ThroneBackrest", "ChainedCrownColossal", "CrimsonEclipseDisc", "ThroneArmrestWall", "GauntletHandOpen",
+		"GreaveTower", "SabatonFoot", "BrokenGrandStair", "MantleChainColossal", "ChainClimbCage",
+		"KneelingSupplicant", "OathRegisterWall", "FootstoolGreat", "RelicCageIron", "ThroneHeartCrack", "BackrestBannerWine",
+	}
+	for _, name in f50 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 50 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		assert(t.Min.Y > -1.2 and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f50 >= 15)
+	assert(Kit.ExtraTemplates.ThroneBackrest.Size.Y >= 320, "ThroneBackrest must clear 320 studs")
+	local room = require(nodes["ReplicatedStorage.Shared.Config.TowerLayout"]).ForFloor(50)
+	local SetPiece = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor50"])
+	local ctx, attrs, parts, lights, emitters = makeAbyssalCollectorCtx(room, true)
+	SetPiece.Build(ctx)
+	assert((attrs.PlacedPropCount or 0) >= 760, "Floor 50 PlacedPropCount < 760")
+	assert((attrs.DistinctTemplateCount or 0) >= 41, "Floor 50 DistinctTemplateCount < 41")
+	assert((attrs.GroundCoverCount or 0) >= 520, "Floor 50 GroundCoverCount < 520")
+	assert(#lights <= 24, "Floor 50 lights exceed 24")
+	assert(#emitters <= 16, "Floor 50 emitters exceed 16")
 	assertAbyssalTelegraphSafety(room, parts, lights)
 end)
 

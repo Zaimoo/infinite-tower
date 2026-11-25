@@ -774,7 +774,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 
 *940 × 795 × 370, `Bottom = −6`. The Crimson Eclipse.*
 
-**Guide image:** ask for it before building.
+**Guide image:** `reference/Abyssal Throne 50.jpg`.
 
 **Story beat:** the Throne. At the bottom of the Abyss, where every Undertow ends, stands the **Throne** of the Warden-King: built so vast that the whole court could kneel on its steps, and grown vaster since. Its **feet** stand on the **Supplicants' Floor**. Its **greaves** rise like towers, its **armrests** are walled terraces, and its **hands** rest on the armrests' ends, open, the last two Wardlights burning in their palms. On its **seat** the **Crimson Overlord** waits for the oath he swore to be answered. Behind him the Throne's **backrest** rises out of sight into the black, crowned by the Chained Crown, with the **Crimson Eclipse** burning behind it.
 
@@ -1169,6 +1169,7 @@ pwsh tests/run.ps1
 - **Floor 47 (`feat/abyssal-throne-floor-47`):** built `AbyssalF47Kit` (15 templates, `tools/blender/generate_abyssal_f47_kit.py`), `AbyssalFloor47.luau` (22 landmarks, 186-stud arched Effigy on Bearers), `Terrain.Rifts` `Loop = true`, `PROCESSIONAL` stairs/bridges, `AUTHORED[47]` and `FloorGrades[47]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 - **Floor 48 (`feat/abyssal-throne-floor-48`):** built `AbyssalF48Kit` (15 templates, `tools/blender/generate_abyssal_f48_kit.py`), `AbyssalFloor48.luau` (26 landmarks, 214-stud Anchor Spires), `Surfaces.THRONEWARD`, `CATENARY` suspended decks, `VoidCatchY = -3.5`, `AUTHORED[48]` and `FloorGrades[48]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 - **Floor 49 (`feat/abyssal-throne-floor-49`):** built `AbyssalF49Kit` (16 templates, `tools/blender/generate_abyssal_f49_kit.py`), `AbyssalFloor49.luau` (28 landmarks, 244-stud Dreadguard Keep Tower), star-fort bastion layout with closed-loop moat & `DRAWBRIDGE` stairs, `AUTHORED[49]` and `FloorGrades[49]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
+- **Floor 50 (`feat/abyssal-throne-floor-50`):** built `AbyssalF50Kit` (16 templates, `tools/blender/generate_abyssal_f50_kit.py`), `AbyssalFloor50.luau` (32 landmarks, 334-stud `ThroneBackrest` + `CrimsonEclipseDisc`), `THRONE` bridges/stairs, dropped invalid `SUPPLICANTS` patrol per §3.5, `AUTHORED[50]` and `FloorGrades[50]`, verified full 46–50 escalation ladder & all 50 floors offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 
 ---
 

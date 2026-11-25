@@ -807,7 +807,7 @@ test("Floor 21 climbs the escalation ladder: bigger and more elaborate than ever
 	local walk, base = routeLength(room), routeLength(canonical)
 	assert(walk <= 1.5 * base, string.format("the Sanctuary-Apex walk is %.0f (canonical %.0f)", walk, base))
 	-- Every floor without its own Size keeps its per-index room size.
-	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true, [46] = true, [47] = true, [48] = true, [49] = true }
+	local sized = { [21] = true, [22] = true, [23] = true, [24] = true, [25] = true, [26] = true, [27] = true, [28] = true, [29] = true, [30] = true, [31] = true, [32] = true, [33] = true, [34] = true, [35] = true, [36] = true, [37] = true, [38] = true, [39] = true, [40] = true, [41] = true, [42] = true, [43] = true, [44] = true, [45] = true, [46] = true, [47] = true, [48] = true, [49] = true, [50] = true }
 	for id = 1, 50 do
 		if not sized[id] then
 			local r, c = Layout.ForFloor(id), Layout.Get((id - 1) % 5 + 1)
@@ -3822,7 +3822,7 @@ test("Astral Archives Floors 41-45 terrain surfaces, floating isles, scarps and 
 	end
 end)
 
-test("Astral Archives Floors 41-45 and Abyssal Throne Floors 46-49 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
+test("Astral Archives Floors 41-45 and Abyssal Throne Floors 46-50 landmark footprints clear all walkways, camps, portals and hit the height ladder", function()
 	local specs = {
 		{ Floor = 41, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor41"]), MinCount = 15, MinTop = 130 },
 		{ Floor = 42, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor42"]), MinCount = 17, MinTop = 150 },
@@ -3833,6 +3833,7 @@ test("Astral Archives Floors 41-45 and Abyssal Throne Floors 46-49 landmark foot
 		{ Floor = 47, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor47"]), MinCount = 18, MinTop = 170 },
 		{ Floor = 48, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor48"]), MinCount = 20, MinTop = 200 },
 		{ Floor = 49, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor49"]), MinCount = 22, MinTop = 235 },
+		{ Floor = 50, Mod = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor50"]), MinCount = 26, MinTop = 320 },
 	}
 	local function nearestDistSq(px: number, pz: number, lm: any): number
 		local nx = math.clamp(px, lm.X - lm.HalfX, lm.X + lm.HalfX)
@@ -4128,6 +4129,67 @@ test("Abyssal Throne Floor 49 (Dreadguard Citadel): star fort round moated keep,
 	for _, c in r.Camps do if c.Id ~= "APEX_SANCTUM" then live += c.Size end end
 	assert(live == 35 and r.EliteCount == 4, string.format("Floor 49 expected 35 live mobs & 4 Elites, got %d & %d", live, r.EliteCount))
 	assert(#Layout.Validate(r) == 0, "Floor 49 has Validate issues")
+end)
+
+test("Abyssal Throne Floor 50 (Overlord's Throne) & full 46-50 escalation ladder beat every earlier tower floor", function()
+	local r = Layout.ForFloor(50)
+	assert(r.Authored == "abyssal:5" and r.Name == "Overlord's Throne" and r.PathStyle == "VAHL")
+	assert(r.Width == 940 and r.Depth == 795 and r.Height == 370 and r.Bottom == -6 and #r.ReturnLinks == 2)
+	local apex = r.Platforms.Apex
+	assert(apex.Width == 212 and apex.Depth == 156 and apex.Y == 72, "Seat must be 212x156 at Y 72")
+	for id, p in r.Platforms do
+		if id ~= "Apex" then assert(p.Y < apex.Y, id .. " must stand below Seat") end
+	end
+	local deg: { [string]: number } = {}
+	local apexIn: { [string]: string } = {}
+	for _, l in r.Links do
+		deg[l.From] = (deg[l.From] or 0) + 1
+		deg[l.To] = (deg[l.To] or 0) + 1
+		if l.From == "Apex" or l.To == "Apex" then apexIn[l.Id] = l.Kind end
+	end
+	assert(deg.Apex == 4 and apexIn.ArmW_Apex == "STAIRS" and apexIn.ArmE_Apex == "STAIRS" and apexIn.HandW_Apex and apexIn.HandE_Apex, "Throne Seat entered only by Armrest STAIRS and Hands")
+	assert(deg.BrokenStair == 1 and deg.ReliquaryW == 1 and deg.ReliquaryE == 1, "BrokenStair and Reliquaries must be dead ends")
+	local adj: { [string]: { string } } = {}
+	local cut = { ArmW = true, ArmE = true, HandW = true, HandE = true }
+	for _, l in r.Links do
+		if not cut[l.From] and not cut[l.To] then
+			adj[l.From] = adj[l.From] or {}; adj[l.To] = adj[l.To] or {}
+			table.insert(adj[l.From], l.To); table.insert(adj[l.To], l.From)
+		end
+	end
+	local seen = { Basin = true }; local q = { "Basin" }; local qi = 1
+	while qi <= #q do
+		local cur = q[qi]; qi += 1
+		for _, nxt in adj[cur] or {} do if not seen[nxt] then seen[nxt] = true; table.insert(q, nxt) end end
+	end
+	assert(not seen.Apex, "Seat must be unreachable without ArmW/ArmE/HandW/HandE")
+	local live, hasBoss = 0, false
+	for _, c in r.Camps do
+		if c.Boss then hasBoss = true elseif c.Id ~= "APEX_SANCTUM" then live += c.Size end
+	end
+	assert(hasBoss and live == 35 and r.EliteCount == 4, string.format("Floor 50 expected 35 live mobs, 4 Elites, Boss camp, got %d & %d", live, r.EliteCount))
+	assert(#Layout.Validate(r) == 0, "Floor 50 has Validate issues")
+
+	-- Strict Escalation Ladder across Floors 46..50 and Floor 50 supremacy over Floors 1..45
+	local function metricsOf(fId: number)
+		local rm = Layout.ForFloor(fId)
+		local pCount, yMap, yCount = 0, {}, 0
+		for _, plat in rm.Platforms do
+			pCount += 1
+			if not yMap[plat.Y] then yMap[plat.Y] = true; yCount += 1 end
+		end
+		return rm.Width * rm.Depth, rm.Height, pCount, #rm.Links, yCount, rm.Platforms.Apex.Y
+	end
+	local pArea, pH, pT, pL, pV, pApexY = 0, 0, 0, 0, 0, -math.huge
+	for fId = 46, 50 do
+		local a, h, t, l, v, ay = metricsOf(fId)
+		assert(a > pArea and h > pH and t > pT and l > pL and v > pV and ay > pApexY, string.format("Floor %d breaks Abyssal escalation ladder", fId))
+		pArea, pH, pT, pL, pV, pApexY = a, h, t, l, v, ay
+	end
+	for prev = 1, 45 do
+		local a, h, t, l, v, ay = metricsOf(prev)
+		assert(pArea >= a and pH >= h and pT >= t and pL >= l and pV >= v and pApexY >= ay, string.format("Floor 50 must lead Floor %d on every structural metric", prev))
+	end
 end)
 
 test("On every floor heroes can route from the Sanctuary to every camp and to the Apex", function()
