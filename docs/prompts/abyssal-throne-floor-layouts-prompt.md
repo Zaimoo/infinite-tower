@@ -383,7 +383,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 
 *700 × 700 × 265, `Bottom = −4`. Crimson vigil.*
 
-**Guide image:** ask for it before building.
+**Guide image:** `reference/Abyssal Throne 47.jpg`.
 
 **Story beat:** the road the oaths were carried down. Twice a year the Vahl carried their oaths to the Throne in two columns: the **Sworn** on the west and the **Bound** on the east. The columns met and crossed at the **Crossing of Oaths**, swapping sides so that no oath reached the Throne by the hand that swore it. They gathered at the **Crimson Bier**, where an effigy of the Warden-King lay in state. The procession has been walking ever since. The Bier stands in the middle of the floor in plain sight from the arrival, ringed by stone mourners.
 
@@ -1166,6 +1166,7 @@ pwsh tests/run.ps1
   - every patrol under 240 s (Floor 50's `SUPPLICANTS` doesn't resolve as written, see Floor 50).
 
 - **Floor 46 (`feat/abyssal-throne-floor-46`):** built `AbyssalF46Kit` (15 templates, `tools/blender/generate_abyssal_f46_kit.py`), `AbyssalFloor46.luau` (20 landmarks, 172-stud Upfall), `Dirge.luau` / `DirgeRuntime.client.luau`, `Surfaces.VAHL` / `Surfaces.THRONEWARD`, `CHAINFORD` bridges, `AUTHORED[46]` and `FloorGrades[46]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
+- **Floor 47 (`feat/abyssal-throne-floor-47`):** built `AbyssalF47Kit` (15 templates, `tools/blender/generate_abyssal_f47_kit.py`), `AbyssalFloor47.luau` (22 landmarks, 186-stud arched Effigy on Bearers), `Terrain.Rifts` `Loop = true`, `PROCESSIONAL` stairs/bridges, `AUTHORED[47]` and `FloorGrades[47]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 
 ---
 

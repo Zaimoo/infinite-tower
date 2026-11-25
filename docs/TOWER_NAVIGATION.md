@@ -168,3 +168,4 @@ Floors 41–45 (Astral Archives, `astral:1`–`astral:5`, `PathStyle = "HALCYR"`
   - `"WAYGATE"` (Floor 44): pale vellum limestone deck with gold rune bands and lapis-brass parapets passing physically through a standing Waygate ring-portal.
   - `"SUTURE"` (Floor 45): dark ebony shelf-plank bridge lashed across the Rift with brass chains and pale starlight-gold suture stitches.
   - `"CHAINFORD"` (Floor 46): blackened-iron diamond-plate grate spanned across braided Undertow channels on chain bolsters with bone-white limestone edge guides and iron chain bollards (`VoidCatchY = -2.2` returns anyone who steps into a channel).
+  - `"PROCESSIONAL"` (Floor 47): obsidian processional deck and `StationW`/`StationE` stairs with matte wine-crimson `Fabric` center runner, bone-white border flags, flanking statue plinths and draped wine banners outside `UsableWidth`. Closed-loop `Terrain.Rifts` (`Loop = true`) carves the void moat around the central Crimson Bier mesa.

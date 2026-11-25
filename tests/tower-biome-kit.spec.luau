@@ -588,6 +588,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[41].AtmosphereDensity < Light.FloorGrades[45].AtmosphereDensity, "Astral atmosphere thickens from Floor 41 to Floor 45")
 	assert(Light.FloorGrades[45].BloomIntensity >= 0.58, "Floor 45 keeps rift-eye bloom")
 	assert(Light.FloorGrades[46] ~= nil and Light.TowerPreset(10, 46) ~= Light.TowerPreset(10), "floor 46 layers its ash-fall dusk grade over BiomeGrades[10]")
+	assert(Light.FloorGrades[47] ~= nil and Light.TowerPreset(10, 47) ~= Light.TowerPreset(10), "floor 47 layers its crimson vigil grade over BiomeGrades[10]")
 	assert(Light.TowerPreset(10, 99) == Light.TowerPreset(10), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
@@ -881,6 +882,32 @@ test("Floor 46 has its own Abyssal Descent kit: >= 11 new templates, 150+ stud U
 	assert((attrs.GroundCoverCount or 0) >= 300, "Floor 46 GroundCoverCount < 300")
 	assert(#lights <= 24, "Floor 46 lights exceed 24")
 	assert(#emitters <= 12, "Floor 46 emitters exceed 12")
+	assertAbyssalTelegraphSafety(room, parts, lights)
+end)
+
+test("Floor 47 has its own Crimson Procession kit: >= 12 new templates, 170+ stud Effigy, census & §5.7 telegraph safety", function()
+	local f47 = {
+		"EffigyOnBearers", "CrimsonBierCatafalque", "ProcessionerSworn", "ProcessionerBound", "KneelingStatue",
+		"ProcessionalStairRunner", "OathLectern", "OathTabletChained", "MournerVeiled", "SilkLoomShrine",
+		"IronForgeShrine", "ChainVotiveRack", "OssuaryNicheWall", "BannerPoleWine", "CenserStand",
+	}
+	for _, name in f47 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 47 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		assert(t.Min.Y > -1.2 and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f47 >= 12)
+	assert(Kit.ExtraTemplates.EffigyOnBearers.Size.Y >= 170, "EffigyOnBearers must clear 170 studs")
+	local room = require(nodes["ReplicatedStorage.Shared.Config.TowerLayout"]).ForFloor(47)
+	local SetPiece = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor47"])
+	local ctx, attrs, parts, lights, emitters = makeAbyssalCollectorCtx(room, true)
+	SetPiece.Build(ctx)
+	assert((attrs.PlacedPropCount or 0) >= 500, "Floor 47 PlacedPropCount < 500")
+	assert((attrs.DistinctTemplateCount or 0) >= 34, "Floor 47 DistinctTemplateCount < 34")
+	assert((attrs.GroundCoverCount or 0) >= 400, "Floor 47 GroundCoverCount < 400")
+	assert(#lights <= 24, "Floor 47 lights exceed 24")
+	assert(#emitters <= 12, "Floor 47 emitters exceed 12")
 	assertAbyssalTelegraphSafety(room, parts, lights)
 end)
 

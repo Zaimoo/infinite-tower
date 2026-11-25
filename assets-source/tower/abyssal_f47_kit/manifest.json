@@ -1,0 +1,323 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BannerPoleWine": {
+      "Min": [
+        -2.2,
+        0.0,
+        -1.848
+      ],
+      "Roles": {
+        "ACCENT": 212,
+        "ALT": 28,
+        "GLOW": 100,
+        "METAL": 420,
+        "SILK": 24,
+        "STONE": 28,
+        "TRIM": 552
+      },
+      "Size": [
+        4.4,
+        22.2,
+        4.091
+      ],
+      "Triangles": 1364
+    },
+    "CenserStand": {
+      "Min": [
+        -1.94,
+        0.0,
+        -1.94
+      ],
+      "Roles": {
+        "ACCENT": 140,
+        "ALT": 28,
+        "GLOW": 100,
+        "METAL": 658,
+        "STONE": 28,
+        "TRIM": 900
+      },
+      "Size": [
+        3.88,
+        11.879,
+        3.88
+      ],
+      "Triangles": 1854
+    },
+    "ChainVotiveRack": {
+      "Min": [
+        -7.4,
+        0.0,
+        -1.6
+      ],
+      "Roles": {
+        "ALT": 180,
+        "GLOW": 200,
+        "METAL": 1800,
+        "SILK": 24,
+        "STONE": 138,
+        "TRIM": 2200
+      },
+      "Size": [
+        14.8,
+        16.412,
+        3.703
+      ],
+      "Triangles": 4542
+    },
+    "CrimsonBierCatafalque": {
+      "Min": [
+        -7.0,
+        0.0,
+        -6.138
+      ],
+      "Roles": {
+        "ACCENT": 520,
+        "ALT": 44,
+        "GLOW": 200,
+        "METAL": 672,
+        "SILK": 306,
+        "STONE": 186,
+        "TRIM": 784
+      },
+      "Size": [
+        14.0,
+        22.417,
+        12.275
+      ],
+      "Triangles": 2712
+    },
+    "EffigyOnBearers": {
+      "Min": [
+        -26.6,
+        0.0,
+        -20.6
+      ],
+      "Roles": {
+        "ACCENT": 528,
+        "ALT": 2180,
+        "GLOW": 48,
+        "METAL": 4766,
+        "SILK": 56,
+        "STONE": 1834,
+        "TRIM": 2800
+      },
+      "Size": [
+        53.2,
+        186.0,
+        41.2
+      ],
+      "Triangles": 12212
+    },
+    "IronForgeShrine": {
+      "Min": [
+        -6.8,
+        -0.002,
+        -6.218
+      ],
+      "Roles": {
+        "ALT": 44,
+        "GLOW": 100,
+        "METAL": 368,
+        "SILK": 12,
+        "STONE": 174,
+        "TRIM": 644
+      },
+      "Size": [
+        13.602,
+        16.852,
+        10.821
+      ],
+      "Triangles": 1342
+    },
+    "KneelingStatue": {
+      "Min": [
+        -2.2,
+        0.0,
+        -2.7
+      ],
+      "Roles": {
+        "ALT": 284,
+        "METAL": 44,
+        "SILK": 12,
+        "STONE": 44
+      },
+      "Size": [
+        4.4,
+        9.106,
+        5.4
+      ],
+      "Triangles": 384
+    },
+    "MournerVeiled": {
+      "Min": [
+        -2.402,
+        0.0,
+        -2.402
+      ],
+      "Roles": {
+        "ALT": 28,
+        "GLOW": 100,
+        "METAL": 52,
+        "SILK": 228,
+        "STONE": 64,
+        "TRIM": 232
+      },
+      "Size": [
+        4.804,
+        13.89,
+        4.804
+      ],
+      "Triangles": 704
+    },
+    "OathLectern": {
+      "Min": [
+        -2.1,
+        0.0,
+        -1.9
+      ],
+      "Roles": {
+        "ACCENT": 260,
+        "ALT": 92,
+        "GLOW": 100,
+        "METAL": 712,
+        "SILK": 24,
+        "STONE": 138,
+        "TRIM": 872
+      },
+      "Size": [
+        4.2,
+        7.903,
+        3.8
+      ],
+      "Triangles": 2198
+    },
+    "OathTabletChained": {
+      "Min": [
+        -3.4,
+        0.0,
+        -1.8
+      ],
+      "Roles": {
+        "ACCENT": 200,
+        "ALT": 186,
+        "METAL": 1192,
+        "SILK": 12,
+        "STONE": 56,
+        "TRIM": 1600
+      },
+      "Size": [
+        6.8,
+        14.4,
+        3.6
+      ],
+      "Triangles": 3246
+    },
+    "OssuaryNicheWall": {
+      "Min": [
+        -12.0,
+        0.0,
+        -3.4
+      ],
+      "Roles": {
+        "ACCENT": 424,
+        "ALT": 498,
+        "GLOW": 400,
+        "METAL": 1516,
+        "SILK": 96,
+        "STONE": 256,
+        "TRIM": 1399
+      },
+      "Size": [
+        24.0,
+        25.306,
+        6.8
+      ],
+      "Triangles": 4589
+    },
+    "ProcessionalStairRunner": {
+      "Min": [
+        -3.8,
+        0.0,
+        -1.9
+      ],
+      "Roles": {
+        "ACCENT": 24,
+        "ALT": 56,
+        "GLOW": 100,
+        "METAL": 100,
+        "SILK": 24,
+        "STONE": 138,
+        "TRIM": 244
+      },
+      "Size": [
+        5.7,
+        19.3,
+        4.762
+      ],
+      "Triangles": 686
+    },
+    "ProcessionerBound": {
+      "Min": [
+        -2.587,
+        0.0,
+        -2.587
+      ],
+      "Roles": {
+        "ALT": 28,
+        "METAL": 1066,
+        "STONE": 284,
+        "TRIM": 1440
+      },
+      "Size": [
+        5.174,
+        17.989,
+        5.279
+      ],
+      "Triangles": 2818
+    },
+    "ProcessionerSworn": {
+      "Min": [
+        -2.587,
+        0.0,
+        -2.587
+      ],
+      "Roles": {
+        "ALT": 312,
+        "GLOW": 100,
+        "METAL": 212,
+        "STONE": 124,
+        "TRIM": 392
+      },
+      "Size": [
+        5.174,
+        19.712,
+        5.174
+      ],
+      "Triangles": 1140
+    },
+    "SilkLoomShrine": {
+      "Min": [
+        -7.8,
+        0.0,
+        -3.804
+      ],
+      "Roles": {
+        "ACCENT": 200,
+        "ALT": 44,
+        "GLOW": 200,
+        "METAL": 548,
+        "SILK": 174,
+        "STONE": 334,
+        "TRIM": 916
+      },
+      "Size": [
+        15.633,
+        22.854,
+        7.504
+      ],
+      "Triangles": 2416
+    }
+  },
+  "Unit": "studs"
+}

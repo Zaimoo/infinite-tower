@@ -670,6 +670,22 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	VahlGibbetCage = table.freeze({ Size = Vector3.new(4.85, 22.8, 11.282), Min = Vector3.new(-2.425, 0.0, -5.4), Roles = table.freeze({ "ALT", "METAL", "SILK", "STONE", "TRIM" }) }),
 	WardlightCage = table.freeze({ Size = Vector3.new(3.291, 13.28, 6.02), Min = Vector3.new(-1.645, 0.0, -2.5), Roles = table.freeze({ "GLOW", "METAL", "STONE", "TRIM" }) }),
 	WeirOfHooks = table.freeze({ Size = Vector3.new(22.6, 14.8, 5.2), Min = Vector3.new(-11.3, 0.0, -2.6), Roles = table.freeze({ "ALT", "METAL", "SILK", "STONE", "TRIM" }) }),
+	-- Abyssal Throne Floor 47 (Crimson Procession, abyssal_f47_kit)
+	BannerPoleWine = table.freeze({ Size = Vector3.new(4.4, 22.2, 4.091), Min = Vector3.new(-2.2, 0.0, -1.848), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	CenserStand = table.freeze({ Size = Vector3.new(3.88, 11.879, 3.88), Min = Vector3.new(-1.94, 0.0, -1.94), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
+	ChainVotiveRack = table.freeze({ Size = Vector3.new(14.8, 16.412, 3.703), Min = Vector3.new(-7.4, 0.0, -1.6), Roles = table.freeze({ "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	CrimsonBierCatafalque = table.freeze({ Size = Vector3.new(14.0, 22.417, 12.275), Min = Vector3.new(-7.0, 0.0, -6.138), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	EffigyOnBearers = table.freeze({ Size = Vector3.new(53.2, 186.0, 41.2), Min = Vector3.new(-26.6, 0.0, -20.6), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	IronForgeShrine = table.freeze({ Size = Vector3.new(13.602, 16.852, 10.821), Min = Vector3.new(-6.8, -0.002, -6.218), Roles = table.freeze({ "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	KneelingStatue = table.freeze({ Size = Vector3.new(4.4, 9.106, 5.4), Min = Vector3.new(-2.2, 0.0, -2.7), Roles = table.freeze({ "ALT", "METAL", "SILK", "STONE" }) }),
+	MournerVeiled = table.freeze({ Size = Vector3.new(4.804, 13.89, 4.804), Min = Vector3.new(-2.402, 0.0, -2.402), Roles = table.freeze({ "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	OathLectern = table.freeze({ Size = Vector3.new(4.2, 7.903, 3.8), Min = Vector3.new(-2.1, 0.0, -1.9), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	OathTabletChained = table.freeze({ Size = Vector3.new(6.8, 14.4, 3.6), Min = Vector3.new(-3.4, 0.0, -1.8), Roles = table.freeze({ "ACCENT", "ALT", "METAL", "SILK", "STONE", "TRIM" }) }),
+	OssuaryNicheWall = table.freeze({ Size = Vector3.new(24.0, 25.306, 6.8), Min = Vector3.new(-12.0, 0.0, -3.4), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	ProcessionalStairRunner = table.freeze({ Size = Vector3.new(5.7, 19.3, 4.762), Min = Vector3.new(-3.8, 0.0, -1.9), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
+	ProcessionerBound = table.freeze({ Size = Vector3.new(5.174, 17.989, 5.279), Min = Vector3.new(-2.587, 0.0, -2.587), Roles = table.freeze({ "ALT", "METAL", "STONE", "TRIM" }) }),
+	ProcessionerSworn = table.freeze({ Size = Vector3.new(5.174, 19.712, 5.174), Min = Vector3.new(-2.587, 0.0, -2.587), Roles = table.freeze({ "ALT", "GLOW", "METAL", "STONE", "TRIM" }) }),
+	SilkLoomShrine = table.freeze({ Size = Vector3.new(15.633, 22.854, 7.504), Min = Vector3.new(-7.8, 0.0, -3.804), Roles = table.freeze({ "ACCENT", "ALT", "GLOW", "METAL", "SILK", "STONE", "TRIM" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -945,6 +961,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	AthenaeumDomeDrum = true, AthenaeumDomeCrown = true, RunewardPylon = true, WaygateRing = true, RuneguardTower = true, IndexBoard = true, SealPress = true, StarIronAnvil = true, ChainedTomeRack = true, VaultRingDoor = true, LensRack = true, BookCartLift = true, CopyistAwning = true,
 	GreatTelescopeMount = true, GreatTelescopeTube = true, ObservatoryDomeRibs = true, AzimuthRing = true, SutureShelfSpan = true, RiftOverlookDeck = true, TransitTower = true, TransitInstrument = true, LensBench = true, FallenOrrery = true, StarLecternGrand = true, ToppledCabinetRange = true, ProofPress = true, MeridianFooting = true,
 	UpfallColumn = true, EyotSlabL = true, EyotSlabM = true, EyotSlabS = true, VahlGibbetCage = true, WeirOfHooks = true, ChainedCrownKeystone = true, ReavingRack = true, ExecutionBlock = true, FallenStackWreck = true, ChainPostIron = true,
+	EffigyOnBearers = true, CrimsonBierCatafalque = true, ProcessionerSworn = true, ProcessionerBound = true, SilkLoomShrine = true, IronForgeShrine = true, ChainVotiveRack = true, OssuaryNicheWall = true, OathTabletChained = true, BannerPoleWine = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit
