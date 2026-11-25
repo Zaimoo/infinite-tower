@@ -11,7 +11,7 @@ local AbyssalCollision = {}
 -- plain substrings. ("GroundCover" and "Cover_", not "Cover": a covert-way palisade is a wall.)
 local GHOST_KINDS = table.freeze({
 	"Undertow", "Upfall", "Eclipse", "Sky", "Silhouette", "Ribbon", "Glow", "Mist", "Banner", "Wardlight",
-	"Lantern", "Overhead", "Hanging", "Crown", "GroundCover", "Cover_", "Inlay", "Wound", "Horizon", "RoseWindow",
+	"Lantern", "Overhead", "Hanging", "ThroneCrown", "GroundCover", "Cover_", "Inlay", "Wound", "Horizon", "RoseWindow",
 	"VaultRib", "Skirt", "ChainFordSub", "ChainClimb", "MantleChain", "GreatChain", "ChasmChain", "Detail",
 })
 
