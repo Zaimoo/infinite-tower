@@ -410,21 +410,12 @@ local function instancePosition(inst: Instance): Vector3?
 	return nil
 end
 
-local function modelHasCollidablePart(model: Model): boolean
-	for _, d in model:GetDescendants() do
-		if d:IsA("BasePart") and d.CanCollide then
-			return true
-		end
-	end
-	return false
-end
-
--- True when a tagged piece is small and walk-through enough to lean, bow or draw taut on the toll.
+-- True when a tagged piece is a single small walk-through part that may lean, bow or draw taut on the toll.
+-- A Model never moves: under streaming only some of its parts may have arrived when the floor is scanned, so it
+-- measures small, and pivoting it moves just those parts while the rest stream in where they were (the "broken"
+-- great chains on Floor 48).
 local function canSway(inst: Instance): boolean
-	if inst:IsA("Model") then
-		local size = inst:GetExtentsSize()
-		return math.max(size.X, size.Y, size.Z) <= MAX_SWAY_SIZE and not modelHasCollidablePart(inst)
-	elseif inst:IsA("BasePart") then
+	if inst:IsA("BasePart") then
 		return math.max(inst.Size.X, inst.Size.Y, inst.Size.Z) <= MAX_SWAY_SIZE and not inst.CanCollide
 	end
 	return false
