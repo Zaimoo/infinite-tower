@@ -370,15 +370,15 @@ function AstralFloor41.Build(ctx: any)
 	-- faceted rock & glowing cyan crystal underside with hanging gold lanterns,
 	-- and classical curved marble balustrades automatically gapped at every bridge!
 	-- =========================================================================
-	local bridgeAnglesByPlat: { [string]: { number } } = {}
+	local bridgeAnglesByPlat: { [string]: { { number } } } = {}
 	for _, link in ctx.layout.Links do
 		local pFrom = P[link.From]
 		local pTo = P[link.To]
 		if pFrom and pTo then
 			bridgeAnglesByPlat[link.From] = bridgeAnglesByPlat[link.From] or {}
-			table.insert(bridgeAnglesByPlat[link.From], math.atan2(link.AZ - pFrom.Z, link.AX - pFrom.X))
+			table.insert(bridgeAnglesByPlat[link.From], { math.atan2(link.AZ - pFrom.Z, link.AX - pFrom.X), link.Width })
 			bridgeAnglesByPlat[link.To] = bridgeAnglesByPlat[link.To] or {}
-			table.insert(bridgeAnglesByPlat[link.To], math.atan2(link.BZ - pTo.Z, link.BX - pTo.X))
+			table.insert(bridgeAnglesByPlat[link.To], { math.atan2(link.BZ - pTo.Z, link.BX - pTo.X), link.Width })
 		end
 	end
 
@@ -477,9 +477,9 @@ function AstralFloor41.Build(ctx: any)
 		-- 3. Classical white-marble perimeter balustrades with gold handrails (automatically gapped at bridges & bays!)
 		local openings: { { number } } = {}
 		for _, ba in bridgeAnglesByPlat[id] or {} do
-			-- Match the 28-stud bridgehead pier tightly so circular balustrades meet the pier curbs cleanly
-			local halfSpan = math.asin(math.clamp(16.2 / radius, 0.22, 0.72))
-			table.insert(openings, { ba, halfSpan })
+			-- Match the bridgehead pier tightly so circular balustrades meet the pier curbs cleanly
+			local halfSpan = math.asin(math.clamp((ba[2] * 0.5 + 3.8) / radius, 0.20, 0.78))
+			table.insert(openings, { ba[1], halfSpan })
 		end
 		for _, bo in bayOpenings[id] or {} do
 			table.insert(openings, bo)
@@ -497,6 +497,7 @@ function AstralFloor41.Build(ctx: any)
 			local segs = if radius >= 55 then 36 else 28
 			local step = (math.pi * 2) / segs
 			local rimR = radius - 0.9
+			local fenceColliders: { BasePart } = {}
 			for k = 0, segs - 1 do
 				local a0 = -math.pi + k * step
 				local aMid = a0 + step * 0.5
@@ -511,6 +512,8 @@ function AstralFloor41.Build(ctx: any)
 				boxAt("IsleBalPlinth", cf * CFrame.new(0, 0.5, 0), V(1.15, 0.95, segLen), MARBLE_LIGHT, Mat.Marble)
 				boxAt("IsleBalRail", cf * CFrame.new(0, 2.85, 0), V(0.85, 0.45, segLen), GOLD_BRIGHT, Mat.Metal)
 				boxAt("IsleBalPost", cf * CFrame.new(0, 1.75, 0), V(0.65, 1.9, 0.65), MARBLE_WARM, Mat.Marble)
+				local col = boxAt("IsleBalCollider", cf * CFrame.new(0, 1.8, 0), V(1.2, 3.6, segLen + 0.2), MARBLE_LIGHT, Mat.Marble, 1)
+				table.insert(fenceColliders, col)
 				-- Corner newel pillar with gold orb if adjacent segment is a bridge opening
 				local prevOpen = isOpenAngle(aMid - step)
 				local nextOpen = isOpenAngle(aMid + step)
@@ -524,6 +527,10 @@ function AstralFloor41.Build(ctx: any)
 				end
 			end
 			makeDecor(ctx.current())
+			for _, c in fenceColliders do
+				c.CanCollide = true
+				c.CanQuery = true
+			end
 			pin(ctx.current())
 		end)
 	end
@@ -552,11 +559,15 @@ function AstralFloor41.Build(ctx: any)
 			end
 
 			-- Grand central deep-lapis starry constellation mosaic plaza (matching Image 2's foreground!)
-			boxAt("ConcourseLapisMosaicCenter", CFrame.new(V(bx, by + 0.06, bz + 2)), V(164, 0.14, 58), LAPIS_DEEP, Mat.Marble)
-			boxAt("ConcourseLapisMosaicWest", CFrame.new(V(bx - 165, by + 0.06, bz)), V(130, 0.14, 52), LAPIS_DEEP, Mat.Marble)
-			boxAt("ConcourseLapisMosaicEast", CFrame.new(V(bx + 165, by + 0.06, bz)), V(130, 0.14, 52), LAPIS_DEEP, Mat.Marble)
+			local sideMosW = math.max(88, halfW - 118)
+			local sideMosX = 96 + sideMosW * 0.5
+			local mosD = math.max(44, bd - 34)
+			local fenceColliders: { BasePart } = {}
+			boxAt("ConcourseLapisMosaicCenter", CFrame.new(V(bx, by + 0.06, bz + 2)), V(152, 0.14, mosD + 4), LAPIS_DEEP, Mat.Marble)
+			boxAt("ConcourseLapisMosaicWest", CFrame.new(V(bx - sideMosX, by + 0.06, bz)), V(sideMosW, 0.14, mosD), LAPIS_DEEP, Mat.Marble)
+			boxAt("ConcourseLapisMosaicEast", CFrame.new(V(bx + sideMosX, by + 0.06, bz)), V(sideMosW, 0.14, mosD), LAPIS_DEEP, Mat.Marble)
 			-- Gold borders framing the three starry mosaic panels
-			for _, panel in { { bx, bz + 2, 164, 58 }, { bx - 165, bz, 130, 52 }, { bx + 165, bz, 130, 52 } } do
+			for _, panel in { { bx, bz + 2, 152, mosD + 4 }, { bx - sideMosX, bz, sideMosW, mosD }, { bx + sideMosX, bz, sideMosW, mosD } } do
 				local cx, cz, pw, pd = panel[1], panel[2], panel[3], panel[4]
 				for _, sz in { -1, 1 } do
 					boxAt("MosaicGoldEdgeZ", CFrame.new(V(cx, by + 0.13, cz + sz * pd * 0.5)), V(pw + 1.2, 0.12, 0.75), GOLD_BRIGHT, Mat.Metal)
@@ -568,10 +579,10 @@ function AstralFloor41.Build(ctx: any)
 
 			-- Clean, non-overlapping golden constellation arcs in the west & east panels + framing the central astrolabe!
 			local starChains = {
-				{ V(-70, 0.15, 178), V(-52, 0.15, 152), V(-34, 0.15, 168) },
-				{ V(34, 0.15, 168), V(52, 0.15, 152), V(70, 0.15, 178) },
-				{ V(-215, 0.15, 176), V(-188, 0.15, 150), V(-152, 0.15, 174), V(-118, 0.15, 154) },
-				{ V(118, 0.15, 154), V(152, 0.15, 174), V(188, 0.15, 150), V(215, 0.15, 176) },
+				{ V(-64, 0.15, bz + 12), V(-48, 0.15, bz - 10), V(-34, 0.15, bz + 4) },
+				{ V(34, 0.15, bz + 4), V(48, 0.15, bz - 10), V(64, 0.15, bz + 12) },
+				{ V(-(sideMosX + sideMosW * 0.38), 0.15, bz + 10), V(-(sideMosX + sideMosW * 0.12), 0.15, bz - 12), V(-(sideMosX - sideMosW * 0.14), 0.15, bz + 8), V(-(sideMosX - sideMosW * 0.36), 0.15, bz - 10) },
+				{ V(sideMosX - sideMosW * 0.36, 0.15, bz - 10), V(sideMosX - sideMosW * 0.14, 0.15, bz + 8), V(sideMosX + sideMosW * 0.12, 0.15, bz - 12), V(sideMosX + sideMosW * 0.38, 0.15, bz + 10) },
 			}
 			for _, chain in starChains do
 				for i, pt in chain do
@@ -598,7 +609,7 @@ function AstralFloor41.Build(ctx: any)
 				boxAt("ArrivalStepGold", CFrame.new(V(0, sy + 0.12, sz - 1.85)), V(26.2, 0.14, 0.35), GOLD_BRIGHT, Mat.Metal)
 			end
 
-			-- Classical marble balustrades framing the Concourse promenade edges (exact openings for EVERY bridge & return ramp!)
+			-- Classical marble balustrades framing the Concourse promenade edges (exact openings for EVERY bridge!)
 			local function balustradeSpan(x0: number, z0: number, x1: number, z1: number)
 				local a, b = V(x0, by, z0), V(x1, by, z1)
 				local len = (b - a).Magnitude
@@ -607,6 +618,8 @@ function AstralFloor41.Build(ctx: any)
 				local cf = CFrame.lookAt(mid, b)
 				boxAt("ConcourseBalPlinth", cf * CFrame.new(0, 0.55, 0), V(1.3, 1.1, len), MARBLE_LIGHT, Mat.Marble)
 				boxAt("ConcourseBalRail", cf * CFrame.new(0, 3.1, 0), V(0.95, 0.45, len), GOLD_BRIGHT, Mat.Metal)
+				local col = boxAt("ConcourseBalCollider", cf * CFrame.new(0, 1.8, 0), V(1.35, 3.6, len + 0.4), MARBLE_LIGHT, Mat.Marble, 1)
+				table.insert(fenceColliders, col)
 				local posts = math.max(2, math.floor(len / 8))
 				for i = 0, posts do
 					local pt = a:Lerp(b, i / posts)
@@ -619,7 +632,7 @@ function AstralFloor41.Build(ctx: any)
 			end
 
 			-- Compute exact X-openings along Basin's north edge from the 3 straight outgoing bridges only!
-			-- (Unconnected void ReturnLinks are hidden, so Basin's north balustrade runs cleanly across X=±222.)
+			-- (Unconnected void ReturnLinks are hidden, so Basin's north balustrade runs cleanly.)
 			local northZ = bz - halfD + 0.8
 			local gaps: { { number } } = {}
 			for _, link in ctx.layout.Links do
@@ -676,35 +689,41 @@ function AstralFloor41.Build(ctx: any)
 			balustradeSpan(halfW - 1.5, northZ + 8, halfW - 1.5, southZ - 8)
 
 			-- Celestial globes on pedestals framing the arrival stair & promenade corners
+			local cornerX = halfW - 6
 			for _, gp in {
 				V(-28, by, southZ - 1.5), V(28, by, southZ - 1.5),
-				V(-278, by, northZ + 3), V(278, by, northZ + 3),
-				V(-278, by, southZ - 3), V(278, by, southZ - 3),
+				V(-cornerX, by, northZ + 3), V(cornerX, by, northZ + 3),
+				V(-cornerX, by, southZ - 3), V(cornerX, by, southZ - 3),
 			} do
 				buildGlobePedestal(gp, 1.0)
 			end
 			-- South reading benches tucked neatly against the south balustrade
-			for _, bxBench in { -180, -68, 68, 180 } do
+			for _, bxBench in { -155, -66, 66, 155 } do
 				buildMarbleBench(V(bxBench, by, southZ - 5.5), 180)
 			end
 
 			makeDecor(ctx.current())
+			for _, c in fenceColliders do
+				c.CanCollide = true
+				c.CanQuery = true
+			end
 			pin(ctx.current())
 		end)
 	end
 
 	-- Central golden compass-star astrolabe medallion inside the central lapis plaza (clean, no overlapping zig-zag!)
 	ctx.group("ConcourseStarMap", function()
-		ctx.ring("ConcourseAstrolabeOuter", V(0, 0.16, 167), 20.0, 0.45, GOLD_BRIGHT, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 24)
-		ctx.ring("ConcourseAstrolabeInner", V(0, 0.17, 167), 10.5, 0.32, GLOW_GOLD, Mat.Neon, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 18)
+		local astZ = if basin then basin.Z + 2 else 173
+		ctx.ring("ConcourseAstrolabeOuter", V(0, 0.16, astZ), 20.0, 0.45, GOLD_BRIGHT, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 24)
+		ctx.ring("ConcourseAstrolabeInner", V(0, 0.17, astZ), 10.5, 0.32, GLOW_GOLD, Mat.Neon, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 18)
 		for i = 0, 7 do
 			local a = i * math.pi / 4
 			local len = if i % 2 == 0 then 19.5 else 13.0
-			local bar = boxAt("ConcourseGlyphRay", CFrame.new(V(math.cos(a) * (len * 0.5 + 2.0), 0.16, 167 + math.sin(a) * (len * 0.5 + 2.0))) * CFrame.Angles(0, -a, 0), V(len, 0.10, 0.34), GLOW_GOLD, Mat.Neon)
+			local bar = boxAt("ConcourseGlyphRay", CFrame.new(V(math.cos(a) * (len * 0.5 + 2.0), 0.16, astZ + math.sin(a) * (len * 0.5 + 2.0))) * CFrame.Angles(0, -a, 0), V(len, 0.10, 0.34), GLOW_GOLD, Mat.Neon)
 			bar:SetAttribute("ConjunctionGlyph", true)
 			safeTag(bar, "ConjunctionGlyph")
 		end
-		lump("ConcourseAstrolabeCore", V(0, 0.18, 167), V(3.2, 0.24, 3.2), GLOW_GOLD, Mat.Neon)
+		lump("ConcourseAstrolabeCore", V(0, 0.18, astZ), V(3.2, 0.24, 3.2), GLOW_GOLD, Mat.Neon)
 		makeDecor(ctx.current())
 	end)
 
@@ -1070,8 +1089,8 @@ function AstralFloor41.Build(ctx: any)
 	-- =========================================================================
 	-- { x, y, z, withLight, lookAtX, lookAtZ }
 	local lampSpots = {
-		{ -56, 0, 121, true, -56, 165 },       -- Concourse west (against north balustrade, arching south)
-		{ 56, 0, 121, true, 56, 165 },         -- Concourse east (against north balustrade, arching south)
+		{ -56, 0, 133, true, -56, 171 },       -- Concourse west (against north balustrade, arching south)
+		{ 56, 0, 133, true, 56, 171 },         -- Concourse east (against north balustrade, arching south)
 		{ -158, 8, 47.5, true, -190, 25 },     -- Vane Root SE rim (arching inward)
 		{ -90, 16, -53.5, true, -90, -24 },    -- Lamplighters' Isle N rim (arching inward)
 		{ 0, 24, -49.5, true, 0, -85 },        -- The Calamus S rim (clear of center & all 4 bridges, arching inward)

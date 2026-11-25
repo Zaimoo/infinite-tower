@@ -109,25 +109,25 @@ AstralFloor42.Landmarks = table.freeze({
 	-- 9. Codex Moon Phase Disc (grounded cleanly on MoonSE's integrated south medallion bay, facing Sanctuary)
 	{ Id = "CodexMoonPhaseDisc", X = 110, Z = 56, Y = 17, HalfX = 6.2, HalfZ = 2.0, Top = 15.0 },
 	-- 10. Glossary Marginalia Stack (grounded on MoonW's integrated western stack bay)
-	{ Id = "GlossaryStack", X = -296, Z = -90, Y = 20, HalfX = 5.2, HalfZ = 4.0, Top = 7.6 },
+	{ Id = "GlossaryStack", X = -300, Z = -74, Y = 20, HalfX = 5.2, HalfZ = 4.0, Top = 7.6 },
 	-- 11. Marginalia Stack (grounded on MoonE's integrated eastern stack bay)
-	{ Id = "MarginaliaStack", X = 296, Z = -90, Y = 22, HalfX = 5.2, HalfZ = 4.0, Top = 7.6 },
+	{ Id = "MarginaliaStack", X = 300, Z = -74, Y = 22, HalfX = 5.2, HalfZ = 4.0, Top = 7.6 },
 	-- 12. Atlas Globe Stand (grounded on OuterNW's integrated NW alcove bay)
 	{ Id = "AtlasGlobeStand", X = -216, Z = -248, Y = 25, HalfX = 9.6, HalfZ = 5.4, Top = 15.2 },
 	-- 13. Almanac Star-Table Slate (grounded on OuterNE's integrated NE alcove bay)
 	{ Id = "AlmanacStarTable", X = 216, Z = -248, Y = 27, HalfX = 9.2, HalfZ = 2.8, Top = 13.2 },
 	-- 14. Lexicon Lectern Row (grounded on MiddleW's integrated western lectern bay)
-	{ Id = "LexiconLecternRow", X = -194, Z = -110, Y = 30, HalfX = 2.4, HalfZ = 7.2, Top = 6.6 },
+	{ Id = "LexiconLecternRow", X = -180, Z = -110, Y = 30, HalfX = 2.4, HalfZ = 7.2, Top = 6.6 },
 	-- 15. Concordance Lectern Row (grounded on MiddleE's integrated eastern lectern bay)
-	{ Id = "ConcordanceLecternRow", X = 194, Z = -110, Y = 34, HalfX = 2.4, HalfZ = 7.2, Top = 6.6 },
+	{ Id = "ConcordanceLecternRow", X = 180, Z = -110, Y = 34, HalfX = 2.4, HalfZ = 7.2, Top = 6.6 },
 	-- 16. The Aphelion lone telescope (grounded on Aphelion's integrated frosty northern observatory bay)
 	{ Id = "AphelionTelescope", X = 0, Z = -302, Y = 39, HalfX = 5.4, HalfZ = 6.5, Top = 12.2 },
 	-- 17. Perihelion Court Brass Sundial (grounded on Crossing's integrated northern marble dais bay, clear of camp)
 	{ Id = "PerihelionSundial", X = 0, Z = 32, Y = 8, HalfX = 9.2, HalfZ = 9.2, Top = 7.0 },
 	-- 18. Plinth West Ring Gear half-sunk solidly on Basin's slate-blue north terrace
-	{ Id = "PlinthRingGearW", X = -156, Z = 162, Y = 0, HalfX = 10.4, HalfZ = 3.6, Top = 10.8 },
+	{ Id = "PlinthRingGearW", X = -156, Z = 174, Y = 0, HalfX = 10.4, HalfZ = 3.6, Top = 10.8 },
 	-- 19. Plinth East Ring Gear half-sunk solidly on Basin's slate-blue north terrace
-	{ Id = "PlinthRingGearE", X = 156, Z = 162, Y = 0, HalfX = 10.4, HalfZ = 3.6, Top = 10.8 },
+	{ Id = "PlinthRingGearE", X = 156, Z = 174, Y = 0, HalfX = 10.4, HalfZ = 3.6, Top = 10.8 },
 }) :: { Landmark }
 
 local function safeTag(inst: Instance?, tagName: string)
@@ -395,15 +395,15 @@ function AstralFloor42.Build(ctx: any)
 	-- underside (with its flat grey STONE lid hidden), distinctive floor inlays, and
 	-- golden-trimmed marble balustrades automatically gapped cleanly at every bridge & bay!
 	-- =========================================================================
-	local bridgeAnglesByPlat: { [string]: { number } } = {}
+	local bridgeAnglesByPlat: { [string]: { { number } } } = {}
 	for _, link in ctx.layout.Links do
 		local pFrom = P[link.From]
 		local pTo = P[link.To]
 		if pFrom and pTo then
 			bridgeAnglesByPlat[link.From] = bridgeAnglesByPlat[link.From] or {}
-			table.insert(bridgeAnglesByPlat[link.From], math.atan2(link.AZ - pFrom.Z, link.AX - pFrom.X))
+			table.insert(bridgeAnglesByPlat[link.From], { math.atan2(link.AZ - pFrom.Z, link.AX - pFrom.X), link.Width })
 			bridgeAnglesByPlat[link.To] = bridgeAnglesByPlat[link.To] or {}
-			table.insert(bridgeAnglesByPlat[link.To], math.atan2(link.BZ - pTo.Z, link.BX - pTo.X))
+			table.insert(bridgeAnglesByPlat[link.To], { math.atan2(link.BZ - pTo.Z, link.BX - pTo.X), link.Width })
 		end
 	end
 
@@ -558,8 +558,8 @@ function AstralFloor42.Build(ctx: any)
 		-- 3. Classical marble-and-gold perimeter balustrades (automatically gapped cleanly at EVERY bridge & alcove bay!)
 		local openings: { { number } } = {}
 		for _, ba in bridgeAnglesByPlat[id] or {} do
-			local halfSpan = math.asin(math.clamp(16.2 / radius, 0.22, 0.74))
-			table.insert(openings, { ba, halfSpan })
+			local halfSpan = math.asin(math.clamp((ba[2] * 0.5 + 3.8) / radius, 0.20, 0.78))
+			table.insert(openings, { ba[1], halfSpan })
 		end
 		for _, bo in bayOpenings[id] or {} do
 			table.insert(openings, bo)
@@ -581,6 +581,7 @@ function AstralFloor42.Build(ctx: any)
 			local balPlinthMat = if isFrost then Mat.Ice else Mat.Marble
 			local balRailCol = if isFrost then FROST_TRIM else GOLD_BRIGHT
 			local balRailMat = if isFrost then Mat.Ice else Mat.Metal
+			local fenceColliders: { BasePart } = {}
 			for k = 0, segs - 1 do
 				local a0 = -math.pi + k * step
 				local aMid = a0 + step * 0.5
@@ -594,6 +595,8 @@ function AstralFloor42.Build(ctx: any)
 				boxAt("IsleBalPlinth", cf * CFrame.new(0, 0.5, 0), V(1.15, 0.95, segLen), balPlinthCol, balPlinthMat)
 				boxAt("IsleBalRail", cf * CFrame.new(0, 2.85, 0), V(0.88, 0.45, segLen), balRailCol, balRailMat)
 				boxAt("IsleBalPost", cf * CFrame.new(0, 1.75, 0), V(0.65, 1.9, 0.65), if isFrost then FROST_ICE else MARBLE_WARM, balPlinthMat)
+				local col = boxAt("IsleBalCollider", cf * CFrame.new(0, 1.8, 0), V(1.2, 3.6, segLen + 0.2), balPlinthCol, balPlinthMat, 1)
+				table.insert(fenceColliders, col)
 				local prevOpen = isOpenAngle(aMid - step)
 				local nextOpen = isOpenAngle(aMid + step)
 				if prevOpen then
@@ -606,6 +609,10 @@ function AstralFloor42.Build(ctx: any)
 				end
 			end
 			makeDecor(ctx.current())
+			for _, c in fenceColliders do
+				c.CanCollide = true
+				c.CanQuery = true
+			end
 			pin(ctx.current())
 		end)
 	end
@@ -633,10 +640,10 @@ function AstralFloor42.Build(ctx: any)
 				boxAt("PlinthGoldCorniceSide", CFrame.new(V(bx + sx * (halfW + 2.1), by - 0.60, bz)), V(1.0, 0.90, bd + 1.2), GOLD_BRIGHT, Mat.Metal)
 			end
 
-			-- Flanking slate-blue tiled side wings matching Image 1's blue stonework flanking the cream arrival walkway!
+			-- Flanking slate-blue tiled side wings sized cleanly to Basin's width!
+			local wingW = math.max(120, halfW - 50)
 			for _, sx in { -1, 1 } do
-				local wingCx = bx + sx * 176
-				local wingW = 248
+				local wingCx = bx + sx * (44 + wingW * 0.5)
 				boxAt("PlinthBlueWing", CFrame.new(V(wingCx, by + 0.11, bz)), V(wingW, 0.14, bd - 10), SLATE_BLUE, Mat.Slate)
 				-- Gold borders & subtle tile grid seams framing each blue side wing
 				for _, sz in { -1, 1 } do
@@ -667,6 +674,7 @@ function AstralFloor42.Build(ctx: any)
 			end
 
 			-- Classical marble-and-gold balustrades along all Plinth edges (exact gaps for the 3 straight bridges!)
+			local fenceColliders: { BasePart } = {}
 			local function balustradeSpan(x0: number, z0: number, x1: number, z1: number)
 				local a, b = V(x0, by, z0), V(x1, by, z1)
 				local len = (b - a).Magnitude
@@ -675,6 +683,8 @@ function AstralFloor42.Build(ctx: any)
 				local cf = CFrame.lookAt(mid, b)
 				boxAt("PlinthBalPlinth", cf * CFrame.new(0, 0.55, 0), V(1.3, 1.1, len), MARBLE_LIGHT, Mat.Marble)
 				boxAt("PlinthBalRail", cf * CFrame.new(0, 3.10, 0), V(0.95, 0.45, len), GOLD_BRIGHT, Mat.Metal)
+				local col = boxAt("PlinthBalCollider", cf * CFrame.new(0, 1.8, 0), V(1.35, 3.6, len + 0.4), MARBLE_LIGHT, Mat.Marble, 1)
+				table.insert(fenceColliders, col)
 				local posts = math.max(2, math.floor(len / 9))
 				for i = 0, posts do
 					local pt = a:Lerp(b, i / posts)
@@ -719,14 +729,19 @@ function AstralFloor42.Build(ctx: any)
 			balustradeSpan(halfW - 1.5, northZ + 6, halfW - 1.5, southZ - 6)
 
 			-- Warm golden braziers framing the Sanctuary arrival stair foot & Plinth corners
+			local brazX = halfW - 10
 			for _, bp in {
 				V(-26, by, southZ - 1.5), V(26, by, southZ - 1.5),
-				V(-304, by, northZ + 3), V(304, by, northZ + 3),
+				V(-brazX, by, northZ + 3), V(brazX, by, northZ + 3),
 			} do
 				buildBrazier(bp, 1.0, false)
 			end
 
 			makeDecor(ctx.current())
+			for _, c in fenceColliders do
+				c.CanCollide = true
+				c.CanQuery = true
+			end
 			pin(ctx.current())
 		end)
 	end
@@ -844,21 +859,21 @@ function AstralFloor42.Build(ctx: any)
 	for idx, lm in { AstralFloor42.Landmarks[10], AstralFloor42.Landmarks[11] } do
 		local side = if idx == 1 then -1 else 1
 		local py = lm.Y :: number
-		buildOrreryBay(side * 290, py, -90, 17.5, 22.0)
+		buildOrreryBay(side * 294, py, -74, 17.5, 22.0)
 		local ms = piece(lm.Id, lm.X, lm.Z, side * 25, "MarginaliaStack", 1.0, HALCYR_42, function(cf)
 			boxAt("SlipBoxes", cf * CFrame.new(0, 3.6, 0), V(9, 7.2, 6), HALCYR_42.WOOD.Color, Mat.Wood)
 		end, py)
 		pin(ms)
 		tagDetail(ms)
 		-- Companion book stack & floating open books tucked neatly inside the bay (100% grounded!)
-		local ms2 = piece(lm.Id .. "_Twin", side * 284, -99, -side * 40, "MarginaliaStack", 0.72, HALCYR_42, function(cf)
+		local ms2 = piece(lm.Id .. "_Twin", side * 288, -83, -side * 40, "MarginaliaStack", 0.72, HALCYR_42, function(cf)
 			boxAt("SlipBoxes2", cf * CFrame.new(0, 2.8, 0), V(6.5, 5.6, 4.5), HALCYR_42.WOOD.Color, Mat.Wood)
 		end, py)
 		pin(ms2)
 		tagDetail(ms2)
 		ctx.group("AstralStackBooks", function()
 			buildFloatingOpenBook(V(lm.X, py + 12.5, lm.Z - 4), side * 30, 0.95)
-			buildFloatingOpenBook(V(side * 282, py + 14.8, -86), -side * 20, 0.85)
+			buildFloatingOpenBook(V(side * 286, py + 14.8, -70), -side * 20, 0.85)
 			makeDecor(ctx.current())
 			pin(ctx.current())
 		end)
@@ -910,8 +925,8 @@ function AstralFloor42.Build(ctx: any)
 
 	-- 14–15. Lexicon & Concordance Lectern Islands (integrated reading bays + curved LecternRows facing the Sun!)
 	for _, spec in {
-		{ lm = AstralFloor42.Landmarks[14], bayX = -186, bayZ = -110, side = -1, yaw = 90, extraX = -152, extraZ = -128, extraYaw = 32, pTint = PLANET_TINTS[6] },
-		{ lm = AstralFloor42.Landmarks[15], bayX = 186, bayZ = -110, side = 1, yaw = -90, extraX = 152, extraZ = -128, extraYaw = -32, pTint = PLANET_TINTS[6] },
+		{ lm = AstralFloor42.Landmarks[14], bayX = -172, bayZ = -110, side = -1, yaw = 90, extraX = -138, extraZ = -128, extraYaw = 32, pTint = PLANET_TINTS[6] },
+		{ lm = AstralFloor42.Landmarks[15], bayX = 172, bayZ = -110, side = 1, yaw = -90, extraX = 138, extraZ = -128, extraYaw = -32, pTint = PLANET_TINTS[6] },
 	} do
 		local lm = spec.lm
 		local ly = lm.Y :: number
@@ -1041,8 +1056,8 @@ function AstralFloor42.Build(ctx: any)
 		{ 86, 17, 0, true, 104, 22 },            -- Codex Moon NW conjunction rim
 		{ -174, 25, -242, true, -198, -230 },    -- Atlas NE rim
 		{ 174, 27, -242, true, 198, -230 },      -- Almanac NW rim
-		{ -144, 30, -92, true, -166, -110 },     -- Lexicon stair head approach
-		{ 144, 34, -92, true, 166, -110 },       -- Concordance stair head approach
+		{ -130, 30, -92, true, -152, -110 },     -- Lexicon stair head approach
+		{ 130, 34, -92, true, 152, -110 },       -- Concordance stair head approach
 		{ -52, 44, -94, true, 0, -70 },          -- Sun-Lectern NW approach
 		{ 52, 44, -94, true, 0, -70 },           -- Sun-Lectern NE approach
 	}
@@ -1090,8 +1105,8 @@ function AstralFloor42.Build(ctx: any)
 	pin(tomes)
 	makeDecor(tomes)
 
-	pageEmitter(V(-166, 36, -110), 3)
-	pageEmitter(V(166, 40, -110), 3)
+	pageEmitter(V(-152, 36, -110), 3)
+	pageEmitter(V(152, 40, -110), 3)
 	pageEmitter(V(0, 52, -70), 4)
 	pageEmitter(V(-222, 16, 26), 2)
 	pageEmitter(V(222, 18, 26), 2)

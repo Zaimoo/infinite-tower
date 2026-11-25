@@ -142,7 +142,7 @@ AstralFloor44.Landmarks = table.freeze({
 	-- 10. Forbidden Vault half-open geared brass ring door embedded in the north-west rocky cliff (facing SOUTH)
 	{ Id = "ForbiddenVaultDoor", X = -112, Z = -378, Y = 56, HalfX = 13.0, HalfZ = 6.0, Top = 23.0 },
 	-- 11. Reliquary of Lenses ground-lens rack on Reliquary solid west bay (facing EAST)
-	{ Id = "ReliquaryLensRack", X = -262, Z = -278, Y = 50, HalfX = 2.6, HalfZ = 9.0, Top = 14.2 },
+	{ Id = "ReliquaryLensRack", X = -266, Z = -224, Y = 50, HalfX = 2.6, HalfZ = 9.0, Top = 14.2 },
 	-- 12. Lantern Walk chained confiscated tomes on LanternWalk north bay (facing SOUTH)
 	{ Id = "LanternWalkTomeRack", X = -106, Z = -140, Y = 26, HalfX = 6.4, HalfZ = 5.6, Top = 17.6 },
 	-- 13. Copyists' Yard shaded awning on WestGallery solid west bay (facing EAST)
@@ -316,6 +316,15 @@ function AstralFloor44.Build(ctx: any)
 		pe.Parent = anchor
 	end
 
+	local fenceColliders: { BasePart } = {}
+	local function enableFences()
+		for _, c in fenceColliders do
+			c.CanCollide = true
+			c.CanQuery = true
+		end
+		table.clear(fenceColliders)
+	end
+
 	local function balustradeSpan(x0: number, z0: number, x1: number, z1: number, y: number, lampEvery: number?, withPointLight: boolean?)
 		local a, b = V(x0, y, z0), V(x1, y, z1)
 		local len = (b - a).Magnitude
@@ -326,6 +335,8 @@ function AstralFloor44.Build(ctx: any)
 		boxAt("WardBalBase", cf * CFrame.new(0, 0.35, 0), V(1.9, 0.7, len + 0.4), STONE_DARK, Mat.Slate)
 		boxAt("WardBalCap", cf * CFrame.new(0, 2.85, 0), V(1.85, 0.42, len + 0.4), STONE_LIGHT, Mat.Slate)
 		boxAt("WardBalTrim", cf * CFrame.new(0, 3.14, 0), V(1.25, 0.22, len), BRASS_AGED, Mat.Metal)
+		local col = boxAt("WardBalCollider", cf * CFrame.new(0, 1.8, 0), V(1.6, 3.6, len + 0.4), WALL_FACE, Mat.Slate, 1)
+		table.insert(fenceColliders, col)
 		local posts = math.max(2, math.floor(len / 20))
 		for i = 0, posts do
 			local pt = a:Lerp(b, i / posts)
@@ -570,8 +581,8 @@ function AstralFloor44.Build(ctx: any)
 	buildFortressFoundation("HallNorthGalleryBay", 14, 30, -145, 84, 40, 106, true, false)
 	buildFortressFoundation("ForgeAlcoveBay", 206, 38, -138, 44, 42, 107, true, false)
 	buildFortressFoundation("EastTowerBay", 300, 42, -96, 44, 72, 108, true, false)
-	buildFortressFoundation("ReliquaryWestBay", -262, 50, -278, 36, 54, 109, true, false)
-	buildFortressFoundation("ReliquaryNorthStacksBay", -210, 50, -317, 68, 24, 110, true, false)
+	buildFortressFoundation("ReliquaryWestBay", -266, 50, -224, 36, 62, 109, true, false)
+	buildFortressFoundation("ReliquaryNorthStacksBay", -210, 50, -267, 76, 24, 110, true, false)
 	buildFortressFoundation("VaultNorthCliffBay", -112, 56, -382, 74, 18, 111, true, true)
 	buildFortressFoundation("CourtOfOathsBay", -4, 52, -362, 76, 32, 112, true, false)
 	buildFortressFoundation("ApexDomeEastBay", 238, 60, -316, 36, 94, 113, true, true)
@@ -601,14 +612,10 @@ function AstralFloor44.Build(ctx: any)
 					local ax = if link.From == "Basin" then link.AX else link.BX
 					local tz = if link.From == "Basin" then link.BZ else link.AZ
 					if tz < bz then
-						local hOpen = link.Width * 0.5 + 1.8
+						local hOpen = link.Width * 0.5 + 1.4
 						table.insert(gaps, { ax - hOpen, ax + hOpen })
 					end
 				end
-			end
-			for _, rLink in ctx.layout.ReturnLinks do
-				local hOpen = rLink.Width * 0.5 + 1.8
-				table.insert(gaps, { rLink.BX - hOpen, rLink.BX + hOpen })
 			end
 			table.sort(gaps, function(g1, g2) return g1[1] < g2[1] end)
 			local curX = -halfW + 4
@@ -626,15 +633,16 @@ function AstralFloor44.Build(ctx: any)
 
 			buildBench(V(-50, by, northZ + 5), 0)
 			buildBench(V(44, by, northZ + 5), 0)
-			buildCrateCluster(V(246, by, bz - 12), -20)
-			buildCrateCluster(V(258, by, bz + 14), 18)
-			buildCrateCluster(V(-252, by, bz + 16), 25)
+			buildCrateCluster(V(224, by, bz - 10), -20)
+			buildCrateCluster(V(228, by, bz + 12), 18)
+			buildCrateCluster(V(-226, by, bz + 12), 25)
 
-			for _, rx in { -230, -165, -95, 95, 165, 230 } do
+			for _, rx in { -200, -140, -80, 80, 140, 200 } do
 				buildRockOutcrop(V(rx, by - 36, southZ + 8), V(44, 33, 24), (rx * 0.25) % 40 - 20)
 			end
 
 			makeDecor(ctx.current())
+			enableFences()
 			pin(ctx.current())
 		end)
 	end
@@ -642,8 +650,8 @@ function AstralFloor44.Build(ctx: any)
 	ctx.group("AstralIsleBalustrade", function()
 		-- Outer Ward north moat-facing balustrades & lamps (West Waygate at X = -106 wide open!)
 		balustradeSpan(-286, 65.5, -170, 65.5, 12, 2, false)
-		balustradeSpan(-140, 65.5, -123, 65.5, 8, 0, false)
-		balustradeSpan(-89, 65.5, -72, 65.5, 8, 0, false)
+		balustradeSpan(-140, 65.5, -118, 65.5, 8, 0, false)
+		balustradeSpan(-94, 65.5, -72, 65.5, 8, 0, false)
 		balustradeSpan(-36, 70.5, 16, 70.5, 14, 1, false)
 		buildBench(V(-20, 14, 75), 0)
 		buildBench(V(2, 14, 75), 0)
@@ -654,8 +662,8 @@ function AstralFloor44.Build(ctx: any)
 
 		-- Middle Ward south promenade balustrades with warm street lamps!
 		balustradeSpan(-252, -61.5, -184, -61.5, 34, 2, false)
-		balustradeSpan(-136, -68.5, -123, -68.5, 26, 0, false)
-		balustradeSpan(-89, -68.5, -76, -68.5, 26, 0, false)
+		balustradeSpan(-136, -68.5, -118, -68.5, 26, 0, false)
+		balustradeSpan(-94, -68.5, -76, -68.5, 26, 0, false)
 		balustradeSpan(-26, -68.5, 54, -68.5, 30, 1, false)
 		balustradeSpan(123, -68.5, 185, -68.5, 38, 2, false)
 		balustradeSpan(208, -61.5, 276, -61.5, 42, 2, false)
@@ -665,21 +673,21 @@ function AstralFloor44.Build(ctx: any)
 		balustradeSpan(-136, -151.5, -76, -151.5, 26, 2, false)
 		buildBench(V(-124, 26, -144), 0)
 		buildBench(V(-88, 26, -144), 0)
-		balustradeSpan(123, -123.5, 137, -123.5, 38, 0, false)
-		balustradeSpan(171, -123.5, 182, -123.5, 38, 0, false)
+		balustradeSpan(123, -123.5, 142, -123.5, 38, 0, false)
+		balustradeSpan(166, -123.5, 182, -123.5, 38, 0, false)
 		balustradeSpan(230, -130.5, 276, -130.5, 42, 2, false)
 
 		-- Inner Ward balustrades & Court of Seals circular paved medallion
 		buildFloorMedallion(-4, 52, -316, 18.5)
-		balustradeSpan(-242, -252.5, -178, -252.5, 50, 2, false)
-		balustradeSpan(-278.5, -253, -278.5, -303, 50, 0, false)
-		balustradeSpan(-40, -287.5, 18, -287.5, 52, 2, false)
+		balustradeSpan(-246, -194.5, -174, -194.5, 50, 2, false)
+		balustradeSpan(-282.5, -195, -282.5, -253, 50, 0, false)
+		balustradeSpan(-40, -287.5, 4, -287.5, 52, 2, false)
 
 		-- Apex Dome terrace balustrades (open cleanly for Waygate Stair south & Seal Stair west!)
-		balustradeSpan(94, -270.5, 137, -270.5, 60, 1, false)
-		balustradeSpan(171, -270.5, 254, -270.5, 60, 1, false)
-		balustradeSpan(93.5, -299, 93.5, -272, 60, 0, false)
-		balustradeSpan(93.5, -361, 93.5, -333, 60, 0, false)
+		balustradeSpan(94, -270.5, 142, -270.5, 60, 1, false)
+		balustradeSpan(166, -270.5, 254, -270.5, 60, 1, false)
+		balustradeSpan(93.5, -304, 93.5, -272, 60, 0, false)
+		balustradeSpan(93.5, -361, 93.5, -328, 60, 0, false)
 		balustradeSpan(254.5, -385, 254.5, -272, 60, 2, false)
 		streetLamp(V(136, 60, -273), true)
 		streetLamp(V(172, 60, -273), true)
@@ -694,7 +702,8 @@ function AstralFloor44.Build(ctx: any)
 			local len = (p1 - p0).Magnitude
 			local mid = (p0 + p1) * 0.5
 			local cf = CFrame.lookAt(mid, p1)
-			boxAt("CurtainWallBody", cf * CFrame.new(0, h * 0.5 - 8, 0), V(5.5, h + 16, len), WALL_FACE, Mat.Slate)
+			local body = boxAt("CurtainWallBody", cf * CFrame.new(0, h * 0.5 - 8, 0), V(5.5, h + 16, len), WALL_FACE, Mat.Slate)
+			table.insert(fenceColliders, body)
 			boxAt("CurtainWallWalk", cf * CFrame.new(0, h, 0), V(6.4, 1.2, len + 1), STONE_LIGHT, Mat.Slate)
 			local merlons = math.max(3, math.floor(len / 9.5))
 			for m = 0, merlons do
@@ -703,7 +712,7 @@ function AstralFloor44.Build(ctx: any)
 			end
 		end
 		curtainSpan(-286, -390, 274, -390, wallY, wallH)
-		curtainSpan(-286, -390, -286, -252, wallY, wallH)
+		curtainSpan(-286, -390, -286, -194, wallY, wallH)
 		curtainSpan(274, -390, 274, -254, wallY, wallH)
 		for _, tp in { V(-286, wallY, -390), V(62, wallY, -390), V(274, wallY, -390), V(274, wallY, -256) } do
 			ctx.cyl("CornerTurretDrum", tp + V(0, 12, 0), 8.0, 42, WALL_FACE, Mat.Slate)
@@ -715,6 +724,7 @@ function AstralFloor44.Build(ctx: any)
 		end
 
 		makeDecor(ctx.current())
+		enableFences()
 		pin(ctx.current())
 	end)
 
@@ -838,9 +848,9 @@ function AstralFloor44.Build(ctx: any)
 	-- Extra Copyists' awnings on WestGalleryCopyBay & far outer Basin flanks
 	for _, aw in {
 		{ -264, 12, 114, 90, 1.02 },
-		{ -252, 0, 232, 45, 0.94 },
-		{ -228, 0, 272, 0, 0.92 },
-		{ 248, 0, 266, -40, 0.94 },
+		{ -224, 0, 238, 45, 0.94 },
+		{ -214, 0, 274, 0, 0.92 },
+		{ 224, 0, 268, -40, 0.94 },
 	} do
 		local ma = piece("CopyistAwningExtra", aw[1], aw[3], aw[4], "CopyistAwning", aw[5], LIBRARY_TINT, function(cf)
 			boxAt("AwningFallback", cf * CFrame.new(0, 4.5, 0), V(10, 9, 6), VELLUM_PAGE, Mat.Fabric)
@@ -915,7 +925,7 @@ function AstralFloor44.Build(ctx: any)
 
 		-- 4. Inner Ward Reliquary wooden bookcase rows on ReliquaryNorthStacksBay (facing SOUTH!)
 		for i = 0, 2 do
-			buildStandingBookcase(V(-230 + i * 19, 50, -317), 0, 1.04)
+			buildStandingBookcase(V(-230 + i * 19, 50, -267), 0, 1.04)
 		end
 
 		-- 5. Rocky slate cliff outcrop cleanly BEHIND & FLANKING the Forbidden Vault Ring Door!
@@ -1058,7 +1068,7 @@ function AstralFloor44.Build(ctx: any)
 		{ -234, 12, 70, 0 }, { 226, 16, 70, 0 },
 		{ -246, 34, -66, 90 }, { 270, 42, -66, -90 },
 		{ -132, 26, -120, 0 }, { 182, 38, -120, 0 },
-		{ -238, 50, -256, 45 }, { -22, 52, -336, 0 },
+		{ -238, 50, -230, 45 }, { -22, 52, -336, 0 },
 	} do
 		local ms = piece("AstralShutteredLamp", sp[1], sp[3], sp[4], "ShutteredLamp", 1.05, SHUTTER_TINT, function(cf)
 			ctx.cyl("ShutteredPost", cf.Position + V(0, 6, 0), 0.7, 12, SHUTTER_TINT.METAL.Color, Mat.Metal)

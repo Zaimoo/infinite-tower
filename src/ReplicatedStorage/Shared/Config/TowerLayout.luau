@@ -2981,7 +2981,7 @@ local AUTHORED: {[number]: any} = {
 	[41] = {
 		Key = "astral:1", Name = "Starlit Vestibule", PathStyle = "HALCYR",
 		Size = { Width = 600, Depth = 620, Height = 225, Bottom = -4 },
-		Basin = { X = 0, Y = 0, Z = 165, Width = 568, Depth = 96 },
+		Basin = { X = 0, Y = 0, Z = 171, Width = 460, Depth = 84 },
 		WestGallery = { X = -190, Y = 8, Z = 25, Width = 84, Depth = 72 },
 		EastGallery = { X = 190, Y = 12, Z = 24, Width = 84, Depth = 72 },
 		Crossing = { X = 0, Y = 24, Z = -85, Width = 76, Depth = 60 },
@@ -3085,19 +3085,19 @@ local AUTHORED: {[number]: any} = {
 	[42] = {
 		Key = "astral:2", Name = "Orbiting Stacks", PathStyle = "HALCYR",
 		Size = { Width = 660, Depth = 680, Height = 250, Bottom = -4 },
-		Basin = { X = 0, Y = 0, Z = 198, Width = 628, Depth = 92 },
+		Basin = { X = 0, Y = 0, Z = 204, Width = 508, Depth = 80 },
 		WestGallery = { X = -222, Y = 10, Z = 26, Width = 84, Depth = 72 },
 		EastGallery = { X = 222, Y = 12, Z = 26, Width = 84, Depth = 72 },
 		Crossing = { X = 0, Y = 8, Z = 70, Width = 72, Depth = 58 },
 		ExtraPlatforms = {
 			MoonSW = { X = -104, Y = 15, Z = 22, Width = 58, Depth = 50 },
 			MoonSE = { X = 104, Y = 17, Z = 22, Width = 58, Depth = 50 },
-			MoonW = { X = -264, Y = 20, Z = -90, Width = 56, Depth = 48 },
-			MoonE = { X = 264, Y = 22, Z = -90, Width = 56, Depth = 48 },
+			MoonW = { X = -268, Y = 20, Z = -74, Width = 56, Depth = 48 },
+			MoonE = { X = 268, Y = 22, Z = -74, Width = 56, Depth = 48 },
 			OuterNW = { X = -198, Y = 25, Z = -230, Width = 62, Depth = 52 },
 			OuterNE = { X = 198, Y = 27, Z = -230, Width = 62, Depth = 52 },
-			MiddleW = { X = -166, Y = 30, Z = -110, Width = 62, Depth = 54 },
-			MiddleE = { X = 166, Y = 34, Z = -110, Width = 62, Depth = 54 },
+			MiddleW = { X = -152, Y = 30, Z = -110, Width = 62, Depth = 54 },
+			MiddleE = { X = 152, Y = 34, Z = -110, Width = 62, Depth = 54 },
 			Aphelion = { X = 0, Y = 39, Z = -270, Width = 62, Depth = 52 },
 		},
 		Apex = { X = 0, Y = 44, Z = -70, Width = 124, Depth = 92 },
@@ -3354,7 +3354,7 @@ local AUTHORED: {[number]: any} = {
 	[44] = {
 		Key = "astral:4", Name = "Runeguard Athenaeum", PathStyle = "HALCYR",
 		Size = { Width = 800, Depth = 795, Height = 305, Bottom = -6 },
-		Basin = { X = 0, Y = 0, Z = 246, Width = 556, Depth = 84 },
+		Basin = { X = 0, Y = 0, Z = 250, Width = 480, Depth = 76 },
 		WestGallery = { X = -204, Y = 12, Z = 98, Width = 72, Depth = 68 },
 		EastGallery = { X = 196, Y = 16, Z = 98, Width = 72, Depth = 68 },
 		Crossing = { X = -106, Y = 8, Z = 98, Width = 72, Depth = 68 },
@@ -3368,7 +3368,7 @@ local AUTHORED: {[number]: any} = {
 			Hall = { X = 14, Y = 30, Z = -96, Width = 84, Depth = 58 },
 			Forge = { X = 154, Y = 38, Z = -96, Width = 66, Depth = 58 },
 			Gate2 = { X = 154, Y = 48, Z = -194, Width = 56, Depth = 44 },
-			Reliquary = { X = -210, Y = 50, Z = -278, Width = 68, Depth = 54 },
+			Reliquary = { X = -210, Y = 50, Z = -224, Width = 76, Depth = 62 },
 			Seals = { X = -4, Y = 52, Z = -316, Width = 76, Depth = 60 },
 			Vault = { X = -112, Y = 56, Z = -348, Width = 66, Depth = 50 },
 		},
@@ -3499,7 +3499,7 @@ local AUTHORED: {[number]: any} = {
 	[45] = {
 		Key = "astral:5", Name = "Rift Warden's Observatory", PathStyle = "HALCYR",
 		Size = { Width = 900, Depth = 795, Height = 350, Bottom = -6 },
-		Basin = { X = 0, Y = 0, Z = 244, Width = 540, Depth = 82 },
+		Basin = { X = 0, Y = 0, Z = 248, Width = 468, Depth = 74 },
 		WestGallery = { X = -218, Y = 12, Z = 108, Width = 78, Depth = 68 },
 		EastGallery = { X = 246, Y = 25, Z = 26, Width = 78, Depth = 68 },
 		Crossing = { X = -38, Y = 10, Z = 116, Width = 76, Depth = 62 },
@@ -3509,7 +3509,7 @@ local AUTHORED: {[number]: any} = {
 			Fallen = { X = 148, Y = 9, Z = 128, Width = 60, Depth = 50 },
 			Ink = { X = -124, Y = 14, Z = 112, Width = 54, Depth = 48 },
 			Lectern = { X = -134, Y = 20, Z = 26, Width = 60, Depth = 52 },
-			Proof = { X = 48, Y = 19, Z = 72, Width = 56, Depth = 46 },
+			Proof = { X = 66, Y = 19, Z = 68, Width = 56, Depth = 46 },
 			SutureMid = { X = 32, Y = 24, Z = -8, Width = 52, Depth = 44 },
 			Overlook = { X = -52, Y = 28, Z = -76, Width = 56, Depth = 46 },
 			Lens = { X = 132, Y = 34, Z = -54, Width = 68, Depth = 56 },
@@ -4405,18 +4405,21 @@ local function build(index: number, v: any?): any
 	end
 	local function link(a, b)
 		local p, q = platforms[a], platforms[b]
+		local isHalcyr = v and v.PathStyle == "HALCYR"
+		local linkWidth = if isHalcyr and not (a == "Sanctuary" and b == "Basin") then 20 else 28
+		local halfLinkW = linkWidth / 2
 		local isAstral41 = v and v.Key == "astral:1"
 		local isAstralArchipelago = v and (v.Key == "astral:1" or v.Key == "astral:2" or v.Key == "astral:5")
 		local roundIsles = isAstralArchipelago and v.Terrain and v.Terrain.RoundDecks or nil
 		-- Floors 43-44: bridges leaving Basin run 100% straight north-south (0 deg slant)
 		-- directly from Basin's north stone edge into each first-row platform's south face!
 		if v and (v.Key == "astral:3" or v.Key == "astral:4") and a == "Basin" and q.Z < p.Z then
-			local sx = math.clamp(q.X, p.X - p.Width / 2 + 20, p.X + p.Width / 2 - 20)
+			local sx = math.clamp(q.X, p.X - p.Width / 2 + 16, p.X + p.Width / 2 - 16)
 			local az = p.Z - p.Depth / 2
 			local bz = q.Z + q.Depth / 2 + (if q.Y > p.Y then 1.0 else -1.0)
 			local run = az - bz
 			assert(math.abs(q.Y - p.Y) / run <= math.tan(math.rad(15)), a .. "->" .. b .. " straight ramp too steep")
-			local connector = { From = a, To = b, AX = sx, AZ = az, AY = p.Y, BX = sx, BZ = bz, BY = q.Y, Width = 28 }
+			local connector = { From = a, To = b, AX = sx, AZ = az, AY = p.Y, BX = sx, BZ = bz, BY = q.Y, Width = linkWidth }
 			landings(connector, 0, -1, 20, 20)
 			if v and v.Stairs and v.Stairs[connector.Id] then
 				connector.Kind = "STAIRS"
@@ -4427,13 +4430,13 @@ local function build(index: number, v: any?): any
 		-- Floors 41, 42, 45: bridges leaving the wide straight Concourse/Basin run 100% straight north-south (0 deg slant)
 		-- directly from Basin's north edge to the circular island's south rim, with zero overlap or overhang!
 		if isAstralArchipelago and a == "Basin" and q.Z < p.Z and roundIsles and roundIsles[b] then
-			local sx = math.clamp(q.X, p.X - p.Width / 2 + 20, p.X + p.Width / 2 - 20)
+			local sx = math.clamp(q.X, p.X - p.Width / 2 + 16, p.X + p.Width / 2 - 16)
 			local az = p.Z - p.Depth / 2 -- flush with Basin & ConcourseMarbleFloor north edge
 			local rB = math.max(q.Width, q.Depth) / 2 + 2.2
 			local bz = q.Z + rB -- flush outside circular island rim; marble pier bridges the curve
 			local run = az - bz
 			assert(math.abs(q.Y - p.Y) / run <= math.tan(math.rad(15)), a .. "->" .. b .. " straight ramp too steep")
-			local connector = { From = a, To = b, AX = sx, AZ = az, AY = p.Y, BX = sx, BZ = bz, BY = q.Y, Width = 28 }
+			local connector = { From = a, To = b, AX = sx, AZ = az, AY = p.Y, BX = sx, BZ = bz, BY = q.Y, Width = linkWidth }
 			landings(connector, 0, -1, 20, 20)
 			if v and v.Stairs and v.Stairs[connector.Id] then
 				connector.Kind = "STAIRS"
@@ -4458,12 +4461,12 @@ local function build(index: number, v: any?): any
 		local insetA, insetB = edgeA-4, edgeB-4
 		-- Keep the inclined deck wholly outside the UPPER slab, including its
 		-- diagonal shoulders. A flat landing bridges back into that slab.
-		if p.Y > q.Y then insetA = edge(p,14)+1 end
-		if q.Y > p.Y then insetB = edge(q,14)+1 end
+		if p.Y > q.Y then insetA = edge(p, halfLinkW)+1 end
+		if q.Y > p.Y then insetB = edge(q, halfLinkW)+1 end
 		-- On Floor 41 Blotter (rectangular slab), keep BOTH ends wholly outside its rectangle so zero blue
 		-- glass overlaps Blotter's marble; solid marble bridgehead piers terraform any angled join flush.
-		if isAstral41 and a == "Blotter" then insetA = edge(p, 14) + 0.3 end
-		if isAstral41 and b == "Blotter" then insetB = edge(q, 14) + 0.3 end
+		if isAstral41 and a == "Blotter" then insetA = edge(p, halfLinkW) + 0.3 end
+		if isAstral41 and b == "Blotter" then insetB = edge(q, halfLinkW) + 0.3 end
 		local run = length-insetA-insetB
 		local extra = math.max(0,math.abs(q.Y-p.Y)/math.tan(math.rad(15))+1-run)
 		-- The lower end can overlap its slab without creating a raised lip:
@@ -4472,7 +4475,7 @@ local function build(index: number, v: any?): any
 		run=length-insetA-insetB
 		assert(math.abs(q.Y-p.Y)/run <= math.tan(math.rad(15)), a.." ramp too steep")
 		local connector = {From=a, To=b, AX=p.X+ux*insetA, AZ=p.Z+uz*insetA, AY=p.Y,
-			BX=q.X-ux*insetB, BZ=q.Z-uz*insetB, BY=q.Y, Width=28}
+			BX=q.X-ux*insetB, BZ=q.Z-uz*insetB, BY=q.Y, Width=linkWidth}
 		landings(connector,ux,uz,math.max(20,2*math.abs(insetA-edgeA)+12),math.max(20,2*math.abs(insetB-edgeB)+12))
 		-- An authored floor can make any of its paths a staircase (Stairs = {[linkId] = true}).
 		if v and v.Stairs and v.Stairs[connector.Id] then
@@ -4551,7 +4554,7 @@ local function build(index: number, v: any?): any
 	if bottom < 0 then
 		local basin = platforms.Basin
 		for _, side in {-1,1} do
-			local x = if v and (v.Key == "astral:4" or v.Key == "astral:5") then side * math.min(w * 0.37, basin.Width / 2 - 22) else side * w * 0.37
+			local x = if v and v.Key == "astral:5" then side * 248 elseif v and v.Key == "astral:4" then side * math.min(w * 0.37, basin.Width / 2 - 22) else side * w * 0.37
 			local z = basin.Z - basin.Depth / 2
 			local connector = {From=if side<0 then "ChasmWest" else "ChasmEast",To="Basin",
 				AX=x,AY=bottom-4,AZ=z-44,BX=x,BY=0,BZ=z-1,Width=32}
