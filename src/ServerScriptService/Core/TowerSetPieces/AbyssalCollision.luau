@@ -14,10 +14,26 @@ local GHOST_KINDS = table.freeze({
 	"Skirt", "Scatter", "ChainFordSub", "ChainClimb", "MantleChain", "GreatChain", "ChasmChain", "Detail",
 })
 
+-- Kinds TowerRoomBuilder.WalkwayExemptKinds lets stand on a walkway (gates over a path, chains and cages round
+-- a span, floor inlays, moat rings and retaining aprons under a lane). They are allowed there only because they
+-- don't block it, so they always stay walk-through. Keep in step with WalkwayExemptKinds.
+AbyssalCollision.LaneKinds = table.freeze({
+	AbyssalVaultDome = true, AbyssalUndertow = true, AbyssalUpfall = true, AbyssalEclipse = true,
+	AbyssalGreatChain = true, AbyssalGateArch = true, AbyssalFloorInlay = true, AbyssalWardlight = true,
+	AbyssalEffigySpan = true, AbyssalChainCage = true, DirgeUndertowBed = true, EyotOutcropBay = true,
+	PaleRiftWound = true, BlackVaultRiftSlit = true, CrossingOathsInlay = true, DirgeFarSilhouettes = true,
+	DirgeUndertowMoat = true, VahlLandmarkBays = true, AbyssalSkyVault = true, AbyssalVoidFloor = true,
+	AbyssalSkyHorizon = true, DreadguardKeepMound = true, KeepAnchorChains = true, StarFortRetainingAprons = true,
+	UndertowMoatRing = true, AbyssalUndertowBed = true, ThroneSilverKey = true,
+})
+
 -- Anything smaller than this on every axis is clutter, not an obstacle.
 AbyssalCollision.ClutterSize = 3.5
 
 function AbyssalCollision.IsGhostKind(kind: string): boolean
+	if AbyssalCollision.LaneKinds[kind] then
+		return true
+	end
 	for _, word in GHOST_KINDS do
 		if string.find(kind, word, 1, true) then
 			return true
