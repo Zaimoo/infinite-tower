@@ -44,6 +44,10 @@ local MAX_EMITTERS = 16
 local MAX_SILHOUETTES = 32
 local MAX_HEARTBEATS = 8
 local RESCAN_INTERVAL = 2.0
+-- Only small dressing sways on the toll (a lantern, a short chain, a court figure). A big tagged piece (a gatehouse,
+-- a cage, a 30-stud chain segment, an anchor spire) visibly tipped up and back, and pulled apart from what it
+-- hangs on, so it keeps still and only its light and flame answer the toll.
+local MAX_SWAY_SIZE = 16
 
 local UNDERTOW_PEAK_COLOR = Color3.fromRGB(164, 112, 245) -- void violet surge (never on walk surfaces)
 local WARDLIGHT_PEAK_COLOR = Color3.fromRGB(244, 240, 228) -- bone-white flame (hue ~45°, sat <= 0.1)
@@ -415,6 +419,17 @@ local function modelHasCollidablePart(model: Model): boolean
 	return false
 end
 
+-- True when a tagged piece is small and walk-through enough to lean, bow or draw taut on the toll.
+local function canSway(inst: Instance): boolean
+	if inst:IsA("Model") then
+		local size = inst:GetExtentsSize()
+		return math.max(size.X, size.Y, size.Z) <= MAX_SWAY_SIZE and not modelHasCollidablePart(inst)
+	elseif inst:IsA("BasePart") then
+		return math.max(inst.Size.X, inst.Size.Y, inst.Size.Z) <= MAX_SWAY_SIZE and not inst.CanCollide
+	end
+	return false
+end
+
 local function scanFloor(floorId: number)
 	clearState()
 	local origin = floorOrigin(floorId)
@@ -511,7 +526,7 @@ local function scanFloor(floorId: number)
 				end
 				local baseCF = inst:GetPivot()
 				table.insert(wardlights, {
-					TargetModel = inst,
+					TargetModel = if canSway(inst) then inst else nil,
 					TargetPart = nil,
 					BaseCFrame = baseCF,
 					Light = lightInst,
@@ -525,7 +540,7 @@ local function scanFloor(floorId: number)
 				local flamePart: BasePart? = if inst.Material == Enum.Material.Neon then inst else nil
 				table.insert(wardlights, {
 					TargetModel = nil,
-					TargetPart = inst,
+					TargetPart = if canSway(inst) then inst else nil,
 					BaseCFrame = inst.CFrame,
 					Light = lightInst,
 					BaseBrightness = if lightInst then lightInst.Brightness else 1,
@@ -544,14 +559,14 @@ local function scanFloor(floorId: number)
 		end
 		local pos = instancePosition(inst)
 		if pos and inFloor(pos) then
-			if inst:IsA("Model") and not modelHasCollidablePart(inst) then
+			if inst:IsA("Model") and canSway(inst) then
 				table.insert(chains, {
 					TargetModel = inst,
 					TargetPart = nil,
 					BaseCFrame = inst:GetPivot(),
 					PhaseOffset = (pos.X * 0.11 + pos.Z * 0.19) % (math.pi * 2),
 				})
-			elseif inst:IsA("BasePart") and not inst.CanCollide then
+			elseif inst:IsA("BasePart") and canSway(inst) then
 				table.insert(chains, {
 					TargetModel = nil,
 					TargetPart = inst,
@@ -591,7 +606,7 @@ local function scanFloor(floorId: number)
 			break
 		end
 		local pos = instancePosition(inst)
-		if pos and inFloor(pos) then
+		if pos and inFloor(pos) and canSway(inst) then
 			if inst:IsA("Model") then
 				table.insert(silhouettes, {
 					TargetModel = inst,
