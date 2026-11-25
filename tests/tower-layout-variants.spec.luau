@@ -4190,10 +4190,11 @@ test("Abyssal Throne Floor 50 (Overlord's Throne) & full 46-50 escalation ladder
 		deg[l.To] = (deg[l.To] or 0) + 1
 		if l.From == "Apex" or l.To == "Apex" then apexIn[l.Id] = l.Kind end
 	end
-	assert(deg.Apex == 4 and apexIn.ArmW_Apex == "STAIRS" and apexIn.ArmE_Apex == "STAIRS" and apexIn.HandW_Apex and apexIn.HandE_Apex, "Throne Seat entered only by Armrest STAIRS and Hands")
-	assert(deg.BrokenStair == 1 and deg.ReliquaryW == 1 and deg.ReliquaryE == 1, "BrokenStair and Reliquaries must be dead ends")
+	assert(deg.Apex == 5 and apexIn.ArmW_Apex == "STAIRS" and apexIn.ArmE_Apex == "STAIRS" and apexIn.HandW_Apex and apexIn.HandE_Apex
+		and apexIn.BrokenStair_Apex == "STAIRS", "Throne Seat entered by the Grand Stair, the Armrest STAIRS and the Hands")
+	assert(deg.BrokenStair == 2 and deg.ReliquaryW == 1 and deg.ReliquaryE == 1, "the Grand Stair climbs on from BrokenStair; Reliquaries are dead ends")
 	local adj: { [string]: { string } } = {}
-	local cut = { ArmW = true, ArmE = true, HandW = true, HandE = true }
+	local cut = { ArmW = true, ArmE = true, HandW = true, HandE = true, BrokenStair = true }
 	for _, l in r.Links do
 		if not cut[l.From] and not cut[l.To] then
 			adj[l.From] = adj[l.From] or {}; adj[l.To] = adj[l.To] or {}
@@ -4205,7 +4206,7 @@ test("Abyssal Throne Floor 50 (Overlord's Throne) & full 46-50 escalation ladder
 		local cur = q[qi]; qi += 1
 		for _, nxt in adj[cur] or {} do if not seen[nxt] then seen[nxt] = true; table.insert(q, nxt) end end
 	end
-	assert(not seen.Apex, "Seat must be unreachable without ArmW/ArmE/HandW/HandE")
+	assert(not seen.Apex, "Seat must be unreachable without BrokenStair/ArmW/ArmE/HandW/HandE")
 	local live, hasBoss = 0, false
 	for _, c in r.Camps do
 		if c.Boss then hasBoss = true elseif c.Id ~= "APEX_SANCTUM" then live += c.Size end

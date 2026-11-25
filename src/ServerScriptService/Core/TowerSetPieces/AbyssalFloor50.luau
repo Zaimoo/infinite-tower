@@ -125,7 +125,7 @@ AbyssalFloor50.Landmarks = table.freeze({
 	-- 15–16. Colossal armored Sabaton Feet planted beside FootW and FootE.
 	{ Id = "SabatonFootWest", X = -126, Z = 16, Y = -6, HalfX = 13.0, HalfZ = 20.0, Top = 20.0 },
 	{ Id = "SabatonFootEast", X = 126, Z = 16, Y = -6, HalfX = 13.0, HalfZ = 20.0, Top = 20.0 },
-	-- 17. Shattered Broken Grand Stair snapping off the north lip of BrokenStair into the open void.
+	-- 17. The shattered old Grand Stair: its fallen flight lies in the void under the restored Grand Stair.
 	{ Id = "BrokenGrandStair", X = 0, Z = -20, Y = 14, HalfX = 12.0, HalfZ = 14.5, Top = 19.0 },
 	-- 18–19. Sweeping colossal Mantle-Chains hanging from the Throne's shoulders toward ChainW / ChainE.
 	{ Id = "MantleChainWest", X = -275, Z = -205, Y = 115, HalfX = 32.0, HalfZ = 6.0, Top = 26.0, Straddles = true },
@@ -134,8 +134,8 @@ AbyssalFloor50.Landmarks = table.freeze({
 	{ Id = "ChainClimbArchWest", X = -341, Z = -163, Y = 38, HalfX = 12.0, HalfZ = 12.0, Top = 20.0, Straddles = true },
 	{ Id = "ChainClimbArchEast", X = 341, Z = -163, Y = 42, HalfX = 12.0, HalfZ = 12.0, Top = 20.0, Straddles = true },
 	-- 22–23. Ornate Footstool dais trim & iron censers on Crossing's south-west / south-east corners.
-	{ Id = "FootstoolTrimW", X = -46, Z = 138, Y = 16, HalfX = 14.0, HalfZ = 7.0, Top = 12.0 },
-	{ Id = "FootstoolTrimE", X = 46, Z = 138, Y = 16, HalfX = 14.0, HalfZ = 7.0, Top = 12.0 },
+	{ Id = "FootstoolTrimW", X = -46, Z = 138, Y = 28, HalfX = 14.0, HalfZ = 7.0, Top = 12.0 },
+	{ Id = "FootstoolTrimE", X = 46, Z = 138, Y = 28, HalfX = 14.0, HalfZ = 7.0, Top = 12.0 },
 	-- 24–25. Iron Reliquary Shrines on the dead-end ReliquaryW and ReliquaryE terraces.
 	{ Id = "ReliquaryShrineW", X = -388, Z = -362, Y = 46, HalfX = 6.0, HalfZ = 6.0, Top = 17.0 },
 	{ Id = "ReliquaryShrineE", X = 388, Z = -362, Y = 50, HalfX = 6.0, HalfZ = 6.0, Top = 17.0 },
@@ -525,7 +525,7 @@ function AbyssalFloor50.Build(ctx: any)
 			end)
 		end
 
-		-- Broken Grand Stair snapping off the north edge of BrokenStair into the open void!
+		-- The old Grand Stair's fallen flight in the void, under the restored BrokenStair -> Seat stair.
 		local bs = byId.BrokenGrandStair
 		placeKit("BrokenStairSpan", bs.X, bs.Y :: number, bs.Z, 0, "BrokenGrandStair", 1.0, VAHL_50, function(cf)
 			boxAt("BrokenGrandStairFB", cf * CFrame.new(0, 9, 0), V(22, 18, 28), OBSIDIAN_MID, Mat.Basalt)
@@ -695,13 +695,13 @@ function AbyssalFloor50.Build(ctx: any)
 		{ -198, 20, 84, 15, "ChainGalleryRail", 0.72, VAHL_50 },
 		{ 198, 24, 84, -15, "ChainGalleryRail", 0.72, VAHL_50 },
 
-		-- BrokenStair (dead end): tattered banners, broken rails, leaning Wardlight lanterns, rubble.
-		{ -24, 30, 6, 15, "WarBannerPole", 1.1, VAHL_50 },
-		{ 24, 30, 6, -15, "WarBannerPole", 1.1, VAHL_50 },
-		{ -24, 30, 26, 90, "ChainGalleryRail", 0.75, VAHL_50 },
-		{ 24, 30, 26, -90, "ChainGalleryRail", 0.75, VAHL_50 },
-		{ -18, 30, -4, 0, "RuinRubble", 0.9, VAHL_50 },
-		{ 18, 30, -4, 0, "RuinRubble", 0.9, VAHL_50 },
+		-- BrokenStair (the Grand Stair's landing, Y 35): tattered banners, broken rails and rubble beside the flight.
+		{ -27, 35, 20, 15, "WarBannerPole", 1.1, VAHL_50 },
+		{ 27, 35, 20, -15, "WarBannerPole", 1.1, VAHL_50 },
+		{ -27, 35, 38, 90, "ChainGalleryRail", 0.75, VAHL_50 },
+		{ 27, 35, 38, -90, "ChainGalleryRail", 0.75, VAHL_50 },
+		{ -26, 35, 13, 0, "RuinRubble", 0.9, VAHL_50 },
+		{ 26, 35, 13, 0, "RuinRubble", 0.9, VAHL_50 },
 
 		-- WestBastion & EastBastion (Mantle Bastions, Elite): BulwarkWalls, GibbetCages, Winches, ArmourRacks.
 		{ -368, 32, -90, 90, "BulwarkWall", 1.05, VAHL_50 },
@@ -1034,13 +1034,78 @@ function AbyssalFloor50.Build(ctx: any)
 	for _, ep in {
 		V(0, 10, 295), V(-180, 4, 215), V(180, 4, 215),
 		V(-320, 14, 95), V(320, 18, 95),
-		V(0, 22, 110), V(0, 34, 15),
+		V(0, 30, 110), V(0, 38, 29),
 		V(-330, 38, -90), V(330, 42, -90),
 		V(-200, 68, -265), V(200, 72, -265),
 		V(0, 78, -200), V(0, 120, -310),
 	} do
 		ashEmitter(ep, 4)
 	end
+
+	-- =========================================================================
+	-- J. THE THRONE HALL: Floor 50 is inside the Throne itself. Hall walls behind the mountain band, pilasters,
+	-- vault springers and a coffered ceiling close the room overhead (Y 420+, clear of the Backrest at 370 and
+	-- the Eclipse, now the hall's great crimson rose window, at 401), and two iron chandeliers hang over the
+	-- Footstool. All overhead: walk-through, and casting no shadow, so the floor keeps its light under the roof.
+	-- =========================================================================
+	ctx.group("ThroneHallOverhead", function()
+		local W, D = ctx.layout.Width / 2, ctx.layout.Depth / 2
+		local roofY = 436
+		-- Hall walls just outside the room's edges, from below the mountain tops to the ceiling.
+		boxAt("HallWallNorth", CFrame.new(V(0, 240, -D - 7)), V(W * 2 + 28, 400, 12), OBSIDIAN_DARK, Mat.Basalt)
+		boxAt("HallWallSouth", CFrame.new(V(0, 240, D + 7)), V(W * 2 + 28, 400, 12), OBSIDIAN_DARK, Mat.Basalt)
+		boxAt("HallWallWest", CFrame.new(V(-W - 7, 240, 0)), V(12, 400, D * 2 + 28), OBSIDIAN_DARK, Mat.Basalt)
+		boxAt("HallWallEast", CFrame.new(V(W + 7, 240, 0)), V(12, 400, D * 2 + 28), OBSIDIAN_DARK, Mat.Basalt)
+		-- The ceiling and its coffers: iron-banded obsidian beams both ways.
+		boxAt("HallCeiling", CFrame.new(V(0, roofY, 0)), V(W * 2 + 28, 12, D * 2 + 28), OBSIDIAN_DARK, Mat.Basalt)
+		local beamsZ = {}
+		for z = -D + 40, D - 40, 90 do
+			table.insert(beamsZ, z)
+			boxAt("HallCofferBeamX", CFrame.new(V(0, roofY - 10, z)), V(W * 2 + 20, 10, 8), OBSIDIAN_MID, Mat.Basalt)
+			boxAt("HallCofferBandX", CFrame.new(V(0, roofY - 15.4, z)), V(W * 2 + 20, 0.8, 8.6), IRON_BLACK, Mat.Metal)
+		end
+		for x = -W + 47, W - 47, 94 do
+			boxAt("HallCofferBeamZ", CFrame.new(V(x, roofY - 10, 0)), V(8, 10, D * 2 + 20), OBSIDIAN_MID, Mat.Basalt)
+		end
+		-- Pilasters up the side walls under each coffer line, and vault springers arching from them to the ceiling.
+		local rise, run = 96, 150
+		local len = math.sqrt(rise * rise + run * run)
+		local tilt = math.atan2(rise, run)
+		for _, z in beamsZ do
+			for _, side in { -1, 1 } do
+				boxAt("HallPilaster", CFrame.new(V(side * (W - 3), 270, z)), V(8, 330, 12), OBSIDIAN_MID, Mat.Basalt)
+				local mid = V(side * (W - run / 2), roofY - 12 - rise / 2, z)
+				boxAt("HallVaultSpringer", CFrame.new(mid) * CFrame.Angles(0, 0, -side * tilt), V(len, 9, 7), OBSIDIAN_MID, Mat.Basalt)
+			end
+		end
+		for x = -W + 94, W - 94, 94 do
+			for _, side in { -1, 1 } do
+				if not (side > 0 and math.abs(x) < 80) then
+					boxAt("HallPilaster", CFrame.new(V(x, 270, side * (D - 3))), V(12, 330, 8), OBSIDIAN_MID, Mat.Basalt)
+				end
+			end
+		end
+		-- Two iron chandeliers over the Footstool and the Grand Stair, each on four chains from the ceiling.
+		for _, at in { V(-120, 236, 40), V(120, 236, 40) } do
+			ctx.ring("HallChandelierRing", at, 16, 1.2, IRON_BLACK, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 16)
+			for k = 0, 3 do
+				local a = k * math.pi / 2 + math.pi / 4
+				local foot = at + V(math.cos(a) * 15, 0, math.sin(a) * 15)
+				local top = V(at.X, roofY - 16, at.Z)
+				local c = (foot + top) / 2
+				boxAt("HallChandelierChain", CFrame.lookAt(c, top), V(0.6, 0.6, (top - foot).Magnitude), IRON_BLACK, Mat.Metal)
+			end
+			for k = 0, 7 do
+				local a = k * math.pi / 4
+				boxAt("HallChandelierCandle", CFrame.new(at + V(math.cos(a) * 16, 2.2, math.sin(a) * 16)), V(0.9, 3.2, 0.9), WARDLIGHT_BONE, Mat.Neon)
+			end
+			local glow = boxAt("HallChandelierGlow", CFrame.new(at + V(0, 3, 0)), V(1, 1, 1), WARDLIGHT_BONE, Mat.SmoothPlastic, 1)
+			light(glow, WARDLIGHT_BONE, 1.6, 120)
+			lightsUsed += 1
+		end
+		ghost(ctx.current())
+		pin(ctx.current())
+	end)
 
 	local distinctCount = 0
 	for _ in templatesUsed do

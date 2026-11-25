@@ -4131,13 +4131,13 @@ local AUTHORED: {[number]: any} = {
 		Basin = { X = 0, Y = 0, Z = 245, Width = 908, Depth = 104 },
 		WestGallery = { X = -320, Y = 8, Z = 95, Width = 92, Depth = 80 },
 		EastGallery = { X = 320, Y = 12, Z = 95, Width = 92, Depth = 80 },
-		Crossing = { X = 0, Y = 16, Z = 110, Width = 96, Depth = 68 },
+		Crossing = { X = 0, Y = 28, Z = 110, Width = 96, Depth = 68 },
 		WestBastion = { X = -330, Y = 32, Z = -90, Width = 92, Depth = 82 },
 		EastBastion = { X = 330, Y = 36, Z = -90, Width = 92, Depth = 82 },
 		ExtraPlatforms = {
 			FootW = { X = -170, Y = 20, Z = 60, Width = 72, Depth = 60 },
 			FootE = { X = 170, Y = 24, Z = 60, Width = 72, Depth = 60 },
-			BrokenStair = { X = 0, Y = 30, Z = 15, Width = 64, Depth = 48 },
+			BrokenStair = { X = 0, Y = 35, Z = 29, Width = 64, Depth = 36 },
 			ShinW = { X = -200, Y = 38, Z = -40, Width = 64, Depth = 56 },
 			ShinE = { X = 200, Y = 42, Z = -40, Width = 64, Depth = 56 },
 			ReliquaryW = { X = -370, Y = 46, Z = -335, Width = 64, Depth = 52 },
@@ -4153,7 +4153,7 @@ local AUTHORED: {[number]: any} = {
 		Paths = {
 			{ "Sanctuary", "Basin" }, { "Basin", "WestGallery" }, { "Basin", "Crossing" }, { "Basin", "EastGallery" },
 			{ "WestGallery", "FootW" }, { "EastGallery", "FootE" }, { "Crossing", "FootW" }, { "Crossing", "FootE" },
-			{ "Crossing", "BrokenStair" },
+			{ "Crossing", "BrokenStair" }, { "BrokenStair", "Apex" },
 			{ "FootW", "ShinW" }, { "FootE", "ShinE" }, { "WestGallery", "WestBastion" }, { "EastGallery", "EastBastion" },
 			{ "WestBastion", "ShinW" }, { "EastBastion", "ShinE" },
 			{ "ShinW", "ArmW" }, { "ShinE", "ArmE" },
@@ -4163,7 +4163,7 @@ local AUTHORED: {[number]: any} = {
 			{ "ArmW", "Apex" }, { "ArmE", "Apex" }, { "HandW", "Apex" }, { "HandE", "Apex" },
 			{ "ChainW", "ReliquaryW" }, { "ChainE", "ReliquaryE" },
 		},
-		Stairs = { ArmW_Apex = true, ArmE_Apex = true },
+		Stairs = { ArmW_Apex = true, ArmE_Apex = true, BrokenStair_Apex = true },
 		-- Dropped invalid SUPPLICANTS = {WestGallery, Crossing, EastGallery} (no direct link; Gallery-Basin-Gallery exceeds 240 s).
 		Patrols = {
 			WEST_LEG = { "FootW", "ShinW", "ArmW" },
@@ -4201,7 +4201,7 @@ local AUTHORED: {[number]: any} = {
 				{ HalfWidth = 18, Points = { { 275, 165, 16 }, { 270, 15, 18 }, { 265, -155, 18 }, { 280, -310, 16 } } },
 			},
 			Bridges = {
-				Crossing_BrokenStair = true,
+				Crossing_BrokenStair = true, BrokenStair_Apex = true,
 				FootW_ShinW = true, FootE_ShinE = true,
 				WestBastion_ShinW = true, EastBastion_ShinE = true,
 				ShinW_ArmW = true, ShinE_ArmE = true,
@@ -4212,7 +4212,7 @@ local AUTHORED: {[number]: any} = {
 				ChainW_ReliquaryW = true, ChainE_ReliquaryE = true,
 			},
 			BridgeStyles = {
-				Crossing_BrokenStair = "THRONE",
+				Crossing_BrokenStair = "THRONE", BrokenStair_Apex = "THRONE",
 				FootW_ShinW = "THRONE", FootE_ShinE = "THRONE",
 				WestBastion_ShinW = "THRONE", EastBastion_ShinE = "THRONE",
 				ShinW_ArmW = "THRONE", ShinE_ArmE = "THRONE",

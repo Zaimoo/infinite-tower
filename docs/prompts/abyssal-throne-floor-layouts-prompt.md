@@ -779,7 +779,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 **Story beat:** the Throne. At the bottom of the Abyss, where every Undertow ends, stands the **Throne** of the Warden-King: built so vast that the whole court could kneel on its steps, and grown vaster since. Its **feet** stand on the **Supplicants' Floor**. Its **greaves** rise like towers, its **armrests** are walled terraces, and its **hands** rest on the armrests' ends, open, the last two Wardlights burning in their palms. On its **seat** the **Crimson Overlord** waits for the oath he swore to be answered. Behind him the Throne's **backrest** rises out of sight into the black, crowned by the Chained Crown, with the **Crimson Eclipse** burning behind it.
 
 **Shape: you climb the Throne itself: its feet, its greaves, its armrests, then onto the seat.**
-- **The Grand Stair** up the Throne's front is broken: the **Broken Stair** is a dead end halfway up, facing the seat across the void.
+- **The Grand Stair** up the Throne's front: its old flight lies shattered in the void, but a restored flight climbs on from the **Broken Stair** landing straight to the seat. (Build change: the Broken Stair was a dead end at first; playtesters read it as a missing ramp.) Build change, also from playtesting: Floor 50 is indoors, the inside of the Throne, under a coffered, vaulted roof (`ThroneHallOverhead`); Floor 49's north wall holds the Throne Gate, so the citadel reads as the throne's entrance.
 - **The legs (quickest, measured):** the **Supplicants' Floor** → the **Footstool** (Crossing) → the **West** or **East Foot** → that side's **Greave** → its **Armrest** → the **Armrest Stair** (`STAIRS`) onto the seat.
 - **The chains:** from the **Hall of Kneeling** (west gallery, Elite) or the **Hall of Oaths** (east gallery, Elite) up to the **West** or **East Mantle Bastion** (Elite, Y 32 and 36). From each Mantle Bastion either cross to its Greave, or climb the Overlord's **mantle-chains** that hang from the Throne's shoulders (the **West** and **East Chain**) to that side's **Hand**, then step from the Hand onto the seat.
 - **The Reliquaries:** dead ends at the back corners, off the Chains, where the court keeps the Overlord's relics.
@@ -813,10 +813,10 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 | `Basin` | The Supplicants' Floor | 0, 0, 245 | 908 × 104 | terrain |
 | `WestGallery` | Hall of Kneeling | −320, 8, 95 | 92 × 80 | terrain (Elite) |
 | `EastGallery` | Hall of Oaths | 320, 12, 95 | 92 × 80 | terrain (Elite) |
-| `Crossing` | The Footstool | 0, 16, 110 | 96 × 68 | terrain |
+| `Crossing` | The Footstool | 0, 28, 110 | 96 × 68 | terrain |
 | `FootW` (extra) | West Foot | −170, 20, 60 | 72 × 60 | terrain (the Throne's foot) |
 | `FootE` (extra) | East Foot | 170, 24, 60 | 72 × 60 | terrain |
-| `BrokenStair` (extra) | The Broken Stair | 0, 30, 15 | 64 × 48 | deck (the Grand Stair's last landing, a dead end) |
+| `BrokenStair` (extra) | The Broken Stair | 0, 35, 29 | 64 × 36 | deck (the Grand Stair's landing; the restored flight climbs on to the Seat) |
 | `WestBastion` | West Mantle Bastion | −330, 32, −90 | 92 × 82 | terrain (Elite) |
 | `EastBastion` | East Mantle Bastion | 330, 36, −90 | 92 × 82 | terrain (Elite) |
 | `ShinW` (extra) | West Greave | −200, 38, −40 | 64 × 56 | deck (the greave's top, built) |
@@ -833,7 +833,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 
 **Paths (29 links):**
 - **The Supplicants' Floor:** `Sanctuary→Basin` (−8), `Basin→WestGallery` (+8), `Basin→Crossing` (+16, 14.76°), `Basin→EastGallery` (+12).
-- **The feet:** `WestGallery→FootW` (+12), `EastGallery→FootE` (+12), `Crossing→FootW` (+4), `Crossing→FootE` (+8), `Crossing→BrokenStair` (+14, 14.73°).
+- **The feet:** `WestGallery→FootW` (+12), `EastGallery→FootE` (+12), `Crossing→FootW` (+4), `Crossing→FootE` (+8), `Crossing→BrokenStair` (+7), `BrokenStair→Apex` (+37, the Grand Stair, `STAIRS`). The Footstool rose to Y 28 and the landing moved to Z 29 so the 37-stud flight fits a 15° stair between the landing and the Seat.
 - **Up the legs:** `FootW→ShinW` (+18, 14.79°), `FootE→ShinE` (+18, 14.79°), `ShinW→ArmW` (+14, 14.73°), `ShinE→ArmE` (+14, 14.73°).
 - **The Mantle Bastions:** `WestGallery→WestBastion` (+24), `EastGallery→EastBastion` (+24), `WestBastion→ShinW` (+6), `EastBastion→ShinE` (+6).
 - **Up the chains:** `WestBastion→ChainW` (+12), `EastBastion→ChainE` (+12), `ChainW→HandW` (+18), `ChainE→HandE` (+18), `ChainW→ReliquaryW` (+2), `ChainE→ReliquaryE` (+2).
@@ -910,7 +910,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 - **Room:** key, name and `Size` (`Bottom = −6`, 2 return ramps). It is the largest and tallest room in the tower.
 - **The Throne rule:**
   - the Apex is entered by exactly four links: the two Armrest Stairs (`STAIRS`, one from each side) and the two Hands;
-  - `BrokenStair` has exactly one link (a dead end);
+  - `BrokenStair` has two links: up from the Footstool, and the `BrokenStair→Apex` Grand Stair (`STAIRS`) to the Seat;
   - with both Armrests and both Hands removed, the Apex is unreachable.
 - **Dead ends:** `ReliquaryW` and `ReliquaryE` each have exactly one link.
 - **Arena clearance:** the Apex's landmark footprints stay off the arena and the portal lanes.
@@ -1333,13 +1333,13 @@ Layout fields only, exactly as validated on 2026-11-25. Each floor's PR adds `Pa
 	Basin = { X = 0, Y = 0, Z = 245, Width = 908, Depth = 104 },
 	WestGallery = { X = -320, Y = 8, Z = 95, Width = 92, Depth = 80 },
 	EastGallery = { X = 320, Y = 12, Z = 95, Width = 92, Depth = 80 },
-	Crossing = { X = 0, Y = 16, Z = 110, Width = 96, Depth = 68 },
+	Crossing = { X = 0, Y = 28, Z = 110, Width = 96, Depth = 68 },
 	WestBastion = { X = -330, Y = 32, Z = -90, Width = 92, Depth = 82 },
 	EastBastion = { X = 330, Y = 36, Z = -90, Width = 92, Depth = 82 },
 	ExtraPlatforms = {
 		FootW = { X = -170, Y = 20, Z = 60, Width = 72, Depth = 60 },
 		FootE = { X = 170, Y = 24, Z = 60, Width = 72, Depth = 60 },
-		BrokenStair = { X = 0, Y = 30, Z = 15, Width = 64, Depth = 48 },
+		BrokenStair = { X = 0, Y = 35, Z = 29, Width = 64, Depth = 36 },
 		ShinW = { X = -200, Y = 38, Z = -40, Width = 64, Depth = 56 },
 		ShinE = { X = 200, Y = 42, Z = -40, Width = 64, Depth = 56 },
 		ReliquaryW = { X = -370, Y = 46, Z = -335, Width = 64, Depth = 52 },
@@ -1355,7 +1355,7 @@ Layout fields only, exactly as validated on 2026-11-25. Each floor's PR adds `Pa
 	Paths = {
 		{ "Sanctuary", "Basin" }, { "Basin", "WestGallery" }, { "Basin", "Crossing" }, { "Basin", "EastGallery" },
 		{ "WestGallery", "FootW" }, { "EastGallery", "FootE" }, { "Crossing", "FootW" }, { "Crossing", "FootE" },
-		{ "Crossing", "BrokenStair" },
+		{ "Crossing", "BrokenStair" }, { "BrokenStair", "Apex" },
 		{ "FootW", "ShinW" }, { "FootE", "ShinE" }, { "WestGallery", "WestBastion" }, { "EastGallery", "EastBastion" },
 		{ "WestBastion", "ShinW" }, { "EastBastion", "ShinE" },
 		{ "ShinW", "ArmW" }, { "ShinE", "ArmE" },
