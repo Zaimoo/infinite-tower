@@ -13,7 +13,7 @@ export type Dependencies = {
 	SendToast: (Player, string, string?) -> (),
 	SyncProfile: (Player) -> (),
 	IsUnlocked: (Player, string) -> boolean,
-	Report: (Player, string) -> (),
+	Report: (Player, string, (string | number)?) -> (),
 	UnlockRemote: RemoteFunction,
 }
 
@@ -104,7 +104,7 @@ function FortressTreeService.Unlock(player: Player, nodeId: any): (boolean, stri
 		else string.format("Perk unlocked|%s", node.Name)
 	d.SendToast(player, message, "SUCCESS")
 	d.SyncProfile(player)
-	d.Report(player, "TreeNodeUnlocked")
+	d.Report(player, "TreeNodeUnlocked", node.Facility)
 	return true, message
 end
 

@@ -365,16 +365,40 @@ local function modalControl(goal: any): (GuiObject?, boolean, string?)
 		root = forgeRoot()
 		button = control(root, "EquipBestButton") or control(root, "ActionBarEquip")
 	elseif id == "Upgrade" then
+		-- The player chooses the weapon: until they tap one the whole grid is lit, and only then the
+		-- Upgrade button, auto-fill, Review and Confirm (GDD §4.7).
 		root = forgeRoot()
-		button = control(root, "ConfirmUpgradeButton") or control(root, "ReviewUpgradeButton")
-			or control(root, "AutoFillMaterialsButton") or control(root, "ActionBarUpgrade")
-		if not button and root and goal.Control then
-			button = control(root:FindFirstChild(`Tile_{goal.Control}`, true), "TileButton")
+		local window = root and root:FindFirstChild("Root")
+		local view = window and window:GetAttribute("ForgeView")
+		if view == "MATERIALS" or view == "REVIEW" then
+			button = control(root, "ConfirmUpgradeButton") or control(root, "ReviewUpgradeButton")
+			if not button then
+				button = control(root, "AutoFillMaterialsButton")
+				if button then label = "Add spare weapons" end
+			end
+		else
+			local picked = window and window:GetAttribute("GuidePickedArtifact")
+			if picked and window:GetAttribute("GuidePickReady") then
+				button = control(root, "DetailUpgradeButton")
+			else
+				button = control(root, "GridArea")
+				if button then
+					label = if picked then "No spares for that one: pick another" else "Pick a weapon to upgrade"
+				else
+					button = control(root, "ArtifactsTab")
+					if button then label = "Open Artifacts" end
+				end
+			end
 		end
-	elseif id == "Tree" then
+	elseif id == "Tree" or id == "Pedestal" or id == "RollLuck" then
 		root = playerGui:FindFirstChild("FortressTreeOverlay", true)
 		local node = root and goal.Control and root:FindFirstChild(goal.Control, true)
 		button = control(node, "Hit")
+		-- A Forge lesson with the Smelter open: its own Upgrades button opens the tree at the Forge branches.
+		if id == "Pedestal" and not shown(root) then
+			local upgrades = control(forgeRoot(), "ForgeUpgradesButton")
+			if upgrades then return upgrades, true, "Open Upgrades" end
+		end
 	elseif id == "Promotion" then
 		root = playerGui:FindFirstChild("HeroPromotionModal", true)
 		button = control(root, "InitiatePromotionButton") or control(root, "MainHeroSlot")
@@ -433,12 +457,40 @@ local HUD_BUTTONS: { [string]: { string } } = {
 	Upgrades = { "FortressRailButton" },
 	Hub = { "HubRailButton" },
 }
+-- Per-lesson HUD buttons tried before the target's own: at the Forge, its dock's Upgrades opens the
+-- tree at the pedestal branch.
+local LESSON_HUD_BUTTONS: { [string]: { string } } = {
+	Pedestal = { "ForgeHudUpgradesBtn", "FortressRailButton" },
+}
 
 local function ownPlot(): Instance?
 	local folder = workspace:FindFirstChild("WaitingRoomPlots")
 	if folder then
 		for _, plot in folder:GetChildren() do
 			if plot:GetAttribute("OwnerUserId") == player.UserId then return plot end
+		end
+	end
+	return nil
+end
+
+-- The Open Forge on the player's own plot.
+local function ownForge(): Instance?
+	local plot = ownPlot()
+	local buildings = plot and plot:FindFirstChild("PlotBuildings")
+	return buildings and buildings:FindFirstChild("Building_Blacksmith")
+end
+
+-- A pedestal's Buy prompt for a weapon the player can afford now (the server fills pedestals, and a
+-- pedestal shows its price as the `Cost` attribute).
+local function affordablePedestalPrompt(forge: Instance?): ProximityPrompt?
+	if not forge then return nil end
+	local gold = Store.Profile and Store.Profile.Currencies and Store.Profile.Currencies.Gold or 0
+	for _, desc in forge:GetDescendants() do
+		if desc.Name == "BuyArtifactPrompt" and desc:IsA("ProximityPrompt") and desc.Enabled then
+			local pedestal = desc.Parent
+			while pedestal and pedestal ~= forge and not string.match(pedestal.Name, "^Pedestal_%d+$") do pedestal = pedestal.Parent end
+			local cost = pedestal and tonumber(pedestal:GetAttribute("Cost")) or 0
+			if cost <= gold then return desc end
 		end
 	end
 	return nil
@@ -489,14 +541,8 @@ local function worldTarget(target: string, root: BasePart): (Vector3?, Instance?
 	local prompt: Instance? = nil
 	if target == "Blacksmith" then
 		if Store.Goal and Store.Goal.Id == "Roll" then
-			-- Prefer an enabled BuyArtifactPrompt on any pedestal; fall back to the AnvilRollPrompt.
-			for _, desc in building:GetDescendants() do
-				if desc.Name == "BuyArtifactPrompt" and desc:IsA("ProximityPrompt") and desc.Enabled then
-					prompt = desc
-					break
-				end
-			end
-			prompt = prompt or building:FindFirstChild("AnvilRollPrompt", true)
+			-- A pedestal with a weapon the player can afford; otherwise the Anvil, for a free reroll.
+			prompt = affordablePedestalPrompt(building) or building:FindFirstChild("AnvilRollPrompt", true)
 		else
 			prompt = building:FindFirstChild("BlacksmithPrompt", true)
 		end
@@ -777,6 +823,10 @@ local function refresh()
 			if visual and visual.RootPart and visual.RootPart.Parent and (visual.RootPart.Position - root.Position).Magnitude > 35 then
 				position = visual.RootPart.Position + Vector3.new(0, 8, 0)
 			end
+		elseif goal.Id == "Roll" and Store.PlayerFloorId == 0 and control(playerGui, "ForgeHudRerollBtn")
+			and not affordablePedestalPrompt(ownForge()) then
+			-- At the Forge with nothing affordable on the pedestals: the dock's free reroll.
+			object, stepLabel = control(playerGui, "ForgeHudRerollBtn"), "Reroll (free)"
 		elseif target and (Store.PlayerFloorId == 0 or target == "Bank" or target == "Hub") then
 			position, model = worldTarget(target, root)
 			if target == "Tower" and position and (position - root.Position).Magnitude > 80 then position, model = nil, nil end
@@ -785,7 +835,7 @@ local function refresh()
 				if object then position, model = nil, nil end
 			end
 			if not position and not object then
-				for _, name in HUD_BUTTONS[target] or {} do
+				for _, name in LESSON_HUD_BUTTONS[goal.Id] or HUD_BUTTONS[target] or {} do
 					object = control(playerGui, name)
 					if object then break end
 				end

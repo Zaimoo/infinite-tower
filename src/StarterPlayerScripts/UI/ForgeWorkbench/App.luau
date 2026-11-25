@@ -148,6 +148,9 @@ local function App(props: Types.Props)
 	local route, setRoute = React.useState(if props.InitialMode == "UPGRADE" then "UPGRADE_PICK" else "INVENTORY")
 	local sellMode, setSellMode = React.useState(props.InitialPane == "SELL")
 	local dialog, setDialog = React.useState(nil :: string?)
+	-- The weapon the player tapped themselves (the auto-selected target doesn't count). The guide's
+	-- Upgrade lesson waits for this before it points at Upgrade (GDD §4.7).
+	local pickedId, setPickedId = React.useState(nil :: string?)
 	local review, setReview = React.useState(nil :: any)
 	local filter, setFilter = React.useState({ Query = "", Ownership = "ALL", Rarity = 0, WeaponType = "ALL", Sort = "BEST" } :: Types.Filter)
 	local handlers = React.useRef({ Back = function() end })
@@ -260,6 +263,7 @@ local function App(props: Types.Props)
 			forge.ToggleMaterial(id)
 			return
 		end
+		setPickedId(id)
 		if route == "UPGRADE_PICK" then
 			forge.SelectTarget(id)
 			forge.SetMode("UPGRADE")
@@ -364,6 +368,16 @@ local function App(props: Types.Props)
 	React.useEffect(function()
 		if props.OnContextChanged then props.OnContextChanged(forge.HeroId, forge.TargetId, forge.Mode) end
 	end, { forge.HeroId, forge.TargetId, forge.Mode })
+
+	-- For the onboarding guide: which weapon the player picked, and whether it can be upgraded right
+	-- now (enough spare weapons to consume, Gold and Gems).
+	React.useEffect(function()
+		local rootFrame = rootRef.current
+		if not rootFrame then return end
+		local picked = if pickedId and pickedId == forge.TargetId and snapshot.Artifacts[pickedId] then pickedId else nil
+		rootFrame:SetAttribute("GuidePickedArtifact", picked)
+		rootFrame:SetAttribute("GuidePickReady", if picked then Model.upgradeReason(snapshot, picked, Model.autoFill(snapshot, picked, {})) == nil else nil)
+	end, { pickedId, forge.TargetId, snapshot })
 
 	React.useEffect(function()
 		if props.OnBusyChanged then props.OnBusyChanged(busy or sell.Busy) end
@@ -532,6 +546,7 @@ local function App(props: Types.Props)
 		}, {
 			Toolbar = toolbar,
 			GridArea = e("Frame", {
+				Name = "GridArea", -- the onboarding guide lights this while the player picks a weapon
 				Position = UDim2.fromOffset(0, TOOLBAR_HEIGHT + 6),
 				Size = UDim2.new(1, 0, 1, -TOOLBAR_HEIGHT - 12 - T.ActionBarHeight),
 				BackgroundTransparency = 1,
