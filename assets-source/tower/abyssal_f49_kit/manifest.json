@@ -1,0 +1,326 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "ArmourStandPlate": {
+      "Min": [
+        -2.6,
+        0.0,
+        -2.4
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "METAL": 368,
+        "SILK": 40,
+        "STONE": 20,
+        "TRIM": 116
+      },
+      "Size": [
+        5.2,
+        9.94,
+        4.8
+      ],
+      "Triangles": 556
+    },
+    "CurtainWallCrenel": {
+      "Min": [
+        -12.0,
+        0.0,
+        -2.879
+      ],
+      "Roles": {
+        "ALT": 60,
+        "CRYSTAL": 20,
+        "METAL": 128,
+        "STONE": 768,
+        "TRIM": 96
+      },
+      "Size": [
+        24.0,
+        16.412,
+        5.679
+      ],
+      "Triangles": 1072
+    },
+    "DrawbridgeStair": {
+      "Min": [
+        -12.2,
+        0.0,
+        -4.4
+      ],
+      "Roles": {
+        "ALT": 24,
+        "METAL": 2100,
+        "STONE": 138,
+        "TRIM": 1164,
+        "WOOD": 36
+      },
+      "Size": [
+        24.4,
+        25.675,
+        10.386
+      ],
+      "Triangles": 3462
+    },
+    "DreadguardKeepGatehouse": {
+      "Min": [
+        -14.4,
+        0.0,
+        -5.727
+      ],
+      "Roles": {
+        "ACCENT": 144,
+        "ALT": 144,
+        "GLOW": 200,
+        "METAL": 2584,
+        "SILK": 72,
+        "STONE": 1355,
+        "TRIM": 1552
+      },
+      "Size": [
+        28.8,
+        41.7,
+        13.661
+      ],
+      "Triangles": 6051
+    },
+    "DreadguardKeepTower": {
+      "Min": [
+        -19.589,
+        0.0,
+        -16.389
+      ],
+      "Roles": {
+        "ACCENT": 336,
+        "ALT": 192,
+        "METAL": 4200,
+        "MOSS": 80,
+        "SILK": 84,
+        "STONE": 1819,
+        "TRIM": 3600
+      },
+      "Size": [
+        39.178,
+        244.019,
+        32.778
+      ],
+      "Triangles": 10311
+    },
+    "DreadguardSentry": {
+      "Min": [
+        -4.065,
+        0.0,
+        -4.065
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "METAL": 546,
+        "STONE": 168,
+        "TRIM": 116
+      },
+      "Size": [
+        8.13,
+        19.987,
+        8.13
+      ],
+      "Triangles": 842
+    },
+    "ExecutionYardSet": {
+      "Min": [
+        -6.4,
+        -0.082,
+        -4.7
+      ],
+      "Roles": {
+        "METAL": 344,
+        "SILK": 12,
+        "STONE": 112,
+        "TRIM": 36,
+        "WOOD": 224
+      },
+      "Size": [
+        12.002,
+        8.915,
+        9.9
+      ],
+      "Triangles": 728
+    },
+    "GateTowerChained": {
+      "Min": [
+        -7.0,
+        0.0,
+        -7.0
+      ],
+      "Roles": {
+        "ALT": 12,
+        "GLOW": 100,
+        "METAL": 1304,
+        "SILK": 36,
+        "STONE": 236,
+        "TRIM": 736
+      },
+      "Size": [
+        14.0,
+        54.4,
+        16.178
+      ],
+      "Triangles": 2424
+    },
+    "GreatIronBell": {
+      "Min": [
+        -8.9,
+        0.0,
+        -4.92
+      ],
+      "Roles": {
+        "ACCENT": 200,
+        "METAL": 500,
+        "STONE": 156,
+        "TRIM": 168,
+        "WOOD": 78
+      },
+      "Size": [
+        17.8,
+        33.0,
+        9.84
+      ],
+      "Triangles": 1102
+    },
+    "IronStakePalisade": {
+      "Min": [
+        -10.0,
+        0.0,
+        -5.579
+      ],
+      "Roles": {
+        "METAL": 180,
+        "MOSS": 40,
+        "STONE": 44,
+        "TRIM": 184
+      },
+      "Size": [
+        20.0,
+        9.265,
+        7.845
+      ],
+      "Triangles": 448
+    },
+    "MineWindingGear": {
+      "Min": [
+        -6.831,
+        0.0,
+        -9.34
+      ],
+      "Roles": {
+        "CRYSTAL": 60,
+        "METAL": 2440,
+        "STONE": 605,
+        "TRIM": 1960,
+        "WOOD": 60
+      },
+      "Size": [
+        13.663,
+        28.44,
+        16.171
+      ],
+      "Triangles": 5125
+    },
+    "PenitentCage": {
+      "Min": [
+        -2.771,
+        0.0,
+        -5.2
+      ],
+      "Roles": {
+        "METAL": 800,
+        "SILK": 12,
+        "STONE": 20,
+        "TRIM": 324
+      },
+      "Size": [
+        5.543,
+        22.8,
+        9.93
+      ],
+      "Triangles": 1156
+    },
+    "RavelinPortcullis": {
+      "Min": [
+        -13.117,
+        0.0,
+        -5.317
+      ],
+      "Roles": {
+        "ACCENT": 144,
+        "ALT": 84,
+        "METAL": 716,
+        "SILK": 72,
+        "STONE": 729,
+        "TRIM": 568
+      },
+      "Size": [
+        26.234,
+        21.13,
+        10.034
+      ],
+      "Triangles": 2313
+    },
+    "ShutteredWardlight": {
+      "Min": [
+        -1.571,
+        0.0,
+        -1.571
+      ],
+      "Roles": {
+        "METAL": 130,
+        "STONE": 56,
+        "TRIM": 268
+      },
+      "Size": [
+        3.141,
+        13.577,
+        4.893
+      ],
+      "Triangles": 454
+    },
+    "SiegeHookCrane": {
+      "Min": [
+        -5.4,
+        0.0,
+        -8.4
+      ],
+      "Roles": {
+        "METAL": 1208,
+        "STONE": 28,
+        "TRIM": 700,
+        "WOOD": 24
+      },
+      "Size": [
+        10.8,
+        36.32,
+        21.703
+      ],
+      "Triangles": 1960
+    },
+    "StarBastionSalient": {
+      "Min": [
+        -14.382,
+        0.0,
+        -11.178
+      ],
+      "Roles": {
+        "ALT": 144,
+        "METAL": 88,
+        "SILK": 36,
+        "STONE": 480,
+        "TRIM": 48
+      },
+      "Size": [
+        28.764,
+        28.9,
+        24.678
+      ],
+      "Triangles": 796
+    }
+  },
+  "Unit": "studs"
+}

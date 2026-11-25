@@ -35,6 +35,7 @@ local AstralFloor45 = require(script.Parent.TowerSetPieces.AstralFloor45)
 local AbyssalFloor46 = require(script.Parent.TowerSetPieces.AbyssalFloor46)
 local AbyssalFloor47 = require(script.Parent.TowerSetPieces.AbyssalFloor47)
 local AbyssalFloor48 = require(script.Parent.TowerSetPieces.AbyssalFloor48)
+local AbyssalFloor49 = require(script.Parent.TowerSetPieces.AbyssalFloor49)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
@@ -6541,6 +6542,7 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		elseif layout.Authored == "abyssal:1" then AbyssalFloor46.Build
 		elseif layout.Authored == "abyssal:2" then AbyssalFloor47.Build
 		elseif layout.Authored == "abyssal:3" then AbyssalFloor48.Build
+		elseif layout.Authored == "abyssal:4" then AbyssalFloor49.Build
 		else nil
 	if setPieceBuild then
 		setPieceBuild({

@@ -637,7 +637,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 
 *840 × 795 × 320, `Bottom = −6`. Iron night.*
 
-**Guide image:** ask for it before building.
+**Guide image:** `reference/Abyssal Throne 49.jpg`.
 
 **Story beat:** the Dreadguard's fortress. Here the Throne's executioners built the last wall between the Abyss and the Throne: a **star fort** of obsidian and iron, its bastions pointed outward so no wall could be approached without being seen from two others. At its heart, on a mound ringed by a void moat, stands the **Dreadguard Keep**, where they keep the Overlord's sword when he is not holding it. They keep their lamps shuttered on the walls so nothing can see them first. The only lit lamps are on the drawbridges into the keep.
 
@@ -1168,6 +1168,7 @@ pwsh tests/run.ps1
 - **Floor 46 (`feat/abyssal-throne-floor-46`):** built `AbyssalF46Kit` (15 templates, `tools/blender/generate_abyssal_f46_kit.py`), `AbyssalFloor46.luau` (20 landmarks, 172-stud Upfall), `Dirge.luau` / `DirgeRuntime.client.luau`, `Surfaces.VAHL` / `Surfaces.THRONEWARD`, `CHAINFORD` bridges, `AUTHORED[46]` and `FloorGrades[46]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 - **Floor 47 (`feat/abyssal-throne-floor-47`):** built `AbyssalF47Kit` (15 templates, `tools/blender/generate_abyssal_f47_kit.py`), `AbyssalFloor47.luau` (22 landmarks, 186-stud arched Effigy on Bearers), `Terrain.Rifts` `Loop = true`, `PROCESSIONAL` stairs/bridges, `AUTHORED[47]` and `FloorGrades[47]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 - **Floor 48 (`feat/abyssal-throne-floor-48`):** built `AbyssalF48Kit` (15 templates, `tools/blender/generate_abyssal_f48_kit.py`), `AbyssalFloor48.luau` (26 landmarks, 214-stud Anchor Spires), `Surfaces.THRONEWARD`, `CATENARY` suspended decks, `VoidCatchY = -3.5`, `AUTHORED[48]` and `FloorGrades[48]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
+- **Floor 49 (`feat/abyssal-throne-floor-49`):** built `AbyssalF49Kit` (16 templates, `tools/blender/generate_abyssal_f49_kit.py`), `AbyssalFloor49.luau` (28 landmarks, 244-stud Dreadguard Keep Tower), star-fort bastion layout with closed-loop moat & `DRAWBRIDGE` stairs, `AUTHORED[49]` and `FloorGrades[49]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 
 ---
 
