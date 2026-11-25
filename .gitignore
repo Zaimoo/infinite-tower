@@ -24,6 +24,8 @@ Desktop.ini
 /artifacts/
 !assets/artifacts/
 assets/models/enemies/
+# Rendered biome music (regenerate with tools/generate_biome_ambience.py)
+assets/music/
 
 # Wally packages
 Packages/
