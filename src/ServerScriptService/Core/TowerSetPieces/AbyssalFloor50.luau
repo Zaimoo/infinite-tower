@@ -101,8 +101,8 @@ AbyssalFloor50.Landmarks = table.freeze({
 	{ Id = "ThroneBackrest", X = 0, Z = -342, Y = 36, HalfX = 72.0, HalfZ = 25.0, Top = 334.0, Straddles = true },
 	-- 2. Monumental Chained Crown emblem mounted high on the backrest front face.
 	{ Id = "ChainedCrownColossal", X = 0, Z = -316, Y = 238, HalfX = 42.0, HalfZ = 5.0, Top = 84.0, Straddles = true },
-	-- 3. Crimson Eclipse burning high in the black vault behind the crown (>= 175 studs above Apex!).
-	{ Id = "CrimsonEclipseDisc", X = 0, Z = -384, Y = 250, HalfX = 76.0, HalfZ = 4.0, Top = 152.0, Straddles = true },
+	-- 3. Crimson Eclipse burning high behind the crown, set against the hall's north wall as its rose window (>= 175 studs above Apex!).
+	{ Id = "CrimsonEclipseDisc", X = 0, Z = -393, Y = 250, HalfX = 76.0, HalfZ = 4.0, Top = 152.0, Straddles = true },
 	-- 4–5. Full-height matte wine-crimson silk banners flanking the backrest shoulders.
 	{ Id = "BackrestBannerWineW", X = -32, Z = -318, Y = 146, HalfX = 9.5, HalfZ = 3.5, Top = 104.0, Straddles = true },
 	{ Id = "BackrestBannerWineE", X = 32, Z = -318, Y = 146, HalfX = 9.5, HalfZ = 3.5, Top = 104.0, Straddles = true },
