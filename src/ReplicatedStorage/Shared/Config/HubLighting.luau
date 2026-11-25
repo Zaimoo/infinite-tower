@@ -594,9 +594,9 @@ local FloorGrades: { [number]: { [string]: any } } = {
 	-- Floor 47, Crimson Procession: crimson vigil — dark cool ambient, warm bone-white pools under Wardlights,
 	-- wine silk catching muted rose top fill with faint high-altitude glow behind the Effigy.
 	[47] = {
-		Ambient = c(60, 52, 78), OutdoorAmbient = c(92, 82, 114), ColorShift_Top = c(226, 206, 214), ColorShift_Bottom = c(84, 54, 126),
-		AtmosphereDensity = 0.36, AtmosphereColor = c(88, 72, 108), AtmosphereDecay = c(52, 38, 76), AtmosphereHaze = 1.0,
-		TintColor = c(242, 232, 238), Saturation = 0.12, Contrast = 0.12, ExposureCompensation = 0.10, BloomIntensity = 0.45,
+		Ambient = c(96, 84, 112), OutdoorAmbient = c(148, 132, 162), ColorShift_Top = c(232, 214, 222), ColorShift_Bottom = c(98, 68, 140),
+		AtmosphereDensity = 0.27, AtmosphereColor = c(110, 92, 128), AtmosphereDecay = c(66, 50, 92), AtmosphereHaze = 0.62,
+		TintColor = c(246, 238, 244), Saturation = 0.12, Contrast = 0.12, ExposureCompensation = 0.20, BloomIntensity = 0.45,
 	},
 }
 HubLighting.FloorGrades = FloorGrades
