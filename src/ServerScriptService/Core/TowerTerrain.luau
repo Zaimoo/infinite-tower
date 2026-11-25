@@ -18,6 +18,8 @@
 -- The field is analytic (TowerTerrain.Field), so the ecosystem scatter (TowerBiomeAssets) can ask for the
 -- ground height, slope and kind of any spot without raycasting.
 
+local Layout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
+
 local TowerTerrain = {}
 
 local RES = 4
@@ -233,6 +235,10 @@ local function walkways(layout: any): ({ any }, { any })
 		for _, name in { "LandingA", "LandingB" } do
 			local pad = link[name]
 			local padPlat = if name == "LandingA" then link.From else link.To
+			-- Abyssal floors: the pad stops at its terrace's far edge, as the room builder builds it.
+			if layout.PathStyle == "VAHL" and layout.Platforms[padPlat] then
+				pad = Layout.ClipLanding(pad, layout.Platforms[padPlat], if name == "LandingA" then "B" else "A")
+			end
 			if suspPlatMap and suspPlatMap[padPlat] then
 				continue
 			end
@@ -973,6 +979,8 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		end
 	end
 	local rifts = td and td.Rifts or nil
+	-- How far in from the walls rifts leave the mountain band whole: the band's full depth (Base + Noise).
+	local riftWallKeep = if td and td.WallBand and td.WallBand.Base > 0 then td.WallBand.Base + (td.WallBand.Noise or 0) else 0
 	local function riftCarve(x: number, z: number): number
 		if not rifts then return 0 end
 		local best = 0
@@ -1201,6 +1209,11 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 		-- with rough walls, never cutting under a solid non-deck, non-bridge terrain terrace or earthen ramp.
 		if rifts and not (own > -math.huge and not ownDeck and not ownBridge) then
 			local rf = riftCarve(x, z)
+			-- A rift never cuts the mountain band along the walls (Floors 46-50): it fades out just inside the
+			-- band, so a moat running along the back edge leaves the wall standing instead of opening it to the sky.
+			if rf > 0 and riftWallKeep > 0 then
+				rf *= math.clamp((math.min(w / 2 - math.abs(x), d / 2 - math.abs(z)) - riftWallKeep) / 12, 0, 1)
+			end
 			if rf > 0 then
 				y = math.min(y, bottom + (y - bottom) * (1 - rf))
 				if rf >= 0.65 then
