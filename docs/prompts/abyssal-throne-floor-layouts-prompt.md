@@ -273,7 +273,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 
 *640 × 640 × 240, `Bottom = −4`. Ash-fall dusk under the Rift's wound.*
 
-**Guide image:** ask for it before building.
+**Guide image:** `reference/Abyssal Throne 46.jpg`.
 
 **Story beat:** where the dark first catches what falls. The squad comes down through the Rift and lands on the **Fallstrand**, a strand of debris from the Archive above: shelf-ends, brass, drifts of pages. Ahead, the **Undertow** braids across a black plain in a dozen violet ribbons, and the ribbons run **uphill**, away from you and up the floor. At the back-west they gather and pour straight up into the dark: the **Upfall**. The Vahl's outriders hold the eyots between the channels. The Throne is not in sight yet. Everything is already flowing toward it.
 
@@ -1165,7 +1165,7 @@ pwsh tests/run.ps1
   - walks 2.03× / 2.06× / 1.93× / 2.04× / 1.68×;
   - every patrol under 240 s (Floor 50's `SUPPLICANTS` doesn't resolve as written, see Floor 50).
 
-  No floor built yet; no guide images yet.
+- **Floor 46 (`feat/abyssal-throne-floor-46`):** built `AbyssalF46Kit` (15 templates, `tools/blender/generate_abyssal_f46_kit.py`), `AbyssalFloor46.luau` (20 landmarks, 172-stud Upfall), `Dirge.luau` / `DirgeRuntime.client.luau`, `Surfaces.VAHL` / `Surfaces.THRONEWARD`, `CHAINFORD` bridges, `AUTHORED[46]` and `FloorGrades[46]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 
 ---
 

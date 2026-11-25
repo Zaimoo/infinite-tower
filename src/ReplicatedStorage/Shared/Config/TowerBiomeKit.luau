@@ -654,6 +654,22 @@ TowerBiomeKit.ExtraTemplates = table.freeze({
 	MaelstromSwirlRing = table.freeze({ Size = Vector3.new(145.792, 19.959, 131.784), Min = Vector3.new(-72.889, -1.309, -65.891), Roles = table.freeze({ "ALT", "CRYSTAL", "GLOW", "SILK" }) }),
 	ReefCoralTable = table.freeze({ Size = Vector3.new(19.713, 14.342, 15.564), Min = Vector3.new(-9.542, 0.0, -8.238), Roles = table.freeze({ "CORAL", "CRYSTAL", "GLOW", "STONE" }) }),
 	SeaDomeArchRib = table.freeze({ Size = Vector3.new(71.393, 114.726, 16.0), Min = Vector3.new(-38.0, 0.0, -8.0), Roles = table.freeze({ "ACCENT", "CRYSTAL", "METAL", "STONE" }) }),
+	-- Abyssal Throne Floor 46 (Abyssal Descent, abyssal_f46_kit)
+	ChainFordSpan = table.freeze({ Size = Vector3.new(14.0, 7.0, 24.0), Min = Vector3.new(-7.0, 0.0, -12.0), Roles = table.freeze({ "ALT", "METAL", "STONE", "TRIM" }) }),
+	ChainPostIron = table.freeze({ Size = Vector3.new(4.795, 11.2, 4.065), Min = Vector3.new(-2.033, 0.0, -2.033), Roles = table.freeze({ "ACCENT", "GLOW", "METAL", "TRIM" }) }),
+	ChainedCrownKeystone = table.freeze({ Size = Vector3.new(11.6, 18.972, 8.019), Min = Vector3.new(-5.8, 0.0, -4.009), Roles = table.freeze({ "ACCENT", "ALT", "METAL", "SILK", "STONE", "TRIM" }) }),
+	ExecutionBlock = table.freeze({ Size = Vector3.new(8.6, 8.676, 7.6), Min = Vector3.new(-4.3, 0.0, -3.8), Roles = table.freeze({ "ALT", "METAL", "SILK", "STONE", "TRIM" }) }),
+	EyotSlabL = table.freeze({ Size = Vector3.new(63.844, 18.671, 74.148), Min = Vector3.new(-32.844, 0.0, -35.431), Roles = table.freeze({ "ALT", "MOSS", "STONE" }) }),
+	EyotSlabM = table.freeze({ Size = Vector3.new(47.244, 16.651, 50.37), Min = Vector3.new(-24.586, 0.0, -25.942), Roles = table.freeze({ "ALT", "MOSS", "STONE" }) }),
+	EyotSlabS = table.freeze({ Size = Vector3.new(28.353, 14.638, 32.864), Min = Vector3.new(-14.353, 0.0, -16.989), Roles = table.freeze({ "ALT", "MOSS", "STONE" }) }),
+	FallenStackWreck = table.freeze({ Size = Vector3.new(14.617, 7.512, 10.867), Min = Vector3.new(-6.627, -0.485, -5.765), Roles = table.freeze({ "ACCENT", "ALT", "MOSS", "STONE", "WOOD" }) }),
+	ObsidianGeodeSplit = table.freeze({ Size = Vector3.new(11.959, 7.39, 8.447), Min = Vector3.new(-6.456, -0.831, -4.182), Roles = table.freeze({ "CRYSTAL", "MOSS", "STONE", "TRIM" }) }),
+	ReavingRack = table.freeze({ Size = Vector3.new(13.0, 10.0, 3.633), Min = Vector3.new(-7.0, 0.0, -1.833), Roles = table.freeze({ "ALT", "METAL", "SILK", "STONE", "TRIM" }) }),
+	UndertowRibbon = table.freeze({ Size = Vector3.new(21.202, 1.701, 42.344), Min = Vector3.new(-10.431, -0.001, -21.247), Roles = table.freeze({ "CRYSTAL", "GLOW", "STONE" }) }),
+	UpfallColumn = table.freeze({ Size = Vector3.new(43.278, 167.563, 45.687), Min = Vector3.new(-21.829, -0.995, -22.552), Roles = table.freeze({ "CRYSTAL", "GLOW", "METAL", "STONE", "TRIM" }) }),
+	VahlGibbetCage = table.freeze({ Size = Vector3.new(4.85, 22.8, 11.282), Min = Vector3.new(-2.425, 0.0, -5.4), Roles = table.freeze({ "ALT", "METAL", "SILK", "STONE", "TRIM" }) }),
+	WardlightCage = table.freeze({ Size = Vector3.new(3.291, 13.28, 6.02), Min = Vector3.new(-1.645, 0.0, -2.5), Roles = table.freeze({ "GLOW", "METAL", "STONE", "TRIM" }) }),
+	WeirOfHooks = table.freeze({ Size = Vector3.new(22.6, 14.8, 5.2), Min = Vector3.new(-11.3, 0.0, -2.6), Roles = table.freeze({ "ALT", "METAL", "SILK", "STONE", "TRIM" }) }),
 }) :: { [string]: Template }
 
 local rgb = Color3.fromRGB
@@ -928,6 +944,7 @@ TowerBiomeKit.CastsShadow = table.freeze({
 	IndexEngineCore = true, IndexEngineGearBank = true, IndexEngineShelfTower = true, LiftedIndexGallery = true, ScarpShelfStrata = true, ToppledShelfRange = true, BinderyPress = true, ErrataPress = true, LedgerStackTall = true, ColophonWall = true,
 	AthenaeumDomeDrum = true, AthenaeumDomeCrown = true, RunewardPylon = true, WaygateRing = true, RuneguardTower = true, IndexBoard = true, SealPress = true, StarIronAnvil = true, ChainedTomeRack = true, VaultRingDoor = true, LensRack = true, BookCartLift = true, CopyistAwning = true,
 	GreatTelescopeMount = true, GreatTelescopeTube = true, ObservatoryDomeRibs = true, AzimuthRing = true, SutureShelfSpan = true, RiftOverlookDeck = true, TransitTower = true, TransitInstrument = true, LensBench = true, FallenOrrery = true, StarLecternGrand = true, ToppledCabinetRange = true, ProofPress = true, MeridianFooting = true,
+	UpfallColumn = true, EyotSlabL = true, EyotSlabM = true, EyotSlabS = true, VahlGibbetCage = true, WeirOfHooks = true, ChainedCrownKeystone = true, ReavingRack = true, ExecutionBlock = true, FallenStackWreck = true, ChainPostIron = true,
 }) :: { [string]: boolean }
 
 return TowerBiomeKit

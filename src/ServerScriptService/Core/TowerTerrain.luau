@@ -113,6 +113,12 @@ local Surfaces: { [string]: Surface } = {
 	-- basalt rift chasms and cliffs so glowing violet rift eyes, ward walls and pale gold lamps pop cleanly.
 	RIFTWARD = { Trail = M.Slate, Walk = M.Slate, WalkAccent = M.Basalt, Bank = M.Basalt,
 		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.Basalt },
+	-- Abyssal Throne obsidian & basalt surfaces (46–50): dark monolithic plates and slate shelves
+	-- with limestone border inlays so bone wardlights, iron chains, and void fissures pop cleanly.
+	VAHL = { Trail = M.Limestone, Walk = M.Basalt, WalkAccent = M.Slate, Bank = M.Slate,
+		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.Slate },
+	THRONEWARD = { Trail = M.Limestone, Walk = M.Basalt, WalkAccent = M.Basalt, Bank = M.Basalt,
+		Cliff = M.Basalt, Peak = M.Basalt, PoolBed = M.Basalt, Lush = M.Basalt },
 }
 TowerTerrain.Surfaces = Surfaces
 
@@ -978,8 +984,9 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 					if pt[1] < minX then minX = pt[1] end
 					if pt[1] > maxX then maxX = pt[1] end
 				end
-				for i = 1, nPts - 1 do
-					local a, b = pts[i], pts[i + 1]
+				local segCount = if rift.Loop and nPts >= 3 then nPts else nPts - 1
+				for i = 1, segCount do
+					local a, b = pts[i], pts[(i % nPts) + 1]
 					local dx, dz = b[1] - a[1], b[2] - a[2]
 					local len2 = math.max(dx * dx + dz * dz, 1e-3)
 					local t = math.clamp(((x - a[1]) * dx + (z - a[2]) * dz) / len2, 0, 1)
@@ -987,10 +994,12 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 					local hwA = a[3] or defaultHW
 					local hwB = b[3] or defaultHW
 					local hw = hwA + (hwB - hwA) * t
-					if pinch == "W" then
-						hw *= math.clamp((cx - minX) / 45, 0, 1)
-					elseif pinch == "E" then
-						hw *= math.clamp((maxX - cx) / 45, 0, 1)
+					if not rift.Loop then
+						if pinch == "W" then
+							hw *= math.clamp((cx - minX) / 45, 0, 1)
+						elseif pinch == "E" then
+							hw *= math.clamp((maxX - cx) / 45, 0, 1)
+						end
 					end
 					if hw > 0.5 then
 						local warp = 2.6 * fbm(x / 18, z / 18, seed + 241 + rIdx * 11, 2)
@@ -1389,7 +1398,7 @@ local function materialFor(field: Field, palette: Palette, kind: string, y: numb
 		elseif kind == "MOUNTAIN" and y - field.Bottom > 34 then
 			return s.Peak
 		end
-		if s == Surfaces.HALCYR or s == Surfaces.RIFTWARD then
+		if s == Surfaces.HALCYR or s == Surfaces.RIFTWARD or s == Surfaces.THRONEWARD then
 			return s.Lush
 		end
 		return if patch > 0.22 then s.WalkAccent else s.Lush
