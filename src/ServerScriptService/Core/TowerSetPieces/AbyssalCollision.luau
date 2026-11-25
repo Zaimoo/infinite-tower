@@ -32,10 +32,18 @@ AbyssalCollision.LaneKinds = table.freeze({
 	UndertowMoatRing = true, AbyssalUndertowBed = true, ThroneSilverKey = true,
 })
 
+-- Lane kinds that hold a terrace up from below (Floor 49's star-fort retaining walls under every bastion and
+-- curtain, and the Keep mound with its buttresses under the Apex). Their tops meet a walkway's underside, which
+-- is why they are lane-exempt, but nobody walks through a wall: they stay solid.
+AbyssalCollision.SupportKinds = table.freeze({ StarFortRetainingAprons = true, DreadguardKeepMound = true })
+
 -- Anything smaller than this on every axis is clutter, not an obstacle.
 AbyssalCollision.ClutterSize = 3.5
 
 function AbyssalCollision.IsGhostKind(kind: string): boolean
+	if AbyssalCollision.SupportKinds[kind] then
+		return false
+	end
 	if AbyssalCollision.LaneKinds[kind] then
 		return true
 	end

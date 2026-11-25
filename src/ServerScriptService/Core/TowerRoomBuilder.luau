@@ -292,6 +292,83 @@ function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number)
 	end
 end
 
+-- A bridge's curbs never stand on another walkway. Where two links leave one terrace side by side (Floor 48's
+-- Keystone), each link's inner curb runs across its neighbour's deck and landing as a wall (invisible on natural
+-- floors), so heroes and players can't cross. Each curb keeps its longest stretch clear of every other link's
+-- deck; the parts of its group running beside it are cut to match, and a stub under 3 studs goes.
+-- Returns how many curbs were trimmed or removed.
+function Builder.TrimCrossingCurbs(model: Instance, origin: Vector3, layout: any): number
+	local decks = {}
+	local connectors = table.clone(layout.Links)
+	for _, link in layout.ReturnLinks or {} do
+		table.insert(connectors, link)
+	end
+	for _, link in connectors do
+		-- The deck itself, not its landing pads: a pad lies on the terrace, where a neighbour's curb ends anyway.
+		local a = origin + Vector3.new(link.AX, link.AY, link.AZ)
+		local b = origin + Vector3.new(link.BX, link.BY, link.BZ)
+		local len = (b - a).Magnitude
+		if len > 0.5 then
+			table.insert(decks, { LinkId = link.Id, Frame = CFrame.lookAt((a + b) / 2, b), Half = Vector3.new(link.Width / 2, 0, len / 2) })
+		end
+	end
+	local function onOtherDeck(point: Vector3, own: string): boolean
+		for _, deck in decks do
+			if deck.LinkId ~= own then
+				local at = deck.Frame:PointToObjectSpace(point)
+				if math.abs(at.X) < deck.Half.X and math.abs(at.Z) < deck.Half.Z and at.Y > -3 and at.Y < 6 then
+					return true
+				end
+			end
+		end
+		return false
+	end
+	local trimmed = 0
+	for _, group in model:GetChildren() do
+		local own = group:GetAttribute("LinkId")
+		local curb = group:FindFirstChild("BridgeCurb")
+		if group.Name ~= "BridgeCurb" or type(own) ~= "string" or not (curb and curb:IsA("BasePart")) then
+			continue
+		end
+		local len = curb.Size.Z
+		local steps = math.max(1, math.floor(len))
+		local best0, best1, run0 = 0, -1, nil
+		for i = 0, steps do
+			local t = -len / 2 + len * i / steps
+			if onOtherDeck(curb.CFrame:PointToWorldSpace(Vector3.new(0, 0, t)), own) then
+				run0 = nil
+			else
+				run0 = run0 or t
+				if t - run0 > best1 - best0 then
+					best0, best1 = run0, t
+				end
+			end
+		end
+		if best1 - best0 >= len - 0.5 then
+			continue
+		end
+		trimmed += 1
+		if best1 - best0 < 3 then
+			group:Destroy()
+			continue
+		end
+		local frame = curb.CFrame
+		local cut0, cut1 = best0 + len / 2, len / 2 - best1
+		for _, p in group:GetDescendants() do
+			if p:IsA("BasePart") and p.CFrame.LookVector:Dot(frame.LookVector) > 0.999 then
+				local newLen = p.Size.Z - cut0 - cut1
+				if newLen < 1 then
+					p:Destroy()
+				else
+					p.Size = Vector3.new(p.Size.X, p.Size.Y, newLen)
+					p.CFrame = p.CFrame * CFrame.new(0, 0, (cut0 - cut1) / 2)
+				end
+			end
+		end
+	end
+	return trimmed
+end
+
 -- Removes a floor's terrain (TowerFloorService calls this when the room retires).
 function Builder.ClearTerrain(id: number)
 	local floorSpec = Config.Get(id)
@@ -1690,7 +1767,19 @@ function Builder.Build(id: number, generation: number): any
 		return false
 	end
 	local landingSeq = 0
+	-- Abyssal floors (PathStyle "VAHL"): a pad stops at its terrace's far edge (Layout.ClipLanding).
+	local rampEndOf: { [any]: string } = {}
+	if layout.PathStyle == "VAHL" then
+		for _, l in layout.Links do
+			rampEndOf[l.LandingA] = "B"
+			rampEndOf[l.LandingB] = "A"
+		end
+	end
 	local function landing(pad: any, id: string, terraceName: string?)
+		local terrace = if terraceName then layout.Platforms[terraceName] else nil
+		if terrace and rampEndOf[pad] then
+			pad = Layout.ClipLanding(pad, terrace, rampEndOf[pad])
+		end
 		landingSeq += 1
 		local a=origin+Vector3.new(pad.AX,pad.AY,pad.AZ)
 		local b=origin+Vector3.new(pad.BX,pad.BY,pad.BZ)
@@ -3216,6 +3305,7 @@ function Builder.Build(id: number, generation: number): any
 			for _, side in { -1, 1 } do
 				local curbOffset = right * (side * (link.Width / 2 - 1.02))
 				local curbGroup = propGroup(model, "BridgeCurb")
+				curbGroup:SetAttribute("LinkId", link.Id)
 				local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.3, 2.6, curbLen), mid + curbOffset, curbCol, curbMat, if visibleCurb then nil else 1)
 				curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.35, 0)
 				if hungLinks[link.Id] and bridgeStyles[link.Id] == "HEDGE" then
@@ -3865,6 +3955,7 @@ function Builder.Build(id: number, generation: number): any
 			-- On the ramp's edge (not beside it, where nothing holds it up).
 			local curbOffset = right * (side * (link.Width / 2 - 1.1))
 			local curbGroup = propGroup(model, "BridgeCurb")
+			curbGroup:SetAttribute("LinkId", link.Id)
 			local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, math.max(1,delta.Magnitude-4)), mid + curbOffset, theme.TrimColor, theme.TrimMaterial)
 			curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
 			local glowStrip = decor(curbGroup, "BridgeRuneStrip", Vector3.new(0.45, 0.35, delta.Magnitude - 4), mid + curbOffset, theme.LightColor, Enum.Material.SmoothPlastic, 0.3)
@@ -4190,6 +4281,10 @@ function Builder.Build(id: number, generation: number): any
    end
   end
   return false
+ end
+ if layout.PathStyle == "VAHL" then
+  -- Abyssal floors: no curb stands across another link's deck.
+  model:SetAttribute("CurbsTrimmed", Builder.TrimCrossingCurbs(model, origin, layout))
  end
  -- Scenery standing on a walkway goes too (whole), solid or not: the ramps and paths stay clear.
  local onWalkway = Builder.WalkwayHitTest(model, origin, idx)

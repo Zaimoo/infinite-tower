@@ -5,7 +5,8 @@
 -- Synchronised purely from workspace:GetServerTimeNow() so every player sees the same Dirge toll
 -- with zero remotes and zero gameplay effect:
 --   * Cycle period tightens floor by floor: 16 s (F46) -> 13.5 s (F47) -> 11 s (F48) -> 8.5 s (F49) -> 6 s (F50).
---   * Parks any daytime Lighting Sky and installs a starless black void sky ("AbyssalVaultSky") while on F46–50.
+--   * Parks any daytime Lighting Sky and installs a sunless, starless copy of it ("AbyssalVaultSky") while on
+--     F46–50: an overcast vault under the floor's haze, never a space skybox.
 --   * Continuously scrolls "DirgeUndertow" toward -Z (the Throne) and surges speed & brightness on each toll.
 --   * Flares & leans "DirgeWardlight" bone-white flames toward -Z, draws "DirgeChain" dressing taut then slackens,
 --     lifts "DirgeAshEmitter" particles toward -Z, bows "DirgeSilhouette" far-ledge figures toward the Throne,
@@ -146,14 +147,11 @@ local function setVaultSky(enabled: boolean)
 					child.Parent = nil
 				end
 			end
-			local sky = Instance.new("Sky")
+			-- Not a space skybox: the tower's own clouded sky (a copy of the parked one), with no sun, moon or
+			-- stars, so the floor's haze and atmosphere grade tint it into a dim overcast vault.
+			local base = savedSkies[1] and savedSkies[1].Sky
+			local sky: Sky = (if base then base:Clone() else nil) or Instance.new("Sky")
 			sky.Name = "AbyssalVaultSky"
-			sky.SkyboxBk = "rbxassetid://159454299"
-			sky.SkyboxDn = "rbxassetid://159454296"
-			sky.SkyboxFt = "rbxassetid://159454293"
-			sky.SkyboxLf = "rbxassetid://159454286"
-			sky.SkyboxRt = "rbxassetid://159454300"
-			sky.SkyboxUp = "rbxassetid://159454288"
 			sky.StarCount = 0
 			sky.CelestialBodiesShown = false
 			sky.Parent = Lighting
