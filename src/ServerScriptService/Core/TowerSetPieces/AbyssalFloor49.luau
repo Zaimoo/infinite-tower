@@ -13,6 +13,7 @@
 -- with only a faint distant crimson glow high on the far north sky horizon.
 local CollectionService = game:GetService("CollectionService")
 local InfernalFoundry = require(script.Parent.InfernalFoundry)
+local AbyssalCollision = require(script.Parent.AbyssalCollision)
 
 local AbyssalFloor49 = {}
 
@@ -179,7 +180,8 @@ function AbyssalFloor49.Build(ctx: any)
 		if m then m:SetAttribute("OnTerrain", true) end
 	end
 
-	local function makeDecor(m: Instance?)
+	-- Walk-through dressing: no collision, queries, touches or shadows.
+	local function ghost(m: Instance?)
 		if not m then return end
 		noCollide(m)
 		for _, d in m:GetDescendants() do
@@ -191,6 +193,20 @@ function AbyssalFloor49.Build(ctx: any)
 				d:SetAttribute("SolidScenery", false)
 			end
 		end
+	end
+	-- A placed prop: overhead, sky, glow, hanging and small pieces become ghosts; everything else a player can
+	-- walk into keeps its collision (AbyssalCollision).
+	local function makeDecor(m: Instance?)
+		if not m then return end
+		if AbyssalCollision.StaysSolid(m) then
+			for _, d in m:GetDescendants() do
+				if d:IsA("BasePart") then
+					d.CanTouch = false
+				end
+			end
+			return
+		end
+		ghost(m)
 	end
 
 	local function tagDirge(inst: Instance?, tagName: string)
