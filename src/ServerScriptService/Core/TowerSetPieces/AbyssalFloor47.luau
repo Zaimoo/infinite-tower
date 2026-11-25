@@ -9,6 +9,7 @@
 -- stacked bone-white Ossuary urn niches under a narrowing pale Rift slit in the black vault.
 local CollectionService = game:GetService("CollectionService")
 local InfernalFoundry = require(script.Parent.InfernalFoundry)
+local AbyssalCollision = require(script.Parent.AbyssalCollision)
 
 local AbyssalFloor47 = {}
 
@@ -176,7 +177,8 @@ function AbyssalFloor47.Build(ctx: any)
 		if m then m:SetAttribute("OnTerrain", true) end
 	end
 
-	local function makeDecor(m: Instance?)
+	-- Walk-through dressing: no collision, queries, touches or shadows.
+	local function ghost(m: Instance?)
 		if not m then return end
 		noCollide(m)
 		for _, d in m:GetDescendants() do
@@ -189,10 +191,24 @@ function AbyssalFloor47.Build(ctx: any)
 			end
 		end
 	end
+	-- A placed prop: overhead, sky, glow, hanging and small pieces become ghosts; everything else a player can
+	-- walk into keeps its collision (AbyssalCollision).
+	local function makeDecor(m: Instance?)
+		if not m then return end
+		if AbyssalCollision.StaysSolid(m) then
+			for _, d in m:GetDescendants() do
+				if d:IsA("BasePart") then
+					d.CanTouch = false
+				end
+			end
+			return
+		end
+		ghost(m)
+	end
 
 	local function tagDetail(m: Instance?)
 		if not m then return end
-		makeDecor(m)
+		ghost(m)
 		for _, d in m:GetDescendants() do
 			if d:IsA("BasePart") then
 				safeTag(d, "TowerDetail")

@@ -348,9 +348,10 @@ function Builder.Build(id: number, generation: number): any
 	end
 	local isHalcyrOpenSky = natural and layout.PathStyle == "HALCYR"
 	local isVahlOpenVault = natural and layout.PathStyle == "VAHL"
-	if isHalcyrOpenSky or isVahlOpenVault then
-		-- Floors 41-50 sit in open void / obsidian vault envelopes; players who fall into the void are
-		-- caught at VoidCatchY rather than standing on an invisible sub-floor slab.
+	if isHalcyrOpenSky then
+		-- Floors 41-45 sit in an open void; players who fall into it are caught at VoidCatchY rather than
+		-- standing on an invisible sub-floor slab. (Floors 46-50 keep the slab: their chasm floor is walkable
+		-- ground, left by the Basin return ramps, never a teleport.)
 		ground.CanCollide = false
 		ground.CanQuery = false
 		ground.CanTouch = false
@@ -4226,7 +4227,7 @@ function Builder.Build(id: number, generation: number): any
 		Origin = origin,
 		Model = model,
 		Arrival = CFrame.new(origin + Vector3.new(0, 11.5, safe.Z - 12)),
-		VoidCatchY = if id >= 41 and id <= 45 then -6 elseif id == 46 or id == 47 then -2.2 elseif id >= 48 and id <= 50 then -3.5 else nil,
+		VoidCatchY = if id >= 41 and id <= 45 then -6 else nil,
 		Bounds = { Min = Vector3.new(-width / 2, -16, -depth / 2), Max = Vector3.new(width / 2, height + 24, depth / 2) },
 		Zones = {
 			{
