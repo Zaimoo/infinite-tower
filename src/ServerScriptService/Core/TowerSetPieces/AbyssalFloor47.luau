@@ -102,10 +102,10 @@ AbyssalFloor47.Landmarks = table.freeze({
 	-- 3. The Oathgate arrival iron gate straddling Sanctuary -> Muster
 	{ Id = "OathgateArrivalArch", X = 0, Z = 286, Y = 8, HalfX = 38.5, HalfZ = 7.2, Top = 30.4, Straddles = true },
 	-- 4. Ossuary North Columbarium Wall behind The Ossuary
-	{ Id = "OssuaryNorthNicheWall", X = 0, Z = -322, Y = 44, HalfX = 12.0, HalfZ = 3.5, Top = 25.4 },
+	{ Id = "OssuaryNorthNicheWall", X = 0, Z = -322, Y = 40, HalfX = 12.0, HalfZ = 3.5, Top = 25.4 },
 	-- 5–6. Ossuary West & East Flanking Urn Walls (angled along north rim clear of Vigil->Ossuary landings)
-	{ Id = "OssuaryWestNicheWall", X = -28, Z = -320, Y = 44, HalfX = 11.5, HalfZ = 4.2, Top = 25.4 },
-	{ Id = "OssuaryEastNicheWall", X = 28, Z = -320, Y = 44, HalfX = 11.5, HalfZ = 4.2, Top = 25.4 },
+	{ Id = "OssuaryWestNicheWall", X = -28, Z = -320, Y = 40, HalfX = 11.5, HalfZ = 4.2, Top = 25.4 },
+	{ Id = "OssuaryEastNicheWall", X = 28, Z = -320, Y = 40, HalfX = 11.5, HalfZ = 4.2, Top = 25.4 },
 	-- 7. Mourners' Gallery Veiled Balcony cantilevered north of Mourners facing the Bier across the open void (dead end)
 	{ Id = "MournersGalleryBalcony", X = 0, Z = -85, Y = 22, HalfX = 15.5, HalfZ = 3.0, Top = 14.0 },
 	-- 8. Shrine of Silk Vertical Loom Shrine (ShrineW south bay)
@@ -440,7 +440,7 @@ function AbyssalFloor47.Build(ctx: any)
 			{ 302, 24, -85, 22, 24 },  -- ChapelOfChainsVotives
 			{ -252, 36, -260, 34, 34 },-- VigilSwornKeeperTower
 			{ 252, 40, -260, 34, 34 }, -- VigilBoundKeeperTower
-			{ 0, 44, -322, 82, 18 },   -- OssuaryNorth/West/EastNicheWall
+			{ 0, 40, -322, 82, 18 },   -- OssuaryNorth/West/EastNicheWall
 		}
 		for idx, b in baySpecs do
 			local bx, by, bz, bw, bd = b[1], b[2], b[3], b[4], b[5]
@@ -776,7 +776,7 @@ function AbyssalFloor47.Build(ctx: any)
 		placeClearProp("MournerTablet", "OathTabletChained", sx * 24, 22, -65, sx * -90, 0.8, VAHL_47, function(cf) fbPillar(cf, 5, 11, 2.5, BONE_MARBLE, BLACK_IRON) end)
 	end
 
-	-- 6) Vigils of Sworn & Bound (VigilW Y=36, VigilE Y=40) & The Ossuary (Y=44)
+	-- 6) Vigils of Sworn & Bound (VigilW Y=36, VigilE Y=40) & The Ossuary (Y=40)
 	for _, spec in {
 		{ x = -215, y = 36, z = -235, side = -1, tpl = "ProcessionerSworn", tint = SWORN_TINT },
 		{ x = 215, y = 40, z = -235, side = 1, tpl = "ProcessionerBound", tint = BOUND_TINT },
@@ -790,9 +790,9 @@ function AbyssalFloor47.Build(ctx: any)
 		placeClearProp("VigilColonnade", "GothicPillarColonnade", spec.x + spec.side * 28, spec.y, spec.z - 22, 0, 0.85, spec.tint, function(cf) fbPillar(cf, 8, 36, 8, OBSIDIAN, BLACK_IRON) end)
 	end
 	for _, ox in { -24, 24 } do
-		placeClearProp("OssuaryMourner", "MournerVeiled", ox, 44, -274, 180, 0.95, OSSUARY_TINT, function(cf) fbStatue(cf, 13, WINE_SILK, BLACK_IRON, true) end)
-		placeClearProp("OssuaryCenser", "CenserStand", ox * 1.15, 44, -296, 0, 1.0, OSSUARY_TINT, function(cf) fbPillar(cf, 3, 10, 3, BLACK_IRON, WARDLIGHT_GLOW) end)
-		placeClearProp("OssuaryUrnPile", "OssuaryBones", ox * 0.65, 44, -310, 0, 1.0, OSSUARY_TINT, function(cf) fbPillar(cf, 8, 5, 8, BONE_MARBLE, ASH_GREY) end)
+		placeClearProp("OssuaryMourner", "MournerVeiled", ox, 40, -274, 180, 0.95, OSSUARY_TINT, function(cf) fbStatue(cf, 13, WINE_SILK, BLACK_IRON, true) end)
+		placeClearProp("OssuaryCenser", "CenserStand", ox * 1.15, 40, -296, 0, 1.0, OSSUARY_TINT, function(cf) fbPillar(cf, 3, 10, 3, BLACK_IRON, WARDLIGHT_GLOW) end)
+		placeClearProp("OssuaryUrnPile", "OssuaryBones", ox * 0.65, 40, -310, 0, 1.0, OSSUARY_TINT, function(cf) fbPillar(cf, 8, 5, 8, BONE_MARBLE, ASH_GREY) end)
 	end
 
 	-- 7) Crimson Bier (Apex Y=48) outer rim pedestals, kneeling guards & bone-white Wardlights (arena center 100% clean!)

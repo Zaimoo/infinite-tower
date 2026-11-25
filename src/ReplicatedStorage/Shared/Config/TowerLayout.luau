@@ -3803,7 +3803,7 @@ local AUTHORED: {[number]: any} = {
 			ChapelE = { X = 270, Y = 24, Z = -85, Width = 60, Depth = 52 },
 			VigilW = { X = -215, Y = 36, Z = -235, Width = 64, Depth = 56 },
 			VigilE = { X = 215, Y = 40, Z = -235, Width = 64, Depth = 56 },
-			Ossuary = { X = 0, Y = 44, Z = -290, Width = 72, Depth = 56 },
+			Ossuary = { X = 0, Y = 40, Z = -290, Width = 72, Depth = 56 },
 		},
 		Apex = { X = 0, Y = 48, Z = -160, Width = 120, Depth = 92 },
 		Paths = {
