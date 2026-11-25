@@ -6,7 +6,7 @@
 --   * Four towering 214-stud iron-collared obsidian Anchor Spires with giant capstans and suspended
 --     counterweights stand just outside the four anchor footings, carrying four colossal forged iron
 --     chains in a sweeping dipping saltire across the chasm.
---   * Where the four great chains converge hangs the central iron Keystone cage-platform (Y=22, the
+--   * Where the four great chains converge hangs the central iron Keystone cage-platform (Y=25, the
 --     lowest point past the near rim), lit by the floor's brightest pale bone-white Wardlight; along
 --     each diagonal arm hang the four Bead decks in iron suspension cradles. All overhead chains and
 --     cradles maintain >= 18 studs clear above every deck and walkway link.
@@ -105,16 +105,16 @@ AbyssalFloor48.Landmarks = table.freeze({
 	{ Id = "SaltireChainFW", X = -57, Z = -180, Y = 46, HalfX = 62.0, HalfZ = 80.0, Top = 104.0, Straddles = true },
 	{ Id = "SaltireChainFE", X = 72, Z = -175, Y = 46, HalfX = 76.0, HalfZ = 76.0, Top = 104.0, Straddles = true },
 	-- 9. The Keystone Cage-Platform (lowest point of the saltire, brightest bone-white Wardlight)
-	{ Id = "KeystoneCage", X = 0, Z = -105, Y = 22, HalfX = 28.0, HalfZ = 24.0, Top = 45.0, Straddles = true },
+	{ Id = "KeystoneCage", X = 0, Z = -105, Y = 25, HalfX = 28.0, HalfZ = 24.0, Top = 45.0, Straddles = true },
 	-- 10–13. The Four Hung Bead Suspension Cradles
 	{ Id = "BeadNWCradle", X = -32, Z = -35, Y = 26, HalfX = 24.0, HalfZ = 10.0, Top = 31.0, Straddles = true },
 	{ Id = "BeadNECradle", X = 32, Z = -35, Y = 30, HalfX = 24.0, HalfZ = 10.0, Top = 31.0, Straddles = true },
-	{ Id = "BeadFWCradle", X = -32, Z = -175, Y = 31, HalfX = 24.0, HalfZ = 10.0, Top = 31.0, Straddles = true },
-	{ Id = "BeadFECradle", X = 32, Z = -175, Y = 33, HalfX = 24.0, HalfZ = 10.0, Top = 31.0, Straddles = true },
+	{ Id = "BeadFWCradle", X = -32, Z = -175, Y = 29, HalfX = 24.0, HalfZ = 10.0, Top = 31.0, Straddles = true },
+	{ Id = "BeadFECradle", X = 32, Z = -175, Y = 31, HalfX = 24.0, HalfZ = 10.0, Top = 31.0, Straddles = true },
 	-- 14. The Far Gatehouse behind Apex (back-east rim, gold-rimmed Chained Crown sigil, clear of portals)
 	{ Id = "FarGatehouse", X = 170, Z = -364, Y = 56, HalfX = 30.0, HalfZ = 10.0, Top = 55.0 },
 	-- 15. The Chainwright's Yard colossal half-forged link (east forge bay of Crossing, clear of camp)
-	{ Id = "ChainwrightForgedLink", X = 58, Z = 115, Y = 12, HalfX = 12.0, HalfZ = 9.0, Top = 14.0 },
+	{ Id = "ChainwrightForgedLink", X = 58, Z = 115, Y = 24, HalfX = 12.0, HalfZ = 9.0, Top = 14.0 },
 	-- 16. The Hookward pulley gantry (west flank bay of WestGallery, clear of camp)
 	{ Id = "HookwardPulleyGantry", X = -274, Z = 102, Y = 8, HalfX = 9.0, HalfZ = 4.0, Top = 14.0 },
 	-- 17. The Ashgrate iron ash-pit grate (east flank bay of EastGallery, clear of camp)
@@ -344,7 +344,7 @@ function AbyssalFloor48.Build(ctx: any)
 
 	-- =========================================================================
 	-- A. VOID FLOOR & UNDERTOW POOL (strictly at Y = -9.5 inside the chasm!)
-	--    31+ studs below Keystone (Y=22) and > 40 studs clear of near/far rims.
+	--    31+ studs below Keystone (Y=25) and > 40 studs clear of near/far rims.
 	-- =========================================================================
 	ctx.group("AbyssalVoidFloor", function()
 		ctx.tag("OnTerrain", true)
@@ -453,9 +453,9 @@ function AbyssalFloor48.Build(ctx: any)
 		end
 	end
 
-	-- The Keystone Cage-Platform (Y = 22, open diagonal entries, brightest bone-white Wardlight at Y = 49)
+	-- The Keystone Cage-Platform (Y = 25, open diagonal entries, brightest bone-white Wardlight at Y = 52)
 	local ks = placeTemplate("AbyssalChainCage", "KeystoneCage",
-		CFrame.new(V(0, 22, -105)), 1.0, VAHL_48, false, false, "DirgeWardlight",
+		CFrame.new(V(0, 25, -105)), 1.0, VAHL_48, false, false, "DirgeWardlight",
 		function(cf)
 			for _, p in { V(-25, 11, 0), V(25, 11, 0), V(0, 11, -21), V(0, 11, 21) } do
 				boxAt("KeystonePier", cf * CFrame.new(p), V(4, 22, 4), IRON_BLACK, Mat.Metal)
@@ -510,11 +510,11 @@ function AbyssalFloor48.Build(ctx: any)
 		end
 	end
 
-	-- Saltire lower chains converging onto KeystoneCage's upper diagonal horns (Y = 46.5 -> 24.5 studs above Keystone!)
-	spanGreatChain("SaltireNW", V(-112, 166, 8), V(-21.5, 46.5, -87.5), 24, 4, 1.15)
-	spanGreatChain("SaltireNE", V(112, 170, 8), V(21.5, 46.5, -87.5), 24, 4, 1.15)
-	spanGreatChain("SaltireFW", V(-21.5, 46.5, -122.5), V(-114, 178, -256), 24, 5, 1.15)
-	spanGreatChain("SaltireFE", V(21.5, 46.5, -122.5), V(144, 182, -244), 24, 5, 1.15)
+	-- Saltire lower chains converging onto KeystoneCage's upper diagonal horns (Y = 49.5 -> 24.5 studs above Keystone!)
+	spanGreatChain("SaltireNW", V(-112, 166, 8), V(-21.5, 49.5, -87.5), 24, 4, 1.15)
+	spanGreatChain("SaltireNE", V(112, 170, 8), V(21.5, 49.5, -87.5), 24, 4, 1.15)
+	spanGreatChain("SaltireFW", V(-21.5, 49.5, -122.5), V(-114, 178, -256), 24, 5, 1.15)
+	spanGreatChain("SaltireFE", V(21.5, 49.5, -122.5), V(144, 182, -244), 24, 5, 1.15)
 
 	-- Upper sweeping catenary stay-chains joining the four spires high overhead (Y >= 120, matching the jpg!)
 	local function placeCatenarySpan(name: string, a: Vector3, b: Vector3, lowDrop: number)
@@ -613,9 +613,9 @@ function AbyssalFloor48.Build(ctx: any)
 	end
 
 	-- 3. The Chainwright's Yard (Crossing) — HalfForgedLink on solid east forge-bay extension
-	buildObsidianPier("CrossingForgeBay", 58, 12, 115, 16.0)
+	buildObsidianPier("CrossingForgeBay", 58, 24, 115, 16.0)
 	local hfl = placeTemplate("ChainwrightForgedLink", "HalfForgedLink",
-		CFrame.new(V(58, 12, 115)) * CFrame.Angles(0, math.rad(-90), 0), 1.0, VAHL_48, false, true, "DirgeWardlight",
+		CFrame.new(V(58, 24, 115)) * CFrame.Angles(0, math.rad(-90), 0), 1.0, VAHL_48, false, true, "DirgeWardlight",
 		function(cf)
 			boxAt("HalfForgedProxy", cf * CFrame.new(0, 6, 0), V(20, 12, 12), IRON_BLACK, Mat.Metal)
 		end)
@@ -623,7 +623,7 @@ function AbyssalFloor48.Build(ctx: any)
 		local g = H.glowOf(hfl)
 		if g then addLight(g, WARD_GLOW, 1.6, 54) end
 	end
-	addAshEmitter(V(58, 15, 115), 5, false)
+	addAshEmitter(V(58, 27, 115), 5, false)
 
 	-- 4. The Hookward (WestGallery) — HookPulleyRack on solid west bay extension
 	buildObsidianPier("HookwardBay", -274, 8, 102, 14.0)
@@ -788,9 +788,9 @@ function AbyssalFloor48.Build(ctx: any)
 		{ T = "CoalHeap", X = 250, Y = 16, Z = 74, Yaw = 30, S = 0.95 },
 		{ T = "ShutteredLamp", X = 248, Y = 16, Z = 122, Yaw = -110, S = 1.0 },
 		-- Crossing (The Chainwright's Yard) south-west/north-west off-camp corners
-		{ T = "PartsRack", X = -38, Y = 12, Z = 90, Yaw = 45, S = 0.85 },
-		{ T = "IngotPallet", X = 38, Y = 12, Z = 90, Yaw = -45, S = 0.85 },
-		{ T = "ChainHoist", X = 42, Y = 12, Z = 140, Yaw = -135, S = 0.75 },
+		{ T = "PartsRack", X = -38, Y = 24, Z = 90, Yaw = 45, S = 0.85 },
+		{ T = "IngotPallet", X = 38, Y = 24, Z = 90, Yaw = -45, S = 0.85 },
+		{ T = "ChainHoist", X = 42, Y = 24, Z = 140, Yaw = -135, S = 0.75 },
 		-- AnchorNW & AnchorNE Rim Walk bollards & chained lamps
 		{ T = "ChainBollard", X = -82, Y = 28, Z = 12, Yaw = 15, S = 0.9 },
 		{ T = "ChainBollard", X = 82, Y = 32, Z = 12, Yaw = -15, S = 0.9 },

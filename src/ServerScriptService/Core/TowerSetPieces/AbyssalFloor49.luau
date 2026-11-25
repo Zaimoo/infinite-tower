@@ -209,6 +209,17 @@ function AbyssalFloor49.Build(ctx: any)
 		ghost(m)
 	end
 
+	-- A platform support (AbyssalCollision.SupportKinds) collides, but its top meets the walkway it holds up, so
+	-- the room's solid-scenery lane check (which pads every part by 2-3 studs) must not count it as blocking.
+	local function supportOnly(m: Instance?)
+		if not m then return end
+		for _, d in m:GetDescendants() do
+			if d:IsA("BasePart") then
+				d:SetAttribute("SolidScenery", false)
+			end
+		end
+	end
+
 	local function tagDirge(inst: Instance?, tagName: string)
 		if not inst then return end
 		inst:SetAttribute(tagName, true)
@@ -419,7 +430,19 @@ function AbyssalFloor49.Build(ctx: any)
 		ctx.ring("KeepArenaBoneRing", V(0, 64.04, -90), 34.0, 0.42, BONE_MARBLE, Mat.Limestone, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 28)
 		ctx.ring("KeepArenaCrownRing", V(0, 64.04, -90), 16.0, 0.36, IRON_BLACK, Mat.Metal, CFrame.Angles(math.pi / 2, 0, 0), 0, math.pi * 2, 20)
 
+		-- The mound, its shoulders, buttresses and the tower plinth hold the Keep up and stay solid
+		-- (AbyssalCollision.SupportKinds); the flush arena rings on the Apex floor stay walk-through.
 		makeDecor(ctx.current())
+		supportOnly(ctx.current())
+		local mound = ctx.current()
+		if mound then
+			for _, d in mound:GetDescendants() do
+				if d:IsA("BasePart") and string.find(d.Name, "Ring", 1, true) then
+					d.CanCollide = false
+					d.CanQuery = false
+				end
+			end
+		end
 		pin(ctx.current())
 	end)
 
@@ -475,6 +498,7 @@ function AbyssalFloor49.Build(ctx: any)
 			boxAt("CountermineHoistRim", CFrame.new(V(cm.X, cm.Y - 0.6, cm.Z + 20)), V(27.2, 0.8, 25.2), IRON_BLACK, Mat.Metal)
 		end
 		makeDecor(ctx.current())
+		supportOnly(ctx.current())
 		pin(ctx.current())
 	end)
 
@@ -894,6 +918,62 @@ function AbyssalFloor49.Build(ctx: any)
 			tagDirge(head, "DirgeSilhouette")
 		end
 
+		makeDecor(ctx.current())
+		pin(ctx.current())
+	end)
+
+	-- =========================================================================
+	-- F. THE THRONE GATE: the citadel guards the way into the Throne (Floor 50). Its colossal gate stands in
+	-- the north wall behind the North Bastion: twin gate towers, closed iron doors above the Bastion's prow
+	-- (the threshold), a pointed arch and gable crowned by the Chained Crown sigil, wine banners, and a thin
+	-- crimson glow between the door leaves. Solid masonry, all behind the North Bastion's camp and lanes.
+	-- =========================================================================
+	ctx.group("ThroneGate", function()
+		local fz = -381 -- the façade's front face
+		boxAt("ThroneGateFacade", CFrame.new(V(0, 115, fz - 10)), V(260, 250, 20), OBSIDIAN, Mat.Basalt)
+		boxAt("ThroneGateGable", CFrame.new(V(0, 262, fz - 8)), V(64, 44, 16), OBSIDIAN, Mat.Basalt)
+		-- The gable roofline: two raking beams from the façade's corners to a peak over the sigil.
+		local gRun, gRise = 130, 60
+		local gLen, gTilt = math.sqrt(gRun * gRun + gRise * gRise), math.atan2(gRise, gRun)
+		for _, side in { -1, 1 } do
+			boxAt("ThroneGateGableRake", CFrame.new(V(side * gRun / 2, 240 + gRise / 2, fz - 6)) * CFrame.Angles(0, 0, -side * gTilt), V(gLen, 10, 14), IRON_BLACK, Mat.Metal)
+		end
+		-- The doorway: jambs, a pointed arch and two closed iron leaves on the Bastion prow (Y 72).
+		local doorBase, doorTop, halfSpan = 72, 202, 44
+		for _, side in { -1, 1 } do
+			boxAt("ThroneGateJamb", CFrame.new(V(side * halfSpan, (doorBase + doorTop) / 2, fz + 2)), V(8, doorTop - doorBase, 6), IRON_BLACK, Mat.Metal)
+			local aRise = 38
+			local aLen, aTilt = math.sqrt(halfSpan * halfSpan + aRise * aRise), math.atan2(aRise, halfSpan)
+			boxAt("ThroneGateArch", CFrame.new(V(side * halfSpan / 2, doorTop + aRise / 2, fz + 2)) * CFrame.Angles(0, 0, -side * aTilt), V(aLen, 8, 6), IRON_BLACK, Mat.Metal)
+			boxAt("ThroneGateDoorLeaf", CFrame.new(V(side * 20.5, (doorBase + doorTop) / 2, fz + 0.5)), V(39, doorTop - doorBase - 2, 3), IRON_DARK, Mat.Metal)
+			for _, by in { 92, 122, 152, 182 } do
+				boxAt("ThroneGateDoorStrap", CFrame.new(V(side * 20.5, by, fz + 2.3)), V(37, 2.2, 0.8), IRON_BLACK, Mat.Metal)
+			end
+			boxAt("ThroneGateDoorRing", CFrame.new(V(side * 6, 132, fz + 2.6)), V(4, 4, 0.8), SILVER_KEY, Mat.Metal)
+		end
+		-- Never a crimson light (the §5.7 telegraph rule): the slit glows on its own, far from any walkway.
+		boxAt("ThroneGateCrimsonSlit", CFrame.new(V(0, (doorBase + doorTop) / 2, fz + 2.1)), V(1.4, doorTop - doorBase - 4, 0.6), rgb(110, 18, 30), Mat.Neon)
+		-- Twin gate towers with iron bands, crenellated caps, spires and long wine banners.
+		for _, side in { -1, 1 } do
+			local tx = side * 64
+			boxAt("ThroneGateTower", CFrame.new(V(tx, 140, fz - 4)), V(36, 300, 36), OBSIDIAN_MID, Mat.Basalt)
+			for _, by in { 72, 150, 222 } do
+				boxAt("ThroneGateTowerBand", CFrame.new(V(tx, by, fz - 4)), V(37.6, 3, 37.6), IRON_BLACK, Mat.Metal)
+			end
+			boxAt("ThroneGateTowerCap", CFrame.new(V(tx, 294, fz - 4)), V(42, 8, 42), OBSIDIAN, Mat.Basalt)
+			for _, c in { { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } } do
+				boxAt("ThroneGateMerlon", CFrame.new(V(tx + c[1] * 16, 303, fz - 4 + c[2] * 16)), V(8, 10, 8), OBSIDIAN, Mat.Basalt)
+			end
+			boxAt("ThroneGateSpire", CFrame.new(V(tx, 328, fz - 4)), V(10, 60, 10), IRON_BLACK, Mat.Metal)
+			boxAt("ThroneGateWineBanner", CFrame.new(V(tx, 176, fz + 14.6)), V(18, 132, 1), WINE_SILK, Mat.Fabric)
+			boxAt("ThroneGateBannerRod", CFrame.new(V(tx, 243, fz + 15)), V(22, 1.2, 1.2), IRON_BLACK, Mat.Metal)
+		end
+		-- The Chained Crown sigil over the arch: a bone-marble ring and five crown points.
+		ctx.ring("ThroneGateSigilRing", V(0, 262, fz + 1), 12, 1.4, BONE_MARBLE, Mat.Limestone, nil, 0, math.pi * 2, 20)
+		for k = -2, 2 do
+			local h = 10 - math.abs(k) * 2.5
+			boxAt("ThroneGateCrownPoint", CFrame.new(V(k * 5.5, 276 + h / 2, fz + 1)), V(2.2, h, 1.2), BONE_MARBLE, Mat.Limestone)
+		end
 		makeDecor(ctx.current())
 		pin(ctx.current())
 	end)
