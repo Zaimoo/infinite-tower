@@ -1746,6 +1746,12 @@ function Builder.Build(id: number, generation: number): any
 										wCurb.CFrame = CFrame.lookAt(wingMid + wOff + Vector3.new(0, topOff + 0.45, 0), wingMid + wOff + inFlat + Vector3.new(0, topOff + 0.45, 0))
 										local wRail = decor(model, "AstralBridgePierRail", Vector3.new(0.75, 0.42, wingLen), wingMid + wOff + Vector3.new(0, topOff + 2.80, 0), halcyrGold, Enum.Material.Metal)
 										wRail.CFrame = CFrame.lookAt(wingMid + wOff + Vector3.new(0, topOff + 2.80, 0), wingMid + wOff + inFlat + Vector3.new(0, topOff + 2.80, 0))
+										local wColOff = pierRight * (side * ((pad.Width - 8) * 0.5 + 0.50))
+										local wCol = part(model, "AstralBridgePierCollider", Vector3.new(0.8, 3.6, wingLen + 0.4), wingMid + wColOff + Vector3.new(0, topOff + 1.8, 0), pierCapCol, pierCapMat, true)
+										wCol.Transparency = 1
+										wCol.CanTouch = false
+										wCol.CastShadow = false
+										wCol.CFrame = CFrame.lookAt(wingMid + wColOff + Vector3.new(0, topOff + 1.8, 0), wingMid + wColOff + inFlat + Vector3.new(0, topOff + 1.8, 0))
 									end
 								end
 								for _, side in { -1, 1 } do
@@ -1802,6 +1808,11 @@ function Builder.Build(id: number, generation: number): any
 										wCurb.CFrame = CFrame.lookAt(wingMid + wOff + Vector3.new(0, 1.2, 0), wingMid + wOff + inFlat + Vector3.new(0, 1.2, 0))
 										local wRail = decor(model, "AstralBridgePierRail", Vector3.new(1.5, 0.38, wingLen + 0.2), wingMid + wOff + Vector3.new(0, 2.65, 0), halcyrBrass, Enum.Material.Metal)
 										wRail.CFrame = CFrame.lookAt(wingMid + wOff + Vector3.new(0, 2.65, 0), wingMid + wOff + inFlat + Vector3.new(0, 2.65, 0))
+										local wSolid = part(model, "AstralBridgePierCollider", Vector3.new(1.35, 3.6, wingLen + 0.4), wingMid + wOff + Vector3.new(0, 1.8, 0), wCol, wMat, true)
+										wSolid.Transparency = 1
+										wSolid.CanTouch = false
+										wSolid.CastShadow = false
+										wSolid.CFrame = CFrame.lookAt(wingMid + wOff + Vector3.new(0, 1.8, 0), wingMid + wOff + inFlat + Vector3.new(0, 1.8, 0))
 									end
 								end
 							end
@@ -3162,6 +3173,11 @@ function Builder.Build(id: number, generation: number): any
 					local isQuillShaft = layout.Authored == "astral:1"
 						and (link.Id == "WestGallery_Shaft" or link.Id == "Shaft_Crossing" or link.Id == "Crossing_NibLanding" or link.Id == "NibLanding_Apex")
 					local isGrandMarbleStair = (layout.Authored == "astral:1" or layout.Authored == "astral:2") and link.Kind == "STAIRS"
+					local railCollider = part(curbGroup, "BridgeStarglassCollider", Vector3.new(1.15, 3.6, curbLen + 1.2), mid + railOffset, halcyrVellum, Enum.Material.Marble, true)
+					railCollider.Transparency = 1
+					railCollider.CanTouch = false
+					railCollider.CastShadow = false
+					railCollider.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 1.8, 0)
 					local marbleBase = decor(curbGroup, "BridgeStarglassCurb", Vector3.new(1.15, 0.95, curbLen), mid + railOffset, halcyrVellum, Enum.Material.Marble)
 					marbleBase.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 0.35, 0)
 					local goldTrim = decor(curbGroup, "BridgeStarglassGoldTrim", Vector3.new(1.25, 0.35, curbLen), mid + railOffset, halcyrGold, Enum.Material.Metal)
@@ -3189,7 +3205,14 @@ function Builder.Build(id: number, generation: number): any
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "ORBIT" then
 					-- Astral 42 orrery-arm conjunction bridge: twin brass girder rails, gear-tooth trim and a
 					-- counterweight fin extending outside the walkway on the outer edge.
+					-- Mark OnTerrain so PropClearance.Settle never drops the overhanging counterweight curb into the void!
+					curbGroup:SetAttribute("OnTerrain", true)
 					local railOffset = right * (side * (link.Width / 2 - 0.45))
+					local railCollider = part(curbGroup, "BridgeOrbitCollider", Vector3.new(1.2, 3.6, curbLen + 1.2), mid + railOffset, halcyrBrass, Enum.Material.Metal, true)
+					railCollider.Transparency = 1
+					railCollider.CanTouch = false
+					railCollider.CastShadow = false
+					railCollider.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 1.8, 0)
 					local beamRail = decor(curbGroup, "BridgeOrbitRail", Vector3.new(1.2, 2.2, curbLen), mid + railOffset, halcyrBrass, Enum.Material.Metal)
 					beamRail.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 0.9, 0)
 					local topGold = decor(curbGroup, "BridgeOrbitCap", Vector3.new(0.55, 0.35, curbLen * 0.96), mid + railOffset, halcyrGlow, Enum.Material.Neon)
@@ -3211,12 +3234,17 @@ function Builder.Build(id: number, generation: number): any
 					end
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "SHARD" then
 					-- Astral 43 fractured shard spans & grand Lifted Index staircase.
+					curbGroup:SetAttribute("OnTerrain", true)
 					local railOffset = right * (side * (link.Width / 2 - 0.50))
 					local shardStone = Color3.fromRGB(116, 122, 138)
 					local shardStoneDark = Color3.fromRGB(82, 88, 106)
+					local railCollider = part(curbGroup, "BridgeShardCollider", Vector3.new(1.3, 3.6, curbLen + 1.8), mid + railOffset, shardStone, Enum.Material.Slate, true)
+					railCollider.Transparency = 1
+					railCollider.CanTouch = false
+					railCollider.CastShadow = false
+					railCollider.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 1.8, 0)
 					if layout.Authored == "astral:3" and link.Kind == "STAIRS" then
 						-- Grand Lifted Index stone staircase: carved stone plinth, turned balusters, brass handrail & warm lantern finials!
-						curbGroup:SetAttribute("OnTerrain", true)
 						local stairPlinth = decor(curbGroup, "BridgeShardStairPlinth", Vector3.new(1.35, 1.15, curbLen + 2), mid + railOffset, shardStone, Enum.Material.Slate)
 						stairPlinth.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 0.45, 0)
 						local stairTrim = decor(curbGroup, "BridgeShardStairTrim", Vector3.new(1.45, 0.35, curbLen + 2), mid + railOffset, halcyrBrass, Enum.Material.Metal)
@@ -3255,19 +3283,26 @@ function Builder.Build(id: number, generation: number): any
 						end
 					end
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "WAYGATE" then
-					-- Astral 44-45 stone fortress/Observatory bridge: weathered stone balustrades with brass cap rail and
-					-- sturdy bridgehead newel posts outside UsableWidth. Parapet wall stays solid on F45 so players can't phase through!
+					-- Astral 44-45 stone fortress/Observatory bridge: solid stone balustrades with brass cap rail and
+					-- sturdy bridgehead newel posts outside UsableWidth.
+					curbGroup:SetAttribute("OnTerrain", true)
 					local isF45 = layout.Authored == "astral:5"
 					local railOffset = right * (side * (link.Width / 2 - 0.65))
 					local wardWallCol = if isF45 then Color3.fromRGB(78, 84, 108) else Color3.fromRGB(134, 138, 152)
 					local wardCapCol = if isF45 then Color3.fromRGB(118, 124, 148) else Color3.fromRGB(162, 166, 178)
-					local parapet = if isF45
-						then part(curbGroup, "BridgeWaygateCurb", Vector3.new(1.35, 2.5, curbLen + 1.4), mid + railOffset, wardWallCol, Enum.Material.Slate, true)
-						else decor(curbGroup, "BridgeWaygateCurb", Vector3.new(1.35, 2.3, curbLen + 1.2), mid + railOffset, wardWallCol, Enum.Material.Slate)
+					local waygateLen = math.max(1, curbLen - 2.0)
+					local railCollider = part(curbGroup, "BridgeWaygateCollider", Vector3.new(1.4, 3.6, waygateLen), mid + railOffset, wardWallCol, Enum.Material.Slate, true)
+					railCollider.Transparency = 1
+					railCollider.CanTouch = false
+					railCollider.CastShadow = false
+					railCollider.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 1.8, 0)
+					local parapet = part(curbGroup, "BridgeWaygateCurb", Vector3.new(1.35, 2.5, waygateLen), mid + railOffset, wardWallCol, Enum.Material.Slate, true)
+					parapet.CanTouch = false
+					parapet.CastShadow = false
 					parapet.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 1.05, 0)
-					local capRail = decor(curbGroup, "BridgeWaygateCap", Vector3.new(1.55, 0.42, curbLen + 1.4), mid + railOffset, wardCapCol, Enum.Material.Slate)
+					local capRail = decor(curbGroup, "BridgeWaygateCap", Vector3.new(1.55, 0.42, waygateLen), mid + railOffset, wardCapCol, Enum.Material.Slate)
 					capRail.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 2.28, 0)
-					local brassTrim = decor(curbGroup, "BridgeWaygateBrass", Vector3.new(1.1, 0.28, curbLen + 1.2), mid + railOffset, halcyrBrass, Enum.Material.Metal)
+					local brassTrim = decor(curbGroup, "BridgeWaygateBrass", Vector3.new(1.1, 0.28, math.max(1, waygateLen - 0.2)), mid + railOffset, halcyrBrass, Enum.Material.Metal)
 					brassTrim.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 2.58, 0)
 					for _, endPt in { a, b } do
 						local np = endPt + railOffset
@@ -3279,12 +3314,14 @@ function Builder.Build(id: number, generation: number): any
 				elseif hungLinks[link.Id] and bridgeStyles[link.Id] == "SUTURE" then
 					-- Astral 45 Rift sutures: solid timber side guardrails, suspension posts, brass chains, glowing pale-gold
 					-- crisscross suture stitches, and tall lashed ebony bookcases on the Middle Suture strictly outside UsableWidth.
+					curbGroup:SetAttribute("OnTerrain", true)
 					local railOffset = right * (side * (link.Width / 2 - 0.55))
 					local plankDark = Color3.fromRGB(72, 48, 34)
-					local shelfBeam = part(curbGroup, "BridgeSutureShelf", Vector3.new(1.15, 3.2, curbLen + 1.6), mid + railOffset, plankDark, Enum.Material.Wood, true)
+					local shelfBeam = part(curbGroup, "BridgeSutureShelf", Vector3.new(1.15, 3.6, curbLen + 1.6), mid + railOffset, plankDark, Enum.Material.Wood, true)
 					shelfBeam.Transparency = 1 -- invisible solid guardrail behind visual timber curb + chains + golden stitches!
+					shelfBeam.CanTouch = false
 					shelfBeam.CastShadow = false
-					shelfBeam.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 1.6, 0)
+					shelfBeam.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 1.8, 0)
 					local shelfVis = decor(curbGroup, "BridgeSutureCurbVis", Vector3.new(1.15, 1.1, curbLen + 1.4), mid + railOffset, plankDark, Enum.Material.Wood)
 					shelfVis.CFrame = CFrame.lookAt(mid + railOffset, b + railOffset) * CFrame.new(0, 0.45, 0)
 					local chainRail = decor(curbGroup, "BridgeSutureChain", Vector3.new(0.42, 0.42, curbLen + 1.2), mid + railOffset, halcyrBrass, Enum.Material.Metal)
@@ -3797,11 +3834,13 @@ function Builder.Build(id: number, generation: number): any
 			decor(model, "SanctuarySideWall", Vector3.new(2.5, 4.5, safe.Depth - 8), origin + Vector3.new(side * (halfW - 1), 10.2, safe.Z), theme.TrimColor, theme.TrimMaterial, if natural then 1 else nil)
 		end
 	else
-		-- Halcyr carved stone balustrade walls framing the arrival terrace
+		-- Halcyr carved stone balustrade walls framing the arrival terrace (solid so players cannot walk through)
 		local sanWallCol = if layout.Authored == "astral:3" then Color3.fromRGB(112, 118, 134) else halcyrVellum
 		local sanWallMat = if layout.Authored == "astral:3" then Enum.Material.Slate else Enum.Material.Limestone
 		for _, side in { -1, 1 } do
-			decor(model, "HalcyrSanctuaryBalustrade", Vector3.new(2.0, 3.6, safe.Depth - 4), origin + Vector3.new(side * (halfW - 1.2), safe.Y + 1.8, safe.Z), sanWallCol, sanWallMat)
+			local balWall = part(model, "HalcyrSanctuaryBalustrade", Vector3.new(2.0, 3.6, safe.Depth - 4), origin + Vector3.new(side * (halfW - 1.2), safe.Y + 1.8, safe.Z), sanWallCol, sanWallMat, true)
+			balWall.CanTouch = false
+			balWall.CastShadow = false
 			decor(model, "HalcyrSanctuaryCap", Vector3.new(2.6, 0.6, safe.Depth - 3), origin + Vector3.new(side * (halfW - 1.2), safe.Y + 3.8, safe.Z), halcyrBrass, Enum.Material.Metal)
 		end
 	end

@@ -142,7 +142,7 @@ AstralFloor45.Landmarks = table.freeze({
 	-- 19. Fallen Catalogue toppled cabinet range on Fallen's solid circular east alcove (spilling NW into Rift!)
 	{ Id = "FallenCatalogueRange", X = 196, Z = 144, Y = 9, HalfX = 12.8, HalfZ = 9.6, Top = 10.1 },
 	-- 20. Proof Room press & blank sheet table on Proof's solid south alcove (facing NORTH!)
-	{ Id = "ProofRoomPress", X = 48, Z = 108, Y = 19, HalfX = 7.0, HalfZ = 2.8, Top = 6.8 },
+	{ Id = "ProofRoomPress", X = 66, Z = 104, Y = 19, HalfX = 7.0, HalfZ = 2.8, Top = 6.8 },
 	-- 21–23. Crystallised Starlight Rift Lips embedded in dark cliff flanks along the diagonal tear
 	{ Id = "WestRiftLipCrystal", X = -308, Z = -200, Y = -22, HalfX = 12.8, HalfZ = 7.4, Top = 13.7 },
 	{ Id = "MidRiftLipCrystal", X = -92, Z = -40, Y = -22, HalfX = 12.8, HalfZ = 7.4, Top = 13.7 },
@@ -342,6 +342,15 @@ function AstralFloor45.Build(ctx: any)
 		end
 	end
 
+	local fenceColliders: { BasePart } = {}
+	local function enableFences()
+		for _, c in fenceColliders do
+			c.CanCollide = true
+			c.CanQuery = true
+		end
+		table.clear(fenceColliders)
+	end
+
 	local function balustradeSpan(x0: number, z0: number, x1: number, z1: number, y: number, lampEvery: number?, warmGold: boolean?)
 		local a, b = V(x0, y, z0), V(x1, y, z1)
 		local len = (b - a).Magnitude
@@ -352,6 +361,8 @@ function AstralFloor45.Build(ctx: any)
 		boxAt("ObsBalBase", cf * CFrame.new(0, 0.35, 0), V(1.8, 0.7, len + 0.4), STONE_DARK, Mat.Slate)
 		boxAt("ObsBalCap", cf * CFrame.new(0, 2.85, 0), V(1.75, 0.42, len + 0.4), STONE_LIGHT, Mat.Slate)
 		boxAt("ObsBalTrim", cf * CFrame.new(0, 3.14, 0), V(1.15, 0.24, len), BRASS_AGED, Mat.Metal)
+		local col = boxAt("ObsBalCollider", cf * CFrame.new(0, 1.8, 0), V(1.5, 3.6, len + 0.4), WALL_FACE, Mat.Slate, 1)
+		table.insert(fenceColliders, col)
 		local posts = math.max(2, math.floor(len / 18))
 		for i = 0, posts do
 			local pt = a:Lerp(b, i / posts)
@@ -398,9 +409,10 @@ function AstralFloor45.Build(ctx: any)
 			local angB = math.atan2(link.BZ - pB.Z, link.BX - pB.X)
 			local rA = math.max(pA.Width, pA.Depth) * 0.5 + 2
 			local rB = math.max(pB.Width, pB.Depth) * 0.5 + 2
-			-- Exact chord half-angle for a 28-stud bridge + generous clearance so NO balustrade pillar ever clips a bridge!
-			addOpenAngle(link.From, angA, math.asin(math.min(0.95, 17.5 / math.max(rA, 18))) + 0.10)
-			addOpenAngle(link.To, angB, math.asin(math.min(0.95, 17.5 / math.max(rB, 18))) + 0.10)
+			-- Exact chord half-angle for the bridge width + clearance so NO balustrade pillar ever clips a bridge!
+			local halfW = link.Width * 0.5 + 3.0
+			addOpenAngle(link.From, angA, math.asin(math.min(0.95, halfW / math.max(rA, 18))) + 0.08)
+			addOpenAngle(link.To, angB, math.asin(math.min(0.95, halfW / math.max(rB, 18))) + 0.08)
 		end
 	end
 	-- Also keep curved openings cleanly clear where circular outer alcoves & balconies join their parent terraces!
@@ -415,7 +427,7 @@ function AstralFloor45.Build(ctx: any)
 		{ "Orrery", 330, -276, 0.70 },
 		{ "EastGallery", 298, 26, 0.62 },
 		{ "Fallen", 194, 144, 0.70 },
-		{ "Proof", 48, 108, 0.72 },
+		{ "Proof", 66, 104, 0.72 },
 		{ "Overlook", -52, -108, 0.42 },
 	}
 	for _, aj in alcoveJoins do
@@ -484,6 +496,8 @@ function AstralFloor45.Build(ctx: any)
 					boxAt(id .. "BalWall", bcf * CFrame.new(0, 1.35, 0), V(1.35, 2.7, segLen), WALL_FACE, Mat.Slate)
 					boxAt(id .. "BalCap", bcf * CFrame.new(0, 2.85, 0), V(1.75, 0.40, segLen + 0.2), STONE_LIGHT, Mat.Slate)
 					boxAt(id .. "BalTrim", bcf * CFrame.new(0, 3.12, 0), V(1.1, 0.22, segLen), BRASS_AGED, Mat.Metal)
+					local col = boxAt(id .. "BalCollider", bcf * CFrame.new(0, 1.8, 0), V(1.4, 3.6, segLen + 0.2), WALL_FACE, Mat.Slate, 1)
+					table.insert(fenceColliders, col)
 					if k % 3 == 0 then
 						boxAt(id .. "BalPier", bcf * CFrame.new(0, 1.75, 0), V(2.0, 3.5, 2.0), STONE_LIGHT, Mat.Slate)
 						boxAt(id .. "BalFinial", bcf * CFrame.new(0, 3.68, 0), V(2.25, 0.36, 2.25), GOLD_BRIGHT, Mat.Metal)
@@ -492,6 +506,7 @@ function AstralFloor45.Build(ctx: any)
 			end
 
 			makeDecor(ctx.current())
+			enableFences()
 			if solidTop then
 				solidTop.CanCollide = true
 				solidTop.CanQuery = true
@@ -534,6 +549,8 @@ function AstralFloor45.Build(ctx: any)
 				boxAt(id .. "SutCurb", bcf * CFrame.new(0, 0.45, 0), V(1.25, 0.90, segLen), WOOD_DARK, Mat.Wood)
 				boxAt(id .. "SutTopRail", bcf * CFrame.new(0, 3.15, 0), V(0.65, 0.45, segLen), BRASS_AGED, Mat.Metal)
 				boxAt(id .. "SutMidChain", bcf * CFrame.new(0, 1.80, 0), V(0.32, 0.32, segLen), GOLD_BRIGHT, Mat.Metal)
+				local col = boxAt(id .. "SutRailCollider", bcf * CFrame.new(0, 1.8, 0), V(1.3, 3.6, segLen + 0.2), WOOD_DARK, Mat.Wood, 1)
+				table.insert(fenceColliders, col)
 				local stitch = boxAt(id .. "SutStitch", bcf * CFrame.new(0, 2.15, 0) * CFrame.Angles(math.rad(28), 0, 0), V(0.24, 0.24, segLen * 0.92), GOLD_LIGHT, Mat.Neon, 0.12)
 				stitch:SetAttribute("ConjunctionGlyph", true)
 				if k % 2 == 0 then
@@ -543,6 +560,7 @@ function AstralFloor45.Build(ctx: any)
 			end
 
 			makeDecor(ctx.current())
+			enableFences()
 			pin(ctx.current())
 		end)
 	end
@@ -749,7 +767,7 @@ function AstralFloor45.Build(ctx: any)
 	buildCircularObservatoryIsle("OrreryCrestAlcove", 330, 48, -276, 32, 208, true, false, openTowardParent(330, -276, "Orrery", 1.08))
 	buildCircularObservatoryIsle("EastStacksAlcove", 298, 25, 26, 30, 209, true, false, openTowardParent(298, 26, "EastGallery", 1.05))
 	buildCircularObservatoryIsle("FallenCatalogueAlcove", 194, 9, 144, 26, 210, true, false, openTowardParent(194, 144, "Fallen", 1.12))
-	buildCircularObservatoryIsle("ProofRoomAlcove", 48, 19, 108, 22, 211, true, false, openTowardParent(48, 108, "Proof", 1.18))
+	buildCircularObservatoryIsle("ProofRoomAlcove", 66, 19, 104, 22, 211, true, false, openTowardParent(66, 104, "Proof", 1.18))
 
 	-- =========================================================================
 	-- C. ROUNDED STADIUM BASIN, ORNATE SANCTUARY & CIRCULAR APEX COMPASS DAIS
@@ -814,15 +832,16 @@ function AstralFloor45.Build(ctx: any)
 			-- Handcrafted reading vignettes along Basin's rounded ends & edge bays (strictly clear of BASIN_WEST/EAST camps!)
 			buildBench(V(-54, by, southZ - 5.5), 180)
 			buildBench(V(54, by, southZ - 5.5), 180)
-			buildWritingDesk(V(-276, by, bz - 10), 90)
-			buildWritingDesk(V(-276, by, bz + 12), 90)
-			buildCrateCluster(V(-292, by, bz + 2), 20)
-			buildWritingDesk(V(276, by, bz - 8), -90)
-			buildCrateCluster(V(284, by, bz + 14), -24)
-			streetLamp(V(-298, by, bz), GOLD_LIGHT, false)
-			streetLamp(V(298, by, bz), GOLD_LIGHT, false)
+			buildWritingDesk(V(-(halfW + 6), by, bz - 9), 90)
+			buildWritingDesk(V(-(halfW + 6), by, bz + 10), 90)
+			buildCrateCluster(V(-(halfW + 18), by, bz + 2), 20)
+			buildWritingDesk(V(halfW + 6, by, bz - 7), -90)
+			buildCrateCluster(V(halfW + 16, by, bz + 12), -24)
+			streetLamp(V(-(halfW + 24), by, bz), GOLD_LIGHT, false)
+			streetLamp(V(halfW + 24, by, bz), GOLD_LIGHT, false)
 
 			makeDecor(ctx.current())
+			enableFences()
 			pin(ctx.current())
 		end)
 	end
@@ -848,6 +867,7 @@ function AstralFloor45.Build(ctx: any)
 			balustradeSpan(-hw + 1.2, sz - hd + 3, -hw + 1.2, sz + hd - 3, sy, 0, true)
 			balustradeSpan(hw - 1.2, sz - hd + 3, hw - 1.2, sz + hd - 3, sy, 0, true)
 			makeDecor(ctx.current())
+			enableFences()
 			pin(ctx.current())
 		end)
 	end
@@ -1076,7 +1096,7 @@ function AstralFloor45.Build(ctx: any)
 
 		-- Fallen Catalogue & Proof Room vignettes
 		buildCrateCluster(V(206, 9, 158), -32)
-		buildWritingDesk(V(60, 19, 110), 180)
+		buildWritingDesk(V(78, 19, 106), 180)
 
 		-- Warm Observatory lanterns accenting key terraces
 		streetLamp(V(-256, 12, 124), GOLD_LIGHT, false)

@@ -241,7 +241,15 @@ function AstralFloor43.Build(ctx: any)
 		return prop
 	end
 
-	-- Helper: weathered grey-slate & antique-brass stone balustrade span
+	-- Helper: weathered grey-slate & antique-brass stone balustrade span (returns solid collider for post-makeDecor re-enable)
+	local fenceColliders: { BasePart } = {}
+	local function enableFences()
+		for _, c in fenceColliders do
+			c.CanCollide = true
+			c.CanQuery = true
+		end
+		table.clear(fenceColliders)
+	end
 	local function balustradeSpan(x0: number, z0: number, x1: number, z1: number, y: number, withEndOrbs: boolean?)
 		local a, b = V(x0, y, z0), V(x1, y, z1)
 		local len = (b - a).Magnitude
@@ -251,6 +259,8 @@ function AstralFloor43.Build(ctx: any)
 		boxAt("FractureBalPlinth", cf * CFrame.new(0, 0.55, 0), V(1.35, 1.1, len), STONE_LIGHT, Mat.Slate)
 		boxAt("FractureBalRail", cf * CFrame.new(0, 3.05, 0), V(1.05, 0.45, len), BRASS_AGED, Mat.Metal)
 		boxAt("FractureBalCapStone", cf * CFrame.new(0, 2.75, 0), V(1.25, 0.30, len), STONE_TOP, Mat.Slate)
+		local col = boxAt("FractureBalCollider", cf * CFrame.new(0, 1.8, 0), V(1.4, 3.6, len + 0.4), STONE_LIGHT, Mat.Slate, 1)
+		table.insert(fenceColliders, col)
 		local posts = math.max(2, math.floor(len / 8.5))
 		for i = 0, posts do
 			local pt = a:Lerp(b, i / posts)
@@ -612,6 +622,7 @@ function AstralFloor43.Build(ctx: any)
 				end
 			end
 			makeDecor(ctx.current())
+			enableFences()
 			pin(ctx.current())
 		end)
 	end
@@ -695,6 +706,7 @@ function AstralFloor43.Build(ctx: any)
 			end
 
 			makeDecor(ctx.current())
+			enableFences()
 			pin(ctx.current())
 		end)
 	end
@@ -740,15 +752,16 @@ function AstralFloor43.Build(ctx: any)
 			local sZ = az + apex.Depth * 0.5 - 1.2
 			local wX = ax - apex.Width * 0.5 + 1.5
 			local eX = ax + apex.Width * 0.5 - 1.5
-			-- South edge split cleanly around the straight grand staircase (ax ± 16)
-			balustradeSpan(wX + 3, sZ, ax - 16, sZ, ay, true)
-			balustradeSpan(ax + 16, sZ, eX - 3, sZ, ay, true)
+			-- South edge split cleanly around the straight grand staircase (ax ± 12.2)
+			balustradeSpan(wX + 3, sZ, ax - 12.2, sZ, ay, true)
+			balustradeSpan(ax + 12.2, sZ, eX - 3, sZ, ay, true)
 			-- West edge solid balustrade
 			balustradeSpan(wX, az - 34, wX, sZ - 4, ay, true)
-			-- East edge split cleanly around P4C -> Apex bridge (az ± 16)
-			balustradeSpan(eX, az + 16, eX, sZ - 4, ay, true)
-			balustradeSpan(eX, az - 34, eX, az - 16, ay, true)
+			-- East edge split cleanly around P4C -> Apex bridge (az ± 12.2)
+			balustradeSpan(eX, az + 12.2, eX, sZ - 4, ay, true)
+			balustradeSpan(eX, az - 34, eX, az - 12.2, ay, true)
 			makeDecor(ctx.current())
+			enableFences()
 			pin(ctx.current())
 		end)
 	end
