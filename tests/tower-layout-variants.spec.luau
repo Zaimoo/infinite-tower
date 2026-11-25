@@ -3586,7 +3586,8 @@ test("Abyssal set pieces: overhead, sky, glow and hanging dressing is walk-throu
 	local AbyssalCollision = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalCollision"])
 	for _, kind in { "DirgeUndertow", "CrimsonEclipseSky", "CourtSilhouette", "ThroneBanner", "FordWardlight",
 		"VigilOverheadChain", "AbyssHangingChain", "ThroneCrown", "MantleChain", "ChainClimbArch", "ChainFordSub_Basin_Crossing",
-		"EyotSkirt_EyotW", "NorthVaultRibChain", "BackRoseWindow" } do
+		"EyotSkirt_EyotW", "NorthVaultRibChain", "BackRoseWindow", "DreadguardKeepMound", "StarFortRetainingAprons",
+		"AbyssalGateArch", "UndertowMoatRing" } do
 		assert(AbyssalCollision.IsGhostKind(kind), kind .. " should stay walk-through")
 	end
 	for _, kind in { "GallowsGibbet", "BonebarUrn", "FallstrandDebris", "ApexRimFrame", "FordChainPost", "EffigyOnBearers",
