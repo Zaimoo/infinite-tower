@@ -167,4 +167,4 @@ Floors 41–45 (Astral Archives, `astral:1`–`astral:5`, `PathStyle = "HALCYR"`
   - `"SHARD"` (Floor 43): dark-slate and vellum-limestone fractured floor-slab span with jagged broken-edge side teeth and brass under-ties.
   - `"WAYGATE"` (Floor 44): pale vellum limestone deck with gold rune bands and lapis-brass parapets passing physically through a standing Waygate ring-portal.
   - `"SUTURE"` (Floor 45): dark ebony shelf-plank bridge lashed across the Rift with brass chains and pale starlight-gold suture stitches.
-  - `"CHAINFORD"` (Floor 46): blackened-iron diamond-plate grate spanned across braided Undertow channels on chain bolsters with bone-white limestone edge guides and iron chain bollards (`VoidCatchY = -2.2` returns anyone who steps into a channel).
+  - `"CHAINFORD"` (Floor 46): blackened-iron diamond-plate grate spanned across braided Undertow channels on chain bolsters with bone-white limestone edge guides and iron chain bollards (a squad that steps into a channel walks back out by the Basin return ramps).
