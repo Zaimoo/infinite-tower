@@ -3803,7 +3803,7 @@ local AUTHORED: {[number]: any} = {
 			ChapelE = { X = 270, Y = 24, Z = -85, Width = 60, Depth = 52 },
 			VigilW = { X = -215, Y = 36, Z = -235, Width = 64, Depth = 56 },
 			VigilE = { X = 215, Y = 40, Z = -235, Width = 64, Depth = 56 },
-			Ossuary = { X = 0, Y = 44, Z = -290, Width = 72, Depth = 56 },
+			Ossuary = { X = 0, Y = 40, Z = -290, Width = 72, Depth = 56 },
 		},
 		Apex = { X = 0, Y = 48, Z = -160, Width = 120, Depth = 92 },
 		Paths = {
@@ -5152,6 +5152,45 @@ function Layout.PatrolRoutes(index: number, floorId: number?): {[string]: {{X: n
 		end
 	end
 	return routes
+end
+
+-- A landing pad runs from its ramp's end (`rampEnd`, "A" or "B": LandingA's ramp end is its B, LandingB's its A)
+-- into its terrace. A ramp too short for its climb starts deep inside its terrace, and its pad (twice that depth
+-- long) runs out past the far side into the void at the terrace's height, across any walkway below it (Floor 48's
+-- Keystone). Returns the pad with its far end stopped 2 studs past the terrace's edge (the same table when it
+-- already stops there); the ramp end never moves. The room builder and the terrain use it on the Abyssal floors
+-- (PathStyle "VAHL"); the layout data itself keeps the full pads.
+function Layout.ClipLanding(pad: any, terrace: any, rampEnd: string): any
+	local rx, rz = if rampEnd == "B" then pad.BX else pad.AX, if rampEnd == "B" then pad.BZ else pad.AZ
+	local fx, fz = if rampEnd == "B" then pad.AX else pad.BX, if rampEnd == "B" then pad.AZ else pad.BZ
+	local len = math.sqrt((fx - rx) ^ 2 + (fz - rz) ^ 2)
+	if len < 1 then
+		return pad
+	end
+	local dx, dz = (fx - rx) / len, (fz - rz) / len
+	local tIn, tOut = -math.huge, math.huge
+	for _, axis in { { rx, dx, terrace.X, terrace.Width / 2 + 2 }, { rz, dz, terrace.Z, terrace.Depth / 2 + 2 } } do
+		local r0, d, c, half = axis[1], axis[2], axis[3], axis[4]
+		if math.abs(d) < 1e-6 then
+			if math.abs(r0 - c) > half then
+				return pad
+			end
+		else
+			local t1, t2 = (c - half - r0) / d, (c + half - r0) / d
+			tIn, tOut = math.max(tIn, math.min(t1, t2)), math.min(tOut, math.max(t1, t2))
+		end
+	end
+	if tOut < tIn or tOut >= len - 0.5 then
+		return pad
+	end
+	local keep = math.max(tOut, 6)
+	local clipped = table.clone(pad)
+	if rampEnd == "B" then
+		clipped.AX, clipped.AZ = rx + dx * keep, rz + dz * keep
+	else
+		clipped.BX, clipped.BZ = rx + dx * keep, rz + dz * keep
+	end
+	return clipped
 end
 
 function Layout.Lanes(index: number, floorId: number?): {any}
