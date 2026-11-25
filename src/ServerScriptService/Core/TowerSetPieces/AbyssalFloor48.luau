@@ -19,6 +19,7 @@
 --     Undertow lighting the saltire from below.
 local CollectionService = game:GetService("CollectionService")
 local InfernalFoundry = require(script.Parent.InfernalFoundry)
+local AbyssalCollision = require(script.Parent.AbyssalCollision)
 
 local AbyssalFloor48 = {}
 
@@ -169,7 +170,8 @@ function AbyssalFloor48.Build(ctx: any)
 		end
 	end
 
-	local function makeDecor(m: Instance?)
+	-- Walk-through dressing: no collision, queries, touches or shadows.
+	local function ghost(m: Instance?)
 		if not m then return end
 		noCollide(m)
 		for _, d in m:GetDescendants() do
@@ -182,6 +184,20 @@ function AbyssalFloor48.Build(ctx: any)
 			end
 		end
 	end
+	-- A placed prop: overhead, sky, glow, hanging and small pieces become ghosts; everything else a player can
+	-- walk into keeps its collision (AbyssalCollision).
+	local function makeDecor(m: Instance?)
+		if not m then return end
+		if AbyssalCollision.StaysSolid(m) then
+			for _, d in m:GetDescendants() do
+				if d:IsA("BasePart") then
+					d.CanTouch = false
+				end
+			end
+			return
+		end
+		ghost(m)
+	end
 
 	local function tagDirge(inst: Instance?, tagName: string)
 		if not inst then return end
@@ -191,7 +207,7 @@ function AbyssalFloor48.Build(ctx: any)
 
 	local function tagDetail(m: Instance?)
 		if not m then return end
-		makeDecor(m)
+		ghost(m)
 		for _, d in m:GetDescendants() do
 			if d:IsA("BasePart") then
 				safeTag(d, "TowerDetail")

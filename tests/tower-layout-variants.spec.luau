@@ -3582,6 +3582,21 @@ test("Floor 40's landmarks stand clear of every walkway, camp, boss arena and po
 	assert(tallest >= 265, "Floor 40's tallest landmark is under the ladder's 265 studs")
 end)
 
+test("Abyssal set pieces: overhead, sky, glow and hanging dressing is walk-through, structures collide", function()
+	local AbyssalCollision = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalCollision"])
+	for _, kind in { "DirgeUndertow", "CrimsonEclipseSky", "CourtSilhouette", "ThroneBanner", "FordWardlight",
+		"VigilOverheadChain", "AbyssHangingChain", "ThroneCrown", "MantleChain", "ChainClimbArch", "ChainFordSub_Basin_Crossing",
+		"EyotSkirt_EyotW", "NorthVaultRibChain", "BackRoseWindow", "DreadguardKeepMound", "StarFortRetainingAprons",
+		"AbyssalGateArch", "UndertowMoatRing" } do
+		assert(AbyssalCollision.IsGhostKind(kind), kind .. " should stay walk-through")
+	end
+	for _, kind in { "GallowsGibbet", "BonebarUrn", "FallstrandDebris", "ApexRimFrame", "FordChainPost", "EffigyOnBearers",
+		"OathgateArch", "PerimeterCurtainWall", "NorthVaultWall", "FarGatehouse", "DreadguardKeep", "ThroneMonument",
+		"LastOathGate", "KeepCornerSentry" } do
+		assert(not AbyssalCollision.IsGhostKind(kind), kind .. " should collide")
+	end
+end)
+
 test("Every authored floor's terrain field builds and samples without error", function()
 	-- A malformed Terrain entry (a Shapes entry missing a field the sampler reads) only fails when the room is
 	-- built, which the server reports to players as ROOM_NOT_READY: sample every authored field here instead.
