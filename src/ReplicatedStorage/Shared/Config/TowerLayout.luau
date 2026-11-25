@@ -3983,7 +3983,7 @@ local AUTHORED: {[number]: any} = {
 			},
 			NoApexShelf = true,
 			LiquidRise = 0,
-			WallBand = { Base = 14, Noise = 6, NorthScale = 0.2 },
+			WallBand = { Base = 14, Noise = 6 },
 			GroveScale = 0,
 			MeadowScale = 0,
 			GroundCover = false,
