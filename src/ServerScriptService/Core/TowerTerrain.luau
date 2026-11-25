@@ -185,6 +185,9 @@ export type Field = {
 -- walking plane (its part stays as an invisible proxy), STAIR_UNDER under stair treads, and UNDER under
 -- built decks (solid, visible masonry).
 local SOFT = 2.0
+-- A `Terrain.Shapes` entry without `Round` (e.g. `{ Sheer = true }`: a square terrace with a sheer apron) is a
+-- near-square superellipse; without `Grow` it grows 0 studs past the terrace's edges.
+local SQUARE_ROUND = 8
 local STAIR_UNDER = 2.8
 
 local function fbm(x: number, z: number, seed: number, octaves: number): number
@@ -1025,11 +1028,12 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 				continue
 			end
 			local round = r.Round
-			local ax, az = r.HX + round.Grow, r.HZ + round.Grow
+			local grow = round.Grow or 0
+			local ax, az = r.HX + grow, r.HZ + grow
 			if math.abs(x - r.X) > ax + 1 or math.abs(z - r.Z) > az + 1 then
 				continue
 			end
-			local n = round.Round
+			local n = round.Round or SQUARE_ROUND
 			local sq = ((math.abs(x - r.X) / ax) ^ n + (math.abs(z - r.Z) / az) ^ n) ^ (1 / n)
 			if sq <= 1.0 then
 				local topY = r.Y - (if r.IsDeck then UNDER else SOFT)
@@ -1074,8 +1078,9 @@ function TowerTerrain.Field(layout: any, biomeId: string, floorId: number): Fiel
 					-- terrace's edges, so a terrain island reads as rock, not a square slab. Its corners fall
 					-- away; its edges' middles, where paths land, stay flat. `Sheer = true` drops its apron as a
 					-- near-vertical cliff instead of a bank (Floor 36's Bell Stack: a sea-stack, not a hill).
-					local ax, az = r.HX + round.Grow, r.HZ + round.Grow
-					local n = round.Round
+					local grow = round.Grow or 0
+					local ax, az = r.HX + grow, r.HZ + grow
+					local n = round.Round or SQUARE_ROUND
 					local sq = ((math.abs(x - r.X) / ax) ^ n + (math.abs(z - r.Z) / az) ^ n) ^ (1 / n)
 					dist = math.max(0, (sq - 1) * math.min(ax, az))
 				end
