@@ -874,9 +874,9 @@ New players are walked through every feature once, in a fixed order, and held to
 | 1 | Summon a hero | `HeroSummoned` | | 200 Gems |
 | 2 | Set your squad | `SquadDeployed` | Tower (with a hero fit to fight) | |
 | 3 | Enter the Tower | `FloorVisited` (floor 1) | | |
-| 4 | Clear Floor 1 | `FloorCleared` (floor 1) | Forge | 5,000 Gold, topped up so one Forge roll (5,000) is always affordable |
+| 4 | Clear Floor 1 | `FloorCleared` (floor 1) | Forge | 5,000 Gold, topped up so the cheapest Open Forge pedestal weapon is always affordable |
 | 5 | Return to the Hub | `TowerReturned` | | |
-| 6 | Forge a weapon | `ArtifactSummoned` | Facilities, Fortress Tree, The Pit | |
+| 6 | Buy a forged weapon | `ArtifactSummoned` (a pedestal purchase) | Facilities, Fortress Tree, The Pit | |
 | 7 | Equip the weapon | `ArtifactEquipped` | | 200 Gems |
 | 8 | Post a guard | `FacilityAssigned` (Guard Post) | | 750 Gold |
 | 9 | Upgrade your fortress | `TreeNodeUnlocked` | | 1,000 Gold |
@@ -897,7 +897,8 @@ New players are walked through every feature once, in a fixed order, and held to
 - **Abandoned attempts** (the player leaves the floor, or leaves the relic for 2 minutes) remove the relic and the Rival and try again 30 s later, at most 3 times a session. Once the player has stolen, the lesson is done for good (guide fact `Steal`; a real theft counts too).
 - Guide `Version` 5 credits Steal, Duel, Haul and Climb to every player past Floor 2, without rewards.
 
-- **Guaranteed first roll:** a player's first Forge roll yields a weapon type that a squad hero can hold (a hero with no weapon first), so step 7 always has something to equip. Tier and variant roll as normal; later rolls are uniform across the six types.
+- **Buying the first weapon (step 6):** the Open Forge's pedestals are filled from the start, and an Anvil reroll is free. While a pedestal holds a weapon the player can afford, the trail leads to that pedestal's Buy prompt. Otherwise the step reads "Reroll free at the Anvil, then buy.": the trail leads to the Anvil, and at the Forge the spotlight goes on the dock's **Reroll** button ("Reroll (free)"). Equip (step 7) then leads to the Smelter (`BlacksmithPrompt`) and **Equip Best**.
+- **Guaranteed first roll:** until step 6 is done, pedestal rolls (the first fill and every reroll) yield a weapon type that a squad hero can hold (a hero with no weapon first), so step 7 always has something to equip. Tier and variant roll as normal; later rolls are uniform across the six types.
 - **Starter ten-pull:** while the starter Gems still cover a ten-pull, step 1 points at the ten-pull button (it carries the guaranteed Rare).
 - **Spare heroes:** steps 8 and 10 need a hero on the bench. With none, the guide shows *Summon a spare hero* first (when a pull is affordable).
 - **Access is never taken back.** Reaching Floor 3 opens every system regardless of lessons, and players who had cleared Floor 1 before the linear chain shipped keep everything they had (they are credited steps 1, 2, 6 and 7 where they have plainly done them).
@@ -911,7 +912,13 @@ New players are walked through every feature once, in a fixed order, and held to
 | Promote a hero | a squad hero is at its level cap (Lv.10) and the promotion is affordable | 100 Gems |
 | Join the raid | the Raid Portal is open and the player can enter | |
 | Upgrade a weapon | donors and Gold for a star promotion are in hand | 100 Gems |
+| Add a Forge pedestal | Fortress Tree step done, a weapon bought, Pedestals branch unbuilt and **Second Plinth** (`fp_1`) affordable | |
+| Stoke the Forge | Fortress Tree step done, a weapon bought, Forge Luck branch unbuilt and **Stoked Bellows** (`rl_1`) affordable | |
 | Staff the Market / Training Grounds / God's Blessing | the facility is built and empty, with a hero spare | |
+
+**Upgrade a weapon, step by step:** the player chooses the weapon. In the Forge the guide lights the whole inventory grid ("Pick a weapon to upgrade") and waits for a tap; the auto-selected weapon does not count. Only then does it light **Upgrade** on the detail panel, then **Auto-fill**, **Review** and **Confirm**. If the picked weapon has too few spare weapons of its rarity and stars, or the Gold or Gems fall short, the grid stays lit ("No spares for that one: pick another"). The Forge marks the pick on its window (`GuidePickedArtifact`, `GuidePickReady` attributes) for the guide to read.
+
+**Forge upgrades:** the two Forge lessons point at Upgrades and then at their node, as the Fortress Tree step does. From the Forge, *Add a Forge pedestal* lights the dock's **Upgrades** button or the Smelter's **Upgrades** tab, which open the tree at the Pedestals branch. Building a node of either branch completes its lesson (`TreeNodeUnlocked` carries the node's facility) once the core Fortress Tree step is done. Building one earlier completes that step instead, and the branch is then no longer unbuilt, so its lesson never shows.
 
 **Cues (client, decorative only; the server decides what counts):**
 - **Press something: a spotlight.** The screen dims to black except for the one control to press, ringed in gold, with two or three words beside it (`Lesson.Action`). For a core step the dim area also swallows input, which holds the player to the task.

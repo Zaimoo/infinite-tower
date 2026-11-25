@@ -39,8 +39,8 @@ local Lessons: { [string]: Lesson } = {
 	Visit = lesson("Visit", "Enter the Tower", "Go to Floor 1.", "Choose Floor 1", "Tower"),
 	Clear = lesson("Clear", "Clear Floor 1", "Beat the enemies, then the boss.", nil, nil, { Gold = 5000 }),
 	Return = lesson("Return", "Return to the Hub", "Take the portal or press Hub.", "Go back", "Hub"),
-	Roll = lesson("Roll", "Buy a forged weapon", "Roll & buy at the Open Forge.", "Buy weapon", "Blacksmith"),
-	Equip = lesson("Equip", "Equip the weapon", "Open the Forge Smelter.", "Equip it", "Blacksmith", { Gems = 200 }),
+	Roll = lesson("Roll", "Buy a forged weapon", "Buy a weapon on a Forge pedestal.", "Buy weapon", "Blacksmith"),
+	Equip = lesson("Equip", "Equip the weapon", "Open the Forge Smelter and equip it.", "Equip it", "Blacksmith", { Gems = 200 }),
 	GuardPost = lesson("GuardPost", "Post a guard", "Go to the Guard Post.", "Assign a hero", "GuardPost", { Gold = 750 }),
 	Tree = lesson("Tree", "Upgrade your fortress", "Open Upgrades.", "Build this", "Upgrades", { Gold = 1000 }),
 	Synthesis = lesson("Synthesis", "Level up a hero", "Go to The Pit.", "Feed a spare hero", "ThePit", { Gems = 250 }),
@@ -50,6 +50,9 @@ local Lessons: { [string]: Lesson } = {
 	Recruit = lesson("Recruit", "Summon a spare hero", "Go to the Summoning Altar.", "Summon here", "Summoning"),
 	Bank = lesson("Bank", "Bank your relic", "Carry it to a sanctuary.", nil, "Bank"),
 	Upgrade = lesson("Upgrade", "Upgrade a weapon", "Open the Forge Smelter.", "Upgrade it", "Blacksmith", { Gems = 100 }),
+	-- Open Forge upgrades in the Fortress Tree (GDD §4.7): the first extra pedestal, the first Roll Luck node.
+	Pedestal = lesson("Pedestal", "Add a Forge pedestal", "More weapons on every reroll.", "Build this", "Upgrades"),
+	RollLuck = lesson("RollLuck", "Stoke the Forge", "Better odds on every reroll.", "Build this", "Upgrades"),
 	Promotion = lesson("Promotion", "Promote a hero", "Go to The Pit.", "Promote", "ThePit", { Gems = 100 }),
 	Market = lesson("Market", "Staff the Market", "More Tower loot.", "Assign a hero", "Market"),
 	TrainingGrounds = lesson("TrainingGrounds", "Staff the Training Grounds", "More squad power.", "Assign a hero", "TrainingGrounds"),
@@ -109,7 +112,7 @@ local ordered: { Lesson } = {}
 for _, id in Chains.v5 do
 	if id ~= "Bank" then table.insert(ordered, Lessons[id]) end
 end
-for _, id in { "Bank", "Climb", "Haul", "Upgrade", "Promotion", "Market", "TrainingGrounds", "GodsBlessing", "Raid" } do table.insert(ordered, Lessons[id]) end
+for _, id in { "Bank", "Climb", "Haul", "Upgrade", "Pedestal", "RollLuck", "Promotion", "Market", "TrainingGrounds", "GodsBlessing", "Raid" } do table.insert(ordered, Lessons[id]) end
 GuideConfig.Ordered = table.freeze(ordered)
 
 -- Onboarding experiment arms (docs/first-session-and-social-plan.md, A1). A new profile's arm is

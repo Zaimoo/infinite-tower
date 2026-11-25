@@ -5,7 +5,7 @@
 --   2. the core chain of the player's arm (GuideConfig.Chains), strictly in order. A step whose
 --      action is not possible yet is passed over (never shown as a dead end) and comes back when
 --      it is;
---   3. conditional lessons: promotion, raid, weapon upgrade, the other facilities.
+--   3. conditional lessons: promotion, raid, weapon upgrade, Forge upgrades, the other facilities.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Config = require(Shared.Config.GuideConfig)
@@ -16,6 +16,7 @@ local Balance = require(Shared.Config.StatBalance)
 local FortressTree = require(Shared.Util.FortressTree)
 local Stats = require(Shared.Util.StatFormulas)
 local Capacity = require(Shared.Util.InventoryCapacity)
+local ForgeRollRules = require(Shared.Util.ForgeRollRules)
 
 export type Lesson = Config.Lesson
 export type Context = {
@@ -97,6 +98,22 @@ local function canRoll(profile: any): boolean
 	return (profile.Currencies.Gold or 0) >= ArtifactCatalog.RarityStandardPedestalCost[1]
 		and Capacity.ArtifactCount(profile) < Capacity.ArtifactCap(profile.FortressTree)
 end
+
+-- A pedestal holds a weapon the player can buy right now (else the next move is a free reroll).
+local function canBuyPedestal(profile: any): boolean
+	if type(profile.ForgeRoll) ~= "table" then return false end
+	for slot = 1, FortressTree.ForgePedestals(profile.FortressTree) do
+		if ForgeRollRules.ValidatePurchase(profile, slot) then return true end
+	end
+	return false
+end
+
+-- The Open Forge upgrade lessons: each teaches the first node of its Fortress Tree branch, and only
+-- while that branch is unbuilt and its first node can be bought.
+local FORGE_UPGRADES = {
+	{ Lesson = Config.Pedestal, Facility = "ForgePedestals", Node = "fp_1" },
+	{ Lesson = Config.RollLuck, Facility = "ForgeLuck", Node = "rl_1" },
+}
 
 -- A hero on the bench and fit to work or fight.
 local function spareHero(profile: any, now: number): boolean
@@ -192,7 +209,11 @@ local function selectLesson(profile: any, context: Context): Lesson?
 	if open(Config.Return) and context.Floor > 0 and context.Floor <= 50 then return Config.Return end
 	if not atHub then return nil end
 
-	if open(Config.Roll) and canRoll(profile) then return Config.Roll end
+	if open(Config.Roll) and canRoll(profile) then
+		-- Pedestals start filled; when none holds a weapon the player can buy, a free reroll comes first.
+		if canBuyPedestal(profile) then return Config.Roll end
+		return with(Config.Roll, { Description = "Reroll free at the Anvil, then buy." })
+	end
 	if open(Config.Equip) and canEquip(profile, now) then return Config.Equip end
 	if open(Config.GuardPost) and unlocks.Facilities and staffable(profile, Config.GuardPost) then
 		if spareHero(profile, now) then return Config.GuardPost end
@@ -218,7 +239,16 @@ local function selectLesson(profile: any, context: Context): Lesson?
 	if unlocks.Forge and available(Config.Upgrade) then
 		local artifact = upgradeCandidate(profile)
 		if artifact then
-			return with(Config.Upgrade, { Control = artifact, Description = `Upgrade {profile.Artifacts[artifact].DisplayName}.` })
+			-- The player picks which weapon; the guide lights the grid until they do (GDD §4.7).
+			return with(Config.Upgrade, { Description = "Pick a weapon, then upgrade it." })
+		end
+	end
+	if unlocks.FortressTree and facts.Roll and facts.Tree then
+		for _, entry in FORGE_UPGRADES do
+			if available(entry.Lesson) and FortressTree.FacilityLevel(profile.FortressTree, entry.Facility) == 0
+				and FortressTree.CanUnlock(profile.FortressTree, entry.Node, profile.Currencies.Gold, profile.HighestClearedFloor or 0, unlocks) then
+				return with(entry.Lesson, { Control = entry.Node })
+			end
 		end
 	end
 	if unlocks.Facilities and spareHero(profile, now) then

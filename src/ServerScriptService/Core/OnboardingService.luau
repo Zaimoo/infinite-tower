@@ -420,6 +420,8 @@ local GUIDE_EVENTS: { [string]: string } = {
 	ArtifactEquipped = "Equip", TreeNodeUnlocked = "Tree", RelicBanked = "Bank", RaidEntered = "Raid",
 }
 local PIT_EVENTS: { [string]: string } = { SYNTHESIS = "Synthesis", PROMOTION = "Promotion" }
+-- Fortress Tree branches whose node completes an Open Forge lesson (once the core Tree step is done).
+local FORGE_TREE_LESSONS: { [string]: string } = { ForgePedestals = "Pedestal", ForgeLuck = "RollLuck" }
 local WORKERS: { [string]: boolean } = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
 -- Rewards are paid once per lesson. Lessons that replaced a step of the old quest chain share its
 -- CompletedSteps key, so a reward paid under the old chain is not paid again.
@@ -443,6 +445,9 @@ function OnboardingService.Report(player: Player, eventName: string, detail: (st
 	if eventName == "FloorVisited" and detail == 1 then id = "Visit" end
 	if eventName == "TowerReturned" and guide.Facts.Clear then id = "Return" end
 	if eventName == "PitUsed" and type(detail) == "string" then id = PIT_EVENTS[detail] end
+	if eventName == "TreeNodeUnlocked" and guide.Facts.Tree and type(detail) == "string" and FORGE_TREE_LESSONS[detail] then
+		id = FORGE_TREE_LESSONS[detail]
+	end
 	-- A stolen (or duel-won) relic banked after the first bank completes the Haul lesson.
 	if eventName == "RelicBanked" and detail == "Stolen" and guide.Facts.Bank then id = "Haul" end
 	if eventName == "FacilityAssigned" and type(detail) == "string" and WORKERS[detail] then id = detail end

@@ -100,6 +100,7 @@ function HeroOddsModal.new(gui: ScreenGui, banners: { [string]: any }, getProfil
 		Size = UDim2.fromOffset(WIDTH, HEIGHT), BackgroundColor3 = Color3.fromRGB(15, 13, 22),
 		BorderSizePixel = 0, ZIndex = Z,
 	}, scrim)
+	win:SetAttribute("NoFeel", true) -- a click catcher, not a control: no click sound or press spring
 	GildedGrimoire.Frame(win, { Class = "Window", Tone = "Deep", ZIndex = Z })
 	ModalFit.Bind(win, new("UIScale", {}, win), WIDTH, HEIGHT, { MaxScale = 1.25 })
 
