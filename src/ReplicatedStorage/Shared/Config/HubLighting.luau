@@ -605,6 +605,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.38, AtmosphereColor = c(74, 58, 118), AtmosphereDecay = c(46, 36, 92), AtmosphereHaze = 1.3,
 		TintColor = c(234, 232, 246), Saturation = 0.08, Contrast = 0.12, ExposureCompensation = 0.10, BloomIntensity = 0.55,
 	},
+	-- Floor 49, Dreadguard Citadel: iron night — moonless steel-blue dark across the shuttered star fort,
+	-- warm bone-white only on the drawbridge gate-towers and a faint crimson glow beyond the north wall.
+	[49] = {
+		Ambient = c(52, 58, 76), OutdoorAmbient = c(82, 90, 116), ColorShift_Top = c(176, 186, 214), ColorShift_Bottom = c(64, 52, 92),
+		AtmosphereDensity = 0.40, AtmosphereColor = c(62, 68, 96), AtmosphereDecay = c(42, 42, 74), AtmosphereHaze = 1.1,
+		TintColor = c(232, 236, 246), Saturation = 0.04, Contrast = 0.13, ExposureCompensation = 0.08, BloomIntensity = 0.50,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

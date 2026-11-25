@@ -590,6 +590,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[46] ~= nil and Light.TowerPreset(10, 46) ~= Light.TowerPreset(10), "floor 46 layers its ash-fall dusk grade over BiomeGrades[10]")
 	assert(Light.FloorGrades[47] ~= nil and Light.TowerPreset(10, 47) ~= Light.TowerPreset(10), "floor 47 layers its crimson vigil grade over BiomeGrades[10]")
 	assert(Light.FloorGrades[48] ~= nil and Light.TowerPreset(10, 48) ~= Light.TowerPreset(10), "floor 48 layers its void-glare grade over BiomeGrades[10]")
+	assert(Light.FloorGrades[49] ~= nil and Light.TowerPreset(10, 49) ~= Light.TowerPreset(10), "floor 49 layers its iron night grade over BiomeGrades[10]")
 	assert(Light.TowerPreset(10, 99) == Light.TowerPreset(10), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
@@ -937,6 +938,32 @@ test("Floor 48 has its own Voidspan Crossing kit: >= 13 new templates, 200+ stud
 	assert((attrs.GroundCoverCount or 0) >= 420, "Floor 48 GroundCoverCount < 420")
 	assert(#lights <= 24, "Floor 48 lights exceed 24")
 	assert(#emitters <= 12, "Floor 48 emitters exceed 12")
+	assertAbyssalTelegraphSafety(room, parts, lights)
+end)
+
+test("Floor 49 has its own Dreadguard Citadel kit: >= 14 new templates, 235+ stud Keep, census & §5.7 telegraph safety", function()
+	local f49 = {
+		"DreadguardKeepTower", "DreadguardKeepGatehouse", "StarBastionSalient", "CurtainWallCrenel", "DrawbridgeStair",
+		"GateTowerChained", "RavelinPortcullis", "IronStakePalisade", "SiegeHookCrane", "ExecutionYardSet",
+		"PenitentCage", "GreatIronBell", "MineWindingGear", "ArmourStandPlate", "ShutteredWardlight", "DreadguardSentry",
+	}
+	for _, name in f49 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 49 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		assert(t.Min.Y > -1.2 and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f49 >= 14)
+	assert(Kit.ExtraTemplates.DreadguardKeepTower.Size.Y >= 235, "DreadguardKeepTower must clear 235 studs")
+	local room = require(nodes["ReplicatedStorage.Shared.Config.TowerLayout"]).ForFloor(49)
+	local SetPiece = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor49"])
+	local ctx, attrs, parts, lights, emitters = makeAbyssalCollectorCtx(room, true)
+	SetPiece.Build(ctx)
+	assert((attrs.PlacedPropCount or 0) >= 640, "Floor 49 PlacedPropCount < 640")
+	assert((attrs.DistinctTemplateCount or 0) >= 38, "Floor 49 DistinctTemplateCount < 38")
+	assert((attrs.GroundCoverCount or 0) >= 450, "Floor 49 GroundCoverCount < 450")
+	assert(#lights <= 24, "Floor 49 lights exceed 24")
+	assert(#emitters <= 16, "Floor 49 emitters exceed 16")
 	assertAbyssalTelegraphSafety(room, parts, lights)
 end)
 
