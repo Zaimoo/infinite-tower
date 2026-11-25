@@ -737,12 +737,12 @@ function AbyssalFloor46.Build(ctx: any)
 		local by = bh.Y :: number
 		ctx.group(bh.Id, function()
 			local cf = CFrame.new(V(bh.X, by, bh.Z)) * CFrame.Angles(0, math.rad(-75), 0)
-			boxAt("FallenHandWrist", cf * CFrame.new(0, 1.6, 2.5) * CFrame.Angles(math.rad(-14), 0, 0), V(5.2, 3.0, 5.4), BONE_MARBLE, Mat.Marble)
-			boxAt("FallenHandPalm", cf * CFrame.new(0, 2.2, -1.2) * CFrame.Angles(math.rad(12), 0, 0), V(6.4, 2.4, 5.2), BONE_MARBLE, Mat.Marble)
+			boxAt("MarbleHandWrist", cf * CFrame.new(0, 1.6, 2.5) * CFrame.Angles(math.rad(-14), 0, 0), V(5.2, 3.0, 5.4), BONE_MARBLE, Mat.Marble)
+			boxAt("MarbleHandPalm", cf * CFrame.new(0, 2.2, -1.2) * CFrame.Angles(math.rad(12), 0, 0), V(6.4, 2.4, 5.2), BONE_MARBLE, Mat.Marble)
 			for i = -2, 2 do
 				local ang = i * 0.18
 				local fLen = 4.6 - math.abs(i) * 0.55
-				boxAt("FallenHandFinger", cf * CFrame.new(i * 1.25, 3.8 - math.abs(i) * 0.3, -4.4) * CFrame.Angles(math.rad(36 + math.abs(i) * 8), ang, 0), V(1.05, 1.15, fLen), BONE_MARBLE, Mat.Marble)
+				boxAt("MarbleHandFinger", cf * CFrame.new(i * 1.25, 3.8 - math.abs(i) * 0.3, -4.4) * CFrame.Angles(math.rad(36 + math.abs(i) * 8), ang, 0), V(1.05, 1.15, fLen), BONE_MARBLE, Mat.Marble)
 			end
 			makeDecor(ctx.current())
 			pin(ctx.current())
