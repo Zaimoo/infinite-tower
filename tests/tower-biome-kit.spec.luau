@@ -589,6 +589,7 @@ test("A floor with its own grade layers it over its biome's; the others keep the
 	assert(Light.FloorGrades[45].BloomIntensity >= 0.58, "Floor 45 keeps rift-eye bloom")
 	assert(Light.FloorGrades[46] ~= nil and Light.TowerPreset(10, 46) ~= Light.TowerPreset(10), "floor 46 layers its ash-fall dusk grade over BiomeGrades[10]")
 	assert(Light.FloorGrades[47] ~= nil and Light.TowerPreset(10, 47) ~= Light.TowerPreset(10), "floor 47 layers its crimson vigil grade over BiomeGrades[10]")
+	assert(Light.FloorGrades[48] ~= nil and Light.TowerPreset(10, 48) ~= Light.TowerPreset(10), "floor 48 layers its void-glare grade over BiomeGrades[10]")
 	assert(Light.TowerPreset(10, 99) == Light.TowerPreset(10), "a floor without its own grade shares its biome's")
 	for id = 1, 50 do
 		local x = 12000 + ((id - 1) % 10) * 2400
@@ -790,19 +791,21 @@ local function makeAbyssalCollectorCtx(room: any, kitEnabled: boolean)
 			l.Parent = p
 			return l
 		end,
-		kitAt = function(name: string, cf: CFrame, scale: number, tint: any, kind: string?)
+		kitAt = function(name: string, cf: CFrame, scale: any, tint: any, kind: string?)
 			local t = Kit.ExtraTemplates[name] or Kit.Templates[name]
 			if not t then return nil end
+			local sy = if type(scale) == "number" then scale elseif type(scale) == "table" and scale.Y then scale.Y else 1
+			local s = scale or 1
 			local m = makeInst("Model", name)
 			m:SetAttribute("PropKind", kind or name)
 			local glowSwatch = tint and tint.GLOW
 			if glowSwatch and table.find(t.Roles, "GLOW") then
-				local gp = newPart(name .. "_GLOW", t.Size * scale, Vector3.new(cf.X, cf.Y + t.Size.Y * scale * 0.5, cf.Z), glowSwatch.Color, glowSwatch.Material, glowSwatch.Transparency)
+				local gp = newPart(name .. "_GLOW", t.Size * s, Vector3.new(cf.X, cf.Y + t.Size.Y * sy * 0.5, cf.Z), glowSwatch.Color, glowSwatch.Material, glowSwatch.Transparency)
 				gp.Parent = m
 			end
 			local silkSwatch = tint and tint.SILK
 			if silkSwatch and table.find(t.Roles, "SILK") then
-				local sp = newPart(name .. "_SILK", t.Size * scale, Vector3.new(cf.X, cf.Y + t.Size.Y * scale * 0.5, cf.Z), silkSwatch.Color, silkSwatch.Material, silkSwatch.Transparency)
+				local sp = newPart(name .. "_SILK", t.Size * s, Vector3.new(cf.X, cf.Y + t.Size.Y * sy * 0.5, cf.Z), silkSwatch.Color, silkSwatch.Material, silkSwatch.Transparency)
 				sp.Parent = m
 			end
 			table.insert(props, m)
@@ -908,6 +911,32 @@ test("Floor 47 has its own Crimson Procession kit: >= 12 new templates, 170+ stu
 	assert((attrs.GroundCoverCount or 0) >= 400, "Floor 47 GroundCoverCount < 400")
 	assert(#lights <= 24, "Floor 47 lights exceed 24")
 	assert(#emitters <= 12, "Floor 47 emitters exceed 12")
+	assertAbyssalTelegraphSafety(room, parts, lights)
+end)
+
+test("Floor 48 has its own Voidspan Crossing kit: >= 13 new templates, 200+ stud AnchorSpire, census & §5.7 telegraph safety", function()
+	local f48 = {
+		"AnchorSpire", "GreatChainSegment", "GreatChainCatenary", "KeystoneCage", "HungBeadPlatform",
+		"CatenarySpanDeck", "ChainCapstanGreat", "Counterweight", "GibbetLedgeCage", "FarGatehouse",
+		"HalfForgedLink", "AshGrateFloor", "ChainBollard", "HookPulleyRack", "VoidPoolMesh",
+	}
+	for _, name in f48 do
+		local t = Kit.ExtraTemplates[name]
+		assert(t, "missing Floor 48 template " .. name)
+		assert(Kit.Templates[name] == nil, name .. " must stay optional (ExtraTemplates)")
+		assert(t.Min.Y > -1.2 and t.Min.Y <= 0.5, name .. " does not stand on its origin")
+	end
+	assert(#f48 >= 13)
+	assert(Kit.ExtraTemplates.AnchorSpire.Size.Y >= 200, "AnchorSpire must clear 200 studs")
+	local room = require(nodes["ReplicatedStorage.Shared.Config.TowerLayout"]).ForFloor(48)
+	local SetPiece = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor48"])
+	local ctx, attrs, parts, lights, emitters = makeAbyssalCollectorCtx(room, true)
+	SetPiece.Build(ctx)
+	assert((attrs.PlacedPropCount or 0) >= 560, "Floor 48 PlacedPropCount < 560")
+	assert((attrs.DistinctTemplateCount or 0) >= 36, "Floor 48 DistinctTemplateCount < 36")
+	assert((attrs.GroundCoverCount or 0) >= 420, "Floor 48 GroundCoverCount < 420")
+	assert(#lights <= 24, "Floor 48 lights exceed 24")
+	assert(#emitters <= 12, "Floor 48 emitters exceed 12")
 	assertAbyssalTelegraphSafety(room, parts, lights)
 end)
 

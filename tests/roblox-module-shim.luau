@@ -60,6 +60,10 @@ end
 function CFrame.lookAt(at, target)
 	return CFrame.new(at, target)
 end
+function CFrame.fromMatrix(pos, _vX, _vY, vZ)
+	local ry = if vZ then math.atan2(vZ.X, vZ.Z) else 0
+	return setmetatable({ X = pos.X, Y = pos.Y, Z = pos.Z, rx = 0, ry = ry, rz = 0 }, cframeMeta)
+end
 function CFrame.Angles(rx, ry, rz)
 	return setmetatable({ X = 0, Y = 0, Z = 0, rx = rx or 0, ry = ry or 0, rz = rz or 0 }, cframeMeta)
 end
@@ -165,6 +169,11 @@ Vector3.zero = Vector3.new(0, 0, 0)
 Vector3.one = Vector3.new(1, 1, 1)
 vectorMeta.__add=function(a,b) return Vector3.new(a.X+b.X,a.Y+b.Y,a.Z+b.Z) end
 vectorMeta.__sub=function(a,b) return Vector3.new(a.X-b.X,a.Y-b.Y,a.Z-b.Z) end
+vectorMeta.__unm=function(a) return Vector3.new(-a.X,-a.Y,-a.Z) end
+vectorMeta.__div=function(a,b)
+	if type(b) == "number" then return Vector3.new(a.X/b, a.Y/b, a.Z/b) end
+	return Vector3.new(a.X/b.X, a.Y/b.Y, a.Z/b.Z)
+end
 vectorMeta.__mul=function(a,b)
 	if type(a) == "number" then return Vector3.new(b.X*a, b.Y*a, b.Z*a)
 	elseif type(b) == "number" then return Vector3.new(a.X*b, a.Y*b, a.Z*b)

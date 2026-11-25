@@ -598,6 +598,13 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.36, AtmosphereColor = c(88, 72, 108), AtmosphereDecay = c(52, 38, 76), AtmosphereHaze = 1.0,
 		TintColor = c(242, 232, 238), Saturation = 0.12, Contrast = 0.12, ExposureCompensation = 0.10, BloomIntensity = 0.45,
 	},
+	-- Floor 48, Voidspan Crossing: void-glare — black vault over a wall-to-wall Undertow void pooling cold violet
+	-- up-light onto the hung catenary spans, with neutral bone-white Wardlight illumination across every deck.
+	[48] = {
+		Ambient = c(56, 52, 82), OutdoorAmbient = c(88, 84, 122), ColorShift_Top = c(170, 168, 190), ColorShift_Bottom = c(150, 110, 220),
+		AtmosphereDensity = 0.38, AtmosphereColor = c(74, 58, 118), AtmosphereDecay = c(46, 36, 92), AtmosphereHaze = 1.3,
+		TintColor = c(234, 232, 246), Saturation = 0.08, Contrast = 0.12, ExposureCompensation = 0.10, BloomIntensity = 0.55,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 

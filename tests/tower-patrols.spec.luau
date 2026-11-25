@@ -288,4 +288,19 @@ test("Floor 45 authored patrols resolve on walkways and loop under 240 s", funct
 	end
 end)
 
+test("Floor 48 authored patrols resolve on walkways and loop under 240 s", function()
+	local room = Layout.ForFloor(48)
+	local routes = Layout.PatrolRoutes(3, 48)
+	assert(routes.BASIN_LOOP and routes.NEAR_RIM and routes.WEST_CHAIN and routes.EAST_CHAIN and routes.FAR_CHAIN)
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil and routes.BASTION_RING == nil)
+	for id, route in routes do
+		assert(#route >= 2, id .. " is too short")
+		for _, wp in route do
+			assert(onWalkable(room, wp), id .. " waypoint off the walkways on Floor 48")
+		end
+		local seconds = PatrolPath.LoopLength(route) / PatrolPath.Speed
+		assert(seconds > 5 and seconds < 240, id .. " loop takes " .. seconds .. " s")
+	end
+end)
+
 print("Patrol tests: " .. passed .. " passed, 0 failed")

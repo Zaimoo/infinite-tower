@@ -499,7 +499,7 @@ No two neighbours share an Apex position, an approach, a landform or a light. 47
 
 *760 × 760 × 295, `Bottom = −6`. Void-glare from below.*
 
-**Guide image:** ask for it before building.
+**Guide image:** `reference/Abyssal Throne 48.jpg`.
 
 **Story beat:** the court's crossing of the great void. Here the Undertow drops away into a void so deep the Vahl could not bridge it in stone. So they hung **four great chains** across it from four **Anchor Spires**, two on each rim, crossing in a saltire over the middle. They hung platforms on the chains like beads. Where the chains cross, at the lowest point of the sag, hangs the **Keystone**, a cage-platform of iron that the whole span pulls on. Crossing the Voidspan means going *down* into the sag before you can climb out of it.
 
@@ -1167,6 +1167,7 @@ pwsh tests/run.ps1
 
 - **Floor 46 (`feat/abyssal-throne-floor-46`):** built `AbyssalF46Kit` (15 templates, `tools/blender/generate_abyssal_f46_kit.py`), `AbyssalFloor46.luau` (20 landmarks, 172-stud Upfall), `Dirge.luau` / `DirgeRuntime.client.luau`, `Surfaces.VAHL` / `Surfaces.THRONEWARD`, `CHAINFORD` bridges, `AUTHORED[46]` and `FloorGrades[46]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 - **Floor 47 (`feat/abyssal-throne-floor-47`):** built `AbyssalF47Kit` (15 templates, `tools/blender/generate_abyssal_f47_kit.py`), `AbyssalFloor47.luau` (22 landmarks, 186-stud arched Effigy on Bearers), `Terrain.Rifts` `Loop = true`, `PROCESSIONAL` stairs/bridges, `AUTHORED[47]` and `FloorGrades[47]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
+- **Floor 48 (`feat/abyssal-throne-floor-48`):** built `AbyssalF48Kit` (15 templates, `tools/blender/generate_abyssal_f48_kit.py`), `AbyssalFloor48.luau` (26 landmarks, 214-stud Anchor Spires), `Surfaces.THRONEWARD`, `CATENARY` suspended decks, `VoidCatchY = -3.5`, `AUTHORED[48]` and `FloorGrades[48]`, verified offline via `tests/run.ps1` and `rojo build`. Awaits Studio Kit upload approval & live Studio playtest.
 
 ---
 

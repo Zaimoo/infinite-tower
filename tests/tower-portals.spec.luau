@@ -90,9 +90,10 @@ test("Astral Archives Floors 41-45 boss portals stand grounded on every Apex and
 		[45] = require(nodes["ServerScriptService.Core.TowerSetPieces.AstralFloor45"]),
 		[46] = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor46"]),
 		[47] = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor47"]),
+		[48] = require(nodes["ServerScriptService.Core.TowerSetPieces.AbyssalFloor48"]),
 	}
 	local half = Assets.Width * Assets.BossScale / 2
-	for fId = 41, 47 do
+	for fId = 41, 48 do
 		local idx = (fId - 1) % 5 + 1
 		local room = Layout.ForFloor(fId)
 		local apex = room.Platforms.Apex
