@@ -3582,6 +3582,33 @@ test("Floor 40's landmarks stand clear of every walkway, camp, boss arena and po
 	assert(tallest >= 265, "Floor 40's tallest landmark is under the ladder's 265 studs")
 end)
 
+test("Every authored floor's terrain field builds and samples without error", function()
+	-- A malformed Terrain entry (a Shapes entry missing a field the sampler reads) only fails when the room is
+	-- built, which the server reports to players as ROOM_NOT_READY: sample every authored field here instead.
+	local Terrain = require(nodes["ServerScriptService.Core.TowerTerrain"])
+	local biomes = { "verdant_ruins", "fungal_hollow", "ashen_dunes", "frozen_citadel", "infernal_foundry",
+		"thunder_highlands", "corrupted_grove", "sunken_sanctuary", "astral_archives", "abyssal_throne" }
+	for id = 1, 50 do
+		local room = Layout.ForFloor(id)
+		if room.Authored then
+			local ok, err = pcall(function()
+				local field = Terrain.Field(room, biomes[math.ceil(id / 5)], id)
+				for x = -room.Width / 2, room.Width / 2, 37 do
+					for z = -room.Depth / 2, room.Depth / 2, 37 do
+						field.Height(x, z)
+						field.Kind(x, z)
+						if field.Accent then field.Accent(x, z) end
+					end
+				end
+				for _, p in room.Platforms do
+					field.Height(p.X, p.Z)
+				end
+			end)
+			assert(ok, "floor " .. id .. "'s terrain field fails: " .. tostring(err))
+		end
+	end
+end)
+
 test("Every floor but the authored ones reshapes its own layout, the same way every time", function()
 	local varied, bends = 0, 0
 	for id = 2, 50 do
