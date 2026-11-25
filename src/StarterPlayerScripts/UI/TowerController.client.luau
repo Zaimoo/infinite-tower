@@ -117,6 +117,13 @@ local panel = new("Frame", {
 	ZIndex = 40,
 }, gui)
 GothicBoxStyle.Apply(panel, { Style = "Window" })
+-- `Active` on a Frame doesn't stop clicks reaching the scrim's Activated, so clicks on the panel's
+-- empty parts used to close it. This catcher sits under every control (lowest sibling ZIndex) and
+-- swallows them.
+new("TextButton", {
+	Name = "ClickCatcher", Text = "", AutoButtonColor = false, BackgroundTransparency = 1,
+	Size = UDim2.fromScale(1, 1), Selectable = false, ZIndex = 0,
+}, panel):SetAttribute("NoFeel", true)
 
 -- Gilded Grimoire: every label in the selector uses the theme fonts.
 GildedGrimoire.Watch(panel)

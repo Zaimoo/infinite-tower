@@ -476,6 +476,14 @@ local function ForgeOddsModal(props: Props)
 			TreeConfig.MaxForgePedestals or 6
 		)
 
+	-- The window is a TextButton only so clicks inside it don't reach the scrim. Opt it out of UIFeel's
+	-- press spring, which otherwise shrinks the whole window on every click like a reopen. A layout
+	-- effect runs before UIFeel's deferred attach.
+	local windowRef = React.useRef(nil :: TextButton?)
+	React.useLayoutEffect(function()
+		if windowRef.current then windowRef.current:SetAttribute("NoFeel", true) end
+	end, {})
+
 	return e("Frame", {
 		Name = "ForgeOddsOverlay",
 		Size = UDim2.fromScale(1, 1),
@@ -494,6 +502,7 @@ local function ForgeOddsModal(props: Props)
 			[React.Event.Activated] = props.OnClose,
 		}),
 		Window = e("TextButton", {
+			ref = windowRef,
 			Name = "ForgeOddsWindow",
 			Text = "",
 			AutoButtonColor = false,
