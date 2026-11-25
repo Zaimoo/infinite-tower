@@ -318,4 +318,20 @@ test("Floor 49 authored patrols resolve on walkways and loop under 240 s", funct
 	end
 end)
 
+test("Floor 50 authored patrols resolve on walkways and loop under 240 s (invalid SUPPLICANTS dropped)", function()
+	local room = Layout.ForFloor(50)
+	local routes = Layout.PatrolRoutes(5, 50)
+	assert(routes.BASIN_LOOP and routes.WEST_LEG and routes.EAST_LEG and routes.WEST_CHAINS and routes.EAST_CHAINS and routes.THRONE_SEAT)
+	assert(routes.SUPPLICANTS == nil, "Invalid SUPPLICANTS route must remain omitted")
+	assert(routes.GALLERY_WEST == nil and routes.GALLERY_EAST == nil and routes.BASTION_RING == nil)
+	for id, route in routes do
+		assert(#route >= 2, id .. " is too short")
+		for _, wp in route do
+			assert(onWalkable(room, wp), id .. " waypoint off the walkways on Floor 50")
+		end
+		local seconds = PatrolPath.LoopLength(route) / PatrolPath.Speed
+		assert(seconds > 5 and seconds < 240, id .. " loop takes " .. seconds .. " s")
+	end
+end)
+
 print("Patrol tests: " .. passed .. " passed, 0 failed")

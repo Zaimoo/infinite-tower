@@ -1,0 +1,322 @@
+{
+  "Front": "-Y in Blender, +Z in Roblox",
+  "Templates": {
+    "BackrestBannerWine": {
+      "Min": [
+        -9.0,
+        0.0,
+        -2.97
+      ],
+      "Roles": {
+        "ACCENT": 556,
+        "METAL": 1100,
+        "SILK": 84,
+        "TRIM": 900
+      },
+      "Size": [
+        18.0,
+        95.2,
+        5.94
+      ],
+      "Triangles": 2640
+    },
+    "BrokenGrandStair": {
+      "Min": [
+        -11.3,
+        -0.639,
+        -13.283
+      ],
+      "Roles": {
+        "ALT": 84,
+        "METAL": 96,
+        "SILK": 120,
+        "STONE": 597,
+        "TRIM": 48
+      },
+      "Size": [
+        23.114,
+        18.624,
+        28.928
+      ],
+      "Triangles": 945
+    },
+    "ChainClimbCage": {
+      "Min": [
+        -8.1,
+        0.0,
+        -10.8
+      ],
+      "Roles": {
+        "ALT": 28,
+        "GLOW": 100,
+        "METAL": 1396,
+        "STONE": 470,
+        "TRIM": 1440
+      },
+      "Size": [
+        16.2,
+        19.217,
+        21.6
+      ],
+      "Triangles": 3434
+    },
+    "ChainedCrownColossal": {
+      "Min": [
+        -41.895,
+        -0.16,
+        -4.66
+      ],
+      "Roles": {
+        "ACCENT": 532,
+        "METAL": 1624,
+        "TRIM": 1344
+      },
+      "Size": [
+        83.79,
+        83.555,
+        9.32
+      ],
+      "Triangles": 3500
+    },
+    "CrimsonEclipseDisc": {
+      "Min": [
+        -76.5,
+        0.0,
+        -2.9
+      ],
+      "Roles": {
+        "CRYSTAL": 648,
+        "GLOW": 744,
+        "STONE": 168,
+        "TRIM": 140
+      },
+      "Size": [
+        147.801,
+        151.615,
+        6.3
+      ],
+      "Triangles": 1700
+    },
+    "FootstoolGreat": {
+      "Min": [
+        -15.8,
+        0.0,
+        -8.018
+      ],
+      "Roles": {
+        "ACCENT": 224,
+        "ALT": 104,
+        "GLOW": 200,
+        "METAL": 116,
+        "STONE": 334,
+        "TRIM": 336
+      },
+      "Size": [
+        31.595,
+        11.841,
+        16.159
+      ],
+      "Triangles": 1314
+    },
+    "GauntletHandOpen": {
+      "Min": [
+        -11.5,
+        0.0,
+        -12.4
+      ],
+      "Roles": {
+        "ACCENT": 144,
+        "ALT": 40,
+        "GLOW": 100,
+        "METAL": 476,
+        "STONE": 44,
+        "TRIM": 1028
+      },
+      "Size": [
+        24.04,
+        28.307,
+        23.9
+      ],
+      "Triangles": 1832
+    },
+    "GreaveTower": {
+      "Min": [
+        -10.5,
+        0.0,
+        -11.0
+      ],
+      "Roles": {
+        "ACCENT": 12,
+        "METAL": 332,
+        "SILK": 12,
+        "STONE": 64,
+        "TRIM": 48
+      },
+      "Size": [
+        21.0,
+        49.5,
+        22.466
+      ],
+      "Triangles": 468
+    },
+    "KneelingSupplicant": {
+      "Min": [
+        -3.1,
+        0.0,
+        -3.6
+      ],
+      "Roles": {
+        "ALT": 92,
+        "METAL": 36,
+        "MOSS": 20,
+        "STONE": 120,
+        "TRIM": 12
+      },
+      "Size": [
+        6.2,
+        10.441,
+        7.2
+      ],
+      "Triangles": 280
+    },
+    "MantleChainColossal": {
+      "Min": [
+        -31.5,
+        0.0,
+        -3.5
+      ],
+      "Roles": {
+        "METAL": 1098,
+        "STONE": 138,
+        "TRIM": 1120
+      },
+      "Size": [
+        63.0,
+        25.412,
+        7.0
+      ],
+      "Triangles": 2356
+    },
+    "OathRegisterWall": {
+      "Min": [
+        -8.8,
+        0.0,
+        -2.6
+      ],
+      "Roles": {
+        "ACCENT": 72,
+        "ALT": 463,
+        "METAL": 24,
+        "SILK": 72,
+        "STONE": 146,
+        "TRIM": 168
+      },
+      "Size": [
+        17.6,
+        25.2,
+        5.2
+      ],
+      "Triangles": 945
+    },
+    "RelicCageIron": {
+      "Min": [
+        -4.3,
+        0.0,
+        -4.3
+      ],
+      "Roles": {
+        "ACCENT": 92,
+        "CRYSTAL": 20,
+        "GLOW": 80,
+        "METAL": 128,
+        "STONE": 44,
+        "TRIM": 224
+      },
+      "Size": [
+        8.6,
+        16.0,
+        8.6
+      ],
+      "Triangles": 588
+    },
+    "SabatonFoot": {
+      "Min": [
+        -14.021,
+        0.0,
+        -25.366
+      ],
+      "Roles": {
+        "METAL": 504,
+        "MOSS": 20,
+        "STONE": 138,
+        "TRIM": 80
+      },
+      "Size": [
+        26.021,
+        19.1,
+        48.823
+      ],
+      "Triangles": 742
+    },
+    "ThroneArmrestWall": {
+      "Min": [
+        -4.2,
+        0.0,
+        -18.114
+      ],
+      "Roles": {
+        "ALT": 12,
+        "METAL": 466,
+        "SILK": 48,
+        "STONE": 548,
+        "TRIM": 60
+      },
+      "Size": [
+        8.4,
+        22.8,
+        36.114
+      ],
+      "Triangles": 1134
+    },
+    "ThroneBackrest": {
+      "Min": [
+        -70.0,
+        0.0,
+        -20.456
+      ],
+      "Roles": {
+        "ALT": 12,
+        "METAL": 652,
+        "MOSS": 120,
+        "STONE": 1055,
+        "TRIM": 1312
+      },
+      "Size": [
+        140.0,
+        334.0,
+        46.106
+      ],
+      "Triangles": 3151
+    },
+    "ThroneHeartCrack": {
+      "Min": [
+        -13.0,
+        0.0,
+        -4.561
+      ],
+      "Roles": {
+        "CRYSTAL": 58,
+        "METAL": 48,
+        "SILK": 56,
+        "STONE": 164
+      },
+      "Size": [
+        26.0,
+        20.27,
+        9.061
+      ],
+      "Triangles": 326
+    }
+  },
+  "Unit": "studs"
+}

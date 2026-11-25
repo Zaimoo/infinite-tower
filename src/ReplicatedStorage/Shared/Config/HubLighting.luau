@@ -612,6 +612,14 @@ local FloorGrades: { [number]: { [string]: any } } = {
 		AtmosphereDensity = 0.40, AtmosphereColor = c(84, 92, 124), AtmosphereDecay = c(54, 56, 92), AtmosphereHaze = 1.9,
 		TintColor = c(238, 242, 250), Saturation = 0.04, Contrast = 0.13, ExposureCompensation = 0.18, BloomIntensity = 0.50,
 	},
+	-- Floor 50, Overlord's Throne (Biome Boss: Crimson Overlord): The Crimson Eclipse — black-violet ambient
+	-- paired with a crisp silver-white key over the obsidian Seat so boss telegraphs read effortlessly against
+	-- the Throne while the Crimson Eclipse burns exclusively behind the distant Crown.
+	[50] = {
+		Ambient = c(86, 80, 112), OutdoorAmbient = c(136, 128, 172), ColorShift_Top = c(218, 214, 232), ColorShift_Bottom = c(92, 64, 130),
+		AtmosphereDensity = 0.42, AtmosphereColor = c(80, 68, 112), AtmosphereDecay = c(58, 42, 88), AtmosphereHaze = 2.0,
+		TintColor = c(242, 238, 248), Saturation = 0.06, Contrast = 0.14, ExposureCompensation = 0.18, BloomIntensity = 0.60,
+	},
 }
 HubLighting.FloorGrades = FloorGrades
 
