@@ -295,7 +295,8 @@ end
 -- A bridge's curbs never stand on another walkway. Where two links leave one terrace side by side (Floor 48's
 -- Keystone), each link's inner curb runs across its neighbour's deck and landing as a wall (invisible on natural
 -- floors), so heroes and players can't cross. Each curb keeps its longest stretch clear of every other link's
--- deck; the parts of its group running beside it are cut to match, and a stub under 3 studs goes.
+-- deck; the parts of its group running beside it are cut to match, the posts and chain links along the cut
+-- stretch (or on another link's deck) go, and a stub under 3 studs goes.
 -- Returns how many curbs were trimmed or removed.
 function Builder.TrimCrossingCurbs(model: Instance, origin: Vector3, layout: any): number
 	local decks = {}
@@ -330,6 +331,14 @@ function Builder.TrimCrossingCurbs(model: Instance, origin: Vector3, layout: any
 		if group.Name ~= "BridgeCurb" or type(own) ~= "string" or not (curb and curb:IsA("BasePart")) then
 			continue
 		end
+		-- A bridge's end posts, finials and rail chains standing on another link's deck go (Floor 48's Keystone
+		-- and Beads, where several catenary bridges meet and their end posts stood in each other's way).
+		for _, p in group:GetDescendants() do
+			if p:IsA("BasePart") and p ~= curb and p.CFrame.LookVector:Dot(curb.CFrame.LookVector) <= 0.999
+				and onOtherDeck(p.Position - Vector3.new(0, p.Size.Y / 2, 0), own) then
+				p:Destroy()
+			end
+		end
 		local len = curb.Size.Z
 		local steps = math.max(1, math.floor(len))
 		local best0, best1, run0 = 0, -1, nil
@@ -355,13 +364,24 @@ function Builder.TrimCrossingCurbs(model: Instance, origin: Vector3, layout: any
 		local frame = curb.CFrame
 		local cut0, cut1 = best0 + len / 2, len / 2 - best1
 		for _, p in group:GetDescendants() do
-			if p:IsA("BasePart") and p.CFrame.LookVector:Dot(frame.LookVector) > 0.999 then
+			if not p:IsA("BasePart") then
+				continue
+			end
+			if p.CFrame.LookVector:Dot(frame.LookVector) > 0.999 then
+				-- Rails running beside the curb are cut to match.
 				local newLen = p.Size.Z - cut0 - cut1
 				if newLen < 1 then
 					p:Destroy()
 				else
 					p.Size = Vector3.new(p.Size.X, p.Size.Y, newLen)
 					p.CFrame = p.CFrame * CFrame.new(0, 0, (cut0 - cut1) / 2)
+				end
+			else
+				-- Posts, finials and hanging chain links on the cut stretch go with it, so nothing is left
+				-- standing on the other deck or hanging from a rail that is no longer there.
+				local along = frame:PointToObjectSpace(p.Position).Z
+				if (cut0 > 0.5 and along < best0 - 0.5) or (cut1 > 0.5 and along > best1 + 0.5) then
+					p:Destroy()
 				end
 			end
 		end
@@ -4313,6 +4333,31 @@ function Builder.Build(id: number, generation: number): any
 	model:SetAttribute("PropsClearedForLanes", laneCleared)
 	model:SetAttribute("PropsLowered", lowered)
 	model:SetAttribute("PropsDroppedUnsupported", dropped)
+	if layout.PathStyle == "VAHL" and id <= 49 then
+		-- Floors 46-49 lie under the Abyssal vault: the "sky" is the black, starless underside of everything
+		-- (Floor 50 has the Throne's own hall roof). A black ceiling over the mountain tops and black walls just
+		-- outside the room close it in, so the violet Dirge haze tints a void instead of a daylight cloudscape.
+		-- Walk-through, out of reach and shadowless, so the floor keeps all its light.
+		local vault = Instance.new("Model")
+		vault.Name = "AbyssalVoidVault"
+		local vaultColor = Color3.fromRGB(10, 8, 16)
+		local top = height + 70
+		local function shell(name: string, size: Vector3, at: Vector3)
+			local p = part(vault, name, size, origin + at, vaultColor, Enum.Material.SmoothPlastic, false)
+			p.CanQuery = false
+			p.CanTouch = false
+			p.CastShadow = false
+		end
+		local w, d = width / 2 + 10, depth / 2 + 10
+		local wallH = top - layout.Bottom + 20
+		local wallY = layout.Bottom - 20 + wallH / 2
+		shell("VoidVaultCeiling", Vector3.new(width + 40, 6, depth + 40), Vector3.new(0, top + 3, 0))
+		shell("VoidVaultWallN", Vector3.new(width + 40, wallH, 6), Vector3.new(0, wallY, -d - 3))
+		shell("VoidVaultWallS", Vector3.new(width + 40, wallH, 6), Vector3.new(0, wallY, d + 3))
+		shell("VoidVaultWallW", Vector3.new(6, wallH, depth + 40), Vector3.new(-w - 3, wallY, 0))
+		shell("VoidVaultWallE", Vector3.new(6, wallH, depth + 40), Vector3.new(w + 3, wallY, 0))
+		vault.Parent = model
+	end
 	-- After settling: the settle raycasts and lane checks are done, so trim engine work on the scenery.
 	StaticGeometry.Apply(model)
 
