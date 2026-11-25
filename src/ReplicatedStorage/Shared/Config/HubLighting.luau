@@ -616,9 +616,9 @@ local FloorGrades: { [number]: { [string]: any } } = {
 	-- paired with a crisp silver-white key over the obsidian Seat so boss telegraphs read effortlessly against
 	-- the Throne while the Crimson Eclipse burns exclusively behind the distant Crown.
 	[50] = {
-		Ambient = c(48, 42, 68), OutdoorAmbient = c(78, 72, 104), ColorShift_Top = c(200, 196, 214), ColorShift_Bottom = c(76, 48, 112),
-		AtmosphereDensity = 0.42, AtmosphereColor = c(56, 46, 84), AtmosphereDecay = c(44, 30, 68), AtmosphereHaze = 1.4,
-		TintColor = c(236, 232, 244), Saturation = 0.06, Contrast = 0.14, ExposureCompensation = 0.08, BloomIntensity = 0.60,
+		Ambient = c(86, 80, 112), OutdoorAmbient = c(136, 128, 172), ColorShift_Top = c(218, 214, 232), ColorShift_Bottom = c(92, 64, 130),
+		AtmosphereDensity = 0.30, AtmosphereColor = c(80, 68, 112), AtmosphereDecay = c(58, 42, 88), AtmosphereHaze = 0.8,
+		TintColor = c(242, 238, 248), Saturation = 0.06, Contrast = 0.14, ExposureCompensation = 0.18, BloomIntensity = 0.60,
 	},
 }
 HubLighting.FloorGrades = FloorGrades

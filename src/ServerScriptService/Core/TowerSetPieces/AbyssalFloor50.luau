@@ -14,6 +14,7 @@
 -- sits >= 175 studs above Apex in the far sky layer; Undertow ribbons stay in Y <= -7.5 beds.
 local CollectionService = game:GetService("CollectionService")
 local InfernalFoundry = require(script.Parent.InfernalFoundry)
+local AbyssalCollision = require(script.Parent.AbyssalCollision)
 
 local AbyssalFloor50 = {}
 
@@ -188,7 +189,8 @@ function AbyssalFloor50.Build(ctx: any)
 		if m then m:SetAttribute("OnTerrain", true) end
 	end
 
-	local function makeDecor(m: Instance?)
+	-- Walk-through dressing: no collision, queries, touches or shadows.
+	local function ghost(m: Instance?)
 		if not m then return end
 		noCollide(m)
 		for _, d in m:GetDescendants() do
@@ -201,10 +203,24 @@ function AbyssalFloor50.Build(ctx: any)
 			end
 		end
 	end
+	-- A placed prop: overhead, sky, glow, hanging and small pieces become ghosts; everything else a player can
+	-- walk into keeps its collision (AbyssalCollision).
+	local function makeDecor(m: Instance?)
+		if not m then return end
+		if AbyssalCollision.StaysSolid(m) then
+			for _, d in m:GetDescendants() do
+				if d:IsA("BasePart") then
+					d.CanTouch = false
+				end
+			end
+			return
+		end
+		ghost(m)
+	end
 
 	local function tagDetail(m: Instance?)
 		if not m then return end
-		makeDecor(m)
+		ghost(m)
 		for _, d in m:GetDescendants() do
 			if d:IsA("BasePart") then
 				safeTag(d, "TowerDetail")
@@ -417,19 +433,19 @@ function AbyssalFloor50.Build(ctx: any)
 		local mb = placeKit("ThroneMonument", br.X, br.Y :: number, br.Z, 0, "ThroneBackrest", 1.0, VAHL_50, function(cf)
 			boxAt("ThroneBackrestWallFB", cf * CFrame.new(0, 167, 0), V(136, 334, 42), OBSIDIAN_DARK, Mat.Basalt)
 		end)
-		noCollide(mb)
+		makeDecor(mb)
 
 		local cc = AbyssalFloor50.Landmarks[2]
 		local mc = placeKit("ThroneCrown", cc.X, cc.Y :: number, cc.Z, 0, "ChainedCrownColossal", 1.0, VAHL_50, function(cf)
 			ctx.ring("ChainedCrownRingFB", cf.Position + V(0, 42, 0), 36, 2.6, IRON_BLACK, Mat.Metal, nil, 0.18, math.pi * 2 - 0.18, 24)
 		end)
-		noCollide(mc)
+		makeDecor(mc)
 
 		local ec = AbyssalFloor50.Landmarks[3]
 		local me = placeKit("CrimsonEclipseSky", ec.X, ec.Y :: number, ec.Z, 0, "CrimsonEclipseDisc", 1.0, ECLIPSE_TINT, function(cf)
 			ctx.cyl("CrimsonEclipseDiscFB", cf.Position + V(0, 75, 0), 62, 5, rgb(12, 8, 14), Mat.SmoothPlastic)
 		end)
-		noCollide(me)
+		makeDecor(me)
 		if me then
 			me:SetAttribute("DirgeHeartbeat", true)
 			safeTag(me, "DirgeHeartbeat")
@@ -440,7 +456,7 @@ function AbyssalFloor50.Build(ctx: any)
 			local mbn = placeKit("ThroneBanner", bn.X, bn.Y :: number, bn.Z, 0, "BackrestBannerWine", V(1.0, 1.09, 1.0), VAHL_50, function(cf)
 				boxAt("BannerWineFB", cf * CFrame.new(0, 52, 0), V(18, 104, 2), WINE_SILK, Mat.Fabric)
 			end)
-			noCollide(mbn)
+			makeDecor(mbn)
 		end
 
 		-- 6. Throne's Heart Crack in the front Throne base wall (deep matte red-black SmoothPlastic, NEVER Neon!).
@@ -448,7 +464,7 @@ function AbyssalFloor50.Build(ctx: any)
 		local mhc = placeKit("ThroneHeartCrackProp", hc.X, hc.Y :: number, hc.Z, 0, "ThroneHeartCrack", 1.0, HEART_CRACK_TINT, function(cf)
 			boxAt("HeartCrackCleftFB", cf * CFrame.new(0, 10, 0), V(6, 18, 4), HEART_MATTE, Mat.SmoothPlastic)
 		end)
-		noCollide(mhc)
+		makeDecor(mhc)
 		if mhc then
 			mhc:SetAttribute("DirgeHeartbeat", true)
 			safeTag(mhc, "DirgeHeartbeat")
@@ -521,7 +537,7 @@ function AbyssalFloor50.Build(ctx: any)
 			local mc = placeKit("MantleChain", lm.X, lm.Y :: number, lm.Z, spec[2], "MantleChainColossal", V(1.65, 1.45, 1.45), VAHL_50, function(cf)
 				boxAt("MantleChainFB", cf * CFrame.new(0, 12, 0), V(64, 4, 4), IRON_BLACK, Mat.Metal)
 			end)
-			noCollide(mc)
+			makeDecor(mc)
 			if mc then
 				mc:SetAttribute("DirgeChain", true)
 				safeTag(mc, "DirgeChain")
@@ -534,7 +550,7 @@ function AbyssalFloor50.Build(ctx: any)
 			local mch = placeKit("ChainClimbArch", lm.X, lm.Y :: number, lm.Z, spec[2], "ChainClimbCage", V(1.5, 1.2, 1.2), VAHL_50, function(cf)
 				boxAt("ChainClimbArchFB", cf * CFrame.new(0, 18, 0), V(24, 3, 22), IRON_BLACK, Mat.Metal)
 			end)
-			noCollide(mch)
+			makeDecor(mch)
 			if mch then
 				mch:SetAttribute("DirgeChain", true)
 				safeTag(mch, "DirgeChain")
@@ -567,7 +583,7 @@ function AbyssalFloor50.Build(ctx: any)
 		local moa = placeKit("LastOathGate", oa.X, oa.Y :: number, oa.Z, 0, "GatehouseArch", 1.0, VAHL_50, function(cf)
 			boxAt("LastOathGateFB", cf * CFrame.new(0, 26, 0), V(72, 8, 12), IRON_BLACK, Mat.Metal)
 		end)
-		noCollide(moa)
+		makeDecor(moa)
 
 		-- Hall of Kneeling supplicant row along WestGallery's outer west rim.
 		local hk = byId.HallOfKneelingLineW
@@ -796,7 +812,7 @@ function AbyssalFloor50.Build(ctx: any)
 	for _, fs in farStructures do
 		local x, y, z, yaw, tpl, sc = fs[1] :: number, fs[2] :: number, fs[3] :: number, fs[4] :: number, fs[5] :: string, fs[6] :: number
 		local m = placeKit("VaultSkyline_" .. tpl, x, y, z, yaw, tpl, sc, VAHL_50, nil)
-		noCollide(m)
+		makeDecor(m)
 	end
 
 	-- Overhead hanging chains & abyss chains spanning high across the outer chasm flanks (>= 18 studs clear!).
@@ -811,7 +827,7 @@ function AbyssalFloor50.Build(ctx: any)
 		{ 255, 92, -110, -8, "HangingChainRun", 1.25 },
 	} do
 		local mc = placeKit("AbyssHangingChain", ch[1] :: number, ch[2] :: number, ch[3] :: number, ch[4] :: number, ch[5] :: string, ch[6] :: number, VAHL_50, nil)
-		noCollide(mc)
+		makeDecor(mc)
 		if mc then
 			mc:SetAttribute("DirgeChain", true)
 			safeTag(mc, "DirgeChain")
@@ -824,7 +840,7 @@ function AbyssalFloor50.Build(ctx: any)
 		local sz = -325 + math.floor(k / 2) * 58
 		local sx = side * 442
 		local ms = placeKit("CourtSilhouette", sx, 18 + (k % 3) * 6, sz, side * 90, "KneelingSupplicant", 1.25, VAHL_50, nil)
-		noCollide(ms)
+		makeDecor(ms)
 		if ms then
 			ms:SetAttribute("DirgeSilhouette", true)
 			safeTag(ms, "DirgeSilhouette")
@@ -960,7 +976,7 @@ function AbyssalFloor50.Build(ctx: any)
 		local ov = if spec.Name == "PermafrostCage" or spec.Name == "RelicCageIron" or spec.Name == "AbyssReliquaryShrine" then RELIC_TINT else VAHL_50
 		local mp = placeKit("ChasmProp_" .. spec.Name, sx, py, sz, yaw, spec.Name, sc, ov, nil)
 		if zone ~= 3 then
-			noCollide(mp)
+			makeDecor(mp)
 		end
 		if spec.Name == "HangingLantern" and mp then
 			mp:SetAttribute("DirgeWardlight", true)
