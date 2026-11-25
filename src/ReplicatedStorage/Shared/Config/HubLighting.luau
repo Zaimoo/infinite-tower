@@ -587,9 +587,9 @@ local FloorGrades: { [number]: { [string]: any } } = {
 	-- Floor 46, Abyssal Descent: ash-fall dusk under the Rift's wound — pale bone top key, dark violet
 	-- ambient, grey-violet ash haze, and violet Undertow glow rising through the braided channels.
 	[46] = {
-		Ambient = c(68, 56, 86), OutdoorAmbient = c(102, 92, 128), ColorShift_Top = c(214, 206, 228), ColorShift_Bottom = c(96, 62, 146),
-		AtmosphereDensity = 0.34, AtmosphereColor = c(98, 86, 122), AtmosphereDecay = c(56, 44, 86), AtmosphereHaze = 1.2,
-		TintColor = c(232, 226, 240), Saturation = 0.0, Contrast = 0.10, ExposureCompensation = 0.12, BloomIntensity = 0.42,
+		Ambient = c(98, 88, 120), OutdoorAmbient = c(150, 140, 178), ColorShift_Top = c(222, 216, 236), ColorShift_Bottom = c(110, 80, 156),
+		AtmosphereDensity = 0.26, AtmosphereColor = c(118, 106, 142), AtmosphereDecay = c(70, 58, 104), AtmosphereHaze = 0.7,
+		TintColor = c(240, 236, 248), Saturation = 0.04, Contrast = 0.10, ExposureCompensation = 0.22, BloomIntensity = 0.42,
 	},
 	-- Floor 47, Crimson Procession: crimson vigil — dark cool ambient, warm bone-white pools under Wardlights,
 	-- wine silk catching muted rose top fill with faint high-altitude glow behind the Effigy.
