@@ -3592,7 +3592,7 @@ test("Abyssal set pieces: overhead, sky, glow and hanging dressing is walk-throu
 	end
 	for _, kind in { "GallowsGibbet", "BonebarUrn", "FallstrandDebris", "ApexRimFrame", "FordChainPost", "EffigyOnBearers",
 		"OathgateArch", "PerimeterCurtainWall", "NorthVaultWall", "FarGatehouse", "DreadguardKeep", "ThroneMonument",
-		"LastOathGate", "KeepCornerSentry" } do
+		"LastOathGate", "KeepCornerSentry", "CovertPalisade", "CitadelScatter" } do
 		assert(not AbyssalCollision.IsGhostKind(kind), kind .. " should collide")
 	end
 end)
