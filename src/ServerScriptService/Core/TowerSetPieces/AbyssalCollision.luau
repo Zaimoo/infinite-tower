@@ -7,11 +7,12 @@
 -- built round a walkway on purpose, and small clutter a player would otherwise snag on.
 local AbyssalCollision = {}
 
--- Prop kinds (the group's PropKind, or its name) that stay walk-through, matched as plain substrings.
+-- Prop kinds (the group's PropKind or name, or a kit template inside it) that stay walk-through, matched as
+-- plain substrings. ("GroundCover" and "Cover_", not "Cover": a covert-way palisade is a wall.)
 local GHOST_KINDS = table.freeze({
 	"Undertow", "Upfall", "Eclipse", "Sky", "Silhouette", "Ribbon", "Glow", "Mist", "Banner", "Wardlight",
-	"Lantern", "Overhead", "Hanging", "Crown", "Cover", "Inlay", "Wound", "Horizon", "RoseWindow", "VaultRib",
-	"Skirt", "Scatter", "ChainFordSub", "ChainClimb", "MantleChain", "GreatChain", "ChasmChain", "Detail",
+	"Lantern", "Overhead", "Hanging", "Crown", "GroundCover", "Cover_", "Inlay", "Wound", "Horizon", "RoseWindow",
+	"VaultRib", "Skirt", "ChainFordSub", "ChainClimb", "MantleChain", "GreatChain", "ChasmChain", "Detail",
 })
 
 -- Kinds TowerRoomBuilder.WalkwayExemptKinds lets stand on a walkway (gates over a path, chains and cages round
@@ -47,6 +48,13 @@ function AbyssalCollision.StaysSolid(prop: Instance): boolean
 	local kind = (prop:GetAttribute("PropKind") :: string?) or prop.Name
 	if AbyssalCollision.IsGhostKind(kind) then
 		return false
+	end
+	-- A generic group ("CitadelScatter") is judged by the kit template it places: a hanging chain is still a ghost.
+	for _, d in prop:GetDescendants() do
+		local template = d:GetAttribute("KitTemplate") :: string?
+		if template and AbyssalCollision.IsGhostKind(template) then
+			return false
+		end
 	end
 	local size: Vector3
 	if prop:IsA("Model") then
