@@ -389,6 +389,142 @@ function Builder.TrimCrossingCurbs(model: Instance, origin: Vector3, layout: any
 	return trimmed
 end
 
+-- Abyssal floors (46-50): nothing floats. A set piece touching nothing (no part, no terrain) is either hung or
+-- set down. Chains, lanterns, wardlights, gibbets, cages, banners and bells get iron drop chains up to whatever
+-- is directly above them (a bridge's underside, an arch, the void vault or the hall ceiling, else `topY`); any
+-- other piece drops onto the first surface under it. Sky and far-layer dressing (the vault Rift, the Eclipse,
+-- the Upfall, mist, ash, glows, Undertow ribbons, inlays, ground cover) is left where it is.
+-- Runs with the room in the Workspace (raycasts and overlap queries). Returns (pieces hung, pieces set down).
+local HANG_WORDS = { "Chain", "Lantern", "Wardlight", "Hanging", "Gibbet", "Censer", "Cage", "Banner", "Bell", "Lamp" }
+local SKY_WORDS = { "Sky", "Horizon", "Rift", "Eclipse", "Upfall", "Mist", "Wound", "Mote", "Ash", "Undertow", "Glow",
+	"Ribbon", "Inlay", "GroundCover", "Cover_", "Dome" }
+local function kindHas(kind: string, words: { string }): boolean
+	for _, w in words do
+		if string.find(kind, w, 1, true) then
+			return true
+		end
+	end
+	return false
+end
+function Builder.HangAndGround(model: Instance, origin: Vector3, topY: number): (number, number)
+	local kit = model:FindFirstChild("BiomeAssets")
+	if not kit then
+		return 0, 0
+	end
+	-- Walk-through dressing is CanQuery = false; let every part count while looking, then restore.
+	local restored: { BasePart } = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") and not d.CanQuery then
+			d.CanQuery = true
+			table.insert(restored, d)
+		end
+	end
+	local hangers = Instance.new("Model")
+	hangers.Name = "AbyssalVaultHangers"
+	local hung, grounded = 0, 0
+	local corners = { Vector3.new(1, 1, 1), Vector3.new(-1, -1, -1), Vector3.new(1, -1, 1), Vector3.new(-1, 1, -1),
+		Vector3.new(1, 1, -1), Vector3.new(-1, -1, 1), Vector3.new(1, -1, -1), Vector3.new(-1, 1, 1) }
+	for _, g in kit:GetChildren() do
+		local kind = (g:GetAttribute("PropKind") :: string?) or g.Name
+		if kindHas(kind, SKY_WORDS) then
+			continue
+		end
+		local lo, hi = Vector3.new(math.huge, math.huge, math.huge), -Vector3.new(math.huge, math.huge, math.huge)
+		local seen = false
+		local parts = if g:IsA("BasePart") then { g } else g:GetDescendants()
+		for _, d in parts do
+			if d:IsA("BasePart") and d.Transparency < 0.95 then
+				seen = true
+				local half = d.Size / 2
+				for _, s in corners do
+					local p = d.CFrame:PointToWorldSpace(half * s)
+					lo, hi = lo:Min(p), hi:Max(p)
+				end
+			end
+		end
+		if not seen then
+			continue
+		end
+		local touch = OverlapParams.new()
+		touch.FilterType = Enum.RaycastFilterType.Exclude
+		touch.FilterDescendantsInstances = { g }
+		local size = hi - lo + Vector3.new(3, 3, 3)
+		if #workspace:GetPartBoundsInBox(CFrame.new((lo + hi) / 2), size, touch) > 0 then
+			continue
+		end
+		local _, occ = workspace.Terrain:ReadVoxels(Region3.new(lo - Vector3.new(4, 4, 4), hi + Vector3.new(4, 4, 4)):ExpandToGrid(4), 4)
+		local inTerrain = false
+		for i = 1, occ.Size.X do
+			for j = 1, occ.Size.Y do
+				for k = 1, occ.Size.Z do
+					if occ[i][j][k] > 0 then
+						inTerrain = true
+						break
+					end
+				end
+				if inTerrain then break end
+			end
+			if inTerrain then break end
+		end
+		if inTerrain then
+			continue
+		end
+		local ray = RaycastParams.new()
+		ray.FilterType = Enum.RaycastFilterType.Exclude
+		ray.FilterDescendantsInstances = { g, hangers }
+		local c = (lo + hi) / 2
+		if kindHas(kind, HANG_WORDS) then
+			-- One drop chain from the top centre, or two from the ends of a long piece's long axis.
+			local ext = hi - lo
+			local points = { Vector3.new(c.X, hi.Y - 0.5, c.Z) }
+			if math.max(ext.X, ext.Z) > 20 then
+				local along = if ext.X >= ext.Z then Vector3.new(ext.X / 2 - 2, 0, 0) else Vector3.new(0, 0, ext.Z / 2 - 2)
+				points = { Vector3.new(c.X, hi.Y - 0.5, c.Z) - along, Vector3.new(c.X, hi.Y - 0.5, c.Z) + along }
+			end
+			for _, a in points do
+				local up = workspace:Raycast(a, Vector3.new(0, origin.Y + topY - a.Y, 0), ray)
+				local b = if up then up.Position else Vector3.new(a.X, origin.Y + topY, a.Z)
+				local len = b.Y - a.Y
+				if len > 0.5 then
+					local chain = Instance.new("Part")
+					chain.Name = "VaultHangerChain"
+					chain.Shape = Enum.PartType.Cylinder
+					chain.Size = Vector3.new(len, 0.7, 0.7)
+					chain.CFrame = CFrame.new((a + b) / 2) * CFrame.Angles(0, 0, math.pi / 2)
+					chain.Color = Color3.fromRGB(34, 32, 40)
+					chain.Material = Enum.Material.Metal
+					chain.Anchored = true
+					chain.CanCollide = false
+					chain.CanQuery = false
+					chain.CanTouch = false
+					chain.CastShadow = false
+					chain.Parent = hangers
+				end
+			end
+			hung += 1
+		else
+			-- Set down on the first surface under it.
+			local down = workspace:Raycast(Vector3.new(c.X, lo.Y - 0.05, c.Z), Vector3.new(0, -400, 0), ray)
+			if down then
+				local drop = lo.Y - down.Position.Y
+				if drop > 0.3 then
+					if g:IsA("Model") then
+						g:PivotTo(g:GetPivot() - Vector3.new(0, drop, 0))
+					elseif g:IsA("BasePart") then
+						g.CFrame -= Vector3.new(0, drop, 0)
+					end
+					grounded += 1
+				end
+			end
+		end
+	end
+	for _, d in restored do
+		d.CanQuery = false
+	end
+	hangers.Parent = model
+	return hung, grounded
+end
+
 -- Removes a floor's terrain (TowerFloorService calls this when the room retires).
 function Builder.ClearTerrain(id: number)
 	local floorSpec = Config.Get(id)
@@ -4325,14 +4461,6 @@ function Builder.Build(id: number, generation: number): any
 	-- No prop floats: lower anything hovering onto the support under it (settling raycasts, so the room
 	-- is in the Workspace now). A lowered prop can land in a camp or lane, so clear both again after.
 	local lowered, dropped = PropClearance.Settle(model, BiomeAssets.AirborneKinds, 1.5, 80)
-	local kit = model:FindFirstChild("BiomeAssets")
-	if kit then
-		kit:SetAttribute("PropsClearedForCamps", (kit:GetAttribute("PropsClearedForCamps") or 0) + PropClearance.Apply(kit, BiomeAssets.CampHitTest(origin, layout)))
-	end
-	laneCleared += PropClearance.Apply(model, blocksLane)
-	model:SetAttribute("PropsClearedForLanes", laneCleared)
-	model:SetAttribute("PropsLowered", lowered)
-	model:SetAttribute("PropsDroppedUnsupported", dropped)
 	if layout.PathStyle == "VAHL" and id <= 49 then
 		-- Floors 46-49 lie under the Abyssal vault: the "sky" is the black, starless underside of everything
 		-- (Floor 50 has the Throne's own hall roof). A black ceiling over the mountain tops and black walls just
@@ -4358,6 +4486,19 @@ function Builder.Build(id: number, generation: number): any
 		shell("VoidVaultWallE", Vector3.new(6, wallH, depth + 40), Vector3.new(w + 3, wallY, 0))
 		vault.Parent = model
 	end
+	if layout.PathStyle == "VAHL" then
+		local hung, grounded = Builder.HangAndGround(model, origin, height + 70)
+		model:SetAttribute("PropsHungFromVault", hung)
+		model:SetAttribute("PropsGrounded", grounded)
+	end
+	local kit = model:FindFirstChild("BiomeAssets")
+	if kit then
+		kit:SetAttribute("PropsClearedForCamps", (kit:GetAttribute("PropsClearedForCamps") or 0) + PropClearance.Apply(kit, BiomeAssets.CampHitTest(origin, layout)))
+	end
+	laneCleared += PropClearance.Apply(model, blocksLane)
+	model:SetAttribute("PropsClearedForLanes", laneCleared)
+	model:SetAttribute("PropsLowered", lowered)
+	model:SetAttribute("PropsDroppedUnsupported", dropped)
 	-- After settling: the settle raycasts and lane checks are done, so trim engine work on the scenery.
 	StaticGeometry.Apply(model)
 
