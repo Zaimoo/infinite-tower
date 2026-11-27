@@ -38,7 +38,7 @@ UIAssets.Images = table.freeze({
 
 UIAssets.Sounds = table.freeze({
 	Click = "rbxassetid://139403951941162", -- the existing settings click
-	Hover = "rbxassetid://88442833509532", -- ui-simple-button-click
+	Hover = "rbxassetid://124419733384813", -- IT UI Button Hover
 	Error = "rbxassetid://139892036682632", -- Cancel deltarune
 	ToastIn = "rbxassetid://73774648241042", -- RatingExcellent / chime
 	WindowOpen = "rbxassetid://9065073444", -- Darkest Dungeon SFX UI Button Click
