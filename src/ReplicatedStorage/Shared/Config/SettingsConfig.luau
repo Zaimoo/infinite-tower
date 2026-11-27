@@ -123,7 +123,7 @@ SettingsConfig.FONTS = table.freeze({
 })
 
 SettingsConfig.CLICK_SOUND_ID = "rbxassetid://139403951941162"
-SettingsConfig.GEAR_ICON_ID = "rbxassetid://116900178322793"
+SettingsConfig.GEAR_ICON_ID = "rbxassetid://127188165192727"
 
 -- Pure validator: sanitizes and ensures all settings fields conform to schema
 function SettingsConfig.Sanitize(raw: any): SettingsState

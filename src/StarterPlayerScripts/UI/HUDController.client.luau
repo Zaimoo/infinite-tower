@@ -6,6 +6,7 @@
 -- 3. ThePitScreenGui (Synthesis XP Fodder & 1->5 Star Promotion)
 -- 4. MercenaryScreenGui (Noticeboard, Secret Directives & 50G Audit Soul Reveal)
 
+local GuiService = game:GetService("GuiService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -19,6 +20,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
+local SettingsConfig = require(Shared:WaitForChild("Config"):WaitForChild("SettingsConfig"))
 local TowerFloorConfig = require(Shared:WaitForChild("Config"):WaitForChild("TowerFloorConfig"))
 
 -- 1234567 -> "1.2M", matching the floor selector's power readout.
@@ -2456,7 +2458,7 @@ do
 	ProfileDeltaSyncEvent.OnClientEvent:Connect(updateCurrency)
 	updateCurrency(CurrentProfile)
 
-	-- Top-right Setting Icon Button (Roblox TopBar style matched circular button in dedicated topbar overlay)
+	-- Top-left Settings Icon Button (sits beside Roblox CoreGui topbar via GuiService.TopbarInset)
 	local topBarRightGui = PlayerGui:FindFirstChild("TopBarRightScreenGui") :: ScreenGui?
 	if not topBarRightGui then
 		topBarRightGui = Instance.new("ScreenGui")
@@ -2473,11 +2475,11 @@ do
 	local settingsButton = Instance.new("ImageButton")
 	settingsButton.Name = "SettingsButton"
 	settingsButton:SetAttribute("NoFeel", true) -- Disable spring hover/press scaling from UIFeel (does not enlarge when hovered)
-	settingsButton.AnchorPoint = Vector2.new(1, 0)
-	settingsButton.Position = UDim2.new(1, -16, 0, 12)
+	settingsButton.AnchorPoint = Vector2.new(0, 0)
+	settingsButton.Position = UDim2.fromOffset(208, 12)
 	settingsButton.Size = UDim2.fromOffset(44, 44)
 	settingsButton.BackgroundColor3 = Color3.fromRGB(18, 18, 21)
-	settingsButton.BackgroundTransparency = 0.15
+	settingsButton.BackgroundTransparency = 0.08
 	settingsButton.AutoButtonColor = false
 	settingsButton.ZIndex = 15
 	settingsButton.Visible = true
@@ -2491,20 +2493,42 @@ do
 	settingsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	settingsStroke.Thickness = 1
 	settingsStroke.Color = Color3.fromRGB(45, 45, 52)
-	settingsStroke.Transparency = 0.6
+	settingsStroke.Transparency = 0.7
 	settingsStroke.Parent = settingsButton
 
 	local gearIcon = Instance.new("ImageLabel")
 	gearIcon.Name = "GearIcon"
-	gearIcon.Image = "rbxassetid://116900178322793"
+	gearIcon.Image = SettingsConfig.GEAR_ICON_ID
 	gearIcon.AnchorPoint = Vector2.new(0.5, 0.5)
 	gearIcon.Position = UDim2.fromScale(0.5, 0.5)
-	gearIcon.Size = UDim2.fromOffset(26, 26)
+	gearIcon.Size = UDim2.fromOffset(24, 24)
 	gearIcon.BackgroundTransparency = 1
 	gearIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	gearIcon.ScaleType = Enum.ScaleType.Fit
+	gearIcon.ResampleMode = Enum.ResamplerMode.Default
 	gearIcon.ZIndex = 16
 	gearIcon.Parent = settingsButton
+
+	-- Keep Settings button aligned directly beside Roblox's CoreGui topbar (tracks Unibar/chat/mic changes live)
+	local TOPBAR_LEFT_GAP = 8 -- Matches the 8 px gap between the Roblox menu circle and the Unibar pill
+	local function layoutSettingsButton()
+		local bar = GuiService.TopbarInset
+		local btnSize = if bar.Height > 0 and bar.Height < 48
+			then math.clamp(bar.Height - 4, 32, 44)
+			else 44
+		local x = if bar.Height > 0 then math.round(bar.Min.X) + TOPBAR_LEFT_GAP else 16
+		local y = if bar.Height >= 48
+			then math.round(bar.Max.Y - btnSize - 2)
+			elseif bar.Height > 0
+			then math.round(bar.Min.Y + (bar.Height - btnSize) / 2)
+			else 12
+		local iconSize = math.round(btnSize * (24 / 44))
+		settingsButton.Size = UDim2.fromOffset(btnSize, btnSize)
+		settingsButton.Position = UDim2.fromOffset(x, y)
+		gearIcon.Size = UDim2.fromOffset(iconSize, iconSize)
+	end
+	layoutSettingsButton()
+	GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(layoutSettingsButton)
 
 	-- Highlight overlay (matching Roblox TopBar StateOverlayRound: lightens the circle on hover/press with no animations)
 	local stateOverlay = Instance.new("Frame")
@@ -2547,10 +2571,10 @@ do
 	end
 	settingsButton.Activated:Connect(onSettingsTrigger)
 
-	-- Keep Studio F8 development hooks available without the top menu bar (positioned to the left of settings button)
+	-- Keep Studio F8 development hooks available without the top menu bar (top-right corner)
 	navButtonsFrame.Parent = topBarRightGui
 	navButtonsFrame.AnchorPoint = Vector2.new(1, 0)
-	navButtonsFrame.Position = UDim2.new(1, -68, 0, 12)
+	navButtonsFrame.Position = UDim2.new(1, -16, 0, 12)
 	navButtonsFrame.Size = UDim2.fromOffset(240, 36)
 	local devButtons = {}
 	for _, b in navButtonsFrame:GetChildren() do

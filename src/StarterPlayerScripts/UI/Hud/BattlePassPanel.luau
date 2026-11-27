@@ -432,12 +432,16 @@ local function BattlePassPanel(props: { Profile: any, Width: number, Height: num
 		end
 	end
 
-	return e("TextButton", {
-		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 20,
-		[React.Event.Activated] = function() props.OnClose() end,
+	return e("Frame", {
+		Name = "BattlePassOverlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 20,
 	}, {
+		Scrim = e("TextButton", {
+			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
+			[React.Event.Activated] = function() props.OnClose() end,
+		}),
 		Window = Panel({
-			Class = "TextButton", Text = "", AutoButtonColor = false, -- swallows clicks so they don't reach the scrim
+			Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = false, Active = true, -- swallows clicks so they don't reach the scrim
+			ref = function(rbx: Instance?) if rbx then rbx:SetAttribute("NoFeel", true) end end,
 			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -24, 1, -24), Radius = 16, ZIndex = 21,
 		}, {
 			Max = e("UISizeConstraint", { MaxSize = Vector2.new(1040, 640) }),

@@ -1334,13 +1334,17 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			end }, "Bronze", nextText .. "  ›", 13),
 	})
 
-	return e("TextButton", {
-		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 20,
-		[React.Event.Activated] = function() props.OnClose() end,
+	return e("Frame", {
+		Name = "FacilityOverlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 20,
 	}, {
+		Scrim = e("TextButton", {
+			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
+			[React.Event.Activated] = function() props.OnClose() end,
+		}),
 		Window = Panel({
 			Name = `GuideFacility_{props.Facility}`,
-			Class = "TextButton", Text = "", AutoButtonColor = false, -- swallows clicks so they don't reach the scrim
+			Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = false, Active = true, -- swallows clicks so they don't reach the scrim
+			ref = function(rbx: Instance?) if rbx then rbx:SetAttribute("NoFeel", true) end end,
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
 			-- Sized at 1/fit and scaled by fit, so on narrow screens it still fills the screen minus

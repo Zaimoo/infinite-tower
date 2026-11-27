@@ -329,30 +329,6 @@ local function SettingsApp()
 			end
 			return false
 		end
-
-		-- Bind SettingsButton in PlayerGui
-		local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-		local boundButtons: { [Instance]: boolean } = {}
-		local function bind(btn: Instance)
-			if btn.Name == "SettingsButton" and btn:IsA("GuiButton") and not boundButtons[btn] then
-				boundButtons[btn] = true
-				btn.Activated:Connect(function()
-					if _G.ToggleSettings then _G.ToggleSettings() end
-				end)
-			end
-		end
-
-		local addConn: RBXScriptConnection? = nil
-		if playerGui then
-			for _, d in ipairs(playerGui:GetDescendants()) do
-				bind(d)
-			end
-			addConn = playerGui.DescendantAdded:Connect(bind)
-		end
-
-		return function()
-			if addConn then addConn:Disconnect() end
-		end
 	end, { isOpen })
 
 	----------------------------------------------------------------------------
@@ -754,6 +730,9 @@ local function SettingsApp()
 	}, {
 		-- Focus Modal Backdrop Dimmer (blocks world clicks; only the close button dismisses/prompts)
 		Dim = e("TextButton", {
+			ref = function(rbx: Instance?)
+				if rbx then rbx:SetAttribute("NoFeel", true) end
+			end,
 			Name = "Dim",
 			AutoButtonColor = false,
 			Text = "",
@@ -767,7 +746,10 @@ local function SettingsApp()
 		-- Centered Settings Window (TextButton so clicks/drags inside never fall through behind the panel)
 		Window = e("TextButton", {
 			Name = "SettingsPanel",
-			ref = panelRef,
+			ref = function(rbx: Instance?)
+				panelRef.current = rbx
+				if rbx then rbx:SetAttribute("NoFeel", true) end
+			end,
 			AutoButtonColor = false,
 			Text = "",
 			Selectable = false,

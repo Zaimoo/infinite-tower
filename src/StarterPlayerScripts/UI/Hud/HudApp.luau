@@ -264,17 +264,18 @@ end
 local function travelRowWidth(count: number, compact: boolean): number
 	return count * travelPillSize(compact).X + (count - 1) * TRAVEL_GAP
 end
--- True when the row fits in the free part of Roblox's top bar.
+-- True when the row fits in the free part of Roblox's top bar (leaving room for the 8 px gap + 44 px Settings button on the left).
+local TOPBAR_SETTINGS_RESERVE = 64
 local function travelFitsTopbar(count: number, compact: boolean): boolean
 	local bar = GuiService.TopbarInset
-	return bar.Height >= travelPillSize(compact).Y and bar.Width >= travelRowWidth(count, compact) + 16
+	return bar.Height >= travelPillSize(compact).Y and (bar.Width - TOPBAR_SETTINGS_RESERVE) >= travelRowWidth(count, compact) + 16
 end
 local function travelRow(buttons: { any }, compact: boolean, screenX: number, below: number)
 	local pill = travelPillSize(compact)
 	local width = travelRowWidth(#buttons, compact)
 	local bar = GuiService.TopbarInset
 	local inBar = travelFitsTopbar(#buttons, compact)
-	local centerX = if inBar then math.clamp(screenX / 2, bar.Min.X + width / 2 + 8, bar.Max.X - width / 2 - 8) else screenX / 2
+	local centerX = if inBar then math.clamp(screenX / 2, bar.Min.X + TOPBAR_SETTINGS_RESERVE + width / 2 + 8, bar.Max.X - width / 2 - 8) else screenX / 2
 	local top = if inBar then bar.Min.Y + math.floor((bar.Height - pill.Y) / 2) else bar.Max.Y + below
 	local children: { [string]: any } = {
 		Layout = e("UIListLayout", {
