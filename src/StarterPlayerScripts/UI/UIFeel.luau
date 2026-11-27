@@ -43,7 +43,7 @@ local UIFeel = {}
 
 local HOVER_SCALE = 1.04
 local PRESS_SCALE = 0.93
-local HOVER_SFX_GAP = 0.12 -- seconds; sweeping the mouse over a grid must not machine-gun
+local HOVER_SFX_GAP = 0.10 -- seconds; sweeping the mouse over a grid must not machine-gun
 
 local SPRING_OUT = TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local SPRING_IN = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -490,10 +490,35 @@ function UIFeel.Attach(button: GuiButton)
 		UIFeel.Haptic("Click")
 	end)
 	button.Destroying:Connect(function() attached[button] = nil end)
-	-- A button that already owns a UIScale animates itself; it keeps only the sound and haptic.
-	if button:FindFirstChildOfClass("UIScale") then return end
-	local scale: UIScale? = nil
 	local hovered, pressed = false, false
+
+	local function playHoverFeedback()
+		local now = os.clock()
+		if not hoverIsIntentional(now) then return end
+		if now - lastHoverSfx >= HOVER_SFX_GAP then
+			lastHoverSfx = now
+			UIFeel.Sfx("Hover")
+		end
+		UIFeel.Haptic("Hover")
+	end
+
+	-- A button that already owns a UIScale animates itself; it keeps only the sound and haptic.
+	if button:FindFirstChildOfClass("UIScale") then
+		local function enterSoundOnly()
+			if hovered or not button.Active or isCatcher(button) then return end
+			hovered = true
+			playHoverFeedback()
+		end
+		local function leaveSoundOnly()
+			hovered = false
+		end
+		button.MouseEnter:Connect(enterSoundOnly)
+		button.MouseLeave:Connect(leaveSoundOnly)
+		button.SelectionGained:Connect(enterSoundOnly)
+		button.SelectionLost:Connect(leaveSoundOnly)
+		return
+	end
+	local scale: UIScale? = nil
 
 	local function getScale(): UIScale
 		if scale and scale.Parent then return scale end
@@ -513,13 +538,7 @@ function UIFeel.Attach(button: GuiButton)
 		if hovered or not button.Active or isCatcher(button) then return end
 		hovered = true
 		settle(HOVER_IN)
-		local now = os.clock()
-		if not hoverIsIntentional(now) then return end
-		if now - lastHoverSfx > HOVER_SFX_GAP then
-			lastHoverSfx = now
-			UIFeel.Sfx("Hover")
-		end
-		UIFeel.Haptic("Hover")
+		playHoverFeedback()
 	end
 	local function leave()
 		if not hovered and not pressed then return end
