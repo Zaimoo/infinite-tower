@@ -100,7 +100,7 @@ local function PriceButton(props: { Offer: ShopConfig.Offer, Tone: string?, Size
 			Mark = if live then IconAt("Robux", 26, { LayoutOrder = 1, ZIndex = 8 }) else IconAt("Lock", 22, { LayoutOrder = 1, ZIndex = 8 }),
 			Price = if live then inkNumber({ LayoutOrder = 2, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 30), TextScaled = false, TextSize = 24,
 				Text = tostring(price), ZIndex = 8 })
-				else Heavy({ LayoutOrder = 2, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 24), MaxSize = 15, Outline = 2, Gold = false, TextColor3 = Color3.fromRGB(196, 186, 214), Text = "COMING SOON", ZIndex = 8 }),
+				else Heavy({ LayoutOrder = 2, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 24), MaxSize = 15, Outline = 2, Gold = false, TextColor3 = Color3.fromRGB(148, 163, 184), Text = "COMING SOON", ZIndex = 8 }),
 		}),
 	})
 end
@@ -175,7 +175,7 @@ local function AnvilWeaponTile(props: { Order: number, WeaponId: string, Focused
 		Art = e("Frame", {
 			ref = viewportHost,
 			Position = UDim2.fromOffset(10, 38), Size = UDim2.new(1, -20, 0, 122),
-			BackgroundColor3 = Color3.fromRGB(12, 10, 20), BackgroundTransparency = 0.3, ClipsDescendants = true, ZIndex = 6,
+			BackgroundColor3 = Color3.fromRGB(9, 14, 23), BackgroundTransparency = 0.3, ClipsDescendants = true, ZIndex = 6,
 		}, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 		}),
@@ -329,7 +329,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 		local gilt = Color3.fromRGB(212, 175, 90)
 		rows.Featured = Panel({ LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 470), Radius = 16,
 			Top = Tones.Violet.Top:Lerp(gilt, 0.25), Bottom = Tones.Deep.Bottom, Rail = gilt }, {
-			Fx = e(BannerFx.Backdrop, { Color = Color3.fromRGB(200, 160, 255), Accent = gilt, Radius = 16, ZIndex = 4 }),
+			Fx = e(BannerFx.Backdrop, { Color = Color3.fromRGB(56, 189, 248), Accent = gilt, Radius = 16, ZIndex = 4 }),
 			Crest = IconAt("Spark", 54, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 10), ZIndex = 6 }),
 			Title = Heavy({ Position = UDim2.fromOffset(22, 14), Size = UDim2.new(1, -220, 0, 46), MaxSize = 42, TextXAlignment = Enum.TextXAlignment.Left,
 				Text = featured.Title, ZIndex = 6 }),
@@ -338,7 +338,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 				Rail = Color3.fromRGB(255, 250, 214), ZIndex = 6 }, {
 				Text = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 15, Outline = 2, Gold = false, TextColor3 = Color3.new(1, 1, 1), Text = "LIMITED", ZIndex = 8 }),
 			}),
-			Sub = Body({ Position = UDim2.fromOffset(140, 66), Size = UDim2.new(1, -160, 0, 18), TextSize = 14, TextColor3 = Color3.fromRGB(230, 220, 255), Text = featured.Subtitle, ZIndex = 6 }),
+			Sub = Body({ Position = UDim2.fromOffset(140, 66), Size = UDim2.new(1, -160, 0, 18), TextSize = 14, TextColor3 = Color3.fromRGB(203, 213, 225), Text = featured.Subtitle, ZIndex = 6 }),
 			Tiles = e("Frame", { Position = UDim2.fromOffset(16, 94), Size = UDim2.new(1, -32, 0, 240), BackgroundTransparency = 1, ZIndex = 5 }, tiles),
 			Buys = e("Frame", { Position = UDim2.fromOffset(16, 360), Size = UDim2.new(1, -32, 0, 84), BackgroundTransparency = 1, ZIndex = 5 }, buys),
 		})
@@ -564,7 +564,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 							VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 						Mark = if ownsPass then nil elseif livePass then IconAt("Robux", 24, { LayoutOrder = 1, ZIndex = 8 }) else IconAt("Lock", 20, { LayoutOrder = 1, ZIndex = 8 }),
 						Text = Heavy({ LayoutOrder = 2, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), MaxSize = if ownsPass or livePass then 19 else 14,
-							Outline = 2, Gold = false, TextColor3 = if ownsPass then Color3.new(1, 1, 1) elseif livePass then Color3.new(1, 1, 1) else Color3.fromRGB(196, 186, 214),
+							Outline = 2, Gold = false, TextColor3 = if ownsPass then Color3.new(1, 1, 1) elseif livePass then Color3.new(1, 1, 1) else Color3.fromRGB(148, 163, 184),
 							Text = if ownsPass then "OWNED" elseif livePass then tostring(pass.RobuxPrice) else "COMING SOON", ZIndex = 8 }),
 					}),
 				}),
@@ -579,7 +579,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 		Name = "ShopOverlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 20,
 	}, {
 		Scrim = e("TextButton", {
-			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
+			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 10, 16), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
 			[React.Event.Activated] = function() props.OnClose() end,
 		}),
 		Window = Panel({

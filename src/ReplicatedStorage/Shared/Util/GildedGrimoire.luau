@@ -14,35 +14,35 @@ local GildedGrimoire = {}
 
 GildedGrimoire.Name = "Gilded Grimoire"
 
-GildedGrimoire.Ink = Color3.fromRGB(10, 6, 14)
+GildedGrimoire.Ink = Color3.fromRGB(6, 10, 16)
 
--- Panel tones (top, bottom, rail). Violet is the default; the others mark meaning.
+-- Panel tones (top, bottom, rail). Violet key is the default Neo-Gothic Astral Obsidian surface; others mark meaning.
 GildedGrimoire.Tones = table.freeze({
-	Violet = table.freeze({ Top = Color3.fromRGB(58, 38, 88), Bottom = Color3.fromRGB(20, 14, 32), Rail = Color3.fromRGB(240, 196, 110) }),
-	Deep = table.freeze({ Top = Color3.fromRGB(38, 26, 58), Bottom = Color3.fromRGB(14, 10, 22), Rail = Color3.fromRGB(200, 160, 96) }),
-	Bronze = table.freeze({ Top = Color3.fromRGB(96, 64, 24), Bottom = Color3.fromRGB(34, 20, 10), Rail = Color3.fromRGB(255, 214, 110) }),
-	Teal = table.freeze({ Top = Color3.fromRGB(28, 70, 104), Bottom = Color3.fromRGB(10, 20, 40), Rail = Color3.fromRGB(150, 236, 255) }),
-	Crimson = table.freeze({ Top = Color3.fromRGB(96, 30, 40), Bottom = Color3.fromRGB(30, 10, 18), Rail = Color3.fromRGB(255, 214, 110) }),
-	Slate = table.freeze({ Top = Color3.fromRGB(34, 28, 46), Bottom = Color3.fromRGB(16, 12, 24), Rail = Color3.fromRGB(140, 130, 160) }),
-	Gold = table.freeze({ Top = Color3.fromRGB(255, 220, 110), Bottom = Color3.fromRGB(214, 128, 24), Rail = Color3.fromRGB(255, 248, 200) }),
+	Violet = table.freeze({ Top = Color3.fromRGB(22, 32, 48), Bottom = Color3.fromRGB(11, 16, 24), Rail = Color3.fromRGB(229, 196, 112) }),
+	Deep = table.freeze({ Top = Color3.fromRGB(16, 25, 40), Bottom = Color3.fromRGB(9, 14, 23), Rail = Color3.fromRGB(96, 146, 190) }),
+	Bronze = table.freeze({ Top = Color3.fromRGB(96, 64, 24), Bottom = Color3.fromRGB(34, 20, 10), Rail = Color3.fromRGB(229, 196, 112) }),
+	Teal = table.freeze({ Top = Color3.fromRGB(24, 68, 104), Bottom = Color3.fromRGB(10, 22, 40), Rail = Color3.fromRGB(56, 189, 248) }),
+	Crimson = table.freeze({ Top = Color3.fromRGB(96, 24, 40), Bottom = Color3.fromRGB(30, 10, 18), Rail = Color3.fromRGB(229, 196, 112) }),
+	Slate = table.freeze({ Top = Color3.fromRGB(24, 34, 49), Bottom = Color3.fromRGB(13, 19, 30), Rail = Color3.fromRGB(100, 116, 139) }),
+	Gold = table.freeze({ Top = Color3.fromRGB(245, 216, 138), Bottom = Color3.fromRGB(198, 146, 48), Rail = Color3.fromRGB(253, 238, 184) }),
 	-- Tier tones for world billboards (Config/BillboardThemes): relic rarity and mob tier.
-	Jade = table.freeze({ Top = Color3.fromRGB(26, 84, 40), Bottom = Color3.fromRGB(8, 28, 14), Rail = Color3.fromRGB(120, 230, 120) }),
-	Azure = table.freeze({ Top = Color3.fromRGB(24, 66, 104), Bottom = Color3.fromRGB(8, 18, 38), Rail = Color3.fromRGB(120, 220, 255) }),
-	Amber = table.freeze({ Top = Color3.fromRGB(112, 66, 16), Bottom = Color3.fromRGB(38, 18, 6), Rail = Color3.fromRGB(255, 196, 90) }),
+	Jade = table.freeze({ Top = Color3.fromRGB(26, 84, 40), Bottom = Color3.fromRGB(8, 28, 14), Rail = Color3.fromRGB(74, 222, 128) }),
+	Azure = table.freeze({ Top = Color3.fromRGB(24, 66, 104), Bottom = Color3.fromRGB(8, 18, 38), Rail = Color3.fromRGB(56, 189, 248) }),
+	Amber = table.freeze({ Top = Color3.fromRGB(112, 66, 16), Bottom = Color3.fromRGB(38, 18, 6), Rail = Color3.fromRGB(229, 196, 112) }),
 	Void = table.freeze({ Top = Color3.fromRGB(72, 28, 112), Bottom = Color3.fromRGB(20, 8, 38), Rail = Color3.fromRGB(210, 130, 255) }),
-	Gilded = table.freeze({ Top = Color3.fromRGB(100, 76, 22), Bottom = Color3.fromRGB(34, 22, 6), Rail = Color3.fromRGB(255, 226, 130) }),
-	Blood = table.freeze({ Top = Color3.fromRGB(116, 14, 32), Bottom = Color3.fromRGB(34, 4, 12), Rail = Color3.fromRGB(255, 214, 110) }),
-	-- Bright amethyst for generic action buttons (confirm, initiate), so they stand out from panels.
-	Action = table.freeze({ Top = Color3.fromRGB(134, 86, 204), Bottom = Color3.fromRGB(62, 36, 112), Rail = Color3.fromRGB(255, 226, 140) }),
+	Gilded = table.freeze({ Top = Color3.fromRGB(100, 76, 22), Bottom = Color3.fromRGB(34, 22, 6), Rail = Color3.fromRGB(229, 196, 112) }),
+	Blood = table.freeze({ Top = Color3.fromRGB(116, 14, 32), Bottom = Color3.fromRGB(34, 4, 12), Rail = Color3.fromRGB(244, 63, 94) }),
+	-- Astral Ice Cyan for generic action buttons (confirm, initiate), so they stand out from obsidian panels.
+	Action = table.freeze({ Top = Color3.fromRGB(36, 138, 196), Bottom = Color3.fromRGB(14, 64, 112), Rail = Color3.fromRGB(186, 230, 253) }),
 })
 
 GildedGrimoire.Text = table.freeze({
 	White = Color3.fromRGB(255, 255, 255),
-	Parchment = Color3.fromRGB(236, 228, 246),
-	Muted = Color3.fromRGB(196, 186, 214),
-	Gold = Color3.fromRGB(255, 214, 120),
-	Good = Color3.fromRGB(120, 255, 140),
-	Bad = Color3.fromRGB(255, 100, 100),
+	Parchment = Color3.fromRGB(238, 244, 251),
+	Muted = Color3.fromRGB(172, 188, 208),
+	Gold = Color3.fromRGB(229, 196, 112),
+	Good = Color3.fromRGB(74, 222, 128),
+	Bad = Color3.fromRGB(244, 63, 94),
 })
 
 -- Ink outline width and corner radius by box size class.
@@ -66,16 +66,16 @@ GildedGrimoire.Fonts = {
 -- so the same keys now draw a lifted plum card with an ink outline and a gold inset rail, in Cinzel.
 -- The React HUD reads these as Hud/Theme.Glass; imperative HUD pieces use GlassFrame / GlassText below.
 GildedGrimoire.Glass = table.freeze({
-	Base = Color3.fromRGB(44, 30, 68), -- card body (lifted plum)
-	BaseRaised = Color3.fromRGB(66, 46, 98), -- header strip, tile background
-	Hairline = Color3.fromRGB(10, 6, 14), -- the ink outline (was a 1px white hairline)
-	Rail = Color3.fromRGB(240, 196, 110), -- inset gold rail
-	Text = Color3.fromHex("#F6F4FF"),
-	TextMuted = Color3.fromHex("#F6F4FF"), -- at MutedTransparency
-	Arcane = Color3.fromHex("#C084FC"), -- active, selected, focused; skill gauge
-	Royal = Color3.fromHex("#FACC15"), -- currency, primary action, full gauge, local player
-	Danger = Color3.fromHex("#EF4444"), -- down, badges, boss HP, loot stolen
-	Vital = Color3.fromHex("#4ADE80"), -- HP, positive deltas
+	Base = Color3.fromRGB(11, 16, 24), -- Neo-Gothic Obsidian card body (#0B1018)
+	BaseRaised = Color3.fromRGB(22, 32, 48), -- Deep Slate header strip, tile background (#162030)
+	Hairline = Color3.fromRGB(6, 10, 16), -- deep ink outline
+	Rail = Color3.fromRGB(56, 189, 248), -- Ice Cyan holographic inset rail (#38BDF8)
+	Text = Color3.fromHex("#EEF4FB"),
+	TextMuted = Color3.fromHex("#CBD5E1"), -- at MutedTransparency
+	Arcane = Color3.fromHex("#38BDF8"), -- active, selected, focused; Ice Cyan accent
+	Royal = Color3.fromHex("#E5C470"), -- Champagne Gold: currency, primary action, full gauge, local player
+	Danger = Color3.fromHex("#F43F5E"), -- Crimson Alert: down, badges, boss HP, loot stolen
+	Vital = Color3.fromHex("#4ADE80"), -- Emerald Vital: HP, positive deltas
 	-- Mostly opaque so text keeps contrast over a bright sky; a little of the world shows through.
 	BaseTransparency = 0.1,
 	RaisedTransparency = 0.05,
@@ -271,7 +271,7 @@ end
 function GildedGrimoire.Bar(parent: Instance, color: Color3, inkWidth: number?): (Frame, Frame)
 	local track = Instance.new("Frame")
 	track.Name = "GrimoireBar"
-	track.BackgroundColor3 = Color3.fromRGB(26, 20, 36)
+	track.BackgroundColor3 = Color3.fromRGB(9, 14, 23)
 	track.BorderSizePixel = 0
 	local tc = Instance.new("UICorner")
 	tc.CornerRadius = UDim.new(1, 0)
@@ -292,7 +292,7 @@ function GildedGrimoire.Bar(parent: Instance, color: Color3, inkWidth: number?):
 	fc.Parent = fill
 	local shade = Instance.new("UIGradient")
 	shade.Rotation = 90
-	shade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 165))
+	shade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(148, 163, 184))
 	shade.Parent = fill
 	local shine = Instance.new("Frame")
 	shine.Name = "Shine"

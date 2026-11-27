@@ -386,7 +386,7 @@ function SummonReveal.new(gui: ScreenGui)
 
 	local portrait = new("Frame", {
 		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 24),
-		Size = UDim2.fromOffset(CARD_W - 30, 206), BackgroundColor3 = Color3.fromRGB(12, 8, 20), ClipsDescendants = true, ZIndex = Z + 7,
+		Size = UDim2.fromOffset(CARD_W - 30, 206), BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = Z + 7,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 10) }, portrait)
 	self.PortraitRing = new("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, portrait)
@@ -572,7 +572,7 @@ function SummonReveal.FillCard(self: any, item: Item)
 		self.CardRail.Thickness = if item.Emphasis > 0 then 3 else 1.6
 	end
 	self.PortraitRing.Color = item.Color
-	self.Portrait.BackgroundColor3 = item.Color:Lerp(Color3.fromRGB(10, 6, 16), 0.78)
+	self.Portrait.BackgroundColor3 = item.Color:Lerp(Color3.fromRGB(9, 14, 23), 0.78)
 	clearGui(self.Portrait)
 	if item.Hero then
 		HeroCard.Portrait(self.Portrait, item.Hero)
@@ -941,7 +941,7 @@ function SummonReveal.MiniCard(self: any, item: Item, order: number)
 	end
 	local host = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(110, 104),
-		BackgroundColor3 = item.Color:Lerp(Color3.fromRGB(10, 6, 16), 0.8), ClipsDescendants = true, ZIndex = Z + 6,
+		BackgroundColor3 = item.Color:Lerp(Color3.fromRGB(9, 14, 23), 0.8), ClipsDescendants = true, ZIndex = Z + 6,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, host)
 	new("UIStroke", { Color = item.Color, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, host)

@@ -129,12 +129,12 @@ local function tooltip(state: State)
 	if not event then
 		line("Calm", string.format("Next event in %s. Events are announced 60 seconds before they begin.", EventRules.Format(state.SecondsLeft)))
 	else
-		line("Scope", scopeText(state), Color3.fromRGB(205, 200, 220))
+		line("Scope", scopeText(state), Color3.fromRGB(203, 213, 225))
 		if state.Phase == "WARNING" then line("Begins", "Begins in " .. EventRules.Format(state.SecondsLeft), GOLD) end
 		line("Description", event.Description, nil, true)
 		for i, text in event.MobEffects do line("Mob" .. i, "◆ " .. text, MOB_RED) end
 		for i, text in event.RewardEffects do line("Reward" .. i, "◆ " .. text, GOLD) end
-		line("Foot", "Monsters that appear during the event keep its bonus until defeated.", Color3.fromRGB(170, 160, 190))
+		line("Foot", "Monsters that appear during the event keep its bonus until defeated.", Color3.fromRGB(148, 163, 184))
 	end
 	return Components.Glass({
 		AnchorPoint = Vector2.new(1, 1),
@@ -159,7 +159,7 @@ end
 local function goButton(props: { [string]: any })
 	local base: { [string]: any } = {
 		Name = "GoToEvent", AutoButtonColor = true, BackgroundColor3 = GOLD, BorderSizePixel = 0,
-		Text = "GO", TextColor3 = Color3.fromRGB(20, 14, 26), FontFace = G.Fonts.Display, TextSize = 13, ZIndex = 6,
+		Text = "GO", TextColor3 = Color3.fromRGB(11, 16, 24), FontFace = G.Fonts.Display, TextSize = 13, ZIndex = 6,
 		[React.Event.Activated] = goToEvent,
 	}
 	for k, v in props do base[k] = v end

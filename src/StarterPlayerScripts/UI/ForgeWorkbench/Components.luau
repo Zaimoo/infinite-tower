@@ -22,8 +22,8 @@ type Snapshot = Types.Snapshot
 local e = React.createElement
 local C = {}
 
--- The dark plum that rarity colours fade into on cards and preview stages.
-local STAGE_DARK = Color3.fromRGB(24, 16, 38)
+-- The deep obsidian slate that rarity colours fade into on cards and preview stages.
+local STAGE_DARK = Color3.fromRGB(16, 25, 40)
 
 function C.Text(props: { [string]: any })
 	local result: { [string]: any } = {
@@ -692,7 +692,7 @@ function C.ArtifactTile(props: TileProps)
 				AnchorPoint = Vector2.new(1, 1),
 				Position = UDim2.new(1, -5, 1, -5),
 				Size = UDim2.fromOffset(28, 28),
-				BackgroundColor3 = Color3.fromRGB(14, 10, 22),
+				BackgroundColor3 = Color3.fromRGB(9, 14, 23),
 				ClipsDescendants = true,
 				ZIndex = 5,
 			}, {

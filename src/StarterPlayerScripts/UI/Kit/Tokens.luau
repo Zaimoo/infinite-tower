@@ -20,58 +20,58 @@ Tokens.Ink = Grimoire.Ink
 Tokens.Fonts = Grimoire.Fonts
 Tokens.Text = Grimoire.Text
 
--- Surfaces: lifted from near-black so contents don't sit in a void.
+-- Surfaces: Neo-Gothic Astral Obsidian glass & deep slate panels.
 Tokens.Surface = table.freeze({
-	Window = tone(Color3.fromRGB(86, 58, 128), Color3.fromRGB(40, 26, 64), Color3.fromRGB(246, 204, 116)),
-	Panel = tone(Color3.fromRGB(66, 46, 98), Color3.fromRGB(32, 22, 52), Color3.fromRGB(222, 178, 104)),
-	Inset = tone(Color3.fromRGB(44, 30, 68), Color3.fromRGB(24, 16, 38), Color3.fromRGB(176, 140, 90)),
-	Hud = tone(Color3.fromRGB(70, 48, 104), Color3.fromRGB(30, 20, 48), Color3.fromRGB(246, 204, 116)),
+	Window = tone(Color3.fromRGB(22, 32, 48), Color3.fromRGB(11, 16, 24), Color3.fromRGB(229, 196, 112)),
+	Panel = tone(Color3.fromRGB(20, 30, 46), Color3.fromRGB(10, 15, 24), Color3.fromRGB(56, 189, 248)),
+	Inset = tone(Color3.fromRGB(15, 23, 36), Color3.fromRGB(9, 14, 23), Color3.fromRGB(71, 95, 126)),
+	Hud = tone(Color3.fromRGB(18, 28, 44), Color3.fromRGB(11, 16, 24), Color3.fromRGB(56, 189, 248)),
 })
 
 -- Window header bars, one saturated colour per area of the game.
 Tokens.Domain = table.freeze({
-	Forge = tone(Color3.fromRGB(240, 120, 44), Color3.fromRGB(150, 50, 20), Color3.fromRGB(255, 226, 150)),
-	Pit = tone(Color3.fromRGB(178, 100, 246), Color3.fromRGB(96, 44, 172), Color3.fromRGB(255, 226, 150)),
-	Tower = tone(Color3.fromRGB(70, 156, 246), Color3.fromRGB(28, 72, 156), Color3.fromRGB(220, 244, 255)),
-	Fortress = tone(Color3.fromRGB(252, 200, 70), Color3.fromRGB(196, 122, 22), Color3.fromRGB(255, 248, 210)),
-	Index = tone(Color3.fromRGB(230, 192, 130), Color3.fromRGB(152, 108, 58), Color3.fromRGB(255, 244, 214)),
-	Store = tone(Color3.fromRGB(236, 70, 92), Color3.fromRGB(150, 24, 46), Color3.fromRGB(255, 226, 150)),
-	Settings = tone(Color3.fromRGB(128, 116, 160), Color3.fromRGB(62, 54, 88), Color3.fromRGB(236, 228, 246)),
-	Backpack = tone(Color3.fromRGB(246, 186, 46), Color3.fromRGB(184, 104, 16), Color3.fromRGB(255, 248, 210)),
-	Squad = tone(Color3.fromRGB(70, 200, 150), Color3.fromRGB(24, 110, 80), Color3.fromRGB(226, 255, 240)),
+	Forge = tone(Color3.fromRGB(240, 120, 44), Color3.fromRGB(150, 50, 20), Color3.fromRGB(253, 230, 138)),
+	Pit = tone(Color3.fromRGB(36, 138, 196), Color3.fromRGB(14, 52, 92), Color3.fromRGB(229, 196, 112)),
+	Tower = tone(Color3.fromRGB(244, 63, 94), Color3.fromRGB(140, 22, 44), Color3.fromRGB(253, 230, 138)),
+	Fortress = tone(Color3.fromRGB(229, 196, 112), Color3.fromRGB(168, 120, 36), Color3.fromRGB(253, 244, 204)),
+	Index = tone(Color3.fromRGB(229, 196, 112), Color3.fromRGB(146, 108, 52), Color3.fromRGB(253, 244, 204)),
+	Store = tone(Color3.fromRGB(244, 63, 94), Color3.fromRGB(146, 22, 46), Color3.fromRGB(229, 196, 112)),
+	Settings = tone(Color3.fromRGB(51, 65, 85), Color3.fromRGB(22, 32, 48), Color3.fromRGB(186, 230, 253)),
+	Backpack = tone(Color3.fromRGB(229, 196, 112), Color3.fromRGB(162, 108, 30), Color3.fromRGB(253, 244, 204)),
+	Squad = tone(Color3.fromRGB(56, 189, 248), Color3.fromRGB(18, 90, 140), Color3.fromRGB(224, 242, 254)),
 })
 
 -- Button intents (plan §3.3). Colour says what a button does.
 export type Intent = "Primary" | "Confirm" | "Travel" | "Secondary" | "Danger" | "Disabled"
 Tokens.Intent = table.freeze({
-	Primary = tone(Color3.fromRGB(255, 216, 92), Color3.fromRGB(222, 136, 28), Color3.fromRGB(255, 250, 214)),
-	Confirm = tone(Color3.fromRGB(96, 224, 116), Color3.fromRGB(28, 140, 62), Color3.fromRGB(226, 255, 230)),
-	Travel = tone(Color3.fromRGB(80, 176, 252), Color3.fromRGB(30, 90, 192), Color3.fromRGB(226, 244, 255)),
-	Secondary = tone(Color3.fromRGB(120, 86, 180), Color3.fromRGB(58, 38, 100), Color3.fromRGB(236, 206, 140)),
-	Danger = tone(Color3.fromRGB(244, 84, 96), Color3.fromRGB(162, 28, 46), Color3.fromRGB(255, 220, 220)),
-	Disabled = tone(Color3.fromRGB(92, 86, 108), Color3.fromRGB(52, 48, 64), Color3.fromRGB(140, 132, 158)),
+	Primary = tone(Color3.fromRGB(245, 216, 138), Color3.fromRGB(198, 146, 48), Color3.fromRGB(253, 244, 204)),
+	Confirm = tone(Color3.fromRGB(74, 222, 128), Color3.fromRGB(24, 138, 66), Color3.fromRGB(218, 255, 228)),
+	Travel = tone(Color3.fromRGB(56, 189, 248), Color3.fromRGB(18, 92, 160), Color3.fromRGB(224, 242, 254)),
+	Secondary = tone(Color3.fromRGB(30, 44, 66), Color3.fromRGB(15, 23, 36), Color3.fromRGB(56, 189, 248)),
+	Danger = tone(Color3.fromRGB(244, 63, 94), Color3.fromRGB(156, 24, 48), Color3.fromRGB(255, 216, 224)),
+	Disabled = tone(Color3.fromRGB(48, 58, 74), Color3.fromRGB(26, 33, 45), Color3.fromRGB(100, 116, 139)),
 })
 
 -- Meaning colours for toasts, callouts and bars.
 export type Severity = "info" | "success" | "warn" | "error" | "reward" | "block"
 Tokens.Severity = table.freeze({
-	info = Color3.fromRGB(110, 196, 255),
-	success = Color3.fromRGB(110, 236, 130),
-	warn = Color3.fromRGB(255, 194, 72),
-	error = Color3.fromRGB(255, 96, 104),
-	block = Color3.fromRGB(255, 96, 104),
-	reward = Color3.fromRGB(255, 214, 92),
+	info = Color3.fromRGB(56, 189, 248),
+	success = Color3.fromRGB(74, 222, 128),
+	warn = Color3.fromRGB(245, 196, 82),
+	error = Color3.fromRGB(244, 63, 94),
+	block = Color3.fromRGB(244, 63, 94),
+	reward = Color3.fromRGB(229, 196, 112),
 })
 Tokens.SeverityIcon = table.freeze({
 	info = "Eye", success = "Check", warn = "Warning", error = "Warning", block = "Lock", reward = "Spark",
 })
 
 Tokens.BarTone = table.freeze({
-	Gold = tone(Color3.fromRGB(255, 226, 110), Color3.fromRGB(226, 146, 30), Color3.fromRGB(255, 250, 214)),
-	Jade = tone(Color3.fromRGB(120, 240, 140), Color3.fromRGB(34, 156, 70), Color3.fromRGB(226, 255, 230)),
-	Azure = tone(Color3.fromRGB(110, 196, 255), Color3.fromRGB(34, 104, 210), Color3.fromRGB(226, 244, 255)),
-	Crimson = tone(Color3.fromRGB(255, 110, 120), Color3.fromRGB(176, 30, 50), Color3.fromRGB(255, 220, 220)),
-	Arcane = tone(Color3.fromRGB(206, 150, 255), Color3.fromRGB(120, 58, 210), Color3.fromRGB(240, 226, 255)),
+	Gold = tone(Color3.fromRGB(245, 216, 138), Color3.fromRGB(198, 146, 48), Color3.fromRGB(253, 244, 204)),
+	Jade = tone(Color3.fromRGB(74, 222, 128), Color3.fromRGB(24, 144, 68), Color3.fromRGB(218, 255, 228)),
+	Azure = tone(Color3.fromRGB(56, 189, 248), Color3.fromRGB(18, 96, 168), Color3.fromRGB(224, 242, 254)),
+	Crimson = tone(Color3.fromRGB(244, 63, 94), Color3.fromRGB(162, 24, 48), Color3.fromRGB(255, 216, 224)),
+	Arcane = tone(Color3.fromRGB(125, 211, 252), Color3.fromRGB(14, 116, 176), Color3.fromRGB(224, 242, 254)),
 })
 
 -- Type scale (px at 1080p). Nothing below Caption.

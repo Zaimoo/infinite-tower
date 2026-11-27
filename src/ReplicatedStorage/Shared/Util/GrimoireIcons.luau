@@ -10,22 +10,22 @@
 
 local GrimoireIcons = {}
 
-GrimoireIcons.Ink = Color3.fromRGB(10, 6, 14)
+GrimoireIcons.Ink = Color3.fromRGB(6, 10, 16)
 
--- Gothic palette: obsidian, amethyst, antique gold, ember, steel, arcane cyan.
+-- Neo-Gothic Astral Obsidian palette: obsidian, ice cyan, champagne gold, ember, steel, crimson.
 local P = {
-	GoldHi = Color3.fromRGB(255, 226, 120), GoldLo = Color3.fromRGB(196, 120, 24),
+	GoldHi = Color3.fromRGB(245, 216, 138), GoldLo = Color3.fromRGB(198, 146, 48),
 	VioletHi = Color3.fromRGB(214, 150, 255), VioletLo = Color3.fromRGB(96, 34, 170),
-	SteelHi = Color3.fromRGB(236, 238, 248), SteelLo = Color3.fromRGB(120, 124, 146),
-	IronHi = Color3.fromRGB(110, 106, 124), IronLo = Color3.fromRGB(38, 34, 48),
+	SteelHi = Color3.fromRGB(238, 244, 251), SteelLo = Color3.fromRGB(120, 136, 158),
+	IronHi = Color3.fromRGB(100, 116, 139), IronLo = Color3.fromRGB(24, 34, 49),
 	EmberHi = Color3.fromRGB(255, 196, 90), EmberLo = Color3.fromRGB(220, 60, 20),
-	StoneHi = Color3.fromRGB(196, 190, 206), StoneLo = Color3.fromRGB(104, 96, 118),
-	CyanHi = Color3.fromRGB(170, 250, 255), CyanLo = Color3.fromRGB(20, 140, 200),
-	BloodHi = Color3.fromRGB(255, 110, 110), BloodLo = Color3.fromRGB(150, 16, 30),
+	StoneHi = Color3.fromRGB(196, 208, 222), StoneLo = Color3.fromRGB(96, 112, 132),
+	CyanHi = Color3.fromRGB(125, 211, 252), CyanLo = Color3.fromRGB(14, 116, 176),
+	BloodHi = Color3.fromRGB(244, 63, 94), BloodLo = Color3.fromRGB(150, 16, 38),
 	LeatherHi = Color3.fromRGB(168, 92, 60), LeatherLo = Color3.fromRGB(86, 38, 24),
 	PageHi = Color3.fromRGB(255, 248, 226), PageLo = Color3.fromRGB(214, 196, 160),
-	LeafHi = Color3.fromRGB(150, 255, 150), LeafLo = Color3.fromRGB(30, 150, 70),
-	Dark = Color3.fromRGB(28, 22, 40),
+	LeafHi = Color3.fromRGB(74, 222, 128), LeafLo = Color3.fromRGB(22, 138, 66),
+	Dark = Color3.fromRGB(16, 25, 40),
 	White = Color3.new(1, 1, 1),
 }
 GrimoireIcons.Palette = P
@@ -61,12 +61,12 @@ GrimoireIcons.Drawings = {
 		{ X = 29, Y = 41, W = 12, H = 30, Rot = -45, Hi = P.PageHi, Lo = P.GoldLo, Radius = 2 },
 	},
 
-	-- Summoning: an amethyst crystal hovering over a gold altar, with a star spark.
+	-- Summoning: an ice-cyan astral crystal hovering over a gold altar, with a star spark.
 	Summon = {
 		{ X = 32, Y = 52, W = 40, H = 11, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 4 },
 		{ X = 32, Y = 45, W = 24, H = 7, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 3 },
-		{ X = 32, Y = 25, W = 24, H = 24, Rot = 45, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 4 },
-		{ X = 32, Y = 25, W = 10, H = 10, Rot = 45, Hi = P.White, Lo = P.VioletHi, Radius = 2, Outline = 1.6, Sheen = false },
+		{ X = 32, Y = 25, W = 24, H = 24, Rot = 45, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 4 },
+		{ X = 32, Y = 25, W = 10, H = 10, Rot = 45, Hi = P.White, Lo = P.CyanHi, Radius = 2, Outline = 1.6, Sheen = false },
 		{ X = 50, Y = 10, W = 9, H = 9, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 2 },
 	},
 	-- Squad: a steel heater shield with a gold boss and crossed blades behind it.
@@ -85,12 +85,12 @@ GrimoireIcons.Drawings = {
 		{ X = 40, Y = 18, W = 7, H = 30, Rot = 35, Hi = P.LeatherHi, Lo = P.LeatherLo, Radius = 3 },
 		{ X = 28, Y = 12, W = 26, H = 13, Rot = 35, Hi = P.EmberHi, Lo = P.EmberLo, Radius = 3 },
 	},
-	-- Fortress: a stone keep with an amethyst roof and a gold pennant.
+	-- Fortress: a stone keep with an ice-cyan roof and a gold pennant.
 	Fortress = {
 		{ X = 32, Y = 44, W = 36, H = 30, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 3 },
 		{ X = 19, Y = 28, W = 9, H = 8, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 1, Sheen = false },
 		{ X = 45, Y = 28, W = 9, H = 8, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 1, Sheen = false },
-		{ X = 32, Y = 22, W = 24, H = 24, Rot = 45, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 3 },
+		{ X = 32, Y = 22, W = 24, H = 24, Rot = 45, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 3 },
 		{ X = 32, Y = 50, W = 12, H = 16, Hi = P.IronHi, Lo = P.IronLo, Radius = 6, Sheen = false },
 		{ X = 40, Y = 6, W = 14, H = 7, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Outline = 2 },
 	},
@@ -162,9 +162,9 @@ GrimoireIcons.Drawings = {
 		{ X = 18, Y = 32, W = 7, H = 7, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.6 },
 		{ X = 46, Y = 32, W = 7, H = 7, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.6 },
 		{ X = 32, Y = 38, W = 22, H = 36, Hi = P.IronHi, Lo = P.IronLo, Radius = 3 },
-		{ X = 32, Y = 18, W = 18, H = 18, Rot = 45, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 2 },
+		{ X = 32, Y = 18, W = 18, H = 18, Rot = 45, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 2 },
 		{ X = 32, Y = 6, W = 7, H = 7, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 2 },
-		{ X = 32, Y = 30, W = 6, H = 10, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 3, Outline = 1.8, Sheen = false },
+		{ X = 32, Y = 30, W = 6, H = 10, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 3, Outline = 1.8, Sheen = false },
 		{ X = 32, Y = 51, W = 10, H = 12, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 5, Outline = 2, Sheen = false },
 		{ X = 32, Y = 52, W = 5, H = 8, Hi = P.EmberHi, Lo = P.BloodHi, Radius = 2.5, Outline = 1.2, Sheen = false },
 	},
@@ -250,10 +250,10 @@ GrimoireIcons.Drawings = {
 		{ X = 32, Y = 32, W = 12, H = 52, Rot = 45, Hi = P.White, Lo = P.StoneHi, Radius = 4 },
 		{ X = 32, Y = 32, W = 12, H = 52, Rot = -45, Hi = P.White, Lo = P.StoneHi, Radius = 4, Sheen = false },
 	},
-	-- Store: an amethyst gift bag tied with gold, a gold star bursting from it.
+	-- Store: a crimson treasury gift bag tied with gold, a gold star bursting from it.
 	Shop = {
-		{ X = 32, Y = 40, W = 46, H = 40, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 8 },
-		{ X = 32, Y = 21, W = 50, H = 10, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 4 },
+		{ X = 32, Y = 40, W = 46, H = 40, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 8 },
+		{ X = 32, Y = 21, W = 50, H = 10, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 4 },
 		{ X = 32, Y = 40, W = 9, H = 40, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Sheen = false },
 		{ X = 23, Y = 13, W = 16, H = 10, Rot = -24, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 5, Outline = 2 },
 		{ X = 41, Y = 13, W = 16, H = 10, Rot = 24, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 5, Outline = 2 },
@@ -409,20 +409,20 @@ GrimoireIcons.Drawings = {
 		{ X = 25, Y = 32, W = 7, H = 7, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.8, Sheen = false },
 		{ X = 39, Y = 32, W = 7, H = 7, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.8, Sheen = false },
 	},
-	-- Calm (no event yet): a leaning gold-framed hourglass with violet sand.
+	-- Calm (no event yet): a leaning gold-framed hourglass with ice-cyan sand.
 	EventHourglass = {
 		{ X = 14, Y = 32, W = 4, H = 44, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Outline = 2, Sheen = false },
 		{ X = 50, Y = 32, W = 4, H = 44, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Outline = 2, Sheen = false },
 		{ X = 34, Y = 21, W = 20, H = 20, Rot = 45, Hi = P.PageHi, Lo = P.StoneHi, Radius = 5 },
 		{ X = 30, Y = 43, W = 20, H = 20, Rot = 45, Hi = P.PageHi, Lo = P.StoneHi, Radius = 5 },
-		{ X = 34, Y = 18, W = 10, H = 5, Rot = -8, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 2, Outline = 1.6, Sheen = false },
-		{ X = 30, Y = 48, W = 13, H = 8, Rot = -8, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 3, Outline = 1.6, Sheen = false },
+		{ X = 34, Y = 18, W = 10, H = 5, Rot = -8, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 2, Outline = 1.6, Sheen = false },
+		{ X = 30, Y = 48, W = 13, H = 8, Rot = -8, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 3, Outline = 1.6, Sheen = false },
 		{ X = 34, Y = 9, W = 36, H = 7, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2 },
 		{ X = 30, Y = 55, W = 36, H = 7, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2 },
 	},
-	-- Battle Pass: a tilted violet season ticket with a gold band and a star.
+	-- Battle Pass: a tilted crimson ascension ticket with a gold band and a star.
 	Pass = {
-		{ X = 32, Y = 32, W = 54, H = 36, Rot = -12, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 7 },
+		{ X = 32, Y = 32, W = 54, H = 36, Rot = -12, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 7 },
 		{ X = 32, Y = 32, W = 54, H = 9, Rot = -12, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Outline = 2, Sheen = false },
 		{ X = 32, Y = 32, W = 9, H = 30, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 4, Outline = 2 },
 		{ X = 32, Y = 32, W = 30, H = 9, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 4, Outline = 2, Sheen = false },

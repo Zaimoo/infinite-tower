@@ -149,7 +149,7 @@ function ArtifactPreview.Show(host: GuiObject, templateId: string?, options: Pre
 	viewport.ZIndex = host.ZIndex + 1
 	-- A key light from the upper left in front, over a bright cool ambient: metal reads as metal and
 	-- the shadow side never goes to black against the dark card.
-	viewport.Ambient = Color3.fromRGB(176, 170, 190)
+	viewport.Ambient = Color3.fromRGB(172, 184, 200)
 	viewport.LightColor = Color3.fromRGB(255, 246, 228)
 	viewport.LightDirection = Vector3.new(-0.5, -0.9, -0.75)
 

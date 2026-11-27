@@ -1141,7 +1141,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			local resting = restingSeconds(hero)
 			slots["S" .. i] = Panel({ LayoutOrder = i, Size = size, Radius = 10, Top = Tones.Violet.Top, Bottom = Tones.Violet.Bottom, Rail = Theme.RarityColor(rarity) }, {
 				Art = e("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(72, 72),
-					BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = 3 }, {
+					BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = 3 }, {
 					Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 					Ring = e("UIStroke", { Color = Theme.RarityColor(rarity), Thickness = 2.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 					Portrait = e(Portrait, { TemplateId = hero.TemplateId, Archetype = hero.Archetype, Stars = hero.Stars }),
@@ -1256,12 +1256,12 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 		cards["H" .. i] = Panel({
 			Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true, LayoutOrder = i, Size = UDim2.new(1, 0, 0, 78), Radius = 10,
 			Top = if hovered == hero.UUID then Tones.Violet.Top else Tones.Deep.Top, Bottom = Tones.Deep.Bottom,
-			Rail = if good then TEXT.Gold else Color3.fromRGB(110, 96, 140),
+			Rail = if good then TEXT.Gold else Color3.fromRGB(71, 95, 126),
 			[React.Event.MouseEnter] = function() setHovered(hero.UUID) end,
 			[React.Event.MouseLeave] = function() if hovered == hero.UUID then setHovered(nil) end end,
 			[React.Event.Activated] = act,
 		}, {
-			Art = e("Frame", { Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(62, 62), BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = 3 }, {
+			Art = e("Frame", { Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(62, 62), BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = 3 }, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 				Ring = e("UIStroke", { Color = Theme.RarityColor(rarity), Thickness = 2.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 				Portrait = e(Portrait, { TemplateId = hero.TemplateId, Archetype = hero.Archetype, Stars = hero.Stars }),
@@ -1338,7 +1338,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 		Name = "FacilityOverlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 20,
 	}, {
 		Scrim = e("TextButton", {
-			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
+			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 10, 16), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
 			[React.Event.Activated] = function() props.OnClose() end,
 		}),
 		Window = Panel({

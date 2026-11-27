@@ -23,8 +23,8 @@ local Types = require(script.Parent.Types)
 
 local e = React.createElement
 
-local TEXT = Color3.fromRGB(246, 242, 255)
-local SUBTEXT = Color3.fromRGB(214, 204, 232)
+local TEXT = Color3.fromRGB(238, 244, 251)
+local SUBTEXT = Color3.fromRGB(203, 213, 225)
 local GOLD_TEXT = Color3.fromRGB(255, 224, 118)
 local ENHANCED_TEXT = Color3.fromRGB(255, 214, 110)
 
@@ -94,7 +94,7 @@ local function WeaponOddsCard(props: WeaponCardProps)
 		else string.format("1★  PWR <b>%s</b>   DMG <b>%.2f×</b>", Balance.Format(power), dmgMult)
 
 	local cardTop = Kit.Tokens.Surface.Inset.Top:Lerp(color, 0.12)
-	local cardBottom = Color3.fromRGB(16, 12, 26)
+	local cardBottom = Color3.fromRGB(11, 16, 24)
 
 	return e("Frame", {
 		Name = "Card_" .. seed.TemplateId,
@@ -128,7 +128,7 @@ local function WeaponOddsCard(props: WeaponCardProps)
 			Name = "PreviewBox",
 			Position = UDim2.fromOffset(10, 10),
 			Size = UDim2.fromOffset(76, 76),
-			BackgroundColor3 = color:Lerp(Color3.fromRGB(10, 6, 16), 0.76),
+			BackgroundColor3 = color:Lerp(Color3.fromRGB(9, 14, 23), 0.76),
 			BorderSizePixel = 0,
 			ClipsDescendants = true,
 			ZIndex = 5,
@@ -322,7 +322,7 @@ local function ForgeOddsModal(props: Props)
 		ratePills["RatePill_" .. tier] = e("Frame", {
 			Name = "RatePill_" .. tier,
 			LayoutOrder = i,
-			BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+			BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 			BorderSizePixel = 0,
 			AutomaticSize = Enum.AutomaticSize.X,
 			Size = UDim2.fromOffset(0, 22),
@@ -585,12 +585,12 @@ local function ForgeOddsModal(props: Props)
 				Name = "RatesBox",
 				Position = UDim2.fromOffset(16, 66),
 				Size = UDim2.new(1, -32, 0, 82),
-				BackgroundColor3 = Color3.fromRGB(22, 16, 32),
+				BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 				BorderSizePixel = 0,
 				ZIndex = 3,
 			}, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 9) }),
-				Stroke = e("UIStroke", { Color = Color3.fromRGB(92, 66, 126), Thickness = 1.3 }),
+				Stroke = e("UIStroke", { Color = Color3.fromRGB(51, 65, 85), Thickness = 1.3 }),
 				RatesRow = e("Frame", {
 					Name = "RatesRow",
 					Position = UDim2.fromOffset(12, 8),

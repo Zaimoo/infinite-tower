@@ -37,21 +37,21 @@ local DECORATIVE_FAMILY = "CinzelDecorative"
 
 -- Colors sampled directly from the inscriptional navigation specification
 local C = {
-	-- Signature Roman Inscriptional Gold
-	Gold = Color3.fromRGB(228, 186, 115),
-	GoldBright = Color3.fromRGB(252, 222, 156),
-	GoldMuted = Color3.fromRGB(180, 142, 85),
-	GoldDark = Color3.fromRGB(132, 102, 58),
+	-- Signature Neo-Gothic Champagne Gold
+	Gold = Color3.fromRGB(229, 196, 112),
+	GoldBright = Color3.fromRGB(253, 230, 138),
+	GoldMuted = Color3.fromRGB(184, 154, 92),
+	GoldDark = Color3.fromRGB(132, 106, 58),
 
-	-- Metallic Silver / Obsidian Accents
-	Silver = Color3.fromRGB(246, 244, 255),
-	SilverDim = Color3.fromRGB(185, 175, 205),
+	-- Cool Silver / Obsidian Slate Neutrals
+	Silver = Color3.fromRGB(238, 244, 251),
+	SilverDim = Color3.fromRGB(203, 213, 225),
 	TextWhite = Color3.fromRGB(255, 255, 255),
-	TextDim = Color3.fromRGB(165, 155, 185),
+	TextDim = Color3.fromRGB(148, 163, 184),
 
-	-- Dark Inscriptional Stroke / Shadow
-	StrokeDark = Color3.fromRGB(20, 15, 26),
-	ShadowDark = Color3.fromRGB(10, 8, 14),
+	-- Dark Obsidian Stroke / Shadow
+	StrokeDark = Color3.fromRGB(11, 16, 24),
+	ShadowDark = Color3.fromRGB(6, 10, 16),
 }
 
 GothicFont.Palette = C

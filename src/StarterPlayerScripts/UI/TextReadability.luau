@@ -2,7 +2,7 @@
 -- Shared accessibility pass for imperative and React screen UI. Preserve font families,
 -- authored sizes, borders and fades; cover lazily mounted windows as well as the HUD.
 local TextReadability = {}
-local INK = Color3.fromRGB(10, 6, 14)
+local INK = Color3.fromRGB(6, 10, 16)
 
 function TextReadability.Watch(root: Instance)
 	local watched: { [Instance]: boolean } = setmetatable({}, { __mode = "k" }) :: any

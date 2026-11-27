@@ -167,7 +167,7 @@ end
 -- A small rounded status chip; returns the chip and its label.
 local function chip(parent: Instance, props: { [string]: any }): (Frame, TextLabel)
 	local c = new("Frame", {
-		BackgroundColor3 = Color3.fromRGB(20, 14, 30),
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BorderSizePixel = 0,
 		ZIndex = Z + 6,
 	}, nil)
@@ -190,7 +190,7 @@ end
 
 -- Short weapon line for slot cards: "Rare 3★" in the weapon's rarity colour, or "No weapon".
 local function weaponShort(artifact: any?): string
-	if not artifact then return '<font color="#8C82A0">No weapon</font>' end
+	if not artifact then return '<font color="#94A3B8">No weapon</font>' end
 	local info = ArtifactCatalog.GetRarityInfo(artifact.Rarity or 1)
 	return string.format('<font color="%s">%s %d★</font>', info.HexColor, info.Name, artifact.Star or 1)
 end
@@ -217,7 +217,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Name = "SquadDeployScrim",
 		Text = "",
 		AutoButtonColor = false,
-		BackgroundColor3 = Color3.fromRGB(6, 4, 10),
+		BackgroundColor3 = Color3.fromRGB(6, 10, 16),
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
@@ -407,7 +407,7 @@ function SquadController.BuildDetails(self: any)
 	-- Identity: portrait on the left, name / rarity / archetype / level on the right.
 	d.Portrait = new("Frame", {
 		Name = "PortraitHost", Position = UDim2.fromOffset(12, 36), Size = UDim2.fromOffset(84, 84),
-		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 3,
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = Z + 3,
 	}, body)
 	new("UICorner", { CornerRadius = UDim.new(0, 12) }, d.Portrait)
 	d.Ring = new("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, d.Portrait)
@@ -442,7 +442,7 @@ function SquadController.BuildDetails(self: any)
 	-- Stats overview: two columns of label / value rows.
 	local stats = new("Frame", {
 		Name = "Stats", Position = UDim2.fromOffset(10, 132), Size = UDim2.new(1, -20, 0, 116),
-		BackgroundColor3 = Color3.fromRGB(12, 9, 18), BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = Z + 2,
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23), BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = Z + 2,
 	}, body)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, stats)
 	new("UIStroke", { Color = INK, Thickness = 1.6, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, stats)
@@ -506,7 +506,7 @@ function SquadController.BuildSlot(self: any, parent: Instance, i: number): any
 
 	local portrait = new("Frame", {
 		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(66, 66),
-		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 3,
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = Z + 3,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 10) }, portrait)
 	local ring = new("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, portrait)
@@ -879,7 +879,7 @@ function SquadController.RenderDetails(self: any)
 		d.WeaponTier.Text = string.format("Uses %s", if weaponType then (string.gsub(weaponType, "_", " & ")) else "a weapon")
 		d.WeaponTier.TextColor3 = TEXT.Muted
 		d.WeaponStats.Text = "Equip one at the Forge."
-		if d.WeaponRail then d.WeaponRail.Color = Color3.fromRGB(140, 130, 160) end
+		if d.WeaponRail then d.WeaponRail.Color = Color3.fromRGB(100, 116, 139) end
 	end
 end
 
@@ -957,7 +957,7 @@ function SquadController.Refresh(self: any)
 		e.Weapon.Text = if hero then weaponShort(StatFormulas.GetEquippedArtifact(profile, hero)) else ""
 		if locked then
 			retone(e.Main, e.MainLabel, "Bronze", "UNLOCK")
-			e.Rail.Color = Color3.fromRGB(140, 130, 160)
+			e.Rail.Color = Color3.fromRGB(100, 116, 139)
 		elseif self.HeldHero then
 			retone(e.Main, e.MainLabel, "Gold", if hero then "REPLACE" else "PLACE HERE")
 			e.Rail.Color = TEXT.Gold
@@ -970,7 +970,7 @@ function SquadController.Refresh(self: any)
 				e.Rail.Color = Color3.fromRGB(120, 200, 220)
 			else
 				retone(e.Main, e.MainLabel, "Action", if hero then "CHANGE" else "ASSIGN")
-				e.Rail.Color = Color3.fromRGB(150, 138, 176)
+				e.Rail.Color = Color3.fromRGB(96, 146, 190)
 			end
 		elseif hero then
 			local resting = restingSeconds(hero)
@@ -984,7 +984,7 @@ function SquadController.Refresh(self: any)
 			e.Rail.Color = if self.Focus == hero.UUID then TEXT.Gold else Color3.fromRGB(240, 196, 110)
 		else
 			retone(e.Main, e.MainLabel, "Gold", "ASSIGN")
-			e.Rail.Color = Color3.fromRGB(150, 138, 176)
+			e.Rail.Color = Color3.fromRGB(96, 146, 190)
 		end
 		local focused = hero ~= nil and self.Focus == hero.UUID and not self.ChoosingSlot and not self.HeldHero
 		e.Rail.Thickness = if choosing or self.HeldHero or focused then 3 else 1.4
@@ -1085,7 +1085,7 @@ function SquadController.BuildRosterCard(self: any, hero: any): any
 
 	local portrait = new("Frame", {
 		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 7), Size = UDim2.fromOffset(64, 64),
-		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 4,
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = Z + 4,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 10) }, portrait)
 	local ring = new("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, portrait)
@@ -1110,7 +1110,7 @@ function SquadController.BuildRosterCard(self: any, hero: any): any
 	})
 	-- Dims heroes that can't take the slot being chosen (or are resting).
 	local shade = new("Frame", {
-		Name = "Shade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 4, 10), BackgroundTransparency = 0.45,
+		Name = "Shade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 10, 16), BackgroundTransparency = 0.45,
 		BorderSizePixel = 0, Visible = false, ZIndex = Z + 9,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 12) }, shade)

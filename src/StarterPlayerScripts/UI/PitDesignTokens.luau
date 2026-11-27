@@ -7,18 +7,18 @@ local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForC
 
 local T = {}
 T.Color = {
-	Obsidian = Color3.fromRGB(14, 11, 22),
-	Panel = Color3.fromRGB(18, 14, 28),
-	Raised = Color3.fromRGB(26, 20, 38),
+	Obsidian = Color3.fromRGB(11, 16, 24),
+	Panel = Color3.fromRGB(16, 25, 40),
+	Raised = Color3.fromRGB(22, 32, 48),
 	Bronze = Color3.fromRGB(155, 119, 76),
-	Gold = Color3.fromRGB(250, 204, 21),
-	Text = Color3.fromRGB(255, 255, 255),
-	Muted = Color3.fromRGB(165, 155, 185),
-	Edge = Color3.fromRGB(255, 255, 255),
-	Purple = Color3.fromRGB(192, 132, 252),
+	Gold = Color3.fromRGB(229, 196, 112),
+	Text = Color3.fromRGB(238, 244, 251),
+	Muted = Color3.fromRGB(148, 163, 184),
+	Edge = Color3.fromRGB(56, 189, 248),
+	Purple = Color3.fromRGB(56, 189, 248),
 	Good = Color3.fromRGB(74, 222, 128),
-	Danger = Color3.fromRGB(239, 68, 68),
-	Memory = Color3.fromRGB(169, 187, 226),
+	Danger = Color3.fromRGB(244, 63, 94),
+	Memory = Color3.fromRGB(186, 230, 253),
 }
 
 T.Rarity = {

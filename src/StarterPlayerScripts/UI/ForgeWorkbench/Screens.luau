@@ -127,8 +127,8 @@ function Screens.DetailPanel(props: DetailPanelProps)
 			-- A rarity-lit stage: bright at the top, fading to plum.
 			Gradient = e("UIGradient", {
 				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(40, 28, 60), 0.38)),
-					ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 20, 46)),
+					ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(22, 32, 48), 0.38)),
+					ColorSequenceKeypoint.new(1, Color3.fromRGB(11, 16, 24)),
 				}),
 				Rotation = 90,
 			}),
@@ -341,7 +341,7 @@ function Screens.SellSummary(props: SellSummaryProps)
 		-- Big Total Gold Card
 		GoldCard = e("Frame", {
 			Size = UDim2.new(1, 0, 0, 100),
-			BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+			BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 			BorderSizePixel = 0,
 			LayoutOrder = 2,
 		}, {
@@ -401,7 +401,7 @@ function Screens.SellSummary(props: SellSummaryProps)
 		-- Notice / Safety advice
 		Advice = e("Frame", {
 			Size = UDim2.new(1, 0, 0, 90),
-			BackgroundColor3 = Color3.fromRGB(18, 14, 26),
+			BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 			BorderSizePixel = 0,
 			LayoutOrder = 4,
 		}, {
@@ -429,9 +429,9 @@ local function reviewCard(artifact: Types.Artifact, label: string, star: number,
 	local rarity = Catalog.GetRarityInfo(artifact.Rarity)
 	return {
 		Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
-		Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(rarity.Color:Lerp(Color3.fromRGB(40, 28, 60), 0.4), Color3.fromRGB(28, 18, 44)) }),
+		Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(rarity.Color:Lerp(Color3.fromRGB(22, 32, 48), 0.4), Color3.fromRGB(11, 16, 24)) }),
 		Ink = e("UIStroke", { Color = if glow then T.Gold else rarity.Color, Thickness = if glow then 3 else 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-		Band = e("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(10, 6, 14), BackgroundTransparency = 0.3, ZIndex = 3 }, {
+		Band = e("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(6, 10, 16), BackgroundTransparency = 0.3, ZIndex = 3 }, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
 			Label = e(C.Text, { Text = label, TextSize = 15, TextColor3 = if glow then T.Gold else T.Text, Position = UDim2.fromOffset(12, 0), Size = UDim2.new(0.6, 0, 1, 0), ZIndex = 4 }),
 			Stars = e(C.Text, { Text = string.format("%d★", star), TextSize = if glow then 22 else 18, FontFace = T.Theme.Fonts.Number, TextColor3 = T.Gold,
@@ -450,7 +450,7 @@ local function deltaChip(order: number, label: string, before: number, after: nu
 	return e("Frame", { LayoutOrder = order, Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1) }, {
 		Flex = e("UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill }),
 		Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
-		Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(62, 44, 92), Color3.fromRGB(32, 22, 52)) }),
+		Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(22, 32, 48), Color3.fromRGB(11, 16, 24)) }),
 		Ink = e("UIStroke", { Color = T.Theme.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 		Label = e(C.Text, { Text = label, TextSize = 14, FontFace = T.Theme.Fonts.Body, TextColor3 = T.Muted, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 4), Size = UDim2.new(1, -8, 0, 20) }),
 		Value = e(C.Text, { Text = show(after), TextSize = 24, FontFace = T.Theme.Fonts.Number, TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 24), Size = UDim2.new(1, -8, 0, 30) }),

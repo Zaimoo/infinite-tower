@@ -252,7 +252,7 @@ local function createActionBadge(
 		Size = UDim2.fromScale(0.92, 0.92),
 		Position = UDim2.fromScale(0.5, 0.5),
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundColor3 = Color3.fromRGB(13, 9, 18),
+		BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 		BorderSizePixel = 0,
 		ZIndex = baseZ + 1,
 	}, root)
@@ -260,8 +260,8 @@ local function createActionBadge(
 
 	new("UIGradient", {
 		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(38, 28, 50)),
-			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(13, 9, 18)),
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(22, 32, 48)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(11, 16, 24)),
 		}),
 		Rotation = 135,
 	}, disc)
@@ -339,7 +339,7 @@ function GothicVectorIcons.CreateRecall(opts: IconOptions?): Frame
 end
 
 function GothicVectorIcons.CreateTower(opts: IconOptions?): Frame
-	return createActionBadge("VectorTowerBadge", GothicVectorIcons.ASSETS.Tower, Color3.fromRGB(192, 132, 252), opts)
+	return createActionBadge("VectorTowerBadge", GothicVectorIcons.ASSETS.Tower, Color3.fromRGB(244, 63, 94), opts)
 end
 
 -- Fortress Tree badge. There is no uploaded line-art asset yet, so the disc carries a text glyph.
@@ -393,7 +393,7 @@ function GothicVectorIcons.CreateAura(opts: IconOptions?): Frame
 	local stroke = new("UIStroke", {
 		Name = "AuraStroke",
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = o.AccentColor or Color3.fromRGB(200, 140, 255),
+		Color = o.AccentColor or Color3.fromRGB(56, 189, 248),
 		Thickness = 3.5,
 		Transparency = 0.35,
 	}, halo)
@@ -407,7 +407,7 @@ end
 function GothicVectorIcons.CreateRightArrow(opts: IconOptions?): Frame
 	local o = opts or {}
 	local baseZ = o.ZIndex or 43
-	local accent = o.AccentColor or Color3.fromRGB(200, 162, 200)
+	local accent = o.AccentColor or Color3.fromRGB(56, 189, 248)
 
 	local root = new("Frame", {
 		Name = "VectorRightArrow",
@@ -507,7 +507,7 @@ end
 function GothicVectorIcons.CreatePadlock(opts: IconOptions?): Frame
 	local o = opts or {}
 	local baseZ = o.ZIndex or 10
-	local accent = o.AccentColor or Color3.fromRGB(154, 142, 181)
+	local accent = o.AccentColor or Color3.fromRGB(148, 163, 184)
 
 	local root = new("Frame", {
 		Name = "VectorPadlock",
@@ -554,7 +554,7 @@ function GothicVectorIcons.CreatePadlock(opts: IconOptions?): Frame
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.42),
 		Size = UDim2.fromScale(0.22, 0.28),
-		BackgroundColor3 = Color3.fromRGB(15, 12, 24),
+		BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 		BorderSizePixel = 0,
 		ZIndex = baseZ + 3,
 	}, body)
@@ -565,7 +565,7 @@ function GothicVectorIcons.CreatePadlock(opts: IconOptions?): Frame
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.fromScale(0.5, 0.46),
 		Size = UDim2.fromScale(0.12, 0.32),
-		BackgroundColor3 = Color3.fromRGB(15, 12, 24),
+		BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 		BorderSizePixel = 0,
 		ZIndex = baseZ + 3,
 	}, body)

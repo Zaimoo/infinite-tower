@@ -756,7 +756,7 @@ local function SettingsApp()
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.new(0, 960, 0, 620),
-			BackgroundColor3 = Color3.fromRGB(12, 10, 18),
+			BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 			BackgroundTransparency = 0.35,
 			Active = true,
 			ZIndex = 2,
@@ -765,13 +765,13 @@ local function SettingsApp()
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
 			GlassRimStroke = e("UIStroke", {
 				Thickness = 1.2,
-				Color = Color3.fromRGB(240, 235, 255),
+				Color = Color3.fromRGB(56, 189, 248),
 				Transparency = 0.55,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
 			GlassSheen = e("UIGradient", {
 				Rotation = 135,
-				Color = ColorSequence.new(Color3.fromRGB(38, 30, 54), Color3.fromRGB(14, 11, 22)),
+				Color = ColorSequence.new(Color3.fromRGB(22, 32, 48), Color3.fromRGB(9, 14, 23)),
 				Transparency = NumberSequence.new({
 					NumberSequenceKeypoint.new(0, 0.30),
 					NumberSequenceKeypoint.new(0.5, 0.45),
@@ -800,7 +800,7 @@ local function SettingsApp()
 				Header = e("Frame", {
 					Name = "Header",
 					Size = UDim2.new(1, 0, 0, 68),
-					BackgroundColor3 = Color3.fromRGB(16, 13, 24),
+					BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 					BackgroundTransparency = 0.50,
 					LayoutOrder = 1,
 				}, {
@@ -910,7 +910,7 @@ local function SettingsApp()
 					Sidebar = e("Frame", {
 						Name = "Sidebar",
 						Size = UDim2.new(0, 230, 1, 0),
-						BackgroundColor3 = Color3.fromRGB(16, 13, 24),
+						BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 						BackgroundTransparency = 0.50,
 						LayoutOrder = 2,
 					}, {
@@ -937,7 +937,7 @@ local function SettingsApp()
 						ProfileCard = e("Frame", {
 							Name = "ProfileCard",
 							Size = UDim2.new(1, 0, 0, 66),
-							BackgroundColor3 = Color3.fromRGB(22, 18, 34),
+							BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 							BackgroundTransparency = 0.50,
 							LayoutOrder = 1,
 						}, {
@@ -949,7 +949,7 @@ local function SettingsApp()
 								ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 							}),
 							Avatar = e("ImageLabel", {
-								BackgroundColor3 = Color3.fromRGB(26, 20, 36),
+								BackgroundColor3 = Color3.fromRGB(22, 32, 48),
 								Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150", LocalPlayer.UserId),
 								Position = UDim2.fromOffset(10, 9),
 								Size = UDim2.fromOffset(48, 48),
@@ -1020,7 +1020,7 @@ local function SettingsApp()
 				Footer = e("Frame", {
 					Name = "Footer",
 					Size = UDim2.new(1, 0, 0, 46),
-					BackgroundColor3 = Color3.fromRGB(16, 13, 24),
+					BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 					BackgroundTransparency = 0.50,
 					LayoutOrder = 3,
 				}, {

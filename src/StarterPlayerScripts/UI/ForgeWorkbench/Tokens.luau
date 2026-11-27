@@ -9,9 +9,9 @@ return table.freeze({
 	Gold = Grimoire.Text.Gold,
 	Good = Grimoire.Text.Good,
 	Bad = Grimoire.Text.Bad,
-	Equipped = Color3.fromHex("#96ECFF"), -- existing Teal rail
-	Selected = Color3.fromHex("#C084FC"),
-	Background = Color3.fromHex("#0D0912"),
+	Equipped = Color3.fromHex("#38BDF8"), -- Ice Cyan rail
+	Selected = Color3.fromHex("#E5C470"), -- Champagne Gold selected rail
+	Background = Color3.fromHex("#0B1018"),
 	Raised = Grimoire.Tones.Deep.Top,
 	Gap = 8,
 	Padding = 16,

@@ -22,7 +22,7 @@ local player = Players.LocalPlayer
 local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TowerRemotes"):WaitForChild("GuideMoment") :: RemoteEvent
 
 local GOLD = Color3.fromRGB(255, 214, 120)
-local INK = Color3.fromRGB(12, 8, 18)
+local INK = Color3.fromRGB(6, 10, 16)
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "UltimateMoment"

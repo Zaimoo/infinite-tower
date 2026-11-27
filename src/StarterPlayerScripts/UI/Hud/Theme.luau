@@ -9,17 +9,17 @@ local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForC
 local Theme = {}
 
 Theme.Colors = table.freeze({
-	Panel = Color3.fromRGB(15, 13, 22),
-	PanelSoft = Color3.fromRGB(24, 21, 36),
-	Border = Color3.fromRGB(88, 70, 120),
-	Gold = Color3.fromRGB(250, 204, 21),
-	Text = Color3.fromRGB(255, 255, 255),
-	Muted = Color3.fromRGB(170, 160, 190),
+	Panel = Color3.fromRGB(11, 16, 24),
+	PanelSoft = Color3.fromRGB(22, 32, 48),
+	Border = Color3.fromRGB(51, 65, 85),
+	Gold = Color3.fromRGB(229, 196, 112),
+	Text = Color3.fromRGB(238, 244, 251),
+	Muted = Color3.fromRGB(148, 163, 184),
 	Green = Color3.fromRGB(74, 222, 128),
-	Red = Color3.fromRGB(239, 68, 68),
-	HP = Color3.fromRGB(65, 220, 110),
-	Gauge = Color3.fromRGB(255, 210, 55),
-	Badge = Color3.fromRGB(239, 68, 68),
+	Red = Color3.fromRGB(244, 63, 94),
+	HP = Color3.fromRGB(74, 222, 128),
+	Gauge = Color3.fromRGB(229, 196, 112),
+	Badge = Color3.fromRGB(244, 63, 94),
 })
 
 -- Rarity tier frame colours, Common (1) to Immortal (11; 8-11 are the Gilded Mirror heroes). Same hues as ArtifactCatalog's rarities

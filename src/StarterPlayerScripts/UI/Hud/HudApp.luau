@@ -302,7 +302,7 @@ local function travelRow(buttons: { any }, compact: boolean, screenX: number, be
 			}),
 			Edge = e("UIStroke", {
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-				Color = Color3.fromRGB(10, 6, 14),
+				Color = Color3.fromRGB(6, 10, 16),
 				Thickness = 2,
 			}),
 			Label = Components.HeavyLabel({
@@ -696,7 +696,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		{
 			Icon = "Fortress",
 			Label = "Upgrades",
-			Accent = Color3.fromRGB(192, 132, 252), -- #C084FC Violet
+			Accent = Color3.fromRGB(56, 189, 248), -- #38BDF8 Ice Cyan
 			Badge = buildableNodes(profile),
 			OnActivated = function()
 				call("OpenFacilityHUD", "FortressTree")
@@ -723,7 +723,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Name = "PassRailButton",
 			Icon = "Pass",
 			Label = "Pass",
-			Accent = Color3.fromRGB(214, 150, 255), -- #D696FF Amethyst
+			Accent = Color3.fromRGB(244, 63, 94), -- #F43F5E Crimson Alert
 			-- Battle Pass rewards ready to claim.
 			Badge = passClaimable,
 			OnActivated = function()

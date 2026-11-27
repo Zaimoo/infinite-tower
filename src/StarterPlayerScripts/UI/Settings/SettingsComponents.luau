@@ -97,7 +97,7 @@ function SettingsComponents.Section(props: {
 
 	return e("Frame", {
 		Name = "Section_" .. props.Title,
-		BackgroundColor3 = Color3.fromRGB(22, 18, 34),
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BackgroundTransparency = 0.55,
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -231,7 +231,7 @@ function SettingsComponents.Slider(props: {
 				ref = trackRef,
 				Name = "Track",
 				AnchorPoint = Vector2.new(0, 0.5),
-				BackgroundColor3 = Color3.fromRGB(8, 6, 14),
+				BackgroundColor3 = Color3.fromRGB(9, 14, 23),
 				BackgroundTransparency = 0.45,
 				Position = UDim2.new(0, 10, 0.5, 0),
 				Size = UDim2.new(1, -20, 0, 14),
@@ -324,7 +324,7 @@ function SettingsComponents.Toggle(props: {
 			AnchorPoint = Vector2.new(1, 0.5),
 			Position = UDim2.new(1, -2, 0.5, 0),
 			Size = UDim2.fromOffset(52, 28),
-			BackgroundColor3 = if props.Value then Color3.fromRGB(228, 186, 115) else Color3.fromRGB(18, 14, 26),
+			BackgroundColor3 = if props.Value then Color3.fromRGB(56, 189, 248) else Color3.fromRGB(11, 16, 24),
 			BackgroundTransparency = if props.Value then 0.20 else 0.50,
 		}, {
 			PillCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
@@ -338,7 +338,7 @@ function SettingsComponents.Toggle(props: {
 				AnchorPoint = if props.Value then Vector2.new(1, 0.5) else Vector2.new(0, 0.5),
 				Position = if props.Value then UDim2.new(1, -3, 0.5, 0) else UDim2.new(0, 3, 0.5, 0),
 				Size = UDim2.fromOffset(22, 22),
-				BackgroundColor3 = if props.Value then Color3.fromRGB(255, 250, 235) else Color3.fromRGB(120, 115, 135),
+				BackgroundColor3 = if props.Value then Color3.fromRGB(238, 244, 251) else Color3.fromRGB(100, 116, 139),
 			}, {
 				DotCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 				DotStroke = e("UIStroke", {
@@ -374,7 +374,7 @@ function SettingsComponents.TabButton(props: {
 		AutoButtonColor = false,
 		Size = UDim2.new(1, 0, 0, 56),
 		Text = "",
-		BackgroundColor3 = if props.IsActive then Color3.fromRGB(38, 28, 58) else Color3.fromRGB(22, 18, 34),
+		BackgroundColor3 = if props.IsActive then Color3.fromRGB(22, 42, 66) else Color3.fromRGB(16, 25, 40),
 		BackgroundTransparency = if props.IsActive then 0.35 elseif isHovered then 0.38 else 0.55,
 		LayoutOrder = props.LayoutOrder or 1,
 		[React.Event.Activated] = props.OnClick,
@@ -423,7 +423,7 @@ function SettingsComponents.StatCard(props: {
 	return e("Frame", {
 		Name = "StatCard_" .. props.Title,
 		Size = UDim2.new(0.31, 0, 0, 88),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 34),
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BackgroundTransparency = 0.55,
 		LayoutOrder = props.LayoutOrder or 1,
 	}, {
@@ -475,7 +475,7 @@ function SettingsComponents.ActionButton(props: {
 	local isHovered, setHovered = useState(false)
 	local isPrimary = props.Primary == true
 
-	local bgColor = if isPrimary then Color3.fromRGB(112, 64, 180) else Color3.fromRGB(22, 18, 34)
+	local bgColor = if isPrimary then Color3.fromRGB(24, 116, 174) else Color3.fromRGB(16, 25, 40)
 	local bgTrans = if isPrimary then (if isHovered then 0.15 else 0.25) else (if isHovered then 0.35 else 0.50)
 	local strokeColor = if isPrimary then Color3.fromRGB(250, 204, 21) elseif isHovered then Color3.fromRGB(250, 204, 21) else Color3.fromRGB(255, 255, 255)
 	local strokeTrans = if isPrimary then 0.20 elseif isHovered then 0.30 else 0.75

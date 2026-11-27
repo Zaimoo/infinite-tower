@@ -26,9 +26,9 @@ local OBSIDIAN_BG = Color3.fromRGB(14, 16, 24)
 local CARD_BG = Color3.fromRGB(24, 28, 39)
 local GOLD_TEXT = Color3.fromRGB(245, 222, 168)
 local GOLD_FRAME = Color3.fromRGB(198, 162, 92)
-local CREAM = Color3.fromRGB(248, 246, 255)
+local CREAM = Color3.fromRGB(238, 244, 251)
 local MUTED_TEXT = Color3.fromRGB(172, 178, 198)
-local INK = Color3.fromRGB(10, 6, 14)
+local INK = Color3.fromRGB(6, 10, 16)
 
 local MODEL_META: { [Kind]: { BoardName: string, ScreenName: string, ValueFrame: string, ValueLabel: string, ModelKey: string, StudioModel: string } } = {
 	Donated = {
@@ -163,7 +163,7 @@ local function buildScreenGui(screen: BasePart, kind: Kind)
 	newInst("UIGradient", {
 		Color = if isPower
 			then ColorSequence.new(Color3.fromRGB(24, 38, 66), OBSIDIAN_BG)
-			else ColorSequence.new(Color3.fromRGB(36, 32, 46), OBSIDIAN_BG),
+			else ColorSequence.new(Color3.fromRGB(22, 32, 48), OBSIDIAN_BG),
 		Rotation = 90,
 		Parent = header,
 	})
