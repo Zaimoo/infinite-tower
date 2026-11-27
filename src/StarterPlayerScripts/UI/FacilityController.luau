@@ -170,9 +170,13 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		end
 	end)
 
-	-- 2. Modal Frame (Ornate Gothic Box Container)
-	local root = new("Frame", {
+	-- 2. Modal Frame (TextButton at ZIndex 51 > scrim 50 so empty clicks never reach the scrim)
+	local root = new("TextButton", {
 		Name = "FacilityModal",
+		Text = "",
+		AutoButtonColor = false,
+		Selectable = false,
+		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(WIDTH, HEIGHT),
@@ -181,14 +185,8 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		Visible = false,
 		ZIndex = 51,
 	}, gui)
+	root:SetAttribute("NoFeel", true)
 	self.Root = root
-	-- The window is a plain Frame, so clicks on its empty parts used to fall through to the scrim and
-	-- close it. This catcher sits under every control (lowest sibling ZIndex) and swallows them.
-	local catcher = new("TextButton", {
-		Name = "ClickCatcher", Text = "", AutoButtonColor = false, BackgroundTransparency = 1,
-		Size = UDim2.fromScale(1, 1), Selectable = false, ZIndex = 0,
-	}, root)
-	catcher:SetAttribute("NoFeel", true)
 	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
 	GildedGrimoire.Watch(root)
 

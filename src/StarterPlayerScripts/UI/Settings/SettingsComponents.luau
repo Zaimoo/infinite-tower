@@ -3,6 +3,7 @@
 -- Clean Clear Glass UI Components for Settings UI.
 -- Translucent frosted dark crystal cards, gold/amber luminous accents, and 0%-100% exact edge-snap sliders.
 
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
@@ -107,6 +108,12 @@ end
 --------------------------------------------------------------------------------
 -- 2. Interactive Slider (Clear Glass Track + Gold-Amber Fill + 0% Edge-Snap)
 --------------------------------------------------------------------------------
+local function markNoFeel(rbx: Instance?)
+	if rbx then
+		rbx:SetAttribute("NoFeel", true)
+	end
+end
+
 function SettingsComponents.Slider(props: {
 	Label: string,
 	Description: string?,
@@ -116,10 +123,20 @@ function SettingsComponents.Slider(props: {
 	LayoutOrder: number?,
 	OnChange: (number) -> (),
 })
-	local isDragging, setDragging = useState(false)
 	local trackRef = useRef(nil :: Frame?)
 	local onChangeRef = useRef(props.OnChange)
 	onChangeRef.current = props.OnChange
+	local dragConnsRef = useRef(nil :: { RBXScriptConnection }?)
+
+	local stopDragging = useCallback(function()
+		local conns = dragConnsRef.current
+		if conns then
+			for _, conn in conns do
+				conn:Disconnect()
+			end
+			dragConnsRef.current = nil
+		end
+	end, {})
 
 	local updateFromPos = useCallback(function(inputX: number)
 		local track = trackRef.current
@@ -128,7 +145,9 @@ function SettingsComponents.Slider(props: {
 		local absSize = track.AbsoluteSize.X
 		if absSize <= 0 then return end
 
-		local rawAlpha = (inputX - absPos) / math.max(absSize, 1)
+		local inset = GuiService:GetGuiInset()
+		local screenX = inputX + inset.X
+		local rawAlpha = (screenX - absPos) / math.max(absSize, 1)
 		-- Exact Edge-Snap Deadzone (guarantees exact 0% and 100%)
 		if rawAlpha <= 0.015 then
 			rawAlpha = 0
@@ -140,9 +159,9 @@ function SettingsComponents.Slider(props: {
 		onChangeRef.current(percent / 100)
 	end, {})
 
-	-- Global mouse movement listener while dragging to ensure smooth dragging across screen
-	useEffect(function()
-		if not isDragging then return end
+	local startDragging = useCallback(function(inputX: number)
+		stopDragging()
+		updateFromPos(inputX)
 
 		local moveConn = UserInputService.InputChanged:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
@@ -152,20 +171,17 @@ function SettingsComponents.Slider(props: {
 
 		local endConn = UserInputService.InputEnded:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				setDragging(false)
+				stopDragging()
 			end
 		end)
 
-		local focusConn = UserInputService.WindowFocusReleased:Connect(function()
-			setDragging(false)
-		end)
+		local focusConn = UserInputService.WindowFocusReleased:Connect(stopDragging)
+		dragConnsRef.current = { moveConn, endConn, focusConn }
+	end, { stopDragging, updateFromPos })
 
-		return function()
-			moveConn:Disconnect()
-			endConn:Disconnect()
-			focusConn:Disconnect()
-		end
-	end, { isDragging, updateFromPos })
+	useEffect(function()
+		return stopDragging
+	end, { stopDragging })
 
 	local clampedValue = math.clamp(props.Value, 0, 1)
 	local display = props.DisplayValue or string.format("%d%%", math.round(clampedValue * 100))
@@ -196,18 +212,18 @@ function SettingsComponents.Slider(props: {
 			}),
 		}),
 		HitArea = e("TextButton", {
+			ref = markNoFeel,
 			Name = "TrackHit",
 			BackgroundTransparency = 1,
 			Text = "",
 			AutoButtonColor = false,
 			Selectable = false,
 			Active = true,
-			Position = UDim2.new(0, 2, 0, 23),
-			Size = UDim2.new(1, -4, 0, 28),
+			Position = UDim2.new(0, 0, 0, 23),
+			Size = UDim2.new(1, 0, 0, 28),
 			[React.Event.InputBegan] = function(_rbx, input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-					setDragging(true)
-					updateFromPos(input.Position.X)
+					startDragging(input.Position.X)
 				end
 			end,
 		}, {
@@ -217,8 +233,8 @@ function SettingsComponents.Slider(props: {
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = Color3.fromRGB(8, 6, 14),
 				BackgroundTransparency = 0.45,
-				Position = UDim2.fromScale(0, 0.5),
-				Size = UDim2.new(1, 0, 0, 14),
+				Position = UDim2.new(0, 10, 0.5, 0),
+				Size = UDim2.new(1, -20, 0, 14),
 			}, {
 				TrackCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 				TrackStroke = e("UIStroke", {
@@ -275,6 +291,7 @@ function SettingsComponents.Toggle(props: {
 	local isHovered, setHovered = useState(false)
 
 	return e("TextButton", {
+		ref = markNoFeel,
 		Name = "Toggle_" .. props.Label,
 		BackgroundTransparency = 1,
 		Text = "",
@@ -352,6 +369,7 @@ function SettingsComponents.TabButton(props: {
 	local isHovered, setHovered = useState(false)
 
 	return e("TextButton", {
+		ref = markNoFeel,
 		Name = "Tab_" .. props.Name,
 		AutoButtonColor = false,
 		Size = UDim2.new(1, 0, 0, 56),

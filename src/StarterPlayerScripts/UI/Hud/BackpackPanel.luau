@@ -372,7 +372,10 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 			BackgroundTransparency = 1, AutoButtonColor = false, Selectable = false, Text = "", BorderSizePixel = 0,
 			[React.Event.Activated] = close }),
 		Window = Panel({
-			Name = "BackpackWindow", AnchorPoint = Vector2.new(0.5, 0.5),
+			Name = "BackpackWindow",
+			Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = false,
+			ref = function(rbx: Instance?) if rbx then rbx:SetAttribute("NoFeel", true) end end,
+			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(width, height),
 			Active = true, ZIndex = 2, SelectionGroup = true,
 			SelectionBehaviorUp = Enum.SelectionBehavior.Stop, SelectionBehaviorDown = Enum.SelectionBehavior.Stop,

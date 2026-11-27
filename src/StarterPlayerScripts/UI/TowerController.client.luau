@@ -105,9 +105,12 @@ local scrim = new("TextButton", {
 	ZIndex = 38,
 }, gui)
 
--- Main Modal Window Container
-local panel = new("Frame", {
+-- Main Modal Window Container (TextButton at ZIndex 40 > scrim 38 so empty clicks never reach the scrim)
+local panel = new("TextButton", {
 	Name = "FloorSelector",
+	Text = "",
+	AutoButtonColor = false,
+	Selectable = false,
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.5),
 	Size = UDim2.fromOffset(830, 560),
@@ -116,14 +119,8 @@ local panel = new("Frame", {
 	Visible = false,
 	ZIndex = 40,
 }, gui)
+panel:SetAttribute("NoFeel", true)
 GothicBoxStyle.Apply(panel, { Style = "Window" })
--- `Active` on a Frame doesn't stop clicks reaching the scrim's Activated, so clicks on the panel's
--- empty parts used to close it. This catcher sits under every control (lowest sibling ZIndex) and
--- swallows them.
-new("TextButton", {
-	Name = "ClickCatcher", Text = "", AutoButtonColor = false, BackgroundTransparency = 1,
-	Size = UDim2.fromScale(1, 1), Selectable = false, ZIndex = 0,
-}, panel):SetAttribute("NoFeel", true)
 
 -- Gilded Grimoire: every label in the selector uses the theme fonts.
 GildedGrimoire.Watch(panel)
