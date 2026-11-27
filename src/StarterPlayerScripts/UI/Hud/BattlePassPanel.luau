@@ -57,7 +57,7 @@ local QUEST_GAP = 6
 local QUEST_HEAD = 38 -- a quest board's title band
 local QUEST_CHROME = QUEST_HEAD + 12 -- the band plus the board's padding
 local QUEST_MIN, QUEST_MAX = 44, 60
-local ROW_FILL = Color3.fromRGB(24, 17, 38)
+local ROW_FILL = Color3.fromRGB(16, 25, 40)
 
 -- The premium row's gold: dark gilt at rest, bright when a reward is ready.
 local GILT = Tones.Gilded
@@ -156,14 +156,14 @@ local function questRow(order: number, height: number, side: number, accent: Col
 		Medal = e("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0.5, 0), Size = UDim2.fromOffset(36, 36), BackgroundColor3 = Color3.new(1, 1, 1),
 			BackgroundTransparency = if claimed then 0.5 else 0, BorderSizePixel = 0, ZIndex = 4 }, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			Fill = e("UIGradient", { Color = ColorSequence.new(edge:Lerp(Color3.new(0, 0, 0), 0.45), Color3.fromRGB(14, 10, 22)), Rotation = 90 }),
+			Fill = e("UIGradient", { Color = ColorSequence.new(edge:Lerp(Color3.new(0, 0, 0), 0.45), Color3.fromRGB(11, 16, 24)), Rotation = 90 }),
 			Ring = e("UIStroke", { Color = edge, Thickness = 1.6, Transparency = if claimed then 0.4 else 0.1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 			Icon = IconAt(if claimed then "Check" else quest.Icon, 24, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 5 }),
 		}),
 		Text = Body({ Position = UDim2.fromOffset(textLeft, 4), Size = UDim2.new(1, -(textLeft + textRight), 0, 18), TextSize = 14, RichText = false,
 			TextColor3 = if claimed then TEXT.Muted else TEXT.Parchment, Text = quest.Text, ZIndex = 4 }),
 		Bar = e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, textLeft, 1, -8), Size = UDim2.new(1, -(textLeft + textRight + 58), 0, 8),
-			BackgroundColor3 = Color3.fromRGB(12, 9, 20), BorderSizePixel = 0, ZIndex = 4 }, {
+			BackgroundColor3 = Color3.fromRGB(9, 14, 23), BorderSizePixel = 0, ZIndex = 4 }, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 			Ink = e("UIStroke", { Color = Grimoire.Ink, Thickness = 1.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 			Fill = if count > 0 then e("Frame", { Size = UDim2.fromScale(math.clamp(count / quest.Goal, 0.05, 1), 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 5 }, {
@@ -179,7 +179,7 @@ local function questRow(order: number, height: number, side: number, accent: Col
 			Text = string.format("CLAIM +%d", quest.Xp), Disabled = busy, OnActivated = onClaim }) else nil,
 		-- The XP the quest pays: a gold-edged pill, greyed once it has been claimed.
 		Xp = if not ready then e("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -7, 0.5, 0), Size = UDim2.fromOffset(side, 26),
-			BackgroundColor3 = Color3.fromRGB(14, 10, 22), BackgroundTransparency = if claimed then 0.6 else 0.1, BorderSizePixel = 0, ZIndex = 4 }, {
+			BackgroundColor3 = Color3.fromRGB(11, 16, 24), BackgroundTransparency = if claimed then 0.6 else 0.1, BorderSizePixel = 0, ZIndex = 4 }, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 			Edge = e("UIStroke", { Color = if claimed then Tones.Slate.Rail else GOLD_GLOW, Thickness = 1.4, Transparency = if claimed then 0.5 else 0.25, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 			Text = Heavy({ Position = UDim2.fromOffset(4, 1), Size = UDim2.new(1, -8, 1, -2), MaxSize = 14, Outline = 1.8, Gold = not claimed,
@@ -313,7 +313,7 @@ local function BattlePassPanel(props: { Profile: any, Width: number, Height: num
 				Text = string.upper(BattlePassRules.SeasonName(state.Season)), ZIndex = 4 }),
 			Ends = Body({ Position = UDim2.fromOffset(96, 36), Size = UDim2.new(1, -(108 + buttonWidth + 16), 0, 16), TextSize = 13, TextColor3 = TEXT.Muted, RichText = false,
 				Text = "Ends in " .. RewardRules.FormatDuration(endsIn) .. " · unclaimed rewards are delivered", ZIndex = 4 }),
-			Track = e("Frame", { Position = UDim2.fromOffset(96, 58), Size = UDim2.new(1, -(108 + buttonWidth + 16), 0, 16), BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+			Track = e("Frame", { Position = UDim2.fromOffset(96, 58), Size = UDim2.new(1, -(108 + buttonWidth + 16), 0, 16), BackgroundColor3 = Color3.fromRGB(9, 14, 23),
 				BorderSizePixel = 0, ZIndex = 4 }, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 				Ink = e("UIStroke", { Color = Grimoire.Ink, Thickness = 1.8, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
@@ -413,7 +413,7 @@ local function BattlePassPanel(props: { Profile: any, Width: number, Height: num
 				Icon = IconAt(icon, 26, { Position = UDim2.fromOffset(10, 7), ZIndex = 4 }),
 				Title = Heavy({ Position = UDim2.fromOffset(42, 6), Size = UDim2.new(0.5, -46, 0, 26), MaxSize = if narrow then 15 else 19, Outline = 2, TextXAlignment = LEFT, Text = title, ZIndex = 4 }),
 				Done = e("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8), Size = UDim2.fromOffset(50, 22),
-					BackgroundColor3 = if allDone then Tones.Jade.Top else Color3.fromRGB(14, 10, 22), BorderSizePixel = 0, ZIndex = 4 }, {
+					BackgroundColor3 = if allDone then Tones.Jade.Top else Color3.fromRGB(11, 16, 24), BorderSizePixel = 0, ZIndex = 4 }, {
 					Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 					Edge = e("UIStroke", { Color = if allDone then Tones.Jade.Rail else tone.Rail, Thickness = 1.4, Transparency = 0.3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 					Text = e("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, FontFace = Components.NumberFont, TextSize = 13,
@@ -436,7 +436,7 @@ local function BattlePassPanel(props: { Profile: any, Width: number, Height: num
 		Name = "BattlePassOverlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 20,
 	}, {
 		Scrim = e("TextButton", {
-			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
+			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 10, 16), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
 			[React.Event.Activated] = function() props.OnClose() end,
 		}),
 		Window = Panel({

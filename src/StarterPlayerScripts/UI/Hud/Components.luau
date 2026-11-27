@@ -58,7 +58,7 @@ local function bar(fraction: number, color: Color3, order: number, glow: boolean
 	return e("Frame", {
 		LayoutOrder = order,
 		Size = UDim2.new(1, 0, 0, 6),
-		BackgroundColor3 = Color3.fromRGB(40, 36, 52),
+		BackgroundColor3 = Color3.fromRGB(22, 32, 48),
 		BorderSizePixel = 0,
 	}, {
 		Corner = corner(3),
@@ -103,7 +103,7 @@ local function heavyLabel(props: { [string]: any })
 			}),
 			Rotation = 90,
 		}) else nil,
-		Outline = e("UIStroke", { Color = Color3.fromRGB(10, 6, 14), Thickness = props.Outline or 2.6, LineJoinMode = Enum.LineJoinMode.Round }),
+		Outline = e("UIStroke", { Color = Color3.fromRGB(6, 10, 16), Thickness = props.Outline or 2.6, LineJoinMode = Enum.LineJoinMode.Round }),
 	})
 end
 Components.HeavyLabel = heavyLabel
@@ -269,7 +269,7 @@ function Components.RailButton(props: {
 		Key = if props.KeyHint then e("TextLabel", {
 			Position = UDim2.new(0.5, -math.floor(size / 2) - 6, 0, -4), -- on the icon's top-left corner, not the button edge
 			Size = UDim2.fromOffset(22, 22),
-			BackgroundColor3 = Color3.fromRGB(28, 22, 40),
+			BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 			FontFace = NUMBER_FONT,
 			Text = props.KeyHint,
 			TextColor3 = Color3.fromRGB(255, 236, 180),
@@ -356,7 +356,7 @@ local function body(props: { [string]: any })
 	local base: { [string]: any } = {
 		BackgroundTransparency = 1,
 		FontFace = BODY_FONT,
-		TextColor3 = Color3.fromRGB(236, 228, 246),
+		TextColor3 = Color3.fromRGB(238, 244, 251),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		RichText = true,
@@ -373,7 +373,7 @@ local function chunkyBar(fraction: number, hi: Color3, lo: Color3, order: number
 	return e("Frame", {
 		LayoutOrder = order,
 		Size = UDim2.new(1, 0, 0, height),
-		BackgroundColor3 = Color3.fromRGB(26, 20, 36),
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23),
 		BorderSizePixel = 0,
 	}, {
 		Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
@@ -417,7 +417,7 @@ local function glass(props: { [string]: any }, children: { [string]: any }?)
 		Corner = corner(props.Radius or G.Radius),
 		Stroke = e("UIStroke", { ref = props.StrokeRef, Color = G.Hairline, Transparency = G.HairlineTransparency, Thickness = G.StrokeThickness or 1,
 			LineJoinMode = Enum.LineJoinMode.Round, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-		Lit = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 140, 170)) }),
+		Lit = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(148, 163, 184)) }),
 	}
 	for k, v in children or {} do kids[k] = v end
 	return e(props.Class or "Frame", inst, kids)
@@ -588,7 +588,7 @@ end
 local STATE_CHIPS = {
 	Fighting = { "Fighting", Color3.fromRGB(255, 140, 96) },
 	Moving = { "Moving", Color3.fromRGB(130, 210, 255) },
-	Idle = { "Idle", Color3.fromRGB(196, 186, 214) },
+	Idle = { "Idle", Color3.fromRGB(172, 188, 208) },
 	Recalled = { "Recalled", Color3.fromRGB(80, 230, 250) },
 	Down = { "Down", Color3.fromRGB(255, 90, 90) },
 	Dueling = { "Dueling", Color3.fromRGB(255, 214, 80) },
@@ -1125,7 +1125,7 @@ function Components.ViewSquadBar(props: {
 				Text = if viewing then "EXIT [V]" else "VIEW [V]",
 				Font = G.FontHeavy,
 				TextSize = 12,
-				TextColor3 = if viewing then Color3.fromRGB(20, 14, 28) else Grimoire.Text.Primary,
+				TextColor3 = if viewing then Color3.fromRGB(11, 16, 24) else Grimoire.Text.Primary,
 				Selectable = true,
 				[React.Event.Activated] = function()
 					props.OnToggleView()

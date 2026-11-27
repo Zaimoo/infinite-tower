@@ -140,7 +140,7 @@ end
 
 -- A dim placeholder so the grid reads as a bag with room left in it.
 local function emptySlot(order: number)
-	return e("Frame", { LayoutOrder = order, BackgroundColor3 = Color3.fromRGB(16, 12, 24), BackgroundTransparency = 0.35, BorderSizePixel = 0 }, {
+	return e("Frame", { LayoutOrder = order, BackgroundColor3 = Color3.fromRGB(11, 16, 24), BackgroundTransparency = 0.35, BorderSizePixel = 0 }, {
 		Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
 		Stroke = e("UIStroke", { Color = Tones.Slate.Rail, Thickness = 1.2, Transparency = 0.7, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 	})
@@ -368,7 +368,7 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 	local emptyText = if not rows then "Loading your backpack…" elseif #rows == 0 then EMPTY[tab] else nil
 
 	return e("Frame", { Name = "BackpackOverlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 12 }, {
-		Scrim = e("TextButton", { Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(9, 6, 14),
+		Scrim = e("TextButton", { Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 10, 16),
 			BackgroundTransparency = 1, AutoButtonColor = false, Selectable = false, Text = "", BorderSizePixel = 0,
 			[React.Event.Activated] = close }),
 		Window = Panel({

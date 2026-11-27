@@ -262,7 +262,7 @@ local modalFocusOverlay = Instance.new("Frame")
 modalFocusOverlay.Name = "ModalFocusOverlay"
 modalFocusOverlay.Size = UDim2.fromScale(1, 1)
 modalFocusOverlay.Position = UDim2.fromScale(0, 0)
-modalFocusOverlay.BackgroundColor3 = Color3.fromHex("#06040A")
+modalFocusOverlay.BackgroundColor3 = Color3.fromHex("#060A10")
 modalFocusOverlay.BackgroundTransparency = 1
 modalFocusOverlay.BorderSizePixel = 0
 modalFocusOverlay.Visible = false
@@ -744,7 +744,7 @@ local partialTooltipPopover = makeFrame({
 	Name = "SquadVitalityTooltip",
 	Size = UDim2.new(0, 340, 0, 160),
 	Position = UDim2.new(0.5, -170, 0, -168),
-	BackgroundColor3 = Color3.fromRGB(18, 14, 24),
+	BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 	BackgroundTransparency = 0.05,
 	Corner = 8,
 	Stroke = 1.5,
@@ -767,7 +767,7 @@ local tooltipList = makeLabel({
 	Size = UDim2.new(1, -16, 0, 78),
 	Position = UDim2.new(0, 8, 0, 30),
 	Text = "Tracking squad members...",
-	TextColor3 = Color3.fromRGB(225, 220, 240),
+	TextColor3 = Color3.fromRGB(203, 213, 225),
 	TextSize = 11,
 	Font = Enum.Font.Gotham,
 	TextXAlignment = Enum.TextXAlignment.Left,
@@ -1030,7 +1030,7 @@ local blacksmithModal = makeFrame({
 	Name = "BlacksmithModal",
 	Size = UDim2.new(0, 880, 0, 520),
 	Position = UDim2.new(0.5, -440, 0.5, -260),
-	BackgroundColor3 = Color3.fromRGB(22, 20, 26),
+	BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 	Visible = false,
 	Corner = 12,
 	Stroke = 2,
@@ -1047,7 +1047,7 @@ local ACTION_COLORS = {
 	Squad = Color3.fromRGB(56, 189, 248),      -- #38BDF8 Azure
 	Overdrive = Color3.fromRGB(245, 158, 11),   -- #F59E0B Amber
 	Recall = Color3.fromRGB(34, 211, 238),     -- #22D3EE Cyan
-	Tower = Color3.fromRGB(192, 132, 252),     -- #C084FC Violet
+	Tower = Color3.fromRGB(244, 63, 94),       -- #F43F5E Crimson Alert
 	Fortress = Color3.fromRGB(214, 180, 120),  -- Parchment: the Fortress Tree (Phase 4)
 }
 
@@ -1071,7 +1071,7 @@ floatingMenuContainer.Name = "FloatingToolbar"
 floatingMenuContainer.Size = UDim2.fromOffset(494, 96)
 floatingMenuContainer.Position = UDim2.new(0.5, 0, 1, -16)
 floatingMenuContainer.AnchorPoint = Vector2.new(0.5, 1)
-floatingMenuContainer.BackgroundColor3 = Color3.fromRGB(13, 9, 18) -- #0D0912
+floatingMenuContainer.BackgroundColor3 = Color3.fromRGB(11, 16, 24) -- #0D0912
 floatingMenuContainer.BackgroundTransparency = 0.20
 floatingMenuContainer.BorderSizePixel = 0
 floatingMenuContainer.ZIndex = 12
@@ -1086,7 +1086,7 @@ floatCorner.Parent = floatingMenuContainer
 
 local floatStroke = Instance.new("UIStroke")
 floatStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-floatStroke.Color = Color3.fromRGB(49, 39, 64) -- #312740
+floatStroke.Color = Color3.fromRGB(51, 65, 85) -- #312740
 floatStroke.Thickness = 1.2
 floatStroke.Parent = floatingMenuContainer
 
@@ -1170,7 +1170,7 @@ local function createFloatingIconButton(
 		keybindPill.Size = UDim2.fromOffset(18, 18)
 		keybindPill.Position = UDim2.new(1, 2, 0, -2)
 		keybindPill.AnchorPoint = Vector2.new(1, 0)
-		keybindPill.BackgroundColor3 = Color3.fromRGB(246, 244, 255)
+		keybindPill.BackgroundColor3 = Color3.fromRGB(238, 244, 251)
 		keybindPill.BorderSizePixel = 0
 		keybindPill.ZIndex = 32
 
@@ -1180,7 +1180,7 @@ local function createFloatingIconButton(
 
 		local kpStroke = Instance.new("UIStroke")
 		kpStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		kpStroke.Color = Color3.fromRGB(13, 9, 18)
+		kpStroke.Color = Color3.fromRGB(11, 16, 24)
 		kpStroke.Thickness = 1
 		kpStroke.Parent = keybindPill
 
@@ -1190,7 +1190,7 @@ local function createFloatingIconButton(
 		kpLabel.Font = Enum.Font.GothamBold
 		kpLabel.Text = keybindText
 		kpLabel.TextSize = 11
-		kpLabel.TextColor3 = Color3.fromRGB(13, 9, 18)
+		kpLabel.TextColor3 = Color3.fromRGB(11, 16, 24)
 		kpLabel.ZIndex = 33
 		kpLabel.Parent = keybindPill
 
@@ -1209,7 +1209,7 @@ local function createFloatingIconButton(
 		cdText.Font = Enum.Font.GothamBold
 		cdText.Text = ""
 		cdText.TextSize = 22
-		cdText.TextColor3 = Color3.fromRGB(246, 244, 255)
+		cdText.TextColor3 = Color3.fromRGB(238, 244, 251)
 		cdText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 		cdText.TextStrokeTransparency = 0.2
 		cdText.Visible = false
@@ -1223,7 +1223,7 @@ local function createFloatingIconButton(
 	labelPill.Size = UDim2.fromOffset(60, 18)
 	labelPill.Position = UDim2.new(0.5, 0, 1, 0)
 	labelPill.AnchorPoint = Vector2.new(0.5, 1)
-	labelPill.BackgroundColor3 = Color3.fromRGB(13, 9, 18)
+	labelPill.BackgroundColor3 = Color3.fromRGB(11, 16, 24)
 	labelPill.BorderSizePixel = 0
 	labelPill.ZIndex = 14
 
@@ -1735,7 +1735,7 @@ makeButton({
 local forgeDetailFrame = makeFrame({
 	Size = UDim2.new(0.48, -12, 1, -56),
 	Position = UDim2.new(0.02, 0, 0, 46),
-	BackgroundColor3 = Color3.fromRGB(30, 26, 32),
+	BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 	Corner = 10,
 	Stroke = 1,
 	StrokeColor = Color3.fromRGB(120, 90, 60),
@@ -1797,10 +1797,10 @@ heroEquipLayout.Parent = heroEquipScroll
 local artifactListFrame = makeFrame({
 	Size = UDim2.new(0.48, -12, 1, -56),
 	Position = UDim2.new(0.50, 4, 0, 46),
-	BackgroundColor3 = Color3.fromRGB(24, 22, 28),
+	BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 	Corner = 10,
 	Stroke = 1,
-	StrokeColor = Color3.fromRGB(90, 80, 95),
+	StrokeColor = Color3.fromRGB(51, 65, 85),
 	Parent = blacksmithModal,
 })
 
@@ -1942,7 +1942,7 @@ refreshBlacksmithModal = function()
 
 		local card = makeFrame({
 			Size = UDim2.new(1, -8, 0, 56),
-			BackgroundColor3 = isSel and Color3.fromRGB(55, 45, 40) or Color3.fromRGB(32, 30, 38),
+			BackgroundColor3 = isSel and Color3.fromRGB(55, 45, 40) or Color3.fromRGB(22, 32, 48),
 			Corner = 6,
 			Stroke = isSel and 2 or 1,
 			StrokeColor = isSel and Color3.fromRGB(255, 180, 50) or rInfo.Color,
@@ -2111,8 +2111,8 @@ end
 -- A whistle button repaints on a state flip (ready / cooling down / Nova window) or when the countdown
 -- second ticks over. `look` is the cooldown second while cooling, else the name of the ready look.
 local WHISTLE_COOLDOWN_GLYPH = Color3.fromRGB(120, 120, 130)
-local WHISTLE_COOLDOWN_STROKE = Color3.fromRGB(49, 39, 64)
-local WHISTLE_COOLDOWN_LABEL = Color3.fromRGB(120, 115, 130)
+local WHISTLE_COOLDOWN_STROKE = Color3.fromRGB(51, 65, 85)
+local WHISTLE_COOLDOWN_LABEL = Color3.fromRGB(100, 116, 139)
 local WHISTLE_NOVA_COLOR = Color3.fromRGB(255, 230, 80)
 local whistleLook: { [any]: number | string } = {}
 local function paintWhistle(handle: any, cooldownSeconds: number, readyLook: string, readyColor: Color3, tintGlow: boolean)
@@ -2322,14 +2322,14 @@ do
 	-- SAVED GOTHIC UI TEXT BOX DESIGN (Obsidian Sheen + White Filigree Corners)
 	--========================================================================
 	local GothicPalette = {
-		ObsidianDark = Color3.fromRGB(13, 9, 18),
-		ObsidianMid = Color3.fromRGB(20, 14, 28),
-		ObsidianSheen = Color3.fromRGB(38, 28, 50),
-		FiligreeWhite = Color3.fromRGB(246, 244, 255),
-		OuterGlow = Color3.fromRGB(222, 205, 255),
-		CornerCutout = Color3.fromRGB(26, 15, 38),
-		InnerLineBright = Color3.fromRGB(112, 100, 132),
-		InnerLineMuted = Color3.fromRGB(68, 58, 84),
+		ObsidianDark = Color3.fromRGB(11, 16, 24),
+		ObsidianMid = Color3.fromRGB(16, 25, 40),
+		ObsidianSheen = Color3.fromRGB(22, 32, 48),
+		FiligreeWhite = Color3.fromRGB(238, 244, 251),
+		OuterGlow = Color3.fromRGB(56, 189, 248),
+		CornerCutout = Color3.fromRGB(16, 25, 40),
+		InnerLineBright = Color3.fromRGB(148, 163, 184),
+		InnerLineMuted = Color3.fromRGB(51, 65, 85),
 	}
 
 	local function applyGothicBoxStyle(container: Frame, compact: boolean?, zOrder: number?): Frame
@@ -2422,7 +2422,7 @@ do
 		lbl.Font = Enum.Font.Fantasy
 		lbl.TextSize = 16
 		lbl.TextScaled = false
-		lbl.TextStrokeColor3 = Color3.fromRGB(12, 8, 18)
+		lbl.TextStrokeColor3 = Color3.fromRGB(6, 10, 16)
 		lbl.TextStrokeTransparency = 0.2
 		lbl.TextXAlignment = Enum.TextXAlignment.Left
 		lbl.TextYAlignment = Enum.TextYAlignment.Center

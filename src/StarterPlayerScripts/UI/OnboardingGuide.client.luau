@@ -26,7 +26,7 @@ local HeroCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChil
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local GOLD = Color3.fromRGB(255, 216, 119)
-local INK = Color3.fromRGB(28, 20, 35)
+local INK = Color3.fromRGB(11, 16, 24)
 local DIM = 0.38 -- transparency of the black overlay
 local HOLE_PAD = 6
 
@@ -116,7 +116,7 @@ skip.BackgroundColor3 = INK
 skip.BackgroundTransparency = 0.2
 skip.Font = Enum.Font.GothamBold
 skip.TextSize = 14
-skip.TextColor3 = Color3.fromRGB(214, 204, 232)
+skip.TextColor3 = Color3.fromRGB(203, 213, 225)
 skip.Text = "Skip tutorial"
 skip.ZIndex = 5
 skip.AutoButtonColor = false

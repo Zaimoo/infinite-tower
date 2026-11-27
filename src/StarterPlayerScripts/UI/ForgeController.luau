@@ -67,8 +67,8 @@ local function spaced(text: string): string
 end
 
 -- Rarity colours like Rare blue and Superior purple are too dark for small text on a dark card.
-local CATALOG_TEXT = Color3.fromRGB(246, 242, 255)
-local CATALOG_SUBTEXT = Color3.fromRGB(214, 204, 232)
+local CATALOG_TEXT = Color3.fromRGB(238, 244, 251)
+local CATALOG_SUBTEXT = Color3.fromRGB(203, 213, 225)
 local function readable(color: Color3): Color3
 	return color:Lerp(Color3.new(1, 1, 1), 0.4)
 end
@@ -112,26 +112,26 @@ local CARD_H, CARD_GAP = 228, 12
 local PREVIEW_W, PREVIEW_H = 160, 200
 
 local C = {
-	Scrim = Color3.fromRGB(6, 5, 10),
-	Panel = Color3.fromHex("#0D0912"),
-	PanelInner = Color3.fromHex("#1F162B"),
-	CardBg = Color3.fromHex("#140F1D"),
-	SlotBg = Color3.fromHex("#0B0811"),
-	StatBoxBg = Color3.fromHex("#120D1A"),
-	Border = Color3.fromHex("#C084FC"),
-	BorderGlow = Color3.fromRGB(222, 208, 255),
-	BorderDim = Color3.fromHex("#443A54"),
-	BorderCard = Color3.fromHex("#312740"),
-	Text = Color3.fromHex("#F6F4FF"),
-	TextMuted = Color3.fromHex("#8C7FA6"),
-	TextLavender = Color3.fromHex("#A396BA"),
-	GoldYellow = Color3.fromHex("#FACC15"),
+	Scrim = Color3.fromRGB(6, 10, 16),
+	Panel = Color3.fromHex("#0B1018"),
+	PanelInner = Color3.fromHex("#162030"),
+	CardBg = Color3.fromHex("#101928"),
+	SlotBg = Color3.fromHex("#090E17"),
+	StatBoxBg = Color3.fromHex("#0D1524"),
+	Border = Color3.fromHex("#38BDF8"),
+	BorderGlow = Color3.fromRGB(186, 230, 253),
+	BorderDim = Color3.fromHex("#334155"),
+	BorderCard = Color3.fromHex("#243248"),
+	Text = Color3.fromHex("#EEF4FB"),
+	TextMuted = Color3.fromHex("#94A3B8"),
+	TextLavender = Color3.fromHex("#CBD5E1"),
+	GoldYellow = Color3.fromHex("#E5C470"),
 	GoldWarm = Color3.fromHex("#E4BA73"),
 	GoldDeep = Color3.fromHex("#D97706"),
 	Green = Color3.fromHex("#4ADE80"),
 	Red = Color3.fromHex("#E74C3C"),
 	Arrow = Color3.fromHex("#4ADE80"),
-	Underline = Color3.fromHex("#F6F4FF"),
+	Underline = Color3.fromHex("#EEF4FB"),
 	CyanEquipped = Color3.fromHex("#38BDF8"),
 	CyanBg = Color3.fromHex("#0F293A"),
 	CyanBorder = Color3.fromHex("#1E4E68"),
@@ -200,7 +200,7 @@ end
 
 -- Filter tabs and chips: the active one is Gold with dark ink text (light text vanishes on gold),
 -- the rest are Slate with near-white text.
-local FILTER_TEXT = Color3.fromRGB(240, 234, 250)
+local FILTER_TEXT = Color3.fromRGB(238, 244, 251)
 local FILTER_TEXT_ACTIVE = Color3.fromRGB(30, 18, 6)
 local function styleFilter(btn: GuiObject, active: boolean)
 	toneButton(btn, if active then "Gold" else "Slate")
@@ -436,7 +436,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	-- Divider Line beneath tabs
 	local tabDivider = new("Frame", {
 		Name = "TabDivider",
-		BackgroundColor3 = Color3.fromRGB(55, 45, 70),
+		BackgroundColor3 = Color3.fromRGB(51, 65, 85),
 		BorderSizePixel = 0,
 		Position = UDim2.fromOffset(VIEW_X, 100),
 		Size = UDim2.new(0, VIEW_W, 0, 1),
@@ -496,11 +496,11 @@ end
 function Forge:StyleTabs()
 	for key, btn in { ASSIGN = self.AssignTabBtn, SUMMON = self.SummonTabBtn, UPGRADE = self.UpgradeTabBtn } do
 		local active = self.ActiveTab == key
-		btn.BackgroundColor3 = if active then Color3.fromRGB(150, 98, 30) else Color3.fromRGB(34, 28, 46)
+		btn.BackgroundColor3 = if active then Color3.fromRGB(150, 98, 30) else Color3.fromRGB(22, 32, 48)
 		btn.TextColor3 = if active then Color3.new(1, 1, 1) else GildedGrimoire.Text.Muted
 		local rail = GildedGrimoire.StateStroke(btn)
 		if rail then
-			rail.Color = if active then Color3.fromRGB(255, 226, 140) else Color3.fromRGB(110, 96, 140)
+			rail.Color = if active then Color3.fromRGB(245, 216, 138) else Color3.fromRGB(71, 95, 126)
 		end
 	end
 end
@@ -586,12 +586,12 @@ function Forge:BuildAssignView(root: Frame)
 		Name = "CapacityPill",
 		Position = UDim2.fromOffset(0, 2),
 		Size = UDim2.fromOffset(170, 30),
-		BackgroundColor3 = Color3.fromRGB(24, 18, 36),
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BorderSizePixel = 0,
 		ZIndex = 54,
 	}, headerBar)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, capFrame)
-	local capStroke = new("UIStroke", { Color = Color3.fromRGB(80, 60, 110), Thickness = 1.5 }, capFrame)
+	local capStroke = new("UIStroke", { Color = Color3.fromRGB(51, 65, 85), Thickness = 1.5 }, capFrame)
 	self.CapacityStroke = capStroke
 
 	local capLabel = label(capFrame, "Artifacts: 0 / 50", 13, C.TextLavender, Enum.Font.GothamBold)
@@ -672,8 +672,8 @@ function Forge:BuildAssignView(root: Frame)
 		Text = "SELL ARTIFACTS",
 		Font = Enum.Font.GothamBold,
 		TextSize = 13,
-		TextColor3 = Color3.fromRGB(255, 220, 120),
-		BackgroundColor3 = Color3.fromRGB(36, 24, 48),
+		TextColor3 = Color3.fromRGB(229, 196, 112),
+		BackgroundColor3 = Color3.fromRGB(22, 32, 48),
 		BorderSizePixel = 0,
 		ZIndex = 54,
 	}, headerBar)
@@ -716,7 +716,7 @@ function Forge:BuildAssignView(root: Frame)
 		Font = Enum.Font.GothamBold,
 		TextSize = 12,
 		TextColor3 = C.Text,
-		BackgroundColor3 = Color3.fromRGB(45, 35, 60),
+		BackgroundColor3 = Color3.fromRGB(26, 38, 56),
 		BorderSizePixel = 0,
 		ZIndex = 55,
 	}, sellControls)
@@ -762,7 +762,7 @@ function Forge:BuildAssignView(root: Frame)
 		Font = Enum.Font.GothamMedium,
 		TextSize = 11,
 		TextColor3 = C.TextMuted,
-		BackgroundColor3 = Color3.fromRGB(30, 25, 40),
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BorderSizePixel = 0,
 		ZIndex = 55,
 	}, sellControls)
@@ -879,7 +879,7 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 	applyGothicStyle(iconBox, "Slot", { State = "Filled" })
 	local iconBoxGrad = new("UIGradient", {
 		Rotation = 90,
-		Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18)),
+		Color = ColorSequence.new(Color3.fromRGB(9, 14, 23), Color3.fromRGB(9, 14, 23)),
 	}, iconBox)
 	local iconLabel = label(iconBox, "", 72, C.Text)
 	iconLabel.Position = UDim2.fromScale(0, 0)
@@ -985,12 +985,12 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 		Font = Enum.Font.GothamBold,
 		TextSize = 14,
 		TextColor3 = Color3.new(1, 1, 1),
-		BackgroundColor3 = Color3.fromRGB(50, 38, 70),
+		BackgroundColor3 = Color3.fromRGB(22, 32, 48),
 		Visible = false,
 		ZIndex = 56,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, sellBtn)
-	local sellStroke = new("UIStroke", { Color = Color3.fromRGB(120, 90, 160), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, sellBtn)
+	local sellStroke = new("UIStroke", { Color = Color3.fromRGB(56, 189, 248), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, sellBtn)
 	grimoireButtonText(sellBtn)
 
 	local node: CardNode = {
@@ -1057,7 +1057,7 @@ local function updateCard(self: any, node: CardNode, item: { UUID: string, Art: 
 		node.CardRail.Color = rarityColor
 	end
 	if node.IconBoxGrad then
-		node.IconBoxGrad.Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18):Lerp(rarityColor, 0.35))
+		node.IconBoxGrad.Color = ColorSequence.new(Color3.fromRGB(9, 14, 23), Color3.fromRGB(9, 14, 23):Lerp(rarityColor, 0.35))
 	end
 	node.IconLabel.Text = ICON_MAP[art.Type] or ""
 	showArtifact(node.IconLabel, art.TemplateId)
@@ -1099,9 +1099,9 @@ local function updateCard(self: any, node: CardNode, item: { UUID: string, Art: 
 		local sellPrice = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1, art.TemplateId)
 		if not canSell then
 			node.SellBtn.Text = if isGild then "GILDFORGED" elseif isEquipped then "EQUIPPED" else "LOCKED"
-			node.SellBtn.BackgroundColor3 = Color3.fromRGB(30, 20, 35)
-			node.SellBtn.TextColor3 = Color3.fromRGB(140, 120, 140)
-			if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(60, 45, 70) end
+			node.SellBtn.BackgroundColor3 = Color3.fromRGB(16, 22, 33)
+			node.SellBtn.TextColor3 = Color3.fromRGB(100, 116, 139)
+			if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(45, 56, 74) end
 			node.Root.BackgroundTransparency = 0.35
 		else
 			node.Root.BackgroundTransparency = 0
@@ -1116,9 +1116,9 @@ local function updateCard(self: any, node: CardNode, item: { UUID: string, Art: 
 				if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(255, 200, 80) end
 			else
 				node.SellBtn.Text = string.format("SELECT  ·  +%s GOLD", StatBalance.Format(sellPrice))
-				node.SellBtn.BackgroundColor3 = Color3.fromRGB(45, 30, 60)
-				node.SellBtn.TextColor3 = Color3.fromRGB(255, 220, 120)
-				if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(120, 90, 160) end
+				node.SellBtn.BackgroundColor3 = Color3.fromRGB(22, 36, 56)
+				node.SellBtn.TextColor3 = Color3.fromRGB(229, 196, 112)
+				if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(56, 189, 248) end
 			end
 		end
 	else
@@ -1172,7 +1172,7 @@ function Forge:RenderAssignView(force: boolean?)
 			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(217, 119, 6) end
 		else
 			self.CapacityLabel.TextColor3 = C.TextLavender
-			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(80, 60, 110) end
+			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(51, 65, 85) end
 		end
 	end
 	self:UpdateSellValuationDisplay()
@@ -1905,14 +1905,14 @@ function Forge:BuildUpgradeView(root: Frame)
 		Name = "TargetRarityBadge",
 		Position = UDim2.fromOffset(0, 56),
 		Size = UDim2.fromOffset(94, 22),
-		BackgroundColor3 = Color3.fromHex("#2B2832"),
+		BackgroundColor3 = Color3.fromHex("#162030"),
 		BorderSizePixel = 0,
 		ZIndex = 54,
 	}, targetMeta)
 	new("UICorner", { CornerRadius = UDim.new(1, 0) }, targetRarityBadge)
-	new("UIStroke", { Color = Color3.fromHex("#6E6A78"), Thickness = 1 }, targetRarityBadge)
+	new("UIStroke", { Color = Color3.fromHex("#475569"), Thickness = 1 }, targetRarityBadge)
 
-	local targetLevel = label(targetRarityBadge, "Common · 1★", 11, Color3.fromHex("#E2E0E8"), Enum.Font.GothamBold)
+	local targetLevel = label(targetRarityBadge, "Common · 1★", 11, Color3.fromHex("#EEF4FB"), Enum.Font.GothamBold)
 	targetLevel.Name = "TargetLevel"
 	targetLevel.Position = UDim2.fromScale(0, 0)
 	targetLevel.Size = UDim2.fromScale(1, 1)
@@ -1971,12 +1971,12 @@ function Forge:BuildUpgradeView(root: Frame)
 			ZIndex = 54,
 		}, statTable)
 
-		local lbl = label(row, labelText, 12, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
+		local lbl = label(row, labelText, 12, Color3.fromHex("#94A3B8"), Enum.Font.GothamMedium)
 		lbl.Position = UDim2.fromOffset(0, 0)
 		lbl.Size = UDim2.new(0, 140, 1, 0)
 		lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-		local oldVal = label(row, "—", 12, Color3.fromHex("#F6F4FF"), Enum.Font.GothamBold)
+		local oldVal = label(row, "—", 12, Color3.fromHex("#EEF4FB"), Enum.Font.GothamBold)
 		oldVal.Name = "OldVal"
 		oldVal.Position = UDim2.new(0, 140, 0, 0)
 		oldVal.Size = UDim2.new(0, 60, 1, 0)
@@ -2008,12 +2008,12 @@ function Forge:BuildUpgradeView(root: Frame)
 		Name = "FooterDivider",
 		Position = UDim2.fromOffset(16, 154),
 		Size = UDim2.new(1, -32, 0, 1),
-		BackgroundColor3 = Color3.fromHex("#352B47"),
+		BackgroundColor3 = Color3.fromHex("#243248"),
 		BorderSizePixel = 0,
 		ZIndex = 54,
 	}, previewPanel)
 
-	local footerLabel = label(previewPanel, "Donors: <b>0/1</b>  ·  Gold: <b>500</b>", 12, Color3.fromHex("#A396BA"), Enum.Font.Gotham)
+	local footerLabel = label(previewPanel, "Donors: <b>0/1</b>  ·  Gold: <b>500</b>", 12, Color3.fromHex("#94A3B8"), Enum.Font.Gotham)
 	footerLabel.Position = UDim2.fromOffset(16, 160)
 	footerLabel.Size = UDim2.new(1, -32, 0, 24)
 	footerLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -2048,13 +2048,13 @@ function Forge:BuildUpgradeView(root: Frame)
 		}, fodderContainer)
 		applyGothicStyle(slot, "Slot", { State = "Empty" })
 
-		local plus = label(slot, "+", 26, Color3.fromHex("#B4A5D1"), Enum.Font.GothamBold)
+		local plus = label(slot, "+", 26, Color3.fromHex("#38BDF8"), Enum.Font.GothamBold)
 		plus.Name = "PlusLabel"
 		plus.Position = UDim2.fromScale(0, 0.12)
 		plus.Size = UDim2.fromScale(1, 0.44)
 		plus.TextXAlignment = Enum.TextXAlignment.Center
 
-		local name = label(slot, "Slot " .. i, 11, Color3.fromHex("#8C7FA6"), Enum.Font.Gotham)
+		local name = label(slot, "Slot " .. i, 11, Color3.fromHex("#94A3B8"), Enum.Font.Gotham)
 		name.Name = "NameLabel"
 		name.Position = UDim2.fromScale(0, 0.58)
 		name.Size = UDim2.fromScale(1, 0.32)
@@ -2217,7 +2217,7 @@ function Forge:RenderUpgradeView()
 	local isMaxRank = (currentStar >= maxStars)
 	local cost = ArtifactCatalog.GetStarPromotionCost(currentStar, target.Rarity) or { Gold = 0, Gems = 0 }
 	local copiesCount = #self.FodderUUIDs
-	local copiesColor = if copiesCount >= reqFodder and reqFodder > 0 then "#4ADE80" else "#F6F4FF"
+	local copiesColor = if copiesCount >= reqFodder and reqFodder > 0 then "#4ADE80" else "#EEF4FB"
 
 	if isMaxRank then
 		self.FodderReqLabel.Text = "<font color=\"#E4BA73\"><b>MAXIMUM 7-STAR RANK REACHED</b></font>"
@@ -2272,17 +2272,17 @@ function Forge:RenderUpgradeView()
 				end
 				if nameLabel then
 					nameLabel.Text = string.format("%s %d★", fArt.DisplayName or "Fodder", fArt.Star or 1)
-					nameLabel.TextColor3 = Color3.fromRGB(246, 244, 255)
+					nameLabel.TextColor3 = Color3.fromRGB(238, 244, 251)
 				end
 			elseif i <= reqFodder then
 				applyGothicStyle(slotFrame, "Slot", { State = "Empty" })
 				if plusLabel then
 					plusLabel.Text = "+"
-					plusLabel.TextColor3 = Color3.fromHex("#B4A5D1")
+					plusLabel.TextColor3 = Color3.fromHex("#38BDF8")
 				end
 				if nameLabel then
 					nameLabel.Text = "Slot " .. i
-					nameLabel.TextColor3 = Color3.fromHex("#8C7FA6")
+					nameLabel.TextColor3 = Color3.fromHex("#94A3B8")
 				end
 			else
 				applyGothicStyle(slotFrame, "Slot", { State = "Locked" })
@@ -2292,7 +2292,7 @@ function Forge:RenderUpgradeView()
 				;(lockIcon :: Frame).Visible = true
 				if nameLabel then
 					nameLabel.Text = "Req. " .. (i + 1) .. "★"
-					nameLabel.TextColor3 = Color3.fromHex("#706484")
+					nameLabel.TextColor3 = Color3.fromHex("#64748B")
 				end
 			end
 		end
@@ -2372,7 +2372,7 @@ function Forge:BuildPickerDrawer(root: Frame)
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.fromScale(0, 1.5),
 		Size = UDim2.new(1, 0, 0, 240),
-		BackgroundColor3 = Color3.fromRGB(16, 13, 24),
+		BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 		BorderSizePixel = 0,
 		Visible = false,
 		ZIndex = 70,
@@ -2401,17 +2401,17 @@ function Forge:BuildPickerDrawer(root: Frame)
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -4, 0.5, 0),
 		Size = UDim2.fromOffset(28, 28),
-		BackgroundColor3 = Color3.fromRGB(28, 22, 42),
+		BackgroundColor3 = Color3.fromRGB(22, 32, 48),
 		Text = "✕",
 		Font = Enum.Font.GothamBold,
 		TextSize = 13,
-		TextColor3 = Color3.fromRGB(225, 210, 250),
+		TextColor3 = Color3.fromRGB(203, 213, 225),
 		AutoButtonColor = false,
 		ZIndex = 72,
 	}, header)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeDrawerBtn)
 	GrimoireIcons.CloseGlyph(closeDrawerBtn, 13)
-	local drawerCloseStroke = stroke(closeDrawerBtn, Color3.fromRGB(80, 60, 110), 1)
+	local drawerCloseStroke = stroke(closeDrawerBtn, Color3.fromRGB(51, 65, 85), 1)
 
 	closeDrawerBtn.MouseEnter:Connect(function()
 		TweenService:Create(closeDrawerBtn, TweenInfo.new(0.15), {
@@ -2424,11 +2424,11 @@ function Forge:BuildPickerDrawer(root: Frame)
 	end)
 	closeDrawerBtn.MouseLeave:Connect(function()
 		TweenService:Create(closeDrawerBtn, TweenInfo.new(0.15), {
-			BackgroundColor3 = Color3.fromRGB(28, 22, 42),
-			TextColor3 = Color3.fromRGB(225, 210, 250),
+			BackgroundColor3 = Color3.fromRGB(22, 32, 48),
+			TextColor3 = Color3.fromRGB(203, 213, 225),
 		}):Play()
 		TweenService:Create(drawerCloseStroke, TweenInfo.new(0.15), {
-			Color = Color3.fromRGB(80, 60, 110),
+			Color = Color3.fromRGB(51, 65, 85),
 		}):Play()
 	end)
 	closeDrawerBtn.Activated:Connect(function()
@@ -2527,7 +2527,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				AnchorPoint = Vector2.new(0.5, 0),
 				Position = UDim2.new(0.5, 0, 0, 94),
 				Size = UDim2.new(1, -20, 0, 22),
-				BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+				BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 				BorderSizePixel = 0,
 				ZIndex = 73,
 			}, card)
@@ -2612,7 +2612,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					AnchorPoint = Vector2.new(0.5, 0),
 					Position = UDim2.new(0.5, 0, 0, 94),
 					Size = UDim2.new(1, -20, 0, 22),
-					BackgroundColor3 = isSlotted and Color3.fromRGB(24, 60, 36) or Color3.fromRGB(18, 14, 28),
+					BackgroundColor3 = isSlotted and Color3.fromRGB(24, 60, 36) or Color3.fromRGB(11, 16, 24),
 					BorderSizePixel = 0,
 					ZIndex = 73,
 				}, card)
@@ -3088,7 +3088,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		Font = Enum.Font.GothamBold,
 		TextSize = 18,
 		TextColor3 = C.TextMuted,
-		BackgroundColor3 = Color3.fromRGB(28, 20, 36),
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BorderSizePixel = 0,
 		ZIndex = 68,
 	}, win)
@@ -3103,12 +3103,12 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		Name = "RatesBox",
 		Position = UDim2.fromOffset(18, 56),
 		Size = UDim2.new(1, -36, 0, 68),
-		BackgroundColor3 = Color3.fromRGB(22, 16, 32),
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BorderSizePixel = 0,
 		ZIndex = 67,
 	}, win)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, ratesBox)
-	new("UIStroke", { Color = Color3.fromRGB(80, 55, 110), Thickness = 1.2 }, ratesBox)
+	new("UIStroke", { Color = Color3.fromRGB(51, 65, 85), Thickness = 1.2 }, ratesBox)
 
 	local ratesRow = new("Frame", {
 		Name = "RatesRow",
@@ -3157,7 +3157,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 			Font = Enum.Font.GothamBold,
 			TextSize = 11,
 			TextColor3 = if entry.Key == "ALL" then C.GoldYellow else C.TextMuted,
-			BackgroundColor3 = if entry.Key == "ALL" then Color3.fromRGB(45, 30, 65) else Color3.fromRGB(24, 18, 32),
+			BackgroundColor3 = if entry.Key == "ALL" then Color3.fromRGB(22, 42, 66) else Color3.fromRGB(16, 25, 40),
 			BorderSizePixel = 0,
 			ZIndex = 68,
 		}, tabsRow)
@@ -3240,7 +3240,7 @@ function Forge:RenderArtifactsRates()
 		local pct = boosted[tier] * 100
 		local pill = new("Frame", {
 			Name = "RatePill_" .. tier,
-			BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+			BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 			BorderSizePixel = 0,
 			AutomaticSize = Enum.AutomaticSize.X,
 			Size = UDim2.fromOffset(0, 22),

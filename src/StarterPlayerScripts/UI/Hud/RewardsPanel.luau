@@ -218,7 +218,7 @@ local function RewardsPanel(props: { Width: number, OnClose: () -> () })
 			RewardText = RewardRules.Describe(RewardsConfig.Weekly, false),
 			Subtitle = "New chest every Monday · resets in " .. RewardRules.FormatDuration(weekLeft),
 			Ready = weeklyReady,
-			ReadyTone = Tones.Void,
+			ReadyTone = Tones.Teal,
 			Busy = busy,
 			OnClaim = function() send("CLAIM_WEEKLY") end,
 		})
@@ -282,7 +282,7 @@ local function RewardsPanel(props: { Width: number, OnClose: () -> () })
 		Name = "RewardsOverlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 20,
 	}, {
 		Scrim = e("TextButton", {
-			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
+			Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 10, 16), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 20,
 			[React.Event.Activated] = function() props.OnClose() end,
 		}),
 		Window = Panel({

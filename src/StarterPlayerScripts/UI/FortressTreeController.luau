@@ -55,31 +55,31 @@ local HALO_GAP = 7 -- hover halo thickness beyond the rim
 local PULSE_GAP = 4 -- affordable pulse ring thickness beyond the rim
 
 local C = {
-	Scrim = Color3.fromRGB(6, 5, 10),
-	Ink = Color3.fromRGB(16, 12, 22),
+	Scrim = Color3.fromRGB(6, 10, 16),
+	Ink = Color3.fromRGB(6, 10, 16),
 	Root = Color3.fromRGB(246, 160, 36),
-	Locked = Color3.fromRGB(118, 116, 128),
-	Gated = Color3.fromRGB(88, 86, 98),
-	Hidden = Color3.fromRGB(54, 52, 62),
-	ChainSteel = Color3.fromRGB(150, 146, 162),
-	ChainDark = Color3.fromRGB(74, 71, 84),
+	Locked = Color3.fromRGB(100, 116, 139),
+	Gated = Color3.fromRGB(71, 85, 105),
+	Hidden = Color3.fromRGB(38, 49, 66),
+	ChainSteel = Color3.fromRGB(148, 163, 184),
+	ChainDark = Color3.fromRGB(51, 65, 85),
 	Rim = Color3.fromRGB(255, 255, 255),
-	Text = Color3.fromRGB(255, 255, 255),
-	Muted = Color3.fromRGB(175, 168, 192),
-	Gold = Color3.fromRGB(255, 214, 64),
-	Red = Color3.fromRGB(255, 84, 84),
-	Green = Color3.fromRGB(110, 230, 120),
+	Text = Color3.fromRGB(238, 244, 251),
+	Muted = Color3.fromRGB(148, 163, 184),
+	Gold = Color3.fromRGB(229, 196, 112),
+	Red = Color3.fromRGB(244, 63, 94),
+	Green = Color3.fromRGB(74, 222, 128),
 	Orange = Color3.fromRGB(255, 170, 90),
 }
 
 -- Owned tiles take their branch colour; chains and hover halos are tinted from it.
 local BRANCH_COLORS: { [string]: Color3 } = {
 	Root = C.Root,
-	Outskirts = Color3.fromRGB(72, 196, 86),
-	Commerce = Color3.fromRGB(250, 186, 44),
-	Martial = Color3.fromRGB(226, 62, 62),
-	Divine = Color3.fromRGB(168, 96, 240),
-	Command = Color3.fromRGB(52, 150, 240),
+	Outskirts = Color3.fromRGB(74, 222, 128),
+	Commerce = Color3.fromRGB(229, 196, 112),
+	Martial = Color3.fromRGB(244, 63, 94),
+	Divine = Color3.fromRGB(125, 211, 252),
+	Command = Color3.fromRGB(56, 189, 248),
 	Storage = Color3.fromRGB(196, 140, 84),
 	ForgePedestals = Color3.fromRGB(249, 115, 22),
 	ForgeLuck = Color3.fromRGB(251, 191, 36),
@@ -329,7 +329,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	new("UIStroke", {
 		Name = "Outline",
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = Color3.fromRGB(15, 10, 20),
+		Color = Color3.fromRGB(6, 10, 16),
 		Thickness = 3,
 		LineJoinMode = Enum.LineJoinMode.Round,
 	}, closeButton)
@@ -371,7 +371,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	new("UIStroke", {
 		Name = "TextStroke",
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-		Color = Color3.fromRGB(15, 10, 20),
+		Color = Color3.fromRGB(6, 10, 16),
 		Thickness = 2.8,
 		LineJoinMode = Enum.LineJoinMode.Round,
 	}, closeLabel)
@@ -554,7 +554,7 @@ function Controller:BuildNode(canvas: Frame, node: any, at: Vector2): any
 		BackgroundTransparency = 1,
 		Font = Enum.Font.GothamBlack,
 		TextSize = 32,
-		TextColor3 = Color3.fromRGB(235, 232, 242),
+		TextColor3 = Color3.fromRGB(238, 244, 251),
 		Text = "?",
 		Visible = false,
 		ZIndex = 61,
@@ -736,7 +736,7 @@ function Controller:BuildTooltip(gui: ScreenGui)
 		Name = "FortressTreeTooltip",
 		Size = UDim2.fromOffset(250, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = Color3.fromRGB(14, 12, 20),
+		BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 		BackgroundTransparency = 0.04,
 		BorderSizePixel = 0,
 		Visible = false,
@@ -765,7 +765,7 @@ function Controller:BuildTooltip(gui: ScreenGui)
 	self.Tip = tip
 	self.TipTitle = line(1, 15, C.Text, Enum.Font.GothamBlack)
 	self.TipKind = line(2, 11, C.Muted, Enum.Font.GothamBold)
-	self.TipBody = line(3, 13, Color3.fromRGB(220, 214, 232), Enum.Font.GothamMedium)
+	self.TipBody = line(3, 13, Color3.fromRGB(203, 213, 225), Enum.Font.GothamMedium)
 	self.TipFooter = line(4, 13, C.Gold, Enum.Font.GothamBold)
 end
 

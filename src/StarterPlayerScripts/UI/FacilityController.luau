@@ -43,28 +43,28 @@ Controller.__index = Controller
 local WIDTH, HEIGHT = 760, 520
 
 local C = {
-	Scrim = Color3.fromRGB(6, 5, 10),
-	Panel = Color3.fromRGB(15, 13, 22),
-	PanelInner = Color3.fromRGB(20, 17, 30),
-	CardBg = Color3.fromRGB(24, 21, 40),
-	SlotBg = Color3.fromRGB(18, 15, 26),
-	StatBoxBg = Color3.fromRGB(12, 10, 18),
-	Border = Color3.fromRGB(192, 132, 252),
-	BorderGlow = Color3.fromRGB(175, 115, 215),
-	BorderDim = Color3.fromRGB(58, 48, 75),
-	BorderCard = Color3.fromRGB(59, 45, 84),
-	Text = Color3.fromRGB(255, 255, 255),
-	TextMuted = Color3.fromRGB(155, 145, 175),
-	TextLavender = Color3.fromRGB(180, 175, 205),
-	GoldYellow = Color3.fromRGB(250, 204, 21),
+	Scrim = Color3.fromRGB(6, 10, 16),
+	Panel = Color3.fromRGB(11, 16, 24),
+	PanelInner = Color3.fromRGB(16, 25, 40),
+	CardBg = Color3.fromRGB(22, 32, 48),
+	SlotBg = Color3.fromRGB(9, 14, 23),
+	StatBoxBg = Color3.fromRGB(11, 16, 24),
+	Border = Color3.fromRGB(56, 189, 248),
+	BorderGlow = Color3.fromRGB(56, 189, 248),
+	BorderDim = Color3.fromRGB(51, 65, 85),
+	BorderCard = Color3.fromRGB(36, 50, 72),
+	Text = Color3.fromRGB(238, 244, 251),
+	TextMuted = Color3.fromRGB(148, 163, 184),
+	TextLavender = Color3.fromRGB(203, 213, 225),
+	GoldYellow = Color3.fromRGB(229, 196, 112),
 	Green = Color3.fromRGB(74, 222, 128),
-	Red = Color3.fromRGB(239, 68, 68),
-	Arrow = Color3.fromRGB(140, 130, 160),
-	Underline = Color3.fromRGB(225, 150, 245),
+	Red = Color3.fromRGB(244, 63, 94),
+	Arrow = Color3.fromRGB(148, 163, 184),
+	Underline = Color3.fromRGB(56, 189, 248),
 }
 
 local DETAILS = {
-	Summoning = { Title = "SUMMONING", Description = "Call legendary heroes through the dimensional rift.", Color = Color3.fromRGB(192, 132, 252) },
+	Summoning = { Title = "SUMMONING", Description = "Call legendary heroes through the dimensional rift.", Color = Color3.fromRGB(56, 189, 248) },
 	SquadManagement = { Title = "SQUAD MANAGEMENT", Description = "Deploy rested heroes and bench your current squad.", Color = Color3.fromRGB(245, 128, 99) },
 	GuardPost = { Title = "OUTSKIRTS GUARD POST", Description = "Station Adventurers along the southern trail to defend the outskirts and generate passive Gold online & offline.", Color = Color3.fromRGB(130, 205, 95) },
 	Market = { Title = "THE MARKET", Description = "Station Merchants to multiply Infinite Tower mob/boss loot drops and cargo extraction banking.", Color = Color3.fromRGB(245, 195, 75) },
@@ -331,13 +331,13 @@ end
 local BANNER_VIEWS = {
 	CALL_OF_THE_RIFT = {
 		Name = "PermanentSummonView", Prefix = "Perm", Banner = HeroCatalog.PermanentBanner,
-		Tag = "PERMANENT HERO BANNER  ·  1★ – 7★", TitleColor = Color3.fromRGB(250, 204, 21), Stroke = Color3.fromRGB(120, 80, 0),
-		Gradient = { Color3.fromRGB(28, 19, 50), Color3.fromRGB(20, 14, 36), Color3.fromRGB(12, 9, 22) },
+		Tag = "PERMANENT HERO BANNER  ·  1★ – 7★", TitleColor = Color3.fromRGB(229, 196, 112), Stroke = Color3.fromRGB(120, 80, 0),
+		Gradient = { Color3.fromRGB(22, 42, 68), Color3.fromRGB(16, 25, 40), Color3.fromRGB(9, 14, 23) },
 	},
 	A_STARS_ARRIVAL = {
 		Name = "LimitedSummonView", Prefix = "Lim", Banner = HeroCatalog.LimitedBanner,
-		Tag = "LIMITED RATE-UP EVENT  ·  1★ – 7★", TitleColor = Color3.fromRGB(255, 220, 100), Stroke = Color3.fromRGB(140, 85, 10),
-		Gradient = { Color3.fromRGB(44, 25, 68), Color3.fromRGB(28, 16, 44), Color3.fromRGB(14, 10, 24) },
+		Tag = "LIMITED RATE-UP EVENT  ·  1★ – 7★", TitleColor = Color3.fromRGB(245, 216, 138), Stroke = Color3.fromRGB(140, 85, 10),
+		Gradient = { Color3.fromRGB(32, 42, 62), Color3.fromRGB(18, 26, 42), Color3.fromRGB(11, 16, 24) },
 	},
 }
 
@@ -412,7 +412,7 @@ function Controller:BuildBannerView(root: Frame, key: string)
 	}, card)
 	local plate = new("Frame", {
 		Name = "FeaturedPlate", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(1, -118, 1, -10),
-		Size = UDim2.fromOffset(196, 28), BackgroundColor3 = Color3.fromRGB(14, 10, 22), BorderSizePixel = 0, ZIndex = 57,
+		Size = UDim2.fromOffset(196, 28), BackgroundColor3 = Color3.fromRGB(9, 14, 23), BorderSizePixel = 0, ZIndex = 57,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(1, 0) }, plate)
 	stroke(plate, topColor, 1.6)
@@ -421,7 +421,7 @@ function Controller:BuildBannerView(root: Frame, key: string)
 	plateLabel.Size = UDim2.fromScale(1, 1)
 	plateLabel.ZIndex = 58
 
-	local tag = label(card, def.Tag, 13, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
+	local tag = label(card, def.Tag, 13, Color3.fromRGB(203, 213, 225), Enum.Font.GothamBold)
 	tag.TextTransparency = 0.35
 	tag.Position = UDim2.fromOffset(22, 16)
 	tag.Size = UDim2.new(1, -270, 0, 18)
@@ -705,7 +705,7 @@ function Controller:Button(parent: Instance, name: string, text: string, size: U
 		Font = Enum.Font.GothamBold,
 		TextSize = 13,
 		TextWrapped = true,
-		BackgroundColor3 = Color3.fromRGB(34, 28, 52),
+		BackgroundColor3 = Color3.fromRGB(22, 32, 48),
 		TextColor3 = C.Text,
 		BorderSizePixel = 0,
 	}, parent)

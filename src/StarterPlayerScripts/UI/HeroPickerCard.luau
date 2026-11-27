@@ -32,15 +32,15 @@ function Card.Create(parent: Instance, entry: any, order: number, z: number, onS
 	}, parent)
 	new("UICorner", { CornerRadius = UDim.new(0, 12) }, card)
 	new("UIStroke", { Color = accent, Thickness = if entry.Selected then 3 else 1.5 }, card)
-	new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(54, 33, 66), Color3.fromRGB(18, 12, 29)), Rotation = 90 }, card)
+	new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(22, 32, 48), Color3.fromRGB(11, 16, 24)), Rotation = 90 }, card)
 	local portrait = new("Frame", {
 		Name = "Portrait", Position = UDim2.fromOffset(5, 5), Size = UDim2.new(1, -10, 0, TALL_PORTRAIT_HEIGHT),
-		BackgroundColor3 = Color3.fromRGB(20, 14, 30), BorderSizePixel = 0, ClipsDescendants = true, ZIndex = z + 1,
+		BackgroundColor3 = Color3.fromRGB(11, 16, 24), BorderSizePixel = 0, ClipsDescendants = true, ZIndex = z + 1,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, portrait)
 	local badge = new("Frame", {
 		Name = "ArchetypeBadge", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -3, 1, -3),
-		Size = UDim2.fromOffset(24, 24), BackgroundColor3 = Color3.fromRGB(20, 12, 29), BorderSizePixel = 0, ZIndex = z + 4,
+		Size = UDim2.fromOffset(24, 24), BackgroundColor3 = Color3.fromRGB(9, 14, 23), BorderSizePixel = 0, ZIndex = z + 4,
 	}, portrait)
 	new("UICorner", { CornerRadius = UDim.new(0, 5) }, badge)
 	local icon = GrimoireIcons.Create(entry.Archetype or hero.Archetype or "Hero", 18, badge, z + 5)
@@ -72,7 +72,7 @@ function Card.Create(parent: Instance, entry: any, order: number, z: number, onS
 	local role = text("Archetype", archetype, "Body", TALL_PORTRAIT_HEIGHT - 17, 18, 12, PARCHMENT)
 	role.TextWrapped = false
 	role.TextTruncate = Enum.TextTruncate.AtEnd
-	role.BackgroundColor3 = Color3.fromRGB(20, 14, 30)
+	role.BackgroundColor3 = Color3.fromRGB(11, 16, 24)
 	role.BackgroundTransparency = 0.25
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, role)
 	local statusColor = if entry.Disabled then Grimoire.Text.Bad else Grimoire.Text.Muted

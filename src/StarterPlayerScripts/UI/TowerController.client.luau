@@ -45,18 +45,18 @@ local isViewingSquad = false
 
 -- Visual Palette
 local C = {
-	ObsidianDark = Color3.fromRGB(15, 12, 24),
-	ObsidianMid = Color3.fromRGB(22, 18, 34),
-	ObsidianSheen = Color3.fromRGB(36, 28, 52),
-	BorderNormal = Color3.fromRGB(65, 54, 82),
-	BorderSelected = Color3.fromRGB(255, 214, 110),
+	ObsidianDark = Color3.fromRGB(11, 16, 24),
+	ObsidianMid = Color3.fromRGB(16, 25, 40),
+	ObsidianSheen = Color3.fromRGB(22, 32, 48),
+	BorderNormal = Color3.fromRGB(51, 65, 85),
+	BorderSelected = Color3.fromRGB(229, 196, 112),
 	BorderVisiting = Color3.fromRGB(74, 222, 128),
 	BorderSquad = Color3.fromRGB(56, 189, 248),
-	TextWhite = Color3.fromRGB(255, 255, 255),
-	TextMuted = Color3.fromRGB(165, 155, 185),
-	TextDim = Color3.fromRGB(115, 105, 135),
+	TextWhite = Color3.fromRGB(238, 244, 251),
+	TextMuted = Color3.fromRGB(148, 163, 184),
+	TextDim = Color3.fromRGB(100, 116, 139),
 	GreenAccent = Color3.fromRGB(74, 222, 128),
-	GoldAccent = Color3.fromRGB(250, 204, 21),
+	GoldAccent = Color3.fromRGB(229, 196, 112),
 }
 
 -- Biome Environmental Atmospheric Color Themes
@@ -98,7 +98,7 @@ local scrim = new("TextButton", {
 	Name = "TowerScrim",
 	Text = "",
 	AutoButtonColor = false,
-	BackgroundColor3 = Color3.fromRGB(6, 4, 10),
+	BackgroundColor3 = Color3.fromRGB(6, 10, 16),
 	BackgroundTransparency = 1,
 	Size = UDim2.fromScale(1, 1),
 	Visible = false,
@@ -225,7 +225,7 @@ local columnDivider = new("Frame", {
 	Name = "ColumnDivider",
 	Position = UDim2.new(0.36, 0, 0, 6),
 	Size = UDim2.new(0, 2, 1, -12),
-	BackgroundColor3 = Color3.fromRGB(55, 45, 72),
+	BackgroundColor3 = Color3.fromRGB(51, 65, 85),
 	BorderSizePixel = 0,
 	ZIndex = 42,
 }, body)
@@ -297,7 +297,7 @@ new("UICorner", { CornerRadius = UDim.new(0, 8) }, detailBanner)
 local detailBannerScrim = new("Frame", {
 	Name = "DetailBannerScrim",
 	Size = UDim2.fromScale(1, 1),
-	BackgroundColor3 = Color3.fromRGB(14, 10, 20),
+	BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 	BackgroundTransparency = 0.42,
 	BorderSizePixel = 0,
 	Active = false,
@@ -306,9 +306,9 @@ local detailBannerScrim = new("Frame", {
 new("UICorner", { CornerRadius = UDim.new(0, 8) }, detailBannerScrim)
 new("UIGradient", {
 	Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(10, 8, 16)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(18, 14, 26)),
-		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(10, 8, 16)),
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(9, 14, 23)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(16, 25, 40)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(9, 14, 23)),
 	}),
 	Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0.0, 0.15),
@@ -340,7 +340,7 @@ local detailScaling = new("TextLabel", {
 	BackgroundTransparency = 1,
 	RichText = true,
 	Text = "Suggested Power",
-	TextColor3 = Color3.fromRGB(240, 235, 248),
+	TextColor3 = Color3.fromRGB(238, 244, 251),
 	Font = Enum.Font.Gotham,
 	TextSize = 16,
 	TextXAlignment = Enum.TextXAlignment.Left,
@@ -354,7 +354,7 @@ local detailRoster = new("TextLabel", {
 	BackgroundTransparency = 1,
 	RichText = true,
 	Text = "Roster: Moss Crawler ×5, Ruin Guardian ×5, Vinebound Elite ×1",
-	TextColor3 = Color3.fromRGB(220, 212, 235),
+	TextColor3 = Color3.fromRGB(203, 213, 225),
 	Font = Enum.Font.Gotham,
 	TextSize = 16,
 	TextWrapped = true,
@@ -368,7 +368,7 @@ local detailVisitors = new("TextLabel", {
 	Size = UDim2.new(1, -36, 0, 20),
 	BackgroundTransparency = 1,
 	Text = "Visitors: 0 · Stationed Squads: none",
-	TextColor3 = Color3.fromRGB(150, 140, 168),
+	TextColor3 = Color3.fromRGB(148, 163, 184),
 	Font = Enum.Font.Gotham,
 	TextSize = 15,
 	TextXAlignment = Enum.TextXAlignment.Left,
@@ -397,7 +397,7 @@ local statusFooter = new("TextLabel", {
 	Size = UDim2.new(1, -4, 0, 40),
 	BackgroundTransparency = 1,
 	Text = "You: Hub · Squad: Following Master\nHub travel complete",
-	TextColor3 = Color3.fromRGB(160, 150, 180),
+	TextColor3 = Color3.fromRGB(148, 163, 184),
 	Font = Enum.Font.Gotham,
 	TextSize = 14,
 	TextWrapped = true,
@@ -436,7 +436,7 @@ local function createFloorTile(indexInRow: number): any
 		Name = "FloorSlot_" .. indexInRow,
 		LayoutOrder = indexInRow,
 		Size = UDim2.fromOffset(78, 68),
-		BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+		BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 		AutoButtonColor = false,
 		BorderSizePixel = 0,
 		Text = "",
@@ -596,7 +596,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 			Position = UDim2.new(0, 0, 0.12, 0),
 			Size = UDim2.new(1, 0, 0.68, 0),
 			BackgroundTransparency = 0.55,
-			BackgroundColor3 = Color3.fromRGB(8, 6, 12),
+			BackgroundColor3 = Color3.fromRGB(6, 10, 16),
 			BorderSizePixel = 0,
 			Active = false,
 			ZIndex = 44,
@@ -608,7 +608,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 	local vignette = new("Frame", {
 		Name = "Vignette",
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(10, 8, 16),
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23),
 		BackgroundTransparency = 0.45,
 		BorderSizePixel = 0,
 		Active = false,
@@ -653,7 +653,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, innerArtFrame)
 	new("UIStroke", {
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = Color3.fromRGB(60, 50, 75),
+		Color = Color3.fromRGB(51, 65, 85),
 		Thickness = 1,
 		Transparency = 0.4,
 	}, innerArtFrame)
@@ -664,7 +664,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -5),
 		Size = UDim2.new(1, -14, 0, 24),
-		BackgroundColor3 = Color3.fromRGB(12, 10, 18),
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23),
 		BorderSizePixel = 0,
 		Active = false,
 		ZIndex = 46,
@@ -673,7 +673,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 
 	local pillStroke = new("UIStroke", {
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = Color3.fromRGB(75, 62, 95),
+		Color = Color3.fromRGB(51, 65, 85),
 		Thickness = 1,
 	}, pill)
 
@@ -876,7 +876,7 @@ render = function()
 		detailBanner.Image = currentBiomeBanner
 	end
 	if isSelectedLocked then
-		detailBanner.ImageColor3 = Color3.fromRGB(110, 95, 130)
+		detailBanner.ImageColor3 = Color3.fromRGB(100, 116, 139)
 		detailBanner.ImageTransparency = 0.8
 		detailHeader.Text = string.format("Floor %d · %s (LOCKED)", selected, floor.DisplayName)
 		detailScaling.Text = string.format(
@@ -928,12 +928,12 @@ render = function()
 					cardData.Vignette.BackgroundTransparency = 0.5
 				end
 			elseif isBiomeLocked then
-				cardData.Stroke.Color = Color3.fromRGB(35, 28, 48)
+				cardData.Stroke.Color = Color3.fromRGB(30, 41, 59)
 				cardData.Stroke.Thickness = 1.0
-				cardData.PillStroke.Color = Color3.fromRGB(40, 32, 52)
-				cardData.Label.TextColor3 = Color3.fromRGB(110, 95, 130)
+				cardData.PillStroke.Color = Color3.fromRGB(36, 48, 68)
+				cardData.Label.TextColor3 = Color3.fromRGB(100, 116, 139)
 				if cardData.Banner then
-					cardData.Banner.ImageColor3 = Color3.fromRGB(85, 70, 100)
+					cardData.Banner.ImageColor3 = Color3.fromRGB(71, 85, 105)
 					cardData.Banner.ImageTransparency = 0.5
 				end
 				if cardData.Vignette then
@@ -942,7 +942,7 @@ render = function()
 			else
 				cardData.Stroke.Color = C.BorderNormal
 				cardData.Stroke.Thickness = 1.0
-				cardData.PillStroke.Color = Color3.fromRGB(75, 62, 95)
+				cardData.PillStroke.Color = Color3.fromRGB(51, 65, 85)
 				cardData.Label.TextColor3 = C.TextMuted
 				if cardData.Banner then
 					cardData.Banner.ImageColor3 = Color3.fromRGB(215, 215, 225)
@@ -985,11 +985,11 @@ render = function()
 					d.BackgroundColor3 = C.BorderSelected
 				end
 			elseif isFloorLocked then
-				slotData.Stroke.Color = Color3.fromRGB(38, 30, 50)
+				slotData.Stroke.Color = Color3.fromRGB(30, 41, 59)
 				slotData.Stroke.Thickness = 1.0
-				slotData.Number.TextColor3 = Color3.fromRGB(90, 75, 110)
+				slotData.Number.TextColor3 = Color3.fromRGB(71, 85, 105)
 				for _, d in ipairs(slotData.Corners) do
-					d.BackgroundColor3 = Color3.fromRGB(38, 30, 50)
+					d.BackgroundColor3 = Color3.fromRGB(30, 41, 59)
 				end
 			elseif isVisiting then
 				slotData.Stroke.Color = C.BorderVisiting
@@ -1006,11 +1006,11 @@ render = function()
 					d.BackgroundColor3 = C.BorderSquad
 				end
 			elseif isBoss then
-				slotData.Stroke.Color = Color3.fromRGB(150, 110, 180)
+				slotData.Stroke.Color = Color3.fromRGB(244, 63, 94)
 				slotData.Stroke.Thickness = 1.2
-				slotData.Number.TextColor3 = Color3.fromRGB(240, 185, 255)
+				slotData.Number.TextColor3 = Color3.fromRGB(254, 205, 211)
 				for _, d in ipairs(slotData.Corners) do
-					d.BackgroundColor3 = Color3.fromRGB(150, 110, 180)
+					d.BackgroundColor3 = Color3.fromRGB(244, 63, 94)
 				end
 			else
 				slotData.Stroke.Color = C.BorderNormal

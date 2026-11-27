@@ -87,12 +87,12 @@ local CONFIG: ButtonConfig = {
 	COLOR_DISABLED = Color3.fromRGB(120, 100, 70),
 
 	-- Frame tint states
-	FRAME_COLOR_NORMAL = Color3.fromRGB(240, 238, 245),
+	FRAME_COLOR_NORMAL = Color3.fromRGB(238, 244, 251),
 	FRAME_COLOR_HOVER = Color3.fromRGB(255, 255, 255),
-	FRAME_COLOR_DISABLED = Color3.fromRGB(130, 125, 140),
+	FRAME_COLOR_DISABLED = Color3.fromRGB(116, 130, 148),
 
-	-- Dark navy / near-black panel interior background
-	BG_COLOR = Color3.fromRGB(16, 13, 26),
+	-- Neo-Gothic Obsidian interior background
+	BG_COLOR = Color3.fromRGB(11, 16, 24),
 }
 
 OrnateFrameButton.Config = CONFIG
@@ -419,18 +419,18 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 		local tInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 		if not isEnabled then
-			panelGrad.Color = ColorSequence.new(Color3.fromRGB(39, 32, 48), Color3.fromRGB(27, 21, 35))
-			panelStroke.Color = Color3.fromRGB(69, 58, 86)
+			panelGrad.Color = ColorSequence.new(Color3.fromRGB(26, 35, 48), Color3.fromRGB(16, 22, 32))
+			panelStroke.Color = Color3.fromRGB(51, 65, 85)
 			tween(darkPanel, tInfo, {
-				BackgroundColor3 = Color3.fromRGB(39, 32, 48),
+				BackgroundColor3 = Color3.fromRGB(26, 35, 48),
 				BackgroundTransparency = 0,
 			})
 			tween(titleLabel, tInfo, {
-				TextColor3 = Color3.fromRGB(154, 142, 181),
+				TextColor3 = Color3.fromRGB(148, 163, 184),
 				TextTransparency = 0.40,
 			})
 			tween(costLabel, tInfo, {
-				TextColor3 = Color3.fromRGB(154, 142, 181),
+				TextColor3 = Color3.fromRGB(148, 163, 184),
 				TextTransparency = 0.40,
 			})
 			tween(gemIcon, tInfo, {
@@ -450,45 +450,45 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 
 		if variant == "PrimaryGold" then
 			if isHovered then
-				targetBgColor = Color3.fromHex("#FDE047")
-				targetGrad = ColorSequence.new(Color3.fromHex("#FDE047"), Color3.fromHex("#F59E0B"))
+				targetBgColor = Color3.fromHex("#FDE68A")
+				targetGrad = ColorSequence.new(Color3.fromHex("#FDE68A"), Color3.fromHex("#E5C470"))
 				targetStrokeColor = Color3.fromRGB(255, 255, 255)
-				targetTitleColor = Color3.fromHex("#160F04")
-				targetCostColor = Color3.fromHex("#160F04")
+				targetTitleColor = Color3.fromHex("#0B1018")
+				targetCostColor = Color3.fromHex("#0B1018")
 			else
-				targetBgColor = Color3.fromHex("#FACC15")
-				targetGrad = ColorSequence.new(Color3.fromHex("#FACC15"), Color3.fromHex("#D97706"))
-				targetStrokeColor = Color3.fromHex("#FEF08A")
-				targetTitleColor = Color3.fromHex("#160F04")
-				targetCostColor = Color3.fromHex("#160F04")
+				targetBgColor = Color3.fromHex("#F5D88A")
+				targetGrad = ColorSequence.new(Color3.fromHex("#F5D88A"), Color3.fromHex("#C89D46"))
+				targetStrokeColor = Color3.fromHex("#FDE68A")
+				targetTitleColor = Color3.fromHex("#0B1018")
+				targetCostColor = Color3.fromHex("#0B1018")
 			end
 		elseif variant == "PrimaryViolet" then
 			if isHovered then
-				targetBgColor = Color3.fromHex("#392457")
-				targetGrad = ColorSequence.new(Color3.fromHex("#392457"), Color3.fromHex("#24163A"))
-				targetStrokeColor = Color3.fromHex("#FACC15")
+				targetBgColor = Color3.fromHex("#1E3E60")
+				targetGrad = ColorSequence.new(Color3.fromHex("#1E3E60"), Color3.fromHex("#11253D"))
+				targetStrokeColor = Color3.fromHex("#38BDF8")
 				targetTitleColor = Color3.fromRGB(255, 255, 255)
 				targetCostColor = Color3.fromRGB(255, 255, 255)
 			else
-				targetBgColor = Color3.fromHex("#2B1B42")
-				targetGrad = ColorSequence.new(Color3.fromHex("#2B1B42"), Color3.fromHex("#190F29"))
-				targetStrokeColor = Color3.fromHex("#E4BA73")
-				targetTitleColor = Color3.fromHex("#FDE047")
-				targetCostColor = Color3.fromHex("#F6F4FF")
+				targetBgColor = Color3.fromHex("#162E48")
+				targetGrad = ColorSequence.new(Color3.fromHex("#162E48"), Color3.fromHex("#0C1A2C"))
+				targetStrokeColor = Color3.fromHex("#E5C470")
+				targetTitleColor = Color3.fromHex("#F5D88A")
+				targetCostColor = Color3.fromHex("#EEF4FB")
 			end
 		else -- "Secondary"
 			if isHovered then
-				targetBgColor = Color3.fromHex("#231934")
-				targetGrad = ColorSequence.new(Color3.fromHex("#231934"), Color3.fromHex("#231934"))
-				targetStrokeColor = Color3.fromHex("#C084FC")
+				targetBgColor = Color3.fromHex("#18283E")
+				targetGrad = ColorSequence.new(Color3.fromHex("#18283E"), Color3.fromHex("#18283E"))
+				targetStrokeColor = Color3.fromHex("#38BDF8")
 				targetTitleColor = Color3.fromRGB(255, 255, 255)
 				targetCostColor = Color3.fromRGB(255, 255, 255)
 			else
-				targetBgColor = Color3.fromHex("#161020")
-				targetGrad = ColorSequence.new(Color3.fromHex("#161020"), Color3.fromHex("#161020"))
-				targetStrokeColor = Color3.fromHex("#564770")
-				targetTitleColor = Color3.fromHex("#E2D9F3")
-				targetCostColor = Color3.fromHex("#E2D9F3")
+				targetBgColor = Color3.fromHex("#101928")
+				targetGrad = ColorSequence.new(Color3.fromHex("#101928"), Color3.fromHex("#101928"))
+				targetStrokeColor = Color3.fromHex("#334155")
+				targetTitleColor = Color3.fromHex("#CBD5E1")
+				targetCostColor = Color3.fromHex("#CBD5E1")
 			end
 		end
 

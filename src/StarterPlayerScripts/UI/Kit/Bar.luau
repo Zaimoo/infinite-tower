@@ -39,7 +39,7 @@ end
 
 function Bar.Create(parent: Instance?, initial: Props): Handle
 	local props: Props = table.clone(initial)
-	local track: Frame = New("Frame", { BackgroundColor3 = Color3.fromRGB(22, 16, 32), BorderSizePixel = 0 })
+	local track: Frame = New("Frame", { BackgroundColor3 = Color3.fromRGB(9, 14, 23), BorderSizePixel = 0 })
 	New("UICorner", { CornerRadius = UDim.new(1, 0) }, track)
 	local ink = New("UIStroke", { Color = Tokens.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, track)
 	local preview = fillFrame("Preview", track, 2)

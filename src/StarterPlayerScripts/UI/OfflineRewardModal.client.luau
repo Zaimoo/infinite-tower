@@ -18,15 +18,15 @@ local GrimoireIcons = require(Util:WaitForChild("GrimoireIcons"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 
 local C = {
-	Scrim = Color3.fromRGB(6, 5, 10),
-	Panel = Color3.fromRGB(16, 13, 24),
-	CardBg = Color3.fromRGB(25, 21, 38),
-	Border = Color3.fromRGB(245, 195, 75),
-	BorderGlow = Color3.fromRGB(215, 165, 45),
-	BorderCard = Color3.fromRGB(75, 60, 95),
-	Text = Color3.fromRGB(255, 255, 255),
-	TextMuted = Color3.fromRGB(160, 150, 180),
-	GoldYellow = Color3.fromRGB(250, 204, 21),
+	Scrim = Color3.fromRGB(6, 10, 16),
+	Panel = Color3.fromRGB(11, 16, 24),
+	CardBg = Color3.fromRGB(16, 25, 40),
+	Border = Color3.fromRGB(229, 196, 112),
+	BorderGlow = Color3.fromRGB(229, 196, 112),
+	BorderCard = Color3.fromRGB(51, 65, 85),
+	Text = Color3.fromRGB(238, 244, 251),
+	TextMuted = Color3.fromRGB(148, 163, 184),
+	GoldYellow = Color3.fromRGB(229, 196, 112),
 	Green = Color3.fromRGB(74, 222, 128),
 }
 
@@ -126,7 +126,7 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	claimBtn.AnchorPoint = Vector2.new(0.5, 1)
 	claimBtn.Position = UDim2.new(0.5, 0, 1, -24)
 	claimBtn.Size = UDim2.fromOffset(260, 46)
-	claimBtn.BackgroundColor3 = Color3.fromRGB(32, 26, 48)
+	claimBtn.BackgroundColor3 = Color3.fromRGB(22, 32, 48)
 	claimBtn.BorderSizePixel = 0
 	claimBtn.Text = "CONTINUE"
 	claimBtn.Font = Enum.Font.GothamBold

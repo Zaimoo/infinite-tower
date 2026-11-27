@@ -31,19 +31,19 @@ local FINAL_CHARGE_TIME = 0.16
 local RANK_REVEAL_DELAY = 0.55
 
 local C = {
-	Scrim = Color3.fromRGB(6, 6, 10),
-	Bg = Color3.fromRGB(17, 14, 23),
-	Border = Color3.fromRGB(200, 162, 200),
-	BorderGlow = Color3.fromRGB(200, 162, 200),
-	SlotBg = Color3.fromRGB(20, 20, 30),
-	SlotBorder = Color3.fromRGB(200, 162, 200),
-	SuccessGreen = Color3.fromRGB(57, 255, 20),
-	Text = Color3.fromRGB(255, 255, 255),
-	TextMuted = Color3.fromRGB(220, 220, 220),
-	TextDim = Color3.fromRGB(160, 150, 180),
-	StarGold = Color3.fromRGB(255, 215, 0),
-	Danger = Color3.fromRGB(255, 95, 85),
-	Good = Color3.fromRGB(57, 255, 20),
+	Scrim = Color3.fromRGB(6, 10, 16),
+	Bg = Color3.fromRGB(11, 16, 24),
+	Border = Color3.fromRGB(56, 189, 248),
+	BorderGlow = Color3.fromRGB(56, 189, 248),
+	SlotBg = Color3.fromRGB(16, 25, 40),
+	SlotBorder = Color3.fromRGB(56, 189, 248),
+	SuccessGreen = Color3.fromRGB(74, 222, 128),
+	Text = Color3.fromRGB(238, 244, 251),
+	TextMuted = Color3.fromRGB(203, 213, 225),
+	TextDim = Color3.fromRGB(148, 163, 184),
+	StarGold = Color3.fromRGB(229, 196, 112),
+	Danger = Color3.fromRGB(244, 63, 94),
+	Good = Color3.fromRGB(74, 222, 128),
 }
 
 local RARITY = {
@@ -397,7 +397,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -4),
 		Size = UDim2.fromOffset(112, 24),
-		BackgroundColor3 = Color3.fromRGB(15, 12, 22),
+		BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 		BorderSizePixel = 0,
 		Visible = false,
 		ZIndex = 46,
@@ -593,7 +593,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	self.StoneCount:SetAttribute("Grimoire", true)
 	new("UIStroke", {
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-		Color = Color3.fromRGB(9, 5, 14),
+		Color = Color3.fromRGB(6, 10, 16),
 		LineJoinMode = Enum.LineJoinMode.Round,
 		Thickness = 3,
 	}, self.StoneCount)
@@ -615,7 +615,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	self.ConfirmButton = btn
 	applyGothicStyle(btn, "Button")
 	self.ConfirmStroke = GildedGrimoire.StateStroke(btn)
-	btn.TextStrokeColor3 = Color3.fromRGB(10, 6, 14)
+	btn.TextStrokeColor3 = Color3.fromRGB(6, 10, 16)
 	btn.TextStrokeTransparency = 0.15
 
 	btn.Activated:Connect(function()
@@ -1204,7 +1204,7 @@ function Promo.Render(self: any)
 	local tone = if live then Kit.Tokens.Intent.Primary else Kit.Tokens.Intent.Disabled
 	local fill = button:FindFirstChildWhichIsA("UIGradient")
 	if fill then fill.Color = ColorSequence.new(tone.Top, tone.Bottom) end
-	button.TextColor3 = if live then C.Text else Color3.fromRGB(176, 168, 196)
+	button.TextColor3 = if live then C.Text else Color3.fromRGB(148, 163, 184)
 	button.TextTransparency = 0
 	if self.ConfirmStroke then
 		self.ConfirmStroke.Color = tone.Rail
@@ -1355,7 +1355,7 @@ function Promo.Celebrate(self: any)
 			Text = "★",
 			Font = Enum.Font.GothamBlack,
 			TextSize = if i % 2 == 0 then 27 else 19,
-			TextColor3 = if i % 2 == 0 then C.StarGold else Color3.fromRGB(238, 177, 255),
+			TextColor3 = if i % 2 == 0 then C.StarGold else Color3.fromRGB(125, 211, 252),
 			TextStrokeColor3 = C.SlotBg,
 			TextStrokeTransparency = 0.3,
 			BackgroundTransparency = 1,

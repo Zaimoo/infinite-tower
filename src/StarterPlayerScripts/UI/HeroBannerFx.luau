@@ -52,18 +52,18 @@ local PORTAL_POS = UDim2.new(1, -118, 0, 110)
 
 local THEMES = {
 	CALL_OF_THE_RIFT = {
-		Primary = Color3.fromRGB(192, 132, 252), -- arcane violet
-		Secondary = Color3.fromRGB(115, 130, 255), -- dimensional indigo
-		Highlight = Color3.fromRGB(238, 224, 255),
-		Rail = Color3.fromRGB(210, 155, 255),
-		RailBase = Color3.fromRGB(240, 196, 110),
+		Primary = Color3.fromRGB(56, 189, 248), -- astral ice cyan
+		Secondary = Color3.fromRGB(14, 116, 176), -- deep astral cobalt
+		Highlight = Color3.fromRGB(224, 242, 254),
+		Rail = Color3.fromRGB(125, 211, 252),
+		RailBase = Color3.fromRGB(229, 196, 112),
 	},
 	A_STARS_ARRIVAL = {
-		Primary = Color3.fromRGB(255, 218, 102), -- starlight gold
-		Secondary = Color3.fromRGB(216, 110, 245), -- celestial magenta-violet
+		Primary = Color3.fromRGB(245, 216, 138), -- starlight champagne gold
+		Secondary = Color3.fromRGB(56, 189, 248), -- celestial ice cyan
 		Highlight = Color3.fromRGB(255, 248, 220),
-		Rail = Color3.fromRGB(255, 228, 128),
-		RailBase = Color3.fromRGB(240, 196, 110),
+		Rail = Color3.fromRGB(253, 230, 138),
+		RailBase = Color3.fromRGB(229, 196, 112),
 	},
 }
 

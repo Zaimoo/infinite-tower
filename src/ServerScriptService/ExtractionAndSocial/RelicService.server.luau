@@ -176,7 +176,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	valueLbl.Name = "ValueLabel"
 	valueLbl.LayoutOrder = 2
 
-	local statusLbl = BillboardThemes.Text(bb, GildedGrimoire.Fonts.Body, "", 12, Color3.fromRGB(236, 228, 246))
+	local statusLbl = BillboardThemes.Text(bb, GildedGrimoire.Fonts.Body, "", 12, Color3.fromRGB(238, 244, 251))
 	statusLbl.Name = "StatusLabel"
 	statusLbl.LayoutOrder = 3
 

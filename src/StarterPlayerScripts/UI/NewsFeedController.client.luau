@@ -29,8 +29,8 @@ local boardsRemote = remotes:WaitForChild("Boards") :: RemoteEvent
 
 local GOLD = Color3.fromRGB(255, 214, 120)
 local BLOOD = Color3.fromRGB(235, 80, 80)
-local INK = Color3.fromRGB(14, 10, 22)
-local PANEL = Color3.fromRGB(24, 18, 34)
+local INK = Color3.fromRGB(6, 10, 16)
+local PANEL = Color3.fromRGB(11, 16, 24)
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "NewsFeed"
@@ -126,7 +126,7 @@ local headlineLabel = label(banner, GildedGrimoire.Fonts.Title, 17, GOLD)
 headlineLabel.Name = "Headline"
 headlineLabel.Position = UDim2.fromOffset(66, 9)
 headlineLabel.Size = UDim2.new(1, -150, 0, 24)
-local detailLabel = label(banner, GildedGrimoire.Fonts.Body, 13, Color3.fromRGB(232, 226, 240))
+local detailLabel = label(banner, GildedGrimoire.Fonts.Body, 13, Color3.fromRGB(238, 244, 251))
 detailLabel.Name = "Detail"
 detailLabel.Position = UDim2.fromOffset(66, 35)
 detailLabel.Size = UDim2.new(1, -150, 0, 20)
@@ -241,7 +241,7 @@ local extras: { Instance } = {} -- board rows and empty-state lines, rebuilt on 
 local boards: any = { Week = "", Thieves = {}, Hunters = {} }
 local tab = "WANTED" -- "WANTED" | "THIEVES" | "HUNTERS"
 local TABS = { { Key = "WANTED", Text = "Wanted" }, { Key = "THIEVES", Text = "Top Thieves" }, { Key = "HUNTERS", Text = "Top Hunters" } }
-local MUTED = Color3.fromRGB(170, 160, 186)
+local MUTED = Color3.fromRGB(148, 163, 184)
 
 local tabsRow = Instance.new("Frame")
 tabsRow.Name = "Tabs"
@@ -332,7 +332,7 @@ local function wantedRow(b: any, order: number, serverNow: number)
 	who.Position = UDim2.fromOffset(44, 2)
 	who.Size = UDim2.new(1, -124, 0, 18)
 	who.Text = tostring(b.ThiefName)
-	local what = label(row, GildedGrimoire.Fonts.Body, 12, Color3.fromRGB(220, 214, 230))
+	local what = label(row, GildedGrimoire.Fonts.Body, 12, Color3.fromRGB(203, 213, 225))
 	what.Name = "Detail"
 	what.Position = UDim2.fromOffset(44, 21)
 	what.Size = UDim2.new(1, -124, 0, 16)

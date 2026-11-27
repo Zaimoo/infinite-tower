@@ -172,15 +172,15 @@ local function UpgradeResult(props: UpgradeResultProps)
 			-- 2. 3D Model Center Stage with Aura
 			ModelStage = e("Frame", {
 				Size = UDim2.fromOffset(180, 150),
-				BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+				BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 				BorderSizePixel = 0,
 				LayoutOrder = 2,
 			}, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
 				Gradient = e("UIGradient", {
 					Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(34, 24, 48), 0.5)),
-						ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 8, 16)),
+						ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(22, 32, 48), 0.5)),
+						ColorSequenceKeypoint.new(1, Color3.fromRGB(9, 14, 23)),
 					}),
 					Rotation = 90,
 				}),
@@ -228,7 +228,7 @@ local function UpgradeResult(props: UpgradeResultProps)
 			-- 5. Power Counter + Green Delta
 			PowerBox = e("Frame", {
 				Size = UDim2.new(0.6, 0, 0, 44),
-				BackgroundColor3 = Color3.fromRGB(20, 14, 30),
+				BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 				BorderSizePixel = 0,
 				LayoutOrder = 6,
 			}, {

@@ -210,14 +210,14 @@ end
 
 -- Pill progress bar (ink track, shaded fill). `label` is drawn inside the bar, over the fill.
 local function bar(props: { [string]: any }, fraction: number, color: Color3, label: string?)
-	local inst: { [string]: any } = { BackgroundColor3 = Color3.fromRGB(26, 20, 36), BorderSizePixel = 0 }
+	local inst: { [string]: any } = { BackgroundColor3 = Color3.fromRGB(9, 14, 23), BorderSizePixel = 0 }
 	for k, v in props do inst[k] = v end
 	return e("Frame", inst, {
 		Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 		Ink = e("UIStroke", { Color = INK, Thickness = 1.8, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 		Fill = if fraction > 0 then e("Frame", { Size = UDim2.fromScale(math.clamp(fraction, 0.06, 1), 1), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = (props.ZIndex or 1) + 1 }, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			Shade = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 165)) }),
+			Shade = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(148, 163, 184)) }),
 		}) else nil,
 		Label = if label then e("TextLabel", {
 			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, FontFace = Grimoire.Fonts.Number, Text = label, TextSize = 13,
@@ -329,7 +329,7 @@ local function ArtifactPreviewBox(props: { TemplateId: string, Archetype: string
 	return e("Frame", {
 		ref = frameRef,
 		Size = props.Size,
-		BackgroundColor3 = Color3.fromRGB(12, 8, 18),
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23),
 		BackgroundTransparency = 0,
 		ClipsDescendants = true,
 		ZIndex = props.ZIndex,
@@ -452,7 +452,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 				end,
 			}, {
 				Art = e("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.new(1, -20, 0, 110),
-					BackgroundColor3 = Color3.fromRGB(12, 8, 18), ClipsDescendants = true, ZIndex = 3 }, {
+					BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = 3 }, {
 					Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 					Ring = e("UIStroke", { Color = rarityColor, Thickness = 2.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 					Portrait = e(Portrait, { TemplateId = id, Archetype = seed.Archetype, Stars = seed.BaseStar, Size = UDim2.fromScale(1, 1), Dark = mine == nil }),
@@ -496,7 +496,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		end
 
 		heroDetail.Hero = e("Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 150), BackgroundTransparency = 1 }, {
-			Art = e("Frame", { Size = UDim2.fromOffset(140, 140), BackgroundColor3 = Color3.fromRGB(12, 8, 18), ClipsDescendants = true, ZIndex = 3 }, {
+			Art = e("Frame", { Size = UDim2.fromOffset(140, 140), BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = 3 }, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
 				Ring = e("UIStroke", { Color = rarityColor, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 				Portrait = e(Portrait, { TemplateId = heroSeed.HeroId, Archetype = heroSeed.Archetype, Stars = heroSeed.BaseStar, Size = UDim2.fromScale(1, 1), Dark = mine == nil }),
@@ -612,7 +612,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 				end,
 			}, {
 				Art = e("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.new(1, -20, 0, 110),
-					BackgroundColor3 = Color3.fromRGB(12, 8, 18), ClipsDescendants = true, ZIndex = 3 }, {
+					BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = 3 }, {
 					Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 					Ring = e("UIStroke", { Color = rarityColor, Thickness = 2.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 					Preview = e(ArtifactPreviewBox, { TemplateId = id, Archetype = seed.Type, Size = UDim2.fromScale(1, 1), ZIndex = 4 }),
@@ -648,7 +648,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		local speedBonus = stats["Attack Speed"]
 
 		artifactDetail.Header = e("Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 150), BackgroundTransparency = 1 }, {
-			Art = e("Frame", { Size = UDim2.fromOffset(140, 140), BackgroundColor3 = Color3.fromRGB(12, 8, 18), ClipsDescendants = true, ZIndex = 3 }, {
+			Art = e("Frame", { Size = UDim2.fromOffset(140, 140), BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = 3 }, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
 				Ring = e("UIStroke", { Color = rarityColor, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 				Preview = e(ArtifactPreviewBox, { TemplateId = artifactSeed.TemplateId, Archetype = artifactSeed.Type, Size = UDim2.fromScale(1, 1), ZIndex = 4 }),
@@ -742,7 +742,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(6, 5, 10),
+		BackgroundColor3 = Color3.fromRGB(6, 10, 16),
 		BackgroundTransparency = 1,
 		Active = true,
 		ZIndex = 20,

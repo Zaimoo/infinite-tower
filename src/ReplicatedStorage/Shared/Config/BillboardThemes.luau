@@ -25,7 +25,7 @@ local RelicConfig = require(script.Parent.RelicConfig)
 
 local BillboardThemes = {}
 
-BillboardThemes.Ink = Color3.fromRGB(10, 6, 14)
+BillboardThemes.Ink = Color3.fromRGB(6, 10, 16)
 
 local relicThemes: { [string]: Theme } = {
 	MANA_GEODE = table.freeze({
@@ -94,7 +94,7 @@ BillboardThemes.Relic = table.freeze(relicThemes)
 BillboardThemes.Mob = table.freeze({
 	NORMAL = table.freeze({
 		Tone = "Slate",
-		Rail = Color3.fromRGB(150, 140, 170),
+		Rail = Color3.fromRGB(148, 163, 184),
 		Title = Color3.fromRGB(255, 170, 160),
 		Accent = Color3.fromRGB(245, 70, 90),
 		Size = Vector2.new(84, 24),

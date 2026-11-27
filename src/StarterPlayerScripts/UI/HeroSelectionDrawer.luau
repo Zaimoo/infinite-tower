@@ -33,7 +33,7 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 	self.Root = new("TextButton", {
 		Name = "HeroSelectionDrawer", Text = "", AutoButtonColor = false, Selectable = false,
 		Active = true, Modal = true, Visible = false, Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(6, 3, 13), BackgroundTransparency = 0.3,
+		BackgroundColor3 = Color3.fromRGB(6, 10, 16), BackgroundTransparency = 0.3,
 		BorderSizePixel = 0, ZIndex = z, SelectionGroup = true,
 		SelectionBehaviorUp = Enum.SelectionBehavior.Stop, SelectionBehaviorDown = Enum.SelectionBehavior.Stop,
 		SelectionBehaviorLeft = Enum.SelectionBehavior.Stop, SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
@@ -45,7 +45,7 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 	}, self.Root)
 	new("UICorner", { CornerRadius = UDim.new(0, 10) }, self.Panel)
 	new("UIStroke", { Color = GOLD, Thickness = 2 }, self.Panel)
-	new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(52, 31, 66), Color3.fromRGB(19, 12, 29)), Rotation = 90 }, self.Panel)
+	new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(22, 32, 48), Color3.fromRGB(11, 16, 24)), Rotation = 90 }, self.Panel)
 	for _, x in { 0, 1 } do
 		new("Frame", {
 			Name = "CornerGem", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, 0),
@@ -72,7 +72,7 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 
 	self.CloseButton = new("TextButton", {
 		Name = "Close", Position = UDim2.new(1, -58, 0, 14), Size = UDim2.fromOffset(44, 44),
-		Text = "", BackgroundColor3 = Color3.fromRGB(31, 22, 42), BorderSizePixel = 0, ZIndex = z + 3,
+		Text = "", BackgroundColor3 = Color3.fromRGB(22, 32, 48), BorderSizePixel = 0, ZIndex = z + 3,
 	}, self.Panel)
 	new("UICorner", { CornerRadius = UDim.new(0, 7) }, self.CloseButton)
 	new("UIStroke", { Color = GOLD, Thickness = 1.5 }, self.CloseButton)
@@ -94,7 +94,7 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 	local function chip(name: string, order: number, width: number): TextButton
 		local button = new("TextButton", {
 			Name = name, LayoutOrder = order, Size = UDim2.fromOffset(width, 36), AutoButtonColor = true,
-			BackgroundColor3 = Color3.fromRGB(31, 22, 42), BorderSizePixel = 0, Text = "", TextSize = 14,
+			BackgroundColor3 = Color3.fromRGB(22, 32, 48), BorderSizePixel = 0, Text = "", TextSize = 14,
 			TextColor3 = Grimoire.Text.Parchment, ZIndex = z + 3,
 		}, self.Toolbar)
 		new("UICorner", { CornerRadius = UDim.new(0, 7) }, button)
@@ -105,7 +105,7 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 	end
 	local searchBox = new("Frame", {
 		Name = "SearchBox", LayoutOrder = 1, Size = UDim2.fromOffset(240, 36),
-		BackgroundColor3 = Color3.fromRGB(16, 10, 24), BorderSizePixel = 0, ZIndex = z + 3,
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23), BorderSizePixel = 0, ZIndex = z + 3,
 	}, self.Toolbar)
 	new("UICorner", { CornerRadius = UDim.new(0, 7) }, searchBox)
 	new("UIStroke", { Color = GOLD, Thickness = 1, Transparency = 0.35 }, searchBox)
@@ -271,7 +271,7 @@ function Drawer.RenderToolbar(self: any, shownCount: number, total: number)
 	self.ResetButton.Visible = filtered
 	for _, button in { self.RoleButton, self.AvailableButton } do
 		local active = (button == self.RoleButton and self.Role ~= "ALL") or (button == self.AvailableButton and self.AvailableOnly)
-		button.BackgroundColor3 = if active then Color3.fromRGB(74, 52, 24) else Color3.fromRGB(31, 22, 42)
+		button.BackgroundColor3 = if active then Color3.fromRGB(74, 52, 24) else Color3.fromRGB(22, 32, 48)
 	end
 	self.Footer.Text = if shownCount == total then string.format("%d heroes", total)
 		else string.format("%d of %d heroes", shownCount, total)

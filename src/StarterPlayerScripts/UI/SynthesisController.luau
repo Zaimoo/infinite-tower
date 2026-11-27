@@ -44,15 +44,15 @@ local INK = GildedGrimoire.Ink
 local TEXT = GildedGrimoire.Text
 
 local C = {
-	Scrim = Color3.fromRGB(6, 4, 10),
-	Panel = Color3.fromRGB(19, 18, 26),
-	Slot = Color3.fromRGB(23, 22, 30),
-	Line = Color3.fromRGB(228, 208, 236),
-	LineDim = Color3.fromRGB(86, 80, 100),
-	Text = Color3.fromRGB(246, 244, 255),
-	Muted = Color3.fromRGB(150, 146, 162),
-	Plus = Color3.fromRGB(128, 124, 140),
-	Blue = Color3.fromRGB(16, 132, 214),
+	Scrim = Color3.fromRGB(6, 10, 16),
+	Panel = Color3.fromRGB(11, 16, 24),
+	Slot = Color3.fromRGB(16, 25, 40),
+	Line = Color3.fromRGB(56, 189, 248),
+	LineDim = Color3.fromRGB(51, 65, 85),
+	Text = Color3.fromRGB(238, 244, 251),
+	Muted = Color3.fromRGB(148, 163, 184),
+	Plus = Color3.fromRGB(100, 116, 139),
+	Blue = Color3.fromRGB(56, 189, 248),
 	Green = Color3.fromRGB(57, 232, 30),
 	Danger = Color3.fromRGB(239, 128, 120),
 	Good = Color3.fromRGB(150, 230, 160),
@@ -152,7 +152,7 @@ end
 
 local function chip(parent: Instance, props: { [string]: any }): (Frame, TextLabel)
 	local c = new("Frame", {
-		BackgroundColor3 = Color3.fromRGB(20, 14, 30),
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BorderSizePixel = 0,
 		ZIndex = Z + 6,
 	}, nil)
@@ -399,7 +399,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 
 	local recipPortrait = new("Frame", {
 		Name = "PortraitHost", Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 1, -16),
-		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 3,
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = Z + 3,
 	}, recipCard)
 	new("UICorner", { CornerRadius = UDim.new(0, 10) }, recipPortrait)
 	local recipRing = new("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, recipPortrait)
@@ -441,7 +441,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 
 	-- Live XP Bar
 	local bar = new("Frame", {
-		Name = "XPBar", BackgroundColor3 = Color3.fromRGB(12, 10, 18), BorderSizePixel = 0, ClipsDescendants = true,
+		Name = "XPBar", BackgroundColor3 = Color3.fromRGB(9, 14, 23), BorderSizePixel = 0, ClipsDescendants = true,
 		Position = UDim2.fromOffset(14, 342), Size = UDim2.new(1, -28, 0, 20), ZIndex = Z + 2,
 	}, recipientPanel)
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, bar)
@@ -779,7 +779,7 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 
 	local portraitHost = new("Frame", {
 		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(76, 76),
-		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 3,
+		BackgroundColor3 = Color3.fromRGB(9, 14, 23), ClipsDescendants = true, ZIndex = Z + 3,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 12) }, portraitHost)
 	local ring = new("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, portraitHost)
@@ -813,7 +813,7 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 139),
 		Size = UDim2.fromOffset(78, 16),
-		BackgroundColor3 = Color3.fromRGB(36, 22, 54),
+		BackgroundColor3 = Color3.fromRGB(22, 32, 48),
 		BorderSizePixel = 0,
 		Visible = false,
 		ZIndex = Z + 9,
@@ -831,7 +831,7 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 
 	-- Dims heroes that cannot be used as materials
 	local shade = new("Frame", {
-		Name = "Shade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 4, 10), BackgroundTransparency = 0.45,
+		Name = "Shade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 10, 16), BackgroundTransparency = 0.45,
 		BorderSizePixel = 0, Visible = false, ZIndex = Z + 8,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 12) }, shade)
@@ -1284,7 +1284,7 @@ function Synth.Render(self: any)
 	recipSlot.Ring.Color = if recipient then recipRarity else INK
 	-- Secondary: the empty state on the right carries the primary "Select Hero".
 	retone(recipSlot.Button, recipSlot.BtnLabel, if recipient then "Slate" else "Violet", if recipient then "REMOVE HERO" else "SELECT HERO")
-	recipSlot.Rail.Color = if recipient then TEXT.Gold else Color3.fromRGB(150, 138, 176)
+	recipSlot.Rail.Color = if recipient then TEXT.Gold else Color3.fromRGB(96, 146, 190)
 
 	local preview = self.Preview
 	local before = preview and preview.Before
@@ -1314,7 +1314,7 @@ function Synth.Render(self: any)
 
 			self.LevelLabel.Text = string.format("Lv. %d  (CAP: Lv. %d — MAX)", currentLevel, recipientMaxLevel)
 			self.XPText.Text = "MAX LEVEL REACHED"
-			self.SummaryLine.Text = '<font color="#EF8078"><b>MAX LEVEL</b></font><br/><font color="#A59BB9">Promote this hero to keep levelling.</font>'
+			self.SummaryLine.Text = '<font color="#EF8078"><b>MAX LEVEL</b></font><br/><font color="#94A3B8">Promote this hero to keep levelling.</font>'
 		else
 			local baseRatio = math.clamp(currentExp / safeMax, 0, 1)
 			local targetTotalRatio = baseRatio
@@ -1336,7 +1336,7 @@ function Synth.Render(self: any)
 					self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d (CAP)</font>', before.Level, after.Level)
 					local displayMax = StatFormulas.GetXPRequiredForNextLevel(after.Level, after.Stars or recipient.Stars)
 					self.XPText.Text = string.format("%d / %d EXP (+%d EXP) [CAP REACHED]", after.XP or 0, displayMax, gained)
-					self.SummaryLine.Text = string.format('<b><font color="#4ADE80">MAX LEVEL REACHED (Lv. %d)</font></b>  ·  +%s EXP from %d material%s<br/><font color="#A59BB9">Level cap reached.</font>',
+					self.SummaryLine.Text = string.format('<b><font color="#4ADE80">MAX LEVEL REACHED (Lv. %d)</font></b>  ·  +%s EXP from %d material%s<br/><font color="#94A3B8">Level cap reached.</font>',
 						recipientMaxLevel, abbreviate(gained), #self.Donors, if #self.Donors == 1 then "" else "s")
 				else
 					self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d</font>%s', before.Level, after.Level,
@@ -1351,7 +1351,7 @@ function Synth.Render(self: any)
 			else
 				self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", currentLevel, recipientMaxLevel)
 				self.XPText.Text = string.format("%d / %d EXP", currentExp, safeMax)
-				self.SummaryLine.Text = '<font color="#A59BB9">Pick material heroes on the right.</font>'
+				self.SummaryLine.Text = '<font color="#94A3B8">Pick material heroes on the right.</font>'
 			end
 
 			-- 3. Green Preview EXP Bar Tweening
@@ -1414,7 +1414,7 @@ function Synth.Render(self: any)
 		self.RecipientName.Text = "No Hero Selected"
 		self.RecipientInfo.Text = "Receives EXP"
 		self.RecipientInfo.TextColor3 = TEXT.Muted
-		self.LevelLabel.Text = '<font color="#96929F">Lv. —</font>'
+		self.LevelLabel.Text = '<font color="#94A3B8">Lv. —</font>'
 		if self.ActivePreviewTween then
 			self.ActivePreviewTween:Cancel()
 			self.ActivePreviewTween = nil
@@ -1423,7 +1423,7 @@ function Synth.Render(self: any)
 		self.GainFill.Size = UDim2.fromScale(0, 1)
 		self.GainFill.Visible = false
 		self.XPText.Text = ""
-		self.SummaryLine.Text = '<font color="#A59BB9">Pick a hero to level up.</font>'
+		self.SummaryLine.Text = '<font color="#94A3B8">Pick a hero to level up.</font>'
 		self.LastRecipientUID = nil
 		self.LastBaseRatio = 0
 		self.LastTotalRatio = 0
@@ -1528,7 +1528,7 @@ function Synth.Render(self: any)
 		elseif resting > 0 then
 			chipText, chipColor = string.format("RESTING %ds", resting), TEXT.Bad
 		elseif tagText == "Locked" then
-			chipText, chipColor = "LOCKED", Color3.fromRGB(224, 208, 255)
+			chipText, chipColor = "LOCKED", Color3.fromRGB(186, 230, 253)
 		else
 			local live = profile and profile.Heroes and profile.Heroes[hero.UUID] or hero
 			if live.EquippedArtifactUUID and live.EquippedArtifactUUID ~= "" then
@@ -1547,7 +1547,7 @@ function Synth.Render(self: any)
 		if isRecipientMaxLevel then
 			entry.Card.Interactable = false
 			entry.Shade.Visible = true
-			entry.Rail.Color = Color3.fromRGB(86, 80, 100)
+			entry.Rail.Color = Color3.fromRGB(51, 65, 85)
 			entry.Rail.Thickness = 1.4
 			entry.Rail.Transparency = 0.6
 		elseif isSelected then
@@ -1559,14 +1559,14 @@ function Synth.Render(self: any)
 		elseif isProjectedMax then
 			entry.Card.Interactable = true
 			entry.Shade.Visible = true
-			entry.Rail.Color = Color3.fromRGB(86, 80, 100)
+			entry.Rail.Color = Color3.fromRGB(51, 65, 85)
 			entry.Rail.Thickness = 1.4
 			entry.Rail.Transparency = 0.6
 		else
 			local canUse = eligible and not inSquad and not isRecipient
 			entry.Card.Interactable = materialEnabled and canUse
 			entry.Shade.Visible = not materialEnabled or isRecipient or inSquad or not eligible
-			entry.Rail.Color = if canUse then Color3.fromRGB(200, 160, 96) else Color3.fromRGB(86, 80, 100)
+			entry.Rail.Color = if canUse then Color3.fromRGB(200, 160, 96) else Color3.fromRGB(51, 65, 85)
 			entry.Rail.Thickness = 1.4
 			entry.Rail.Transparency = if canUse then 0.2 else 0.6
 		end

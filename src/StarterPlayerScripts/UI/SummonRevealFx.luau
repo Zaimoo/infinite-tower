@@ -11,11 +11,11 @@ local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local Fx = {}
 
 local tween = UIFeel.Tween
-local INK = Color3.fromRGB(14, 10, 22)
+local INK = Color3.fromRGB(6, 10, 16)
 local WHITE = Color3.new(1, 1, 1)
 local CENTERED = Vector2.new(0.5, 0.5)
 
-Fx.RiftBase = Color3.fromRGB(205, 196, 235) -- the circle before it takes a rarity colour
+Fx.RiftBase = Color3.fromRGB(186, 230, 253) -- the circle before it takes a rarity colour
 Fx.Cold = Color3.fromRGB(120, 58, 44) -- the ingot before it heats
 Fx.Hot = Color3.fromRGB(255, 142, 52)
 
@@ -163,7 +163,7 @@ function Fx.Forge(parent: Instance, at: UDim2, z: number)
 		return f
 	end
 
-	local steel = Color3.fromRGB(66, 62, 78)
+	local steel = Color3.fromRGB(51, 65, 85)
 	slab("Base", 105, 218, 150, 28, steel:Lerp(INK, 0.25))
 	slab("Waist", 145, 180, 70, 42, steel:Lerp(INK, 0.15))
 	slab("Horn", 38, 158, 60, 18, steel)
@@ -184,7 +184,7 @@ function Fx.Forge(parent: Instance, at: UDim2, z: number)
 		BackgroundTransparency = 1, Rotation = Fx.HammerRaised, ZIndex = z + 2,
 	}, root)
 	slab("Handle", 14, 135, 132, 10, Color3.fromRGB(124, 86, 54), hammer, z + 2)
-	local head = slab("Head", 0, 118, 44, 44, Color3.fromRGB(152, 148, 164), hammer, z + 3)
+	local head = slab("Head", 0, 118, 44, 44, Color3.fromRGB(148, 163, 184), hammer, z + 3)
 	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(140, 140, 150)) }, head)
 
 	return {
@@ -256,7 +256,7 @@ function Fx.Steam(parent: Instance, at: UDim2, z: number)
 		local x = math.random(-80, 80)
 		local p = new("Frame", {
 			Name = "Steam", AnchorPoint = CENTERED, Position = at + UDim2.fromOffset(x, -4), Size = UDim2.fromOffset(size, size),
-			BackgroundColor3 = Color3.fromRGB(236, 232, 244), BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = z,
+			BackgroundColor3 = Color3.fromRGB(224, 242, 254), BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = z,
 		}, parent)
 		new("UICorner", { CornerRadius = UDim.new(1, 0) }, p)
 		tween(p, life, {

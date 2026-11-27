@@ -38,7 +38,7 @@ banner.Name = "DuelBanner"
 banner.AnchorPoint = Vector2.new(0.5, 0)
 banner.Position = UDim2.new(0.5, 0, 0, 12)
 banner.Size = UDim2.fromScale(0.5, 0.12)
-banner.BackgroundColor3 = Color3.fromRGB(18, 14, 22)
+banner.BackgroundColor3 = Color3.fromRGB(11, 16, 24)
 banner.BackgroundTransparency = 0.15
 banner.Parent = gui
 local bannerSize = Instance.new("UISizeConstraint")
@@ -102,7 +102,7 @@ intro.Name = "DuelIntro"
 intro.AnchorPoint = Vector2.new(0.5, 0.5)
 intro.Position = UDim2.fromScale(0.5, 0.42)
 intro.Size = UDim2.fromOffset(520, 150)
-intro.BackgroundColor3 = Color3.fromRGB(18, 14, 22)
+intro.BackgroundColor3 = Color3.fromRGB(11, 16, 24)
 intro.BackgroundTransparency = 0.12
 intro.Visible = false
 intro.Parent = gui
@@ -118,7 +118,7 @@ local function introSide(xScale: number, color: Color3): (ImageLabel, TextLabel,
 	face.AnchorPoint = Vector2.new(0.5, 0)
 	face.Position = UDim2.new(xScale, 0, 0, 14)
 	face.Size = UDim2.fromOffset(64, 64)
-	face.BackgroundColor3 = Color3.fromRGB(10, 8, 14)
+	face.BackgroundColor3 = Color3.fromRGB(9, 14, 23)
 	face.Parent = intro
 	local faceCorner = Instance.new("UICorner")
 	faceCorner.CornerRadius = UDim.new(0.5, 0)
@@ -140,7 +140,7 @@ local function introSide(xScale: number, color: Color3): (ImageLabel, TextLabel,
 	local powerLabel = nameLabel:Clone()
 	powerLabel.Position = UDim2.new(xScale, 0, 0, 112)
 	powerLabel.Size = UDim2.new(0.4, 0, 0, 18)
-	powerLabel.TextColor3 = Color3.fromRGB(230, 226, 238)
+	powerLabel.TextColor3 = Color3.fromRGB(238, 244, 251)
 	powerLabel.Font = Enum.Font.GothamBold
 	powerLabel.Parent = intro
 	GildedGrimoire.GlassText(powerLabel, "Body")

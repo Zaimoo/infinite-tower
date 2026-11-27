@@ -29,8 +29,8 @@ local WIDTH, HEIGHT = 760, 520 -- same size as the Summoning Altar window
 local Z = 66
 local CLOSE_ACTION = "HeroOddsClose"
 
-local TEXT = Color3.fromRGB(246, 242, 255)
-local SUBTEXT = Color3.fromRGB(214, 204, 232)
+local TEXT = Color3.fromRGB(238, 244, 251)
+local SUBTEXT = Color3.fromRGB(203, 213, 225)
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
 	local o = Instance.new(className)
@@ -97,7 +97,7 @@ function HeroOddsModal.new(gui: ScreenGui, banners: { [string]: any }, getProfil
 	local win = new("TextButton", {
 		Name = "HeroOddsWindow", Text = "", AutoButtonColor = false, Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(WIDTH, HEIGHT), BackgroundColor3 = Color3.fromRGB(15, 13, 22),
+		Size = UDim2.fromOffset(WIDTH, HEIGHT), BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 		BorderSizePixel = 0, ZIndex = Z,
 	}, scrim)
 	win:SetAttribute("NoFeel", true) -- a click catcher, not a control: no click sound or press spring
@@ -116,7 +116,7 @@ function HeroOddsModal.new(gui: ScreenGui, banners: { [string]: any }, getProfil
 
 	local closeBtn = new("TextButton", {
 		Name = "CloseBtn", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12),
-		Size = UDim2.fromOffset(34, 34), Text = "", BackgroundColor3 = Color3.fromRGB(28, 20, 36),
+		Size = UDim2.fromOffset(34, 34), Text = "", BackgroundColor3 = Color3.fromRGB(16, 25, 40),
 		BorderSizePixel = 0, ZIndex = Z + 2,
 	}, win)
 	GildedGrimoire.Frame(closeBtn, { Class = "Button", Tone = "Crimson", ZIndex = Z + 3 })
@@ -126,10 +126,10 @@ function HeroOddsModal.new(gui: ScreenGui, banners: { [string]: any }, getProfil
 	-- Rates box: one pill per tier, then the banner's rules and live state (50/50, Blessing).
 	local ratesBox = new("Frame", {
 		Name = "RatesBox", Position = UDim2.fromOffset(18, 56), Size = UDim2.new(1, -36, 0, 80),
-		BackgroundColor3 = Color3.fromRGB(22, 16, 32), BorderSizePixel = 0, ZIndex = Z + 1,
+		BackgroundColor3 = Color3.fromRGB(16, 25, 40), BorderSizePixel = 0, ZIndex = Z + 1,
 	}, win)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, ratesBox)
-	new("UIStroke", { Color = Color3.fromRGB(80, 55, 110), Thickness = 1.2 }, ratesBox)
+	new("UIStroke", { Color = Color3.fromRGB(51, 65, 85), Thickness = 1.2 }, ratesBox)
 	local ratesRow = new("Frame", {
 		Name = "RatesRow", Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 22),
 		BackgroundTransparency = 1, ZIndex = Z + 2,
@@ -245,7 +245,7 @@ function HeroOddsModal:Render()
 	for i, t in tiers do
 		local color = Theme.RarityColor(t.Tier)
 		local pill = new("Frame", {
-			Name = "RatePill_" .. t.Tier, LayoutOrder = i, BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+			Name = "RatePill_" .. t.Tier, LayoutOrder = i, BackgroundColor3 = Color3.fromRGB(11, 16, 24),
 			BorderSizePixel = 0, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 22), ZIndex = Z + 3,
 		}, self.RatesRow)
 		new("UICorner", { CornerRadius = UDim.new(0, 5) }, pill)
@@ -337,7 +337,7 @@ function HeroOddsModal:HeroCard(parent: Instance, heroId: string, tier: number, 
 
 	local portraitBox = new("Frame", {
 		Name = "PortraitBox", Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(76, 76),
-		BackgroundColor3 = color:Lerp(Color3.fromRGB(10, 6, 16), 0.75), BorderSizePixel = 0, ClipsDescendants = true, ZIndex = Z + 3,
+		BackgroundColor3 = color:Lerp(Color3.fromRGB(9, 14, 23), 0.75), BorderSizePixel = 0, ClipsDescendants = true, ZIndex = Z + 3,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 10) }, portraitBox)
 	new("UIStroke", { Color = color, Thickness = if featured then 2.6 else 1.6, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, portraitBox)

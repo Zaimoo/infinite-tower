@@ -229,7 +229,7 @@ local function buildBeacon(plotModel: Model)
 
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = isLocal and Color3.fromRGB(255, 215, 0) or (Palette.RailInnerWhite or Color3.fromRGB(246, 244, 255))
+	stroke.Color = isLocal and Color3.fromRGB(229, 196, 112) or (Palette.RailInnerWhite or Color3.fromRGB(238, 244, 251))
 	stroke.Thickness = isLocal and 3.5 or 2.0
 	stroke.Parent = avatarFrame
 
